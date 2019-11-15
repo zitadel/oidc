@@ -1,5 +1,8 @@
 name: Test & Build
-on: push
+on: 
+  push:
+    branches-ignore:
+      - master
 jobs:
   build:
     runs-on: ubuntu-18.04
