@@ -1,7 +1,7 @@
 name: Release
 on: push
 jobs:
-  test&build:
+  test:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
@@ -16,6 +16,7 @@ jobs:
       - run: go run main.go
   release:
     runs-on: ubuntu-18.04
+    needs: test
     steps:
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v2
