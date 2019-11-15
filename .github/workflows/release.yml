@@ -6,7 +6,21 @@ jobs:
     strategy:
       matrix:
         go: ['1.11', '1.12', '1.13']
-    name: Go ${{ matrix.go }} sample
+    name: Go ${{ matrix.go }} test
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go run main.go
+  build:
+    runs-on: ubuntu-18.04
+    needs: test
+    strategy:
+      matrix:
+        go: ['1.11', '1.12', '1.13']
+    name: Go ${{ matrix.go }} build
     steps:
       - uses: actions/checkout@master
       - name: Setup go
@@ -16,7 +30,7 @@ jobs:
       - run: go run main.go
   release:
     runs-on: ubuntu-18.04
-    needs: test
+    needs: [test, build]
     steps:
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v2
