@@ -1,10 +1,7 @@
 name: Release
-on:
-  push:
-    branches:
-      - master
+on: push
 jobs:
-  build:
+  test&build:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
