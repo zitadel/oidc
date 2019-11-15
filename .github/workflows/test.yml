@@ -13,4 +13,4 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go }}
-      - run: echo "i am groot"
+      - run: go run main.go
