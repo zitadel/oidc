@@ -1,19 +1,26 @@
 # Security Policy
 
+At @caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the Open Source Community. All reports are thoroughly investigated by our engineering team.
+
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+After the initial Release the following version support will aplly
 
 | Version | Supported                               |
 | ------- | ------------------                      |
 | 1.x.x   | :white_check_mark: (note yet available) |
 | 0.x.x   | :x:                                     |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Use this section to tell people how to report a vulnerability.
+To file a incident, please disclose by email to security@caos.ch a list with the security details.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+At the moment GPG encryption is no yet supported, however you may sign your message at will.
+
+### When should I report a vulnerability?
+
+### When should I NOT report a vulnerability?
+
+## Security Vulnerability Response
+
+## Public Disclosure Timing
