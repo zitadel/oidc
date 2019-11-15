@@ -4,6 +4,19 @@ on:
     branches:
     - master
 jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        go: ['1.11', '1.12', '1.13']
+    name: Go ${{ matrix.go }} sample
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go run main.go
   release:
     runs-on: ubuntu-18.04
     steps:
@@ -13,10 +26,7 @@ jobs:
         fetch-depth: 1
     - name: Release
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         export GIT_TAG="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
         [[ "$GIT_TAG" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
-        echo "Insert Go test & Build Here" ## Insert Go test & Build Here
         npx semantic-release
