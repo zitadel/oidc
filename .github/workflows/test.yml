@@ -1,20 +1,16 @@
 name: Test
-on:
-  push:
-    branches:
-    - !master
+on: push
 jobs:
-  release:
-    runs-on: ubuntu-18.04
+  build:
+    runs-on: ubuntu-108.04
+    strategy:
+      matrix:
+        go: ['1.11', '1.12', '1.13']
+    name: Go ${{ matrix.go }} sample
     steps:
-    - name: Source checkout
-      uses: actions/checkout@v1
-      with:
-        fetch-depth: 1
-    - name: Release
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        echo "Insert Go test & Build Here" ## Insert Go test & Build Here
-        npx semantic-release
+      - uses: actions/checkout@master
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - run: echo "i am groot"
