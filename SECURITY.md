@@ -1,6 +1,6 @@
 # Security Policy
 
-At @caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the Open Source Community. All reports are thoroughly investigated by our engineering team.
+At @caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
 
 ## Supported Versions
 
@@ -13,7 +13,7 @@ After the initial Release the following version support will aplly
 
 ## Reporting a vulnerability
 
-To file a incident, please disclose by email to security@caos.ch a list with the security details.
+To file a incident, please disclose by email to security@caos.ch with the security details.
 
 At the moment GPG encryption is no yet supported, however you may sign your message at will.
 
@@ -31,10 +31,12 @@ At the moment GPG encryption is no yet supported, however you may sign your mess
 
 ## Security Vulnerability Response
 
+TBD
+
 ## Public Disclosure
 
 All accepted and mitigated vulnerabilitys will be published on the [Github Security Page](https://github.com/caos/oidc/security/advisories)
 
 ### Timing
 
-We think it is crucial to publish advisories `ASAP` as mitigations are ready. But due to the unknow nature of the discloures the time frame can range from 7 to 90 days.
+We think it is crucial to publish advisories `ASAP` as mitigations are ready. But due to the unknown nature of the discloures the time frame can range from 7 to 90 days.
