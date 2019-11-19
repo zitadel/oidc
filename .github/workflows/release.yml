@@ -35,4 +35,5 @@ jobs:
       - uses: brpaz/action-semantic-release@v1
         with:
           dry_run: "false"
+          install_plugins: "semantic-release-docker semantic-release-gcr"
           branch: master
