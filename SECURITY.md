@@ -1,6 +1,6 @@
 # Security Policy
 
-At @caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
+At caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
 
 ## Supported Versions
 
