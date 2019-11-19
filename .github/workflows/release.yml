@@ -34,6 +34,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@master
       - uses: brpaz/action-semantic-release@v1
         with:
           dry_run: "false"
