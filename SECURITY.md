@@ -17,7 +17,7 @@ To file a incident, please disclose by email to security@caos.ch with the securi
 
 At the moment GPG encryption is no yet supported, however you may sign your message at will.
 
-### When should I report a vulnerability
+### When should I report a vulnerability
 
 * You think you discovered a ...
   * ... potential security vulnerability in the SDK
