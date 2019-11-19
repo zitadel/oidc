@@ -1,4 +1,4 @@
-package defaults
+package rp
 
 import (
 	"bytes"
@@ -15,11 +15,24 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	str_utils "github.com/caos/utils/strings"
 )
 
-func NewVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ...ConfFunc) rp.Verifier {
+//DefaultVerifier implements the `Verifier` interface
+type DefaultVerifier struct {
+	config *verifierConfig
+	keySet oidc.KeySet
+}
+
+//ConfFunc is the type for providing dynamic verifierConfig
+type ConfFunc func(*verifierConfig)
+
+//ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
+type ACRVerifier func(string) error
+
+//NewDefaultVerifier creates `DefaultVerifier` with the given
+//issuer, clientID, keyset and possible configOptions
+func NewDefaultVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ...ConfFunc) Verifier {
 	conf := &verifierConfig{
 		issuer:   issuer,
 		clientID: clientID,
@@ -33,52 +46,53 @@ func NewVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ...ConfFu
 			opt(conf)
 		}
 	}
-	return &Verifier{config: conf, keySet: keySet}
+	return &DefaultVerifier{config: conf, keySet: keySet}
 }
 
-type Verifier struct {
-	config *verifierConfig
-	keySet oidc.KeySet
-}
-
-type ConfFunc func(*verifierConfig)
-
+//WithIgnoreIssuedAt will turn off iat claim verification
 func WithIgnoreIssuedAt() func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.iat.ignore = true
 	}
 }
 
+//WithIssuedAtOffset mitigates the risk of iat to be in the future
+//because of clock skews with the ability to add an offset to the current time
 func WithIssuedAtOffset(offset time.Duration) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.iat.offset = offset
 	}
 }
 
+//WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
 func WithIssuedAtMaxAge(maxAge time.Duration) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.iat.maxAge = maxAge
 	}
 }
 
+//WithNonce TODO: ?
 func WithNonce(nonce string) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.nonce = nonce
 	}
 }
 
+//WithACRVerifier sets the verifier for the acr claim
 func WithACRVerifier(verifier ACRVerifier) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.acr = verifier
 	}
 }
 
+//WithAuthTimeMaxAge provides the ability to define the maximum duration between auth_time and now
 func WithAuthTimeMaxAge(maxAge time.Duration) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.maxAge = maxAge
 	}
 }
 
+//WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
 func WithSupportedSigningAlgorithms(algs ...string) func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.supportedSignAlgs = algs
@@ -111,9 +125,9 @@ type iatConfig struct {
 	maxAge time.Duration
 }
 
-type ACRVerifier func(string) error
-
-func DefaultACRVerifier(possibleValues []string) func(string) error {
+//DefaultACRVerifier implements `ACRVerifier` returning an error
+//if non of the provided values matches the acr claim
+func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
 		if !str_utils.Contains(possibleValues, acr) {
 			return ErrAcrInvalid(possibleValues, acr)
@@ -122,7 +136,10 @@ func DefaultACRVerifier(possibleValues []string) func(string) error {
 	}
 }
 
-func (v *Verifier) Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error) {
+//Verify implements the `Verify` method of the `Verifier` interface
+//according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+//and https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
+func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error) {
 	v.config.now = time.Now().UTC()
 	idToken, err := v.VerifyIDToken(ctx, idTokenString)
 	if err != nil {
@@ -134,14 +151,15 @@ func (v *Verifier) Verify(ctx context.Context, accessToken, idTokenString string
 	return idToken, nil
 }
 
-func (v *Verifier) now() time.Time {
+func (v *DefaultVerifier) now() time.Time {
 	if v.config.now.IsZero() {
 		v.config.now = time.Now().UTC().Round(time.Second)
 	}
 	return v.config.now
 }
 
-func (v *Verifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
+//VerifyIDToken: https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
 	//1. if encrypted --> decrypt
 	decrypted, err := v.decryptToken(idTokenString)
 	if err != nil {
@@ -206,7 +224,7 @@ func (v *Verifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oi
 	// return err
 }
 
-func (v *Verifier) parseToken(tokenString string) (*oidc.IDTokenClaims, []byte, error) {
+func (v *DefaultVerifier) parseToken(tokenString string) (*oidc.IDTokenClaims, []byte, error) {
 	parts := strings.Split(tokenString, ".")
 	if len(parts) != 3 {
 		return nil, nil, ValidationError("token contains an invalid number of segments") //TODO: err NewValidationError("token contains an invalid number of segments", ValidationErrorMalformed)
@@ -220,14 +238,14 @@ func (v *Verifier) parseToken(tokenString string) (*oidc.IDTokenClaims, []byte, 
 	return idToken, payload, err
 }
 
-func (v *Verifier) checkIssuer(issuer string) error {
+func (v *DefaultVerifier) checkIssuer(issuer string) error {
 	if v.config.issuer != issuer {
 		return ErrIssuerInvalid(v.config.issuer, issuer)
 	}
 	return nil
 }
 
-func (v *Verifier) checkAudience(audiences []string) error {
+func (v *DefaultVerifier) checkAudience(audiences []string) error {
 	if !str_utils.Contains(audiences, v.config.clientID) {
 		return ErrAudienceMissingClientID(v.config.clientID)
 	}
@@ -238,7 +256,7 @@ func (v *Verifier) checkAudience(audiences []string) error {
 
 //4. if multiple aud strings --> check if azp
 //5. if azp --> check azp == client_id
-func (v *Verifier) checkAuthorizedParty(audiences []string, authorizedParty string) error {
+func (v *DefaultVerifier) checkAuthorizedParty(audiences []string, authorizedParty string) error {
 	if len(audiences) > 1 {
 		if authorizedParty == "" {
 			return ErrAzpMissing()
@@ -250,7 +268,7 @@ func (v *Verifier) checkAuthorizedParty(audiences []string, authorizedParty stri
 	return nil
 }
 
-func (v *Verifier) checkSignature(ctx context.Context, idTokenString string, payload []byte) (jose.SignatureAlgorithm, error) {
+func (v *DefaultVerifier) checkSignature(ctx context.Context, idTokenString string, payload []byte) (jose.SignatureAlgorithm, error) {
 	jws, err := jose.ParseSigned(idTokenString)
 	if err != nil {
 		return "", err
@@ -344,7 +362,7 @@ func (v *Verifier) checkSignature(ctx context.Context, idTokenString string, pay
 // 	return nil
 // }
 
-func (v *Verifier) checkExpiration(expiration time.Time) error {
+func (v *DefaultVerifier) checkExpiration(expiration time.Time) error {
 	expiration = expiration.Round(time.Second)
 	if !v.now().Before(expiration) {
 		return ErrExpInvalid(expiration)
@@ -352,7 +370,7 @@ func (v *Verifier) checkExpiration(expiration time.Time) error {
 	return nil
 }
 
-func (v *Verifier) checkIssuedAt(issuedAt time.Time) error {
+func (v *DefaultVerifier) checkIssuedAt(issuedAt time.Time) error {
 	if v.config.iat.ignore {
 		return nil
 	}
@@ -370,7 +388,7 @@ func (v *Verifier) checkIssuedAt(issuedAt time.Time) error {
 	}
 	return nil
 }
-func (v *Verifier) checkNonce(nonce string) error {
+func (v *DefaultVerifier) checkNonce(nonce string) error {
 	if v.config.nonce == "" {
 		return nil
 	}
@@ -379,13 +397,13 @@ func (v *Verifier) checkNonce(nonce string) error {
 	}
 	return nil
 }
-func (v *Verifier) checkAuthorizationContextClassReference(acr string) error {
+func (v *DefaultVerifier) checkAuthorizationContextClassReference(acr string) error {
 	if v.config.acr != nil {
 		return v.config.acr(acr)
 	}
 	return nil
 }
-func (v *Verifier) checkAuthTime(authTime time.Time) error {
+func (v *DefaultVerifier) checkAuthTime(authTime time.Time) error {
 	if v.config.maxAge == 0 {
 		return nil
 	}
@@ -400,7 +418,7 @@ func (v *Verifier) checkAuthTime(authTime time.Time) error {
 	return nil
 }
 
-func (v *Verifier) decryptToken(tokenString string) (string, error) {
+func (v *DefaultVerifier) decryptToken(tokenString string) (string, error) {
 	return tokenString, nil //TODO: impl
 }
 
@@ -423,7 +441,7 @@ func (v *Verifier) decryptToken(tokenString string) (string, error) {
 // 	return token, nil //TODO: impl
 // }
 
-func (v *Verifier) verifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
+func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
 	if atHash == "" {
 		return nil //TODO: return error
 	}

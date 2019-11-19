@@ -1,4 +1,4 @@
-package tokenexchange
+package rp
 
 import (
 	"context"
@@ -6,12 +6,11 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
-	"github.com/caos/oidc/pkg/rp"
 )
 
 //TokenExchangeRP extends the `RelayingParty` interface for the *draft* oauth2 `Token Exchange`
 type TokenExchangeRP interface {
-	rp.RelayingParty
+	RelayingParty
 
 	//TokenExchange implement the `Token Echange Grant` exchanging some token for an other
 	TokenExchange(context.Context, *tokenexchange.TokenExchangeRequest) (*oauth2.Token, error)

@@ -1,4 +1,4 @@
-package defaults
+package rp
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	grants_tx "github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
-	"github.com/caos/oidc/pkg/rp"
-	"github.com/caos/oidc/pkg/rp/tokenexchange"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -23,18 +21,18 @@ const (
 )
 
 type DefaultRP struct {
-	endpoints rp.Endpoints
+	endpoints Endpoints
 
 	oauthConfig oauth2.Config
-	config      *rp.Config
+	config      *Config
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
 
-	verifier rp.Verifier
+	verifier Verifier
 }
 
-func NewDefaultRelayingParty(rpConfig *rp.Config, rpOpts ...DefaultReplayingPartyOpts) (tokenexchange.DelegationTokenExchangeRP, error) {
+func NewDefaultRelayingParty(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExchangeRP, error) {
 	p := &DefaultRP{
 		config:     rpConfig,
 		httpClient: utils.DefaultHTTPClient,
@@ -55,15 +53,15 @@ func NewDefaultRelayingParty(rpConfig *rp.Config, rpOpts ...DefaultReplayingPart
 	return p, nil
 }
 
-type DefaultReplayingPartyOpts func(p *DefaultRP)
+type DefaultRPOpts func(p *DefaultRP)
 
-func WithCookieHandler(cookieHandler *utils.CookieHandler) DefaultReplayingPartyOpts {
+func WithCookieHandler(cookieHandler *utils.CookieHandler) DefaultRPOpts {
 	return func(p *DefaultRP) {
 		p.cookieHandler = cookieHandler
 	}
 }
 
-func WithHTTPClient(client *http.Client) DefaultReplayingPartyOpts {
+func WithHTTPClient(client *http.Client) DefaultRPOpts {
 	return func(p *DefaultRP) {
 		p.httpClient = client
 	}
@@ -169,7 +167,7 @@ func (p *DefaultRP) discover() error {
 		return err
 	}
 
-	p.endpoints = rp.GetEndpoints(discoveryConfig)
+	p.endpoints = GetEndpoints(discoveryConfig)
 	p.oauthConfig = oauth2.Config{
 		ClientID:     p.config.ClientID,
 		ClientSecret: p.config.ClientSecret,

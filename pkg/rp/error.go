@@ -1,4 +1,4 @@
-package defaults
+package rp
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package defaults
+package rp
 
 import (
 	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
