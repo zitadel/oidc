@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go run main.go
-  release:  release:
+  release:
     runs-on: ubuntu-18.04
     needs: [test, build]
     steps:
@@ -42,5 +42,3 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         npx semantic-release
-
-
