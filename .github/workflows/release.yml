@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-18.04
     needs: [test, build]
     steps:
-      - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: brpaz/action-semantic-release@v1
+        with:
+          dry_run: "false"
+          branch: master
