@@ -35,7 +35,14 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@master
-      - uses: brpaz/action-semantic-release@v1
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v2
+        id: semantic   # Need an `id` for output variables
         with:
-          dry_run: "false"
           branch: master
+          semantic_version: latest
+          extra_plugins: |
+            @semantic-release/git
+            @semantic-release/changelog@3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
