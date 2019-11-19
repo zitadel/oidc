@@ -4,7 +4,7 @@ At caos we are extremely grateful for security aware people that disclose vulner
 
 ## Supported Versions
 
-After the initial Release the following version support will aplly
+After the initial Release the following version support will apply
 
 | Version | Supported                               |
 | ------- | ------------------                      |
