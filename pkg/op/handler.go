@@ -10,7 +10,7 @@ import (
 	"github.com/caos/utils/logging"
 )
 
-type Handler interface {
+type OpenIDProvider interface {
 	Configuration
 	// Storage() Storage
 	HandleDiscovery(w http.ResponseWriter, r *http.Request)
@@ -20,25 +20,25 @@ type Handler interface {
 	HttpHandler() *http.Server
 }
 
-func CreateRouter(h Handler) *mux.Router {
+func CreateRouter(o OpenIDProvider) *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc(oidc.DiscoveryEndpoint, h.HandleDiscovery)
-	router.HandleFunc(h.AuthorizationEndpoint().Relative(), h.HandleAuthorize)
-	router.HandleFunc(h.TokenEndpoint().Relative(), h.HandleExchange)
-	router.HandleFunc(h.UserinfoEndpoint().Relative(), h.HandleUserinfo)
+	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
+	router.HandleFunc(o.AuthorizationEndpoint().Relative(), o.HandleAuthorize)
+	router.HandleFunc(o.TokenEndpoint().Relative(), o.HandleExchange)
+	router.HandleFunc(o.UserinfoEndpoint().Relative(), o.HandleUserinfo)
 	return router
 }
 
-func Start(ctx context.Context, h Handler) {
+func Start(ctx context.Context, o OpenIDProvider) {
 	go func() {
 		<-ctx.Done()
-		err := h.HttpHandler().Shutdown(ctx)
+		err := o.HttpHandler().Shutdown(ctx)
 		logging.Log("SERVE-REqwpM").OnError(err).Error("graceful shutdown of oidc server failed")
 	}()
 
 	go func() {
-		err := h.HttpHandler().ListenAndServe()
+		err := o.HttpHandler().ListenAndServe()
 		logging.Log("SERVE-4YNIwG").OnError(err).Panic("oidc server serve failed")
 	}()
-	logging.LogWithFields("SERVE-koAFMs", "port", h.Port()).Info("oidc server is listening")
+	logging.LogWithFields("SERVE-koAFMs", "port", o.Port()).Info("oidc server is listening")
 }
