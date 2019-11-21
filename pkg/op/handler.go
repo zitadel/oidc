@@ -23,9 +23,9 @@ type Handler interface {
 func CreateRouter(h Handler) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc(oidc.DiscoveryEndpoint, h.HandleDiscovery)
-	router.HandleFunc(h.AuthorizationEndpoint(), h.HandleAuthorize)
-	router.HandleFunc(h.TokenEndpoint(), h.HandleExchange)
-	router.HandleFunc(h.UserinfoEndpoint(), h.HandleUserinfo)
+	router.HandleFunc(h.AuthorizationEndpoint().Relative(), h.HandleAuthorize)
+	router.HandleFunc(h.TokenEndpoint().Relative(), h.HandleExchange)
+	router.HandleFunc(h.UserinfoEndpoint().Relative(), h.HandleUserinfo)
 	return router
 }
 
