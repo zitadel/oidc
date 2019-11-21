@@ -24,7 +24,7 @@ type DefaultVerifier struct {
 	keySet oidc.KeySet
 }
 
-//ConfFunc is the type for providing dynamic verifierConfig
+//ConfFunc is the type for providing dynamic options to the DefaultVerfifier
 type ConfFunc func(*verifierConfig)
 
 //ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim

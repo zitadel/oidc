@@ -10,9 +10,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/caos/oidc/pkg/client"
-	"github.com/caos/oidc/pkg/client/defaults"
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 	"github.com/caos/utils/logging"
 )
@@ -30,7 +29,7 @@ func main() {
 
 	ctx := context.Background()
 
-	rpConfig := &client.RelayingPartyConfig{
+	rpConfig := &rp.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Issuer:       issuer,
@@ -38,7 +37,7 @@ func main() {
 		Scopes:       []string{"openid", "profile", "email"},
 	}
 	cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
-	provider, err := defaults.NewDefaultRelayingParty(rpConfig, defaults.WithCookieHandler(cookieHandler))
+	provider, err := rp.NewDefaultRP(rpConfig, rp.WithCookieHandler(cookieHandler))
 	logging.Log("APP-nx6PeF").OnError(err).Panic("error creating provider")
 
 	// state := "foobar"
