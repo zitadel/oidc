@@ -6,7 +6,6 @@ package mock
 
 import (
 	oidc "github.com/caos/oidc/pkg/oidc"
-	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -34,6 +33,51 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
+// AuthRequestByCode mocks base method
+func (m *MockStorage) AuthRequestByCode(arg0 oidc.Client, arg1, arg2 string) (*oidc.AuthRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthRequestByCode", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*oidc.AuthRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AuthRequestByCode indicates an expected call of AuthRequestByCode
+func (mr *MockStorageMockRecorder) AuthRequestByCode(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByCode", reflect.TypeOf((*MockStorage)(nil).AuthRequestByCode), arg0, arg1, arg2)
+}
+
+// AuthorizeClientIDCodeVerifier mocks base method
+func (m *MockStorage) AuthorizeClientIDCodeVerifier(arg0, arg1 string) (oidc.Client, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthorizeClientIDCodeVerifier", arg0, arg1)
+	ret0, _ := ret[0].(oidc.Client)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AuthorizeClientIDCodeVerifier indicates an expected call of AuthorizeClientIDCodeVerifier
+func (mr *MockStorageMockRecorder) AuthorizeClientIDCodeVerifier(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizeClientIDCodeVerifier", reflect.TypeOf((*MockStorage)(nil).AuthorizeClientIDCodeVerifier), arg0, arg1)
+}
+
+// AuthorizeClientIDSecret mocks base method
+func (m *MockStorage) AuthorizeClientIDSecret(arg0, arg1 string) (oidc.Client, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthorizeClientIDSecret", arg0, arg1)
+	ret0, _ := ret[0].(oidc.Client)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AuthorizeClientIDSecret indicates an expected call of AuthorizeClientIDSecret
+func (mr *MockStorageMockRecorder) AuthorizeClientIDSecret(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizeClientIDSecret", reflect.TypeOf((*MockStorage)(nil).AuthorizeClientIDSecret), arg0, arg1)
+}
+
 // CreateAuthRequest mocks base method
 func (m *MockStorage) CreateAuthRequest(arg0 *oidc.AuthRequest) error {
 	m.ctrl.T.Helper()
@@ -48,11 +92,25 @@ func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuthRequest", reflect.TypeOf((*MockStorage)(nil).CreateAuthRequest), arg0)
 }
 
+// DeleteAuthRequestAndCode mocks base method
+func (m *MockStorage) DeleteAuthRequestAndCode(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAuthRequestAndCode", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAuthRequestAndCode indicates an expected call of DeleteAuthRequestAndCode
+func (mr *MockStorageMockRecorder) DeleteAuthRequestAndCode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAuthRequestAndCode", reflect.TypeOf((*MockStorage)(nil).DeleteAuthRequestAndCode), arg0, arg1)
+}
+
 // GetClientByClientID mocks base method
-func (m *MockStorage) GetClientByClientID(arg0 string) (op.Client, error) {
+func (m *MockStorage) GetClientByClientID(arg0 string) (oidc.Client, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClientByClientID", arg0)
-	ret0, _ := ret[0].(op.Client)
+	ret0, _ := ret[0].(oidc.Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

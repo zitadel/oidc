@@ -1,6 +1,7 @@
 package op
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -180,22 +181,67 @@ func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
-	authRequest, err := ParseAuthRequest(w, r)
+	_, err := Authorize(w, r, p.storage)
 	if err != nil {
-		//TODO: return err
+		http.Error(w, err.Error(), 400)
 	}
-	err = ValidateAuthRequest(authRequest, p.storage)
-	if err != nil {
-		//TODO: return err
-	}
-	// err = p.storage.CreateAuthRequest(authRequest)
+	// authRequest, err := ParseAuthRequest(w, r)
 	// if err != nil {
 	// 	//TODO: return err
 	// }
-	//TODO: redirect?
+	// err = ValidateAuthRequest(authRequest, p.storage)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), 400)
+	// 	return
+	// 	//TODO: return err
+	// }
+	// // err = p.storage.CreateAuthRequest(authRequest)
+	// // if err != nil {
+	// // 	//TODO: return err
+	// // }
+	// var client oidc.Client
+	// RedirectToLogin(authRequest, client, w, r)
 }
 
 func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
+	reqType := r.FormValue("grant_type")
+	if reqType == "" {
+		//return errors.New("grant_type missing") //TODO: impl
+	}
+	if reqType == string(oidc.GrantTypeCode) {
+		token, err := CodeExchange(w, r, p.storage)
+		if err != nil {
+
+		}
+		b, _ := json.Marshal(token)
+		w.Write(b)
+		return
+	}
+	p.handleTokenExchange(w, r)
+}
+
+// func (p *DefaultOP) handleCodeExchange(w http.ResponseWriter, r *http.Request) {
+// 	tokenRequest, err := ParseAccessTokenRequest(w, r)
+// 	if err != nil {
+// 		//TODO: return err
+// 	}
+// 	err = ValidateAccessTokenRequest(tokenRequest, p.storage)
+// 	if err != nil {
+// 		//TODO: return err
+// 	}
+// 	b, _ := json.Marshal(tokenRequest)
+// 	w.Write(b)
+// }
+
+func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) {
+	tokenRequest, err := ParseTokenExchangeRequest(w, r)
+	if err != nil {
+		//TODO: return err
+	}
+	err = ValidateTokenExchangeRequest(tokenRequest, p.storage)
+	if err != nil {
+		//TODO: return err
+	}
 }
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {

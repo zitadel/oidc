@@ -8,6 +8,8 @@ import (
 )
 
 const (
+	ScopeOpenID = "openid"
+
 	ResponseTypeCode        ResponseType = "code"
 	ResponseTypeIDToken     ResponseType = "id_token token"
 	ResponseTypeIDTokenOnly ResponseType = "id_token"
@@ -21,6 +23,8 @@ const (
 	PromptLogin         = "login"
 	PromptConsent       = "consent"
 	PromptSelectAccount = "select_account"
+
+	GrantTypeCode GrantType = "authorization_code"
 )
 
 var displayValues = map[string]Display{
@@ -34,6 +38,7 @@ var displayValues = map[string]Display{
 //https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 //
 type AuthRequest struct {
+	ID           string
 	Scopes       Scopes       `schema:"scope"`
 	ResponseType ResponseType `schema:"response_type"`
 	ClientID     string       `schema:"client_id"`
@@ -51,6 +56,49 @@ type AuthRequest struct {
 	IDTokenHint string   `schema:"id_token_hint"`
 	LoginHint   string   `schema:"login_hint"`
 	ACRValues   []string `schema:"acr_values"`
+}
+
+type TokenRequest interface {
+	// GrantType GrantType `schema:"grant_type"`
+	GrantType() GrantType
+}
+
+type TokenRequestType GrantType
+
+type AccessTokenRequest struct {
+	Code         string `schema:"code"`
+	RedirectURI  string `schema:"redirect_uri"`
+	ClientID     string `schema:"client_id"`
+	ClientSecret string `schema:"client_secret"`
+	CodeVerifier string `schema:"code_verifier"`
+}
+
+func (a *AccessTokenRequest) GrantType() GrantType {
+	return GrantTypeCode
+}
+
+type AccessTokenResponse struct {
+	AccessToken  string `json:"access_token,omitempty"`
+	TokenType    string `json:"token_type,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	ExpiresIn    uint64 `json:"expires_in,omitempty"`
+	IDToken      string `json:"id_token,omitempty"`
+}
+
+// func (a AccessTokenRequest) UnmarshalText(text []byte) error {
+// 	fmt.Println(string(text))
+// 	return nil
+// }
+
+type TokenExchangeRequest struct {
+	subjectToken       string   `schema:"subject_token"`
+	subjectTokenType   string   `schema:"subject_token_type"`
+	actorToken         string   `schema:"actor_token"`
+	actorTokenType     string   `schema:"actor_token_type"`
+	resource           []string `schema:"resource"`
+	audience           []string `schema:"audience"`
+	Scope              []string `schema:"scope"`
+	requestedTokenType string   `schema:"requested_token_type"`
 }
 
 // func (a *AuthRequest) UnmarshalText(text []byte) error {
@@ -115,3 +163,5 @@ func (l *Locales) UnmarshalText(text []byte) error {
 	}
 	return nil
 }
+
+type GrantType string

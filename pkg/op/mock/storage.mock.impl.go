@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
+	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 )
 
@@ -18,6 +19,14 @@ func NewMockStorageExpectValidClientID(t *testing.T) op.Storage {
 	return m
 }
 
+func NewMockStorageAny(t *testing.T) op.Storage {
+	m := NewStorage(t)
+	mockS := m.(*MockStorage)
+	mockS.EXPECT().GetClientByClientID(gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
+	mockS.EXPECT().AuthorizeClientIDSecret(gomock.Any(), gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
+	return m
+}
+
 func ExpectValidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).Return(&ConfClient{}, nil)
@@ -25,8 +34,8 @@ func ExpectValidClientID(s op.Storage) {
 
 type ConfClient struct{}
 
-func (c *ConfClient) Type() op.ClientType {
-	return op.ClientTypeConfidential
+func (c *ConfClient) Type() oidc.ClientType {
+	return oidc.ClientTypeConfidential
 }
 func (c *ConfClient) RedirectURIs() []string {
 	return []string{
@@ -34,4 +43,8 @@ func (c *ConfClient) RedirectURIs() []string {
 		"http://localhost:9999/callback",
 		"custom://callback",
 	}
+}
+
+func (c *ConfClient) LoginURL(id string) string {
+	return "login?id=" + id
 }
