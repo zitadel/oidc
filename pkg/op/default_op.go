@@ -1,4 +1,4 @@
-package server
+package op
 
 import (
 	"errors"
@@ -184,15 +184,9 @@ func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//TODO: return err
 	}
-	err = ValidateAuthRequest(authRequest)
+	err = ValidateAuthRequest(authRequest, p.storage)
 	if err != nil {
 		//TODO: return err
-	}
-	if NeedsExistingSession(authRequest) {
-		// session, err := p.storage.CheckSession(authRequest)
-		// if err != nil {
-		// 	//TODO: return err
-		// }
 	}
 	// err = p.storage.CreateAuthRequest(authRequest)
 	// if err != nil {

@@ -1,4 +1,4 @@
-package server
+package op
 
 type Configuration interface {
 	Issuer() string
