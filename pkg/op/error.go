@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -47,8 +48,13 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq *oidc.Auth
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func ExchangeRequestError(w http.ResponseWriter, r *http.Request, exchangeReq *oidc.AuthRequest, err error) {
-
+func ExchangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
+	e, ok := err.(*OAuthError)
+	if !ok {
+		e.ErrorType = ServerError
+		e.Description = err.Error()
+	}
+	utils.MarshalJSON(w, e)
 }
 
 type OAuthError struct {

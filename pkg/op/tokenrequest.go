@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/caos/oidc/pkg/utils"
+
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -21,46 +23,55 @@ import (
 // 	return ParseTokenExchangeRequest(w, r)
 // }
 
-func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage, decoder *schema.Decoder) (*oidc.AccessTokenResponse, error) {
+func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage, decoder *schema.Decoder) {
 	err := r.ParseForm()
 	if err != nil {
-		return nil, errors.New("Unimplemented") //TODO: impl
+		ExchangeRequestError(w, r, ErrInvalidRequest("error parsing form"))
+		return
 	}
 	tokenReq := new(oidc.AccessTokenRequest)
 
 	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
-		return nil, err
+		ExchangeRequestError(w, r, ErrInvalidRequest("error decoding form"))
+		return
 	}
 	if tokenReq.Code == "" {
-		return nil, errors.New("code missing")
+		ExchangeRequestError(w, r, ErrInvalidRequest("code missing"))
+		return
 	}
 
 	client, err := AuthorizeClient(r, tokenReq, storage)
 	if err != nil {
-		return nil, err
+		ExchangeRequestError(w, r, err)
+		return
 	}
 	authReq, err := storage.AuthRequestByCode(client, tokenReq.Code, tokenReq.RedirectURI)
 	if err != nil {
-
+		ExchangeRequestError(w, r, err)
+		return
 	}
 	err = storage.DeleteAuthRequestAndCode(authReq.ID, tokenReq.Code)
 	if err != nil {
-
+		ExchangeRequestError(w, r, err)
+		return
 	}
 	accessToken, err := CreateAccessToken()
 	if err != nil {
-
+		ExchangeRequestError(w, r, err)
+		return
 	}
 	idToken, err := CreateIDToken(nil, "", nil)
 	if err != nil {
-
+		ExchangeRequestError(w, r, err)
+		return
 	}
 
-	return &oidc.AccessTokenResponse{
+	resp := &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
 		IDToken:     idToken,
-	}, nil
+	}
+	utils.MarshalJSON(w, resp)
 }
 
 func CreateAccessToken() (string, error) {

@@ -1,7 +1,6 @@
 package op
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -234,16 +233,11 @@ func (p *DefaultOP) HandleAuthorizeCallback(w http.ResponseWriter, r *http.Reque
 func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 	reqType := r.FormValue("grant_type")
 	if reqType == "" {
-		ExchangeRequestError(w, r, nil, ErrInvalidRequest("grant_type missing"))
+		ExchangeRequestError(w, r, ErrInvalidRequest("grant_type missing"))
 		return
 	}
 	if reqType == string(oidc.GrantTypeCode) {
-		token, err := CodeExchange(w, r, p.storage, p.decoder)
-		if err != nil {
-
-		}
-		b, _ := json.Marshal(token)
-		w.Write(b)
+		CodeExchange(w, r, p.storage, p.decoder)
 		return
 	}
 	p.handleTokenExchange(w, r)
