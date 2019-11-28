@@ -58,6 +58,24 @@ type AuthRequest struct {
 	ACRValues   []string `schema:"acr_values"`
 }
 
+// func (a *AuthRequest) GetID() string {
+// 	return a.ID
+// }
+
+// func (a *AuthRequest) GetClientID() string {
+// 	return a.ClientID
+// }
+
+func (a *AuthRequest) GetRedirectURI() string {
+	return a.RedirectURI
+}
+func (a *AuthRequest) GetResponseType() ResponseType {
+	return a.ResponseType
+}
+func (a *AuthRequest) GetState() string {
+	return a.State
+}
+
 type TokenRequest interface {
 	// GrantType GrantType `schema:"grant_type"`
 	GrantType() GrantType

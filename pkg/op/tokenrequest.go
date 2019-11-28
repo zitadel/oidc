@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"gopkg.in/square/go-jose.v2"
+
 	"github.com/caos/oidc/pkg/op/u"
 	"github.com/caos/oidc/pkg/utils"
 
@@ -52,7 +54,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, dec
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	err = storage.DeleteAuthRequestAndCode(authReq.ID, tokenReq.Code)
+	err = storage.DeleteAuthRequestAndCode(authReq.GetID(), tokenReq.Code)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -62,7 +64,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, dec
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	idToken, err := CreateIDToken(nil, "", nil)
+	idToken, err := CreateIDToken("", authReq, "", time.Now(), time.Now(), "", nil)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -79,28 +81,31 @@ func CreateAccessToken() (string, error) {
 	return "accessToken", nil
 }
 
-func CreateIDToken(authReq *oidc.AuthRequest, atHash string, signer u.Signer) (string, error) {
-	var issuer, sub, acr string
-	var aud, amr []string
-	var exp, iat, authTime time.Time
-
+func CreateIDToken(issuer string, authReq u.AuthRequest, sub string, exp, authTime time.Time, accessToken string, signer u.Signer) (string, error) {
+	var err error
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
-		Subject:                             sub,
-		Audiences:                           aud,
+		Subject:                             authReq.GetSubject(),
+		Audiences:                           authReq.GetAudience(),
 		Expiration:                          exp,
-		IssuedAt:                            iat,
+		IssuedAt:                            time.Now().UTC(),
 		AuthTime:                            authTime,
-		Nonce:                               authReq.Nonce,
-		AuthenticationContextClassReference: acr,
-		AuthenticationMethodsReferences:     amr,
-		AuthorizedParty:                     authReq.ClientID,
-		AccessTokenHash:                     atHash,
+		Nonce:                               authReq.GetNonce(),
+		AuthenticationContextClassReference: authReq.GetACR(),
+		AuthenticationMethodsReferences:     authReq.GetAMR(),
+		AuthorizedParty:                     authReq.GetClientID(),
+	}
+	if accessToken != "" {
+		var alg jose.SignatureAlgorithm
+		claims.AccessTokenHash, err = oidc.AccessTokenHash(accessToken, alg) //TODO: alg
+		if err != nil {
+			return "", err
+		}
 	}
 	return signer.Sign(claims)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage u.Storage) (oidc.Client, error) {
+func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage u.Storage) (u.Client, error) {
 	if tokenReq.ClientID == "" {
 		clientID, clientSecret, ok := r.BasicAuth()
 		if ok {

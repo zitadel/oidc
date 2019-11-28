@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -19,7 +20,7 @@ type Authorizer interface {
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
 	Signe() u.Signer
-	ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
+	// ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
 }
 
 // type Signer interface {
@@ -32,7 +33,7 @@ type ValidationAuthorizer interface {
 }
 
 // type errorHandler func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
-type callbackHandler func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request)
+// type callbackHandler func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request)
 
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	err := r.ParseForm()
@@ -58,18 +59,18 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		return
 	}
 
-	err = authorizer.Storage().CreateAuthRequest(authReq)
+	req, err := authorizer.Storage().CreateAuthRequest(authReq)
 	if err != nil {
 		AuthRequestError(w, r, authReq, err)
 		return
 	}
 
-	client, err := authorizer.Storage().GetClientByClientID(authReq.ClientID)
+	client, err := authorizer.Storage().GetClientByClientID(req.GetClientID())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err)
+		AuthRequestError(w, r, req, err)
 		return
 	}
-	RedirectToLogin(authReq, client, w, r)
+	RedirectToLogin(req, client, w, r)
 }
 
 func ValidateAuthRequest(authReq *oidc.AuthRequest, storage u.Storage) error {
@@ -115,15 +116,15 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 		return nil
 	}
 	if responseType == oidc.ResponseTypeCode {
-		if strings.HasPrefix(uri, "http://") && oidc.IsConfidentialType(client) {
+		if strings.HasPrefix(uri, "http://") && u.IsConfidentialType(client) {
 			return nil
 		}
-		if client.ApplicationType() == oidc.ApplicationTypeNative {
+		if client.ApplicationType() == u.ApplicationTypeNative {
 			return nil
 		}
 		return ErrInvalidRequest("redirect_uri not allowed 2")
 	} else {
-		if client.ApplicationType() != oidc.ApplicationTypeNative {
+		if client.ApplicationType() != u.ApplicationTypeNative {
 			return ErrInvalidRequest("redirect_uri not allowed 3")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
@@ -133,8 +134,8 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 	return nil
 }
 
-func RedirectToLogin(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
-	login := client.LoginURL(authReq.ID)
+func RedirectToLogin(authReq u.AuthRequest, client u.Client, w http.ResponseWriter, r *http.Request) {
+	login := client.LoginURL(authReq.GetID())
 	http.Redirect(w, r, login, http.StatusFound)
 }
 
@@ -150,20 +151,20 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 	AuthResponse(authReq, authorizer, w, r)
 }
 
-func AuthResponse(authReq *oidc.AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
+func AuthResponse(authReq u.AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	var callback string
-	if authReq.ResponseType == oidc.ResponseTypeCode {
-		callback = fmt.Sprintf("%s?code=%s", authReq.RedirectURI, "test")
+	if authReq.GetResponseType() == oidc.ResponseTypeCode {
+		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), "test")
 	} else {
 		var accessToken string
 		var err error
-		if authReq.ResponseType != oidc.ResponseTypeIDTokenOnly {
+		if authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly {
 			accessToken, err = CreateAccessToken()
 			if err != nil {
 
 			}
 		}
-		idToken, err := CreateIDToken(authReq, accessToken, authorizer.Signe())
+		idToken, err := CreateIDToken("", authReq, accessToken, time.Now(), time.Now(), "", authorizer.Signe())
 		if err != nil {
 
 		}
@@ -175,7 +176,7 @@ func AuthResponse(authReq *oidc.AuthRequest, authorizer Authorizer, w http.Respo
 		values := make(map[string][]string)
 		authorizer.Encoder().Encode(resp, values)
 		v := url.Values(values)
-		callback = fmt.Sprintf("%s#%s", authReq.RedirectURI, v.Encode())
+		callback = fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), v.Encode())
 	}
 	http.Redirect(w, r, callback, http.StatusFound)
 }

@@ -1,4 +1,4 @@
-package oidc
+package u
 
 type Client interface {
 	RedirectURIs() []string

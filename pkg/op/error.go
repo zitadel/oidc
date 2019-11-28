@@ -3,6 +3,8 @@ package op
 import (
 	"net/http"
 
+	"github.com/caos/oidc/pkg/op/u"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
@@ -14,17 +16,17 @@ const (
 
 type errorType string
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq u.ErrAuthRequest, err error) {
 	if authReq == nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if authReq.RedirectURI == "" {
+	if authReq.GetRedirectURI() == "" {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	url := authReq.RedirectURI
-	if authReq.ResponseType == oidc.ResponseTypeCode {
+	url := authReq.GetRedirectURI()
+	if authReq.GetResponseType() == oidc.ResponseTypeCode {
 		url += "?"
 	} else {
 		url += "#"
@@ -42,8 +44,8 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq *oidc.Auth
 	if description != "" {
 		url += "&error_description=" + description
 	}
-	if authReq.State != "" {
-		url += "&state=" + authReq.State
+	if authReq.GetState() != "" {
+		url += "&state=" + authReq.GetState()
 	}
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -77,17 +79,17 @@ var (
 	}
 )
 
-func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest) {
+func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request, authReq u.AuthRequest) {
 	if authReq == nil {
 		http.Error(w, e.Error(), http.StatusBadRequest)
 		return
 	}
-	if authReq.RedirectURI == "" {
+	if authReq.GetRedirectURI() == "" {
 		http.Error(w, e.Error(), http.StatusBadRequest)
 		return
 	}
-	url := authReq.RedirectURI
-	if authReq.ResponseType == oidc.ResponseTypeCode {
+	url := authReq.GetRedirectURI()
+	if authReq.GetResponseType() == oidc.ResponseTypeCode {
 		url += "?"
 	} else {
 		url += "#"
@@ -96,8 +98,8 @@ func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request,
 	if e.Description != "" {
 		url += "&error_description=" + e.Description
 	}
-	if authReq.State != "" {
-		url += "&state=" + authReq.State
+	if authReq.GetState() != "" {
+		url += "&state=" + authReq.GetState()
 	}
 	http.Redirect(w, r, url, http.StatusFound)
 }

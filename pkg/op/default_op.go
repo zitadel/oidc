@@ -168,9 +168,9 @@ func (p *DefaultOP) Signe() u.Signer {
 	// return
 }
 
-func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-	return AuthRequestError
-}
+// func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+// 	return AuthRequestError
+// }
 
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	Authorize(w, r, p)
