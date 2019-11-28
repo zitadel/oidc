@@ -15,8 +15,10 @@ type OpenIDProvider interface {
 	// Storage() Storage
 	HandleDiscovery(w http.ResponseWriter, r *http.Request)
 	HandleAuthorize(w http.ResponseWriter, r *http.Request)
+	HandleAuthorizeCallback(w http.ResponseWriter, r *http.Request)
 	HandleExchange(w http.ResponseWriter, r *http.Request)
 	HandleUserinfo(w http.ResponseWriter, r *http.Request)
+	// Storage() Storage
 	HttpHandler() *http.Server
 }
 
@@ -24,6 +26,7 @@ func CreateRouter(o OpenIDProvider) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
 	router.HandleFunc(o.AuthorizationEndpoint().Relative(), o.HandleAuthorize)
+	router.HandleFunc(o.AuthorizationEndpoint().Relative()+"/{id}", o.HandleAuthorizeCallback)
 	router.HandleFunc(o.TokenEndpoint().Relative(), o.HandleExchange)
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), o.HandleUserinfo)
 	return router

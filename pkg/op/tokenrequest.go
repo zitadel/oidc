@@ -3,6 +3,7 @@ package op
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/schema"
 
@@ -20,18 +21,14 @@ import (
 // 	return ParseTokenExchangeRequest(w, r)
 // }
 
-func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage) (*oidc.AccessTokenResponse, error) {
+func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage, decoder *schema.Decoder) (*oidc.AccessTokenResponse, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, errors.New("Unimplemented") //TODO: impl
 	}
 	tokenReq := new(oidc.AccessTokenRequest)
 
-	//TODO:
-	d := schema.NewDecoder()
-	d.IgnoreUnknownKeys(true)
-
-	err = d.Decode(tokenReq, r.Form)
+	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +52,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage) (*oid
 	if err != nil {
 
 	}
-	idToken, err := CreateIDToken()
+	idToken, err := CreateIDToken(nil, "", nil)
 	if err != nil {
 
 	}
@@ -67,10 +64,32 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage) (*oid
 }
 
 func CreateAccessToken() (string, error) {
-	return "", nil
+	return "accessToken", nil
 }
-func CreateIDToken() (string, error) {
-	return "", nil
+
+type Signer interface {
+	Sign(claims *oidc.IDTokenClaims) (string, error)
+}
+
+func CreateIDToken(authReq *oidc.AuthRequest, atHash string, signer Signer) (string, error) {
+	var issuer, sub, acr string
+	var aud, amr []string
+	var exp, iat, authTime time.Time
+
+	claims := &oidc.IDTokenClaims{
+		Issuer:                              issuer,
+		Subject:                             sub,
+		Audiences:                           aud,
+		Expiration:                          exp,
+		IssuedAt:                            iat,
+		AuthTime:                            authTime,
+		Nonce:                               authReq.Nonce,
+		AuthenticationContextClassReference: acr,
+		AuthenticationMethodsReferences:     amr,
+		AuthorizedParty:                     authReq.ClientID,
+		AccessTokenHash:                     atHash,
+	}
+	return signer.Sign(claims)
 }
 
 func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage Storage) (oidc.Client, error) {

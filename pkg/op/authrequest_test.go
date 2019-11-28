@@ -1,12 +1,15 @@
 package op
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/caos/oidc/pkg/op"
-	"github.com/caos/oidc/pkg/op/mock"
+	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/op/mock"
 )
 
 func TestValidateAuthRequest(t *testing.T) {
@@ -58,11 +61,12 @@ func TestValidateAuthRequest(t *testing.T) {
 	}
 }
 
-func TestValidateRedirectURI(t *testing.T) {
+func TestValidateAuthReqRedirectURI(t *testing.T) {
 	type args struct {
-		uri      string
-		clientID string
-		storage  op.Storage
+		uri          string
+		clientID     string
+		responseType oidc.ResponseType
+		storage      op.Storage
 	}
 	tests := []struct {
 		name    string
@@ -71,40 +75,120 @@ func TestValidateRedirectURI(t *testing.T) {
 	}{
 		{
 			"empty fails",
-			args{"", "", nil},
+			args{"", "", oidc.ResponseTypeCode, nil},
 			true,
 		},
 		{
 			"unregistered fails",
-			args{"https://unregistered.com/callback", "client_id", mock.NewMockStorageExpectValidClientID(t)},
+			args{"https://unregistered.com/callback", "web_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
 			true,
 		},
 		{
-			"http not allowed fails",
-			args{"http://registered.com/callback", "client_id", mock.NewMockStorageExpectValidClientID(t)},
+			"storage error fails",
+			args{"https://registered.com/callback", "non_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectInvalidClientID(t)},
 			true,
 		},
 		{
-			"registered https ok",
-			args{"https://registered.com/callback", "client_id", mock.NewMockStorageExpectValidClientID(t)},
+			"code flow registered http not confidential fails",
+			args{"http://registered.com/callback", "useragent_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			true,
+		},
+		{
+			"code flow registered http confidential ok",
+			args{"http://registered.com/callback", "web_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
 			false,
 		},
 		{
-			"registered http allowed ok",
-			args{"http://localhost:9999/callback", "client_id", mock.NewMockStorageExpectValidClientID(t)},
+			"code flow registered custom not native fails",
+			args{"custom://callback", "useragent_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			true,
+		},
+		{
+			"code flow registered custom native ok",
+			args{"http://registered.com/callback", "native_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
 			false,
 		},
 		{
-			"registered scheme ok",
-			args{"custom://callback", "client_id", mock.NewMockStorageExpectValidClientID(t)},
+			"implicit flow registered ok",
+			args{"https://registered.com/callback", "useragent_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
 			false,
+		},
+		{
+			"implicit flow registered http localhost native ok",
+			args{"http://localhost:9999/callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			false,
+		},
+		{
+			"implicit flow registered http localhost user agent fails",
+			args{"http://localhost:9999/callback", "useragent_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			true,
+		},
+		{
+			"implicit flow http non localhost fails",
+			args{"http://registered.com/callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			true,
+		},
+		{
+			"implicit flow custom fails",
+			args{"custom://callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateAuthReqRedirectURI(tt.args.uri, tt.args.clientID, tt.args.storage); (err != nil) != tt.wantErr {
-				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ValidateAuthReqRedirectURI(tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestValidateAuthReqScopes(t *testing.T) {
+	type args struct {
+		scopes []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"scopes missing fails", args{}, true,
+		},
+		{
+			"scope openid missing fails", args{[]string{"email"}}, true,
+		},
+		{
+			"scope ok", args{[]string{"openid"}}, false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAuthorize(t *testing.T) {
+	type args struct {
+		w       http.ResponseWriter
+		r       *http.Request
+		storage Storage
+		decoder *schema.Decoder
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"parsing fails", args{httptest.NewRecorder(), &http.Request{Method: "POST", Body: nil}, nil, nil}},
+		{"decoding fails", args{httptest.NewRecorder(), &http.Request{}, nil, schema.NewDecoder()}},
+		{"decoding fails", args{httptest.NewRecorder(), &http.Request{}, nil, schema.NewDecoder()}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			Authorize(tt.args.w, tt.args.r, tt.args.storage, tt.args.decoder)
 		})
 	}
 }

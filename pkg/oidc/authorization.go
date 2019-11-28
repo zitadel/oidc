@@ -78,17 +78,12 @@ func (a *AccessTokenRequest) GrantType() GrantType {
 }
 
 type AccessTokenResponse struct {
-	AccessToken  string `json:"access_token,omitempty"`
-	TokenType    string `json:"token_type,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    uint64 `json:"expires_in,omitempty"`
-	IDToken      string `json:"id_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty" schema:"access_token,omitempty"`
+	TokenType    string `json:"token_type,omitempty" schema:"token_type,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty" schema:"refresh_token,omitempty"`
+	ExpiresIn    uint64 `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
+	IDToken      string `json:"id_token,omitempty" schema:"id_token,omitempty"`
 }
-
-// func (a AccessTokenRequest) UnmarshalText(text []byte) error {
-// 	fmt.Println(string(text))
-// 	return nil
-// }
 
 type TokenExchangeRequest struct {
 	subjectToken       string   `schema:"subject_token"`

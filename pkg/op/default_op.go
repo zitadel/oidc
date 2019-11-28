@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/gorilla/schema"
+
 	"github.com/caos/oidc/pkg/utils"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -18,6 +20,8 @@ type DefaultOP struct {
 	discoveryConfig *oidc.DiscoveryConfiguration
 	storage         Storage
 	http            *http.Server
+	decoder         *schema.Decoder
+	encoder         *schema.Encoder
 }
 
 type Config struct {
@@ -133,6 +137,10 @@ func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (Ope
 		Addr:    ":" + config.Port,
 		Handler: router,
 	}
+	p.decoder = schema.NewDecoder()
+	p.decoder.IgnoreUnknownKeys(true)
+
+	p.encoder = schema.NewEncoder()
 
 	return p, nil
 }
@@ -157,7 +165,6 @@ func (e Endpoint) Validate() error {
 
 func (p *DefaultOP) AuthorizationEndpoint() Endpoint {
 	return p.endpoints.Authorization
-
 }
 
 func (p *DefaultOP) TokenEndpoint() Endpoint {
@@ -180,11 +187,28 @@ func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 	utils.MarshalJSON(w, p.discoveryConfig)
 }
 
+func (p *DefaultOP) Decoder() *schema.Decoder {
+	return p.decoder
+}
+
+func (p *DefaultOP) Encoder() *schema.Encoder {
+	return p.encoder
+}
+
+func (p *DefaultOP) Storage() Storage {
+	return p.storage
+}
+
+func (p *DefaultOP) Signer() Signer {
+	// return p.signer
+	return nil
+}
+
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
-	_, err := Authorize(w, r, p.storage)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-	}
+	Authorize(w, r, p)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), 400)
+	// }
 	// authRequest, err := ParseAuthRequest(w, r)
 	// if err != nil {
 	// 	//TODO: return err
@@ -203,13 +227,18 @@ func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	// RedirectToLogin(authRequest, client, w, r)
 }
 
+func (p *DefaultOP) HandleAuthorizeCallback(w http.ResponseWriter, r *http.Request) {
+	AuthorizeCallback(w, r, p)
+}
+
 func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 	reqType := r.FormValue("grant_type")
 	if reqType == "" {
-		//return errors.New("grant_type missing") //TODO: impl
+		ExchangeRequestError(w, r, nil, ErrInvalidRequest("grant_type missing"))
+		return
 	}
 	if reqType == string(oidc.GrantTypeCode) {
-		token, err := CodeExchange(w, r, p.storage)
+		token, err := CodeExchange(w, r, p.storage, p.decoder)
 		if err != nil {
 
 		}

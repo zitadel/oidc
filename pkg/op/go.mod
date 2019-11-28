@@ -18,6 +18,7 @@ require (
 	github.com/caos/utils v0.0.0-20191104132131-b318678afbef
 	github.com/caos/utils/logging v0.0.0-20191104132131-b318678afbef
 	github.com/golang/mock v1.3.1
+	github.com/google/go-querystring v1.0.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/schema v1.1.0
 	github.com/stretchr/testify v1.4.0

@@ -1,54 +1,76 @@
 package op
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
 	str_utils "github.com/caos/utils/strings"
 )
 
-func Authorize(w http.ResponseWriter, r *http.Request, storage Storage) (*oidc.AuthRequest, error) {
+type Authorizer interface {
+	Storage() Storage
+	Decoder() *schema.Decoder
+	Encoder() *schema.Encoder
+	Signer() Signer
+}
+
+type ValidationAuthorizer interface {
+	Authorizer
+	ValidateAuthRequest(*oidc.AuthRequest, Storage) error
+}
+
+func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	err := r.ParseForm()
 	if err != nil {
-		return nil, errors.New("Unimplemented") //TODO: impl
+		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form: %v", err))
+		return
 	}
 	authReq := new(oidc.AuthRequest)
 
-	//TODO:
-	d := schema.NewDecoder()
-	d.IgnoreUnknownKeys(true)
+	err = authorizer.Decoder().Decode(authReq, r.Form)
+	if err != nil {
+		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)))
+		return
+	}
 
-	err = d.Decode(authReq, r.Form)
-	if err != nil {
-		return nil, err
+	validation := ValidateAuthRequest
+	if validater, ok := authorizer.(ValidationAuthorizer); ok {
+		validation = validater.ValidateAuthRequest
 	}
-	if err = ValidateAuthRequest(authReq, storage); err != nil {
-		return nil, err
+	if err := validation(authReq, authorizer.Storage()); err != nil {
+		AuthRequestError(w, r, authReq, err)
+		return
 	}
-	err = storage.CreateAuthRequest(authReq)
+
+	err = authorizer.Storage().CreateAuthRequest(authReq)
 	if err != nil {
-		//TODO: return err
+		AuthRequestError(w, r, authReq, err)
+		return
 	}
-	client, err := storage.GetClientByClientID(authReq.ClientID)
+
+	client, err := authorizer.Storage().GetClientByClientID(authReq.ClientID)
 	if err != nil {
-		return nil, err
+		AuthRequestError(w, r, authReq, err)
+		return
 	}
 	RedirectToLogin(authReq, client, w, r)
-	return nil, nil
 }
 
 func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
 		return err
 	}
-	if err := ValidateAuthReqRedirectURI(authReq.RedirectURI, authReq.ClientID, storage); err != nil {
+	if err := ValidateAuthReqRedirectURI(authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
 		return err
 	}
 	return nil
-	return errors.New("Unimplemented") //TODO: impl https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.2
+	// return errors.New("Unimplemented") //TODO: impl https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.2
 
 	// if NeedsExistingSession(authRequest) {
 	// 	session, err := storage.CheckSession(authRequest)
@@ -60,24 +82,43 @@ func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
 
 func ValidateAuthReqScopes(scopes []string) error {
 	if len(scopes) == 0 {
-		return errors.New("scope missing")
+		return ErrInvalidRequest("scope missing")
 	}
 	if !str_utils.Contains(scopes, oidc.ScopeOpenID) {
-		return errors.New("scope openid missing")
+		return ErrInvalidRequest("scope openid missing")
 	}
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(uri, client_id string, storage Storage) error {
+func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage Storage) error {
 	if uri == "" {
-		return errors.New("redirect_uri must not be empty") //TODO:
+		return ErrInvalidRequest("redirect_uri must not be empty")
 	}
 	client, err := storage.GetClientByClientID(client_id)
 	if err != nil {
-		return err
+		return ErrServerError(err.Error())
 	}
 	if !str_utils.Contains(client.RedirectURIs(), uri) {
-		return errors.New("redirect_uri not allowed")
+		return ErrInvalidRequest("redirect_uri not allowed")
+	}
+	if strings.HasPrefix(uri, "https://") {
+		return nil
+	}
+	if responseType == oidc.ResponseTypeCode {
+		if strings.HasPrefix(uri, "http://") && oidc.IsConfidentialType(client) {
+			return nil
+		}
+		if client.ApplicationType() == oidc.ApplicationTypeNative {
+			return nil
+		}
+		return ErrInvalidRequest("redirect_uri not allowed 2")
+	} else {
+		if client.ApplicationType() != oidc.ApplicationTypeNative {
+			return ErrInvalidRequest("redirect_uri not allowed 3")
+		}
+		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
+			return ErrInvalidRequest("redirect_uri not allowed 4")
+		}
 	}
 	return nil
 }
@@ -85,4 +126,46 @@ func ValidateAuthReqRedirectURI(uri, client_id string, storage Storage) error {
 func RedirectToLogin(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
 	login := client.LoginURL(authReq.ID)
 	http.Redirect(w, r, login, http.StatusFound)
+}
+
+func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
+	params := mux.Vars(r)
+	id := params["id"]
+
+	authReq, err := authorizer.Storage().AuthRequestByID(id)
+	if err != nil {
+		AuthRequestError(w, r, nil, err)
+		return
+	}
+	AuthResponse(authReq, authorizer, w, r)
+}
+
+func AuthResponse(authReq *oidc.AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
+	var callback string
+	if authReq.ResponseType == oidc.ResponseTypeCode {
+		callback = fmt.Sprintf("%s?code=%s", authReq.RedirectURI, "test")
+	} else {
+		var accessToken string
+		var err error
+		if authReq.ResponseType != oidc.ResponseTypeIDTokenOnly {
+			accessToken, err = CreateAccessToken()
+			if err != nil {
+
+			}
+		}
+		idToken, err := CreateIDToken(authReq, accessToken, authorizer.Signer())
+		if err != nil {
+
+		}
+		resp := &oidc.AccessTokenResponse{
+			AccessToken: accessToken,
+			IDToken:     idToken,
+			TokenType:   "Bearer",
+		}
+		values := make(map[string][]string)
+		authorizer.Encoder().Encode(resp, values)
+		v := url.Values(values)
+		callback = fmt.Sprintf("%s#%s", authReq.RedirectURI, v.Encode())
+	}
+	http.Redirect(w, r, callback, http.StatusFound)
 }
