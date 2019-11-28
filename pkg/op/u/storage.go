@@ -1,4 +1,4 @@
-package op
+package u
 
 import "github.com/caos/oidc/pkg/oidc"
 

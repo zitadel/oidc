@@ -10,25 +10,35 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op/u"
 	str_utils "github.com/caos/utils/strings"
 )
 
 type Authorizer interface {
-	Storage() Storage
+	Storage() u.Storage
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
-	Signer() Signer
+	Signe() u.Signer
+	ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
 }
+
+// type Signer interface {
+// 	Sign(claims *oidc.IDTokenClaims) (string, error)
+// }
 
 type ValidationAuthorizer interface {
 	Authorizer
-	ValidateAuthRequest(*oidc.AuthRequest, Storage) error
+	ValidateAuthRequest(*oidc.AuthRequest, u.Storage) error
 }
+
+// type errorHandler func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
+type callbackHandler func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request)
 
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	err := r.ParseForm()
 	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form: %v", err))
+		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"))
+		// AuthRequestError(w, r, nil, )
 		return
 	}
 	authReq := new(oidc.AuthRequest)
@@ -62,7 +72,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(authReq, client, w, r)
 }
 
-func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
+func ValidateAuthRequest(authReq *oidc.AuthRequest, storage u.Storage) error {
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
 		return err
 	}
@@ -90,7 +100,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage Storage) error {
+func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage u.Storage) error {
 	if uri == "" {
 		return ErrInvalidRequest("redirect_uri must not be empty")
 	}
@@ -153,7 +163,7 @@ func AuthResponse(authReq *oidc.AuthRequest, authorizer Authorizer, w http.Respo
 
 			}
 		}
-		idToken, err := CreateIDToken(authReq, accessToken, authorizer.Signer())
+		idToken, err := CreateIDToken(authReq, accessToken, authorizer.Signe())
 		if err != nil {
 
 		}

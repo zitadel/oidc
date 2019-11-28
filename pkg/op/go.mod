@@ -10,6 +10,8 @@ replace github.com/caos/oidc/pkg/utils => /Users/livio/workspaces/go/src/github.
 
 replace github.com/caos/oidc/pkg/op => /Users/livio/workspaces/go/src/github.com/caos/oidc/pkg/op
 
+replace github.com/caos/oidc/pkg/op/u => /Users/livio/workspaces/go/src/github.com/caos/oidc/pkg/op/u
+
 require (
 	github.com/caos/oidc v0.0.0-20191119072320-6412f213450c
 	github.com/caos/oidc/pkg/oidc v0.0.0-00010101000000-000000000000

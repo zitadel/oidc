@@ -6,6 +6,13 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 )
 
+type Signer struct {
+}
+
+func (s *Signer) Sign(*oidc.IDTokenClaims) (string, error) {
+	return "sdsa", nil
+}
+
 type Storage struct {
 }
 
@@ -64,5 +71,5 @@ func (c *ConfClient) LoginURL(id string) string {
 }
 
 func (c *ConfClient) ApplicationType() oidc.ApplicationType {
-	return oidc.ApplicationTypeWeb
+	return oidc.ApplicationTypeNative
 }

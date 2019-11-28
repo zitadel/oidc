@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/caos/oidc/pkg/op/u"
 	"github.com/caos/oidc/pkg/utils"
 
 	"github.com/gorilla/schema"
@@ -23,7 +24,7 @@ import (
 // 	return ParseTokenExchangeRequest(w, r)
 // }
 
-func CodeExchange(w http.ResponseWriter, r *http.Request, storage Storage, decoder *schema.Decoder) {
+func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, decoder *schema.Decoder) {
 	err := r.ParseForm()
 	if err != nil {
 		ExchangeRequestError(w, r, ErrInvalidRequest("error parsing form"))
@@ -78,11 +79,7 @@ func CreateAccessToken() (string, error) {
 	return "accessToken", nil
 }
 
-type Signer interface {
-	Sign(claims *oidc.IDTokenClaims) (string, error)
-}
-
-func CreateIDToken(authReq *oidc.AuthRequest, atHash string, signer Signer) (string, error) {
+func CreateIDToken(authReq *oidc.AuthRequest, atHash string, signer u.Signer) (string, error) {
 	var issuer, sub, acr string
 	var aud, amr []string
 	var exp, iat, authTime time.Time
@@ -103,7 +100,7 @@ func CreateIDToken(authReq *oidc.AuthRequest, atHash string, signer Signer) (str
 	return signer.Sign(claims)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage Storage) (oidc.Client, error) {
+func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage u.Storage) (oidc.Client, error) {
 	if tokenReq.ClientID == "" {
 		clientID, clientSecret, ok := r.BasicAuth()
 		if ok {
@@ -124,7 +121,7 @@ func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.Tok
 	return nil, errors.New("Unimplemented") //TODO: impl
 }
 
-func ValidateTokenExchangeRequest(tokenReq oidc.TokenRequest, storage Storage) error {
+func ValidateTokenExchangeRequest(tokenReq oidc.TokenRequest, storage u.Storage) error {
 
 	return errors.New("Unimplemented") //TODO: impl
 }

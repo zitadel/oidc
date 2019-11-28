@@ -1,23 +1,36 @@
 package op
 
 import (
-	"errors"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/gorilla/schema"
 
-	"github.com/caos/oidc/pkg/utils"
-
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op/u"
+)
+
+const (
+	defaultAuthorizationEndpoint = "authorize"
+	defaulTokenEndpoint          = "oauth/token"
+	defaultIntrospectEndpoint    = "introspect"
+	defaultUserinfoEndpoint      = "userinfo"
+)
+
+var (
+	DefaultEndpoints = &endpoints{
+		Authorization:         defaultAuthorizationEndpoint,
+		Token:                 defaulTokenEndpoint,
+		IntrospectionEndpoint: defaultIntrospectEndpoint,
+		Userinfo:              defaultUserinfoEndpoint,
+	}
 )
 
 type DefaultOP struct {
 	config          *Config
 	endpoints       *endpoints
 	discoveryConfig *oidc.DiscoveryConfiguration
-	storage         Storage
+	storage         u.Storage
+	signer          u.Signer
 	http            *http.Server
 	decoder         *schema.Decoder
 	encoder         *schema.Encoder
@@ -77,42 +90,7 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-const (
-	defaultAuthorizationEndpoint = "authorize"
-	defaulTokenEndpoint          = "oauth/token"
-	defaultIntrospectEndpoint    = "introspect"
-	defaultUserinfoEndpoint      = "userinfo"
-)
-
-func CreateDiscoveryConfig(c Configuration) *oidc.DiscoveryConfiguration {
-	return &oidc.DiscoveryConfiguration{
-		Issuer:                c.Issuer(),
-		AuthorizationEndpoint: c.AuthorizationEndpoint().Absolute(c.Issuer()),
-		TokenEndpoint:         c.TokenEndpoint().Absolute(c.Issuer()),
-		// IntrospectionEndpoint: c.Intro().Absolute(c.Issuer()),
-		UserinfoEndpoint: c.UserinfoEndpoint().Absolute(c.Issuer()),
-		// EndSessionEndpoint: c.TokenEndpoint().Absolute(c.Issuer())(c.EndSessionEndpoint),
-		// CheckSessionIframe: c.TokenEndpoint().Absolute(c.Issuer())(c.CheckSessionIframe),
-		// JwksURI:            c.TokenEndpoint().Absolute(c.Issuer())(c.JwksURI),
-		// ScopesSupported:                   oidc.SupportedScopes,
-		// ResponseTypesSupported:            responseTypes,
-		// GrantTypesSupported:               oidc.SupportedGrantTypes,
-		// ClaimsSupported:                   oidc.SupportedClaims,
-		// IdTokenSigningAlgValuesSupported:  []string{keys.SigningAlgorithm},
-		// SubjectTypesSupported:             []string{"public"},
-		// TokenEndpointAuthMethodsSupported:
-
-	}
-}
-
-var DefaultEndpoints = &endpoints{
-	Authorization:         defaultAuthorizationEndpoint,
-	Token:                 defaulTokenEndpoint,
-	IntrospectionEndpoint: defaultIntrospectEndpoint,
-	Userinfo:              defaultUserinfoEndpoint,
-}
-
-func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
+func NewDefaultOP(config *Config, storage u.Storage, signer u.Signer, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	if err := ValidateIssuer(config.Issuer); err != nil {
 		return nil, err
 	}
@@ -120,6 +98,7 @@ func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (Ope
 	p := &DefaultOP{
 		config:    config,
 		storage:   storage,
+		signer:    signer,
 		endpoints: DefaultEndpoints,
 	}
 
@@ -148,20 +127,6 @@ func (p *DefaultOP) Issuer() string {
 	return p.config.Issuer
 }
 
-type Endpoint string
-
-func (e Endpoint) Relative() string {
-	return relativeEndpoint(string(e))
-}
-
-func (e Endpoint) Absolute(host string) string {
-	return absoluteEndpoint(host, string(e))
-}
-
-func (e Endpoint) Validate() error {
-	return nil //TODO:
-}
-
 func (p *DefaultOP) AuthorizationEndpoint() Endpoint {
 	return p.endpoints.Authorization
 }
@@ -183,7 +148,7 @@ func (p *DefaultOP) HttpHandler() *http.Server {
 }
 
 func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
-	utils.MarshalJSON(w, p.discoveryConfig)
+	Discover(w, p.discoveryConfig)
 }
 
 func (p *DefaultOP) Decoder() *schema.Decoder {
@@ -194,13 +159,17 @@ func (p *DefaultOP) Encoder() *schema.Encoder {
 	return p.encoder
 }
 
-func (p *DefaultOP) Storage() Storage {
+func (p *DefaultOP) Storage() u.Storage {
 	return p.storage
 }
 
-func (p *DefaultOP) Signer() Signer {
-	// return p.signer
-	return nil
+func (p *DefaultOP) Signe() u.Signer {
+	return p.signer
+	// return
+}
+
+func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+	return AuthRequestError
 }
 
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
@@ -269,57 +238,4 @@ func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) 
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
 
-}
-
-// func (c *Config) DefaultAndValidate() error {
-// 	if err := ValidateIssuer(c.Issuer); err != nil {
-// 		return err
-// 	}
-// 	if c.AuthorizationEndpoint == "" {
-// 		c.AuthorizationEndpoint = defaultAuthorizationEndpoint
-// 	}
-// 	if c.TokenEndpoint == "" {
-// 		c.TokenEndpoint = defaulTokenEndpoint
-// 	}
-// 	if c.IntrospectionEndpoint == "" {
-// 		c.IntrospectionEndpoint = defaultIntrospectEndpoint
-// 	}
-// 	if c.UserinfoEndpoint == "" {
-// 		c.UserinfoEndpoint = defaultUserinfoEndpoint
-// 	}
-// 	return nil
-// }
-
-func ValidateIssuer(issuer string) error {
-	if issuer == "" {
-		return errors.New("missing issuer")
-	}
-	u, err := url.Parse(issuer)
-	if err != nil {
-		return errors.New("invalid url for issuer")
-	}
-	if u.Host == "" {
-		return errors.New("host for issuer missing")
-	}
-	if u.Scheme != "https" {
-		if !(u.Scheme == "http" && (u.Host == "localhost" || u.Host == "127.0.0.1" || u.Host == "::1" || strings.HasPrefix(u.Host, "localhost:"))) { //TODO: ?
-			return errors.New("scheme for issuer must be `https`")
-		}
-	}
-	if u.Fragment != "" || len(u.Query()) > 0 {
-		return errors.New("no fragments or query allowed for issuer")
-	}
-	return nil
-}
-
-func (c *Config) absoluteEndpoint(endpoint string) string {
-	return strings.TrimSuffix(c.Issuer, "/") + relativeEndpoint(endpoint)
-}
-
-func absoluteEndpoint(host, endpoint string) string {
-	return strings.TrimSuffix(host, "/") + relativeEndpoint(endpoint)
-}
-
-func relativeEndpoint(endpoint string) string {
-	return "/" + strings.TrimPrefix(endpoint, "/")
 }
