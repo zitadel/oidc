@@ -19,5 +19,6 @@ require (
 	github.com/caos/oidc/pkg/utils v0.0.0-00010101000000-000000000000
 	github.com/caos/utils/logging v0.0.0-20191104132131-b318678afbef
 	github.com/google/uuid v1.1.1
-	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f
+	golang.org/x/crypto v0.0.0-20191128160524-b544559bb6d1
+	gopkg.in/square/go-jose.v2 v2.4.0
 )

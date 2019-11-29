@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op/u"
 )
 
 const (
@@ -29,8 +28,8 @@ type DefaultOP struct {
 	config          *Config
 	endpoints       *endpoints
 	discoveryConfig *oidc.DiscoveryConfiguration
-	storage         u.Storage
-	signer          u.Signer
+	storage         Storage
+	signer          Signer
 	http            *http.Server
 	decoder         *schema.Decoder
 	encoder         *schema.Encoder
@@ -90,16 +89,21 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-func NewDefaultOP(config *Config, storage u.Storage, signer u.Signer, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
-	if err := ValidateIssuer(config.Issuer); err != nil {
+func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
+	err := ValidateIssuer(config.Issuer)
+	if err != nil {
 		return nil, err
 	}
 
 	p := &DefaultOP{
 		config:    config,
 		storage:   storage,
-		signer:    signer,
 		endpoints: DefaultEndpoints,
+	}
+
+	p.signer, err = NewDefaultSigner(storage)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, optFunc := range opOpts {
@@ -159,11 +163,11 @@ func (p *DefaultOP) Encoder() *schema.Encoder {
 	return p.encoder
 }
 
-func (p *DefaultOP) Storage() u.Storage {
+func (p *DefaultOP) Storage() Storage {
 	return p.storage
 }
 
-func (p *DefaultOP) Signe() u.Signer {
+func (p *DefaultOP) Signer() Signer {
 	return p.signer
 	// return
 }
@@ -174,25 +178,6 @@ func (p *DefaultOP) Signe() u.Signer {
 
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	Authorize(w, r, p)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), 400)
-	// }
-	// authRequest, err := ParseAuthRequest(w, r)
-	// if err != nil {
-	// 	//TODO: return err
-	// }
-	// err = ValidateAuthRequest(authRequest, p.storage)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), 400)
-	// 	return
-	// 	//TODO: return err
-	// }
-	// // err = p.storage.CreateAuthRequest(authRequest)
-	// // if err != nil {
-	// // 	//TODO: return err
-	// // }
-	// var client oidc.Client
-	// RedirectToLogin(authRequest, client, w, r)
 }
 
 func (p *DefaultOP) HandleAuthorizeCallback(w http.ResponseWriter, r *http.Request) {
@@ -206,24 +191,11 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if reqType == string(oidc.GrantTypeCode) {
-		CodeExchange(w, r, p.storage, p.decoder)
+		CodeExchange(w, r, p)
 		return
 	}
 	p.handleTokenExchange(w, r)
 }
-
-// func (p *DefaultOP) handleCodeExchange(w http.ResponseWriter, r *http.Request) {
-// 	tokenRequest, err := ParseAccessTokenRequest(w, r)
-// 	if err != nil {
-// 		//TODO: return err
-// 	}
-// 	err = ValidateAccessTokenRequest(tokenRequest, p.storage)
-// 	if err != nil {
-// 		//TODO: return err
-// 	}
-// 	b, _ := json.Marshal(tokenRequest)
-// 	w.Write(b)
-// }
 
 func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) {
 	tokenRequest, err := ParseTokenExchangeRequest(w, r)

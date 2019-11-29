@@ -5,11 +5,9 @@
 package mock
 
 import (
-	oidc "github.com/caos/oidc/pkg/oidc"
-	u "github.com/caos/oidc/pkg/op/u"
+	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
 	schema "github.com/gorilla/schema"
-	http "net/http"
 	reflect "reflect"
 )
 
@@ -64,39 +62,25 @@ func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encoder", reflect.TypeOf((*MockAuthorizer)(nil).Encoder))
 }
 
-// ErrorHandler mocks base method
-func (m *MockAuthorizer) ErrorHandler() func(http.ResponseWriter, *http.Request, *oidc.AuthRequest, error) {
+// Signer mocks base method
+func (m *MockAuthorizer) Signer() op.Signer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ErrorHandler")
-	ret0, _ := ret[0].(func(http.ResponseWriter, *http.Request, *oidc.AuthRequest, error))
+	ret := m.ctrl.Call(m, "Signer")
+	ret0, _ := ret[0].(op.Signer)
 	return ret0
 }
 
-// ErrorHandler indicates an expected call of ErrorHandler
-func (mr *MockAuthorizerMockRecorder) ErrorHandler() *gomock.Call {
+// Signer indicates an expected call of Signer
+func (mr *MockAuthorizerMockRecorder) Signer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ErrorHandler", reflect.TypeOf((*MockAuthorizer)(nil).ErrorHandler))
-}
-
-// Signe mocks base method
-func (m *MockAuthorizer) Signe() u.Signer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Signe")
-	ret0, _ := ret[0].(u.Signer)
-	return ret0
-}
-
-// Signe indicates an expected call of Signe
-func (mr *MockAuthorizerMockRecorder) Signe() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signe", reflect.TypeOf((*MockAuthorizer)(nil).Signe))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signer", reflect.TypeOf((*MockAuthorizer)(nil).Signer))
 }
 
 // Storage mocks base method
-func (m *MockAuthorizer) Storage() u.Storage {
+func (m *MockAuthorizer) Storage() op.Storage {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Storage")
-	ret0, _ := ret[0].(u.Storage)
+	ret0, _ := ret[0].(op.Storage)
 	return ret0
 }
 

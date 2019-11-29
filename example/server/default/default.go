@@ -5,23 +5,22 @@ import (
 	"log"
 
 	"github.com/caos/oidc/example/internal/mock"
-	server "github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/op"
 )
 
 func main() {
 	ctx := context.Background()
-	config := &server.Config{
+	config := &op.Config{
 		Issuer: "http://localhost:9998/",
 
 		Port: "9998",
 	}
 	storage := &mock.Storage{}
-	signer := &mock.Signer{}
-	handler, err := server.NewDefaultOP(config, storage, signer, server.WithCustomTokenEndpoint("test"))
+	handler, err := op.NewDefaultOP(config, storage, op.WithCustomTokenEndpoint("test"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	server.Start(ctx, handler)
+	op.Start(ctx, handler)
 	<-ctx.Done()
 
 }

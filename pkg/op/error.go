@@ -3,8 +3,6 @@ package op
 import (
 	"net/http"
 
-	"github.com/caos/oidc/pkg/op/u"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
@@ -16,7 +14,13 @@ const (
 
 type errorType string
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq u.ErrAuthRequest, err error) {
+type ErrAuthRequest interface {
+	GetRedirectURI() string
+	GetResponseType() oidc.ResponseType
+	GetState() string
+}
+
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error) {
 	if authReq == nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -79,7 +83,7 @@ var (
 	}
 )
 
-func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request, authReq u.AuthRequest) {
+func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request, authReq AuthRequest) {
 	if authReq == nil {
 		http.Error(w, e.Error(), http.StatusBadRequest)
 		return

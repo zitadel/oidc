@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/op/u"
 	"github.com/caos/oidc/pkg/utils"
 
 	"github.com/gorilla/schema"
@@ -26,7 +25,13 @@ import (
 // 	return ParseTokenExchangeRequest(w, r)
 // }
 
-func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, decoder *schema.Decoder) {
+type Exchanger interface {
+	Storage() Storage
+	Decoder() *schema.Decoder
+	Signer() Signer
+}
+
+func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	err := r.ParseForm()
 	if err != nil {
 		ExchangeRequestError(w, r, ErrInvalidRequest("error parsing form"))
@@ -34,7 +39,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, dec
 	}
 	tokenReq := new(oidc.AccessTokenRequest)
 
-	err = decoder.Decode(tokenReq, r.Form)
+	err = exchanger.Decoder().Decode(tokenReq, r.Form)
 	if err != nil {
 		ExchangeRequestError(w, r, ErrInvalidRequest("error decoding form"))
 		return
@@ -44,17 +49,17 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, dec
 		return
 	}
 
-	client, err := AuthorizeClient(r, tokenReq, storage)
+	client, err := AuthorizeClient(r, tokenReq, exchanger.Storage())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	authReq, err := storage.AuthRequestByCode(client, tokenReq.Code, tokenReq.RedirectURI)
+	authReq, err := exchanger.Storage().AuthRequestByCode(client, tokenReq.Code, tokenReq.RedirectURI)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	err = storage.DeleteAuthRequestAndCode(authReq.GetID(), tokenReq.Code)
+	err = exchanger.Storage().DeleteAuthRequestAndCode(authReq.GetID(), tokenReq.Code)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -64,7 +69,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, storage u.Storage, dec
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	idToken, err := CreateIDToken("", authReq, "", time.Now(), time.Now(), "", nil)
+	idToken, err := CreateIDToken("", authReq, "", time.Now(), time.Now(), "", exchanger.Signer())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -81,7 +86,7 @@ func CreateAccessToken() (string, error) {
 	return "accessToken", nil
 }
 
-func CreateIDToken(issuer string, authReq u.AuthRequest, sub string, exp, authTime time.Time, accessToken string, signer u.Signer) (string, error) {
+func CreateIDToken(issuer string, authReq AuthRequest, sub string, exp, authTime time.Time, accessToken string, signer Signer) (string, error) {
 	var err error
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
@@ -102,10 +107,23 @@ func CreateIDToken(issuer string, authReq u.AuthRequest, sub string, exp, authTi
 			return "", err
 		}
 	}
-	return signer.Sign(claims)
+
+	return signer.SignIDToken(claims)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage u.Storage) (u.Client, error) {
+type Signe struct {
+	signer jose.Signer
+}
+
+func (s *Signe) Sign(payload []byte) (string, error) {
+	result, err := s.signer.Sign(payload)
+	if err != nil {
+		return "", err
+	}
+	return result.CompactSerialize()
+}
+
+func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage Storage) (Client, error) {
 	if tokenReq.ClientID == "" {
 		clientID, clientSecret, ok := r.BasicAuth()
 		if ok {
@@ -126,7 +144,7 @@ func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.Tok
 	return nil, errors.New("Unimplemented") //TODO: impl
 }
 
-func ValidateTokenExchangeRequest(tokenReq oidc.TokenRequest, storage u.Storage) error {
+func ValidateTokenExchangeRequest(tokenReq oidc.TokenRequest, storage Storage) error {
 
 	return errors.New("Unimplemented") //TODO: impl
 }

@@ -1,4 +1,4 @@
-package op
+package op_test
 
 import (
 	"net/http"
@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
-	"github.com/caos/oidc/pkg/op/u"
 )
 
 func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
-		storage     u.Storage
+		storage     op.Storage
 	}
 	tests := []struct {
 		name    string
@@ -53,7 +53,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateAuthRequest(tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthRequest(tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -65,7 +65,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		uri          string
 		clientID     string
 		responseType oidc.ResponseType
-		storage      u.Storage
+		storage      op.Storage
 	}
 	tests := []struct {
 		name    string
@@ -135,7 +135,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateAuthReqRedirectURI(tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthReqRedirectURI(tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
 			}
 		})
@@ -163,7 +163,7 @@ func TestValidateAuthReqScopes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -184,7 +184,7 @@ func TestAuthorize(t *testing.T) {
 	type args struct {
 		w          http.ResponseWriter
 		r          *http.Request
-		authorizer Authorizer
+		authorizer op.Authorizer
 	}
 	tests := []struct {
 		name string
@@ -218,7 +218,7 @@ func TestAuthorize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
+			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
 		})
 	}
 }

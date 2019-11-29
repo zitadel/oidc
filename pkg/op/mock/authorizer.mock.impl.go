@@ -1,17 +1,13 @@
 package mock
 
 import (
-	http "net/http"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/schema"
 
 	oidc "github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
-	u "github.com/caos/oidc/pkg/op/u"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {
@@ -24,7 +20,7 @@ func NewAuthorizerExpectValid(t *testing.T, wantErr bool) op.Authorizer {
 	ExpectEncoder(m)
 	ExpectSigner(m, t)
 	ExpectStorage(m, t)
-	ExpectErrorHandler(m, t, wantErr)
+	// ExpectErrorHandler(m, t, wantErr)
 	return m
 }
 
@@ -50,27 +46,27 @@ func ExpectEncoder(a op.Authorizer) {
 
 func ExpectSigner(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
-	mockA.EXPECT().Signe().DoAndReturn(
-		func() u.Signer {
+	mockA.EXPECT().Signer().DoAndReturn(
+		func() op.Signer {
 			return &Sig{}
 		})
 }
 
-func ExpectErrorHandler(a op.Authorizer, t *testing.T, wantErr bool) {
-	mockA := a.(*MockAuthorizer)
-	mockA.EXPECT().ErrorHandler().AnyTimes().
-		Return(func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-			if wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-		})
-}
+// func ExpectErrorHandler(a op.Authorizer, t *testing.T, wantErr bool) {
+// 	mockA := a.(*MockAuthorizer)
+// 	mockA.EXPECT().ErrorHandler().AnyTimes().
+// 		Return(func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+// 			if wantErr {
+// 				require.Error(t, err)
+// 				return
+// 			}
+// 			require.NoError(t, err)
+// 		})
+// }
 
 type Sig struct{}
 
-func (s *Sig) Sign(*oidc.IDTokenClaims) (string, error) {
+func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
 	return "", nil
 }
 

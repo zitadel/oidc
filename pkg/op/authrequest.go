@@ -11,15 +11,14 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op/u"
 	str_utils "github.com/caos/utils/strings"
 )
 
 type Authorizer interface {
-	Storage() u.Storage
+	Storage() Storage
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
-	Signe() u.Signer
+	Signer() Signer
 	// ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
 }
 
@@ -29,7 +28,7 @@ type Authorizer interface {
 
 type ValidationAuthorizer interface {
 	Authorizer
-	ValidateAuthRequest(*oidc.AuthRequest, u.Storage) error
+	ValidateAuthRequest(*oidc.AuthRequest, Storage) error
 }
 
 // type errorHandler func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
@@ -73,7 +72,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req, client, w, r)
 }
 
-func ValidateAuthRequest(authReq *oidc.AuthRequest, storage u.Storage) error {
+func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
 		return err
 	}
@@ -101,7 +100,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage u.Storage) error {
+func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage Storage) error {
 	if uri == "" {
 		return ErrInvalidRequest("redirect_uri must not be empty")
 	}
@@ -116,15 +115,15 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 		return nil
 	}
 	if responseType == oidc.ResponseTypeCode {
-		if strings.HasPrefix(uri, "http://") && u.IsConfidentialType(client) {
+		if strings.HasPrefix(uri, "http://") && IsConfidentialType(client) {
 			return nil
 		}
-		if client.ApplicationType() == u.ApplicationTypeNative {
+		if client.ApplicationType() == ApplicationTypeNative {
 			return nil
 		}
 		return ErrInvalidRequest("redirect_uri not allowed 2")
 	} else {
-		if client.ApplicationType() != u.ApplicationTypeNative {
+		if client.ApplicationType() != ApplicationTypeNative {
 			return ErrInvalidRequest("redirect_uri not allowed 3")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
@@ -134,7 +133,7 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 	return nil
 }
 
-func RedirectToLogin(authReq u.AuthRequest, client u.Client, w http.ResponseWriter, r *http.Request) {
+func RedirectToLogin(authReq AuthRequest, client Client, w http.ResponseWriter, r *http.Request) {
 	login := client.LoginURL(authReq.GetID())
 	http.Redirect(w, r, login, http.StatusFound)
 }
@@ -151,7 +150,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 	AuthResponse(authReq, authorizer, w, r)
 }
 
-func AuthResponse(authReq u.AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
+func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	var callback string
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
 		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), "test")
@@ -164,7 +163,7 @@ func AuthResponse(authReq u.AuthRequest, authorizer Authorizer, w http.ResponseW
 
 			}
 		}
-		idToken, err := CreateIDToken("", authReq, accessToken, time.Now(), time.Now(), "", authorizer.Signe())
+		idToken, err := CreateIDToken("", authReq, accessToken, time.Now(), time.Now(), "", authorizer.Signer())
 		if err != nil {
 
 		}

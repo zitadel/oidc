@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op/u"
 )
 
 func TestDefaultOP_HandleDiscovery(t *testing.T) {
@@ -16,7 +15,7 @@ func TestDefaultOP_HandleDiscovery(t *testing.T) {
 		config          *Config
 		endpoints       *endpoints
 		discoveryConfig *oidc.DiscoveryConfiguration
-		storage         u.Storage
+		storage         Storage
 		http            *http.Server
 	}
 	type args struct {

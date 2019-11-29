@@ -3,42 +3,91 @@ package mock
 import (
 	"errors"
 
+	"gopkg.in/square/go-jose.v2"
+
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
 )
-
-type Signer struct {
-}
-
-func (s *Signer) Sign(*oidc.IDTokenClaims) (string, error) {
-	return "sdsa", nil
-}
 
 type Storage struct {
 }
 
-func (s *Storage) CreateAuthRequest(authReq *oidc.AuthRequest) error {
-	authReq.ID = "id"
-	return nil
+type AuthRequest struct {
+	ID           string
+	ResponseType oidc.ResponseType
+	RedirectURI  string
 }
-func (s *Storage) GetClientByClientID(id string) (oidc.Client, error) {
-	if id == "not" {
+
+func (a *AuthRequest) GetACR() string {
+	return ""
+}
+
+func (a *AuthRequest) GetAMR() []string {
+	return []string{}
+}
+
+func (a *AuthRequest) GetAudience() []string {
+	return []string{}
+}
+
+func (a *AuthRequest) GetClientID() string {
+	return ""
+}
+
+func (a *AuthRequest) GetID() string {
+	return a.ID
+}
+
+func (a *AuthRequest) GetNonce() string {
+	return ""
+}
+
+func (a *AuthRequest) GetRedirectURI() string {
+	return ""
+}
+
+func (a *AuthRequest) GetResponseType() oidc.ResponseType {
+	return a.ResponseType
+}
+
+func (a *AuthRequest) GetState() string {
+	return ""
+}
+
+func (a *AuthRequest) GetSubject() string {
+	return ""
+}
+
+func (s *Storage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
+	return &AuthRequest{ID: "id"}, nil
+}
+func (s *Storage) GetClientByClientID(id string) (op.Client, error) {
+	if id == "none" {
 		return nil, errors.New("not found")
 	}
+	var appType op.ApplicationType
+	if id == "web" {
+		appType = op.ApplicationTypeWeb
+	} else if id == "native" {
+		appType = op.ApplicationTypeNative
+	} else {
+		appType = op.ApplicationTypeUserAgent
+	}
+	return &ConfClient{applicationType: appType}, nil
+}
+func (s *Storage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
+	return &AuthRequest{ID: "id"}, nil
+}
+func (s *Storage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
 	return &ConfClient{}, nil
 }
-func (s *Storage) AuthRequestByCode(oidc.Client, string, string) (*oidc.AuthRequest, error) {
-	return &oidc.AuthRequest{ID: "id"}, nil
-}
-func (s *Storage) AuthorizeClientIDSecret(string, string) (oidc.Client, error) {
-	return &ConfClient{}, nil
-}
-func (s *Storage) AuthorizeClientIDCodeVerifier(string, string) (oidc.Client, error) {
+func (s *Storage) AuthorizeClientIDCodeVerifier(string, string) (op.Client, error) {
 	return &ConfClient{}, nil
 }
 func (s *Storage) DeleteAuthRequestAndCode(string, string) error {
 	return nil
 }
-func (s *Storage) AuthRequestByID(id string) (*oidc.AuthRequest, error) {
+func (s *Storage) AuthRequestByID(id string) (op.AuthRequest, error) {
 	if id == "none" {
 		return nil, errors.New("not found")
 	}
@@ -50,13 +99,19 @@ func (s *Storage) AuthRequestByID(id string) (*oidc.AuthRequest, error) {
 	} else {
 		responseType = oidc.ResponseTypeIDToken
 	}
-	return &oidc.AuthRequest{
+	return &AuthRequest{
 		ResponseType: responseType,
 		RedirectURI:  "/callback",
 	}, nil
 }
 
-type ConfClient struct{}
+func (s *Storage) GetSigningKey() (jose.SigningKey, error) {
+	return jose.SigningKey{Algorithm: jose.HS256, Key: []byte("test")}, nil
+}
+
+type ConfClient struct {
+	applicationType op.ApplicationType
+}
 
 func (c *ConfClient) RedirectURIs() []string {
 	return []string{
@@ -70,6 +125,6 @@ func (c *ConfClient) LoginURL(id string) string {
 	return "login?id=" + id
 }
 
-func (c *ConfClient) ApplicationType() oidc.ApplicationType {
-	return oidc.ApplicationTypeNative
+func (c *ConfClient) ApplicationType() op.ApplicationType {
+	return c.applicationType
 }

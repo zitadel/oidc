@@ -1,6 +1,10 @@
-package u
+package op
 
-import "github.com/caos/oidc/pkg/oidc"
+import (
+	"gopkg.in/square/go-jose.v2"
+
+	"github.com/caos/oidc/pkg/oidc"
+)
 
 type Storage interface {
 	CreateAuthRequest(*oidc.AuthRequest) (AuthRequest, error)
@@ -10,12 +14,7 @@ type Storage interface {
 	AuthorizeClientIDSecret(string, string) (Client, error)
 	AuthorizeClientIDCodeVerifier(string, string) (Client, error)
 	DeleteAuthRequestAndCode(string, string) error
-}
-
-type ErrAuthRequest interface {
-	GetRedirectURI() string
-	GetResponseType() oidc.ResponseType
-	GetState() string
+	GetSigningKey() (jose.SigningKey, error)
 }
 
 type AuthRequest interface {
