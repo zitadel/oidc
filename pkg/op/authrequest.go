@@ -69,7 +69,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, req, err)
 		return
 	}
-	RedirectToLogin(req, client, w, r)
+	RedirectToLogin(req.GetID(), client, w, r)
 }
 
 func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
@@ -133,8 +133,8 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 	return nil
 }
 
-func RedirectToLogin(authReq AuthRequest, client Client, w http.ResponseWriter, r *http.Request) {
-	login := client.LoginURL(authReq.GetID())
+func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *http.Request) {
+	login := client.LoginURL(authReqID)
 	http.Redirect(w, r, login, http.StatusFound)
 }
 

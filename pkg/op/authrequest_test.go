@@ -6,10 +6,65 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
 )
+
+func TestAuthorize(t *testing.T) {
+	// testCallback := func(t *testing.T, clienID string) callbackHandler {
+	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
+	// 		// require.Equal(t, clientID, client.)
+	// 	}
+	// }
+	// testErr := func(t *testing.T, expected error) errorHandler {
+	// 	return func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+	// 		require.Equal(t, expected, err)
+	// 	}
+	// }
+	type args struct {
+		w          http.ResponseWriter
+		r          *http.Request
+		authorizer op.Authorizer
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"parsing fails",
+			args{
+				httptest.NewRecorder(),
+				&http.Request{Method: "POST", Body: nil},
+				mock.NewAuthorizerExpectValid(t, true),
+				// testCallback(t, ""),
+				// testErr(t, ErrInvalidRequest("cannot parse form")),
+			},
+		},
+		{
+			"decoding fails",
+			args{
+				httptest.NewRecorder(),
+				func() *http.Request {
+					r := httptest.NewRequest("POST", "/authorize", strings.NewReader("client_id=foo"))
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					return r
+				}(),
+				mock.NewAuthorizerExpectValid(t, true),
+				// testCallback(t, ""),
+				// testErr(t, ErrInvalidRequest("cannot parse auth request")),
+			},
+		},
+		// {"decoding fails", args{httptest.NewRecorder(), &http.Request{}, mock.NewAuthorizerExpectValid(t), nil, testErr(t, nil)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
+		})
+	}
+}
 
 func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
@@ -55,6 +110,34 @@ func TestValidateAuthRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op.ValidateAuthRequest(tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAuthReqScopes(t *testing.T) {
+	type args struct {
+		scopes []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"scopes missing fails", args{}, true,
+		},
+		{
+			"scope openid missing fails", args{[]string{"email"}}, true,
+		},
+		{
+			"scope ok", args{[]string{"openid"}}, false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op.ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -142,45 +225,38 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 }
 
-func TestValidateAuthReqScopes(t *testing.T) {
+func TestRedirectToLogin(t *testing.T) {
 	type args struct {
-		scopes []string
+		authReqID string
+		client    op.Client
+		w         http.ResponseWriter
+		r         *http.Request
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
 	}{
 		{
-			"scopes missing fails", args{}, true,
-		},
-		{
-			"scope openid missing fails", args{[]string{"email"}}, true,
-		},
-		{
-			"scope ok", args{[]string{"openid"}}, false,
+			"redirect ok",
+			args{
+				"id",
+				mock.NewClientExpectAny(t, op.ApplicationTypeNative),
+				httptest.NewRecorder(),
+				httptest.NewRequest("GET", "/authorize", nil),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
-				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			op.RedirectToLogin(tt.args.authReqID, tt.args.client, tt.args.w, tt.args.r)
+			rec := tt.args.w.(*httptest.ResponseRecorder)
+			require.Equal(t, http.StatusFound, rec.Code)
+			require.Equal(t, "/login?id=id", rec.Header().Get("location"))
 		})
 	}
 }
 
-func TestAuthorize(t *testing.T) {
-	// testCallback := func(t *testing.T, clienID string) callbackHandler {
-	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
-	// 		// require.Equal(t, clientID, client.)
-	// 	}
-	// }
-	// testErr := func(t *testing.T, expected error) errorHandler {
-	// 	return func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-	// 		require.Equal(t, expected, err)
-	// 	}
-	// }
+func TestAuthorizeCallback(t *testing.T) {
 	type args struct {
 		w          http.ResponseWriter
 		r          *http.Request
@@ -190,35 +266,31 @@ func TestAuthorize(t *testing.T) {
 		name string
 		args args
 	}{
-		{
-			"parsing fails",
-			args{
-				httptest.NewRecorder(),
-				&http.Request{Method: "POST", Body: nil},
-				mock.NewAuthorizerExpectValid(t, true),
-				// testCallback(t, ""),
-				// testErr(t, ErrInvalidRequest("cannot parse form")),
-			},
-		},
-		{
-			"decoding fails",
-			args{
-				httptest.NewRecorder(),
-				func() *http.Request {
-					r := httptest.NewRequest("POST", "/authorize", strings.NewReader("client_id=foo"))
-					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-					return r
-				}(),
-				mock.NewAuthorizerExpectValid(t, true),
-				// testCallback(t, ""),
-				// testErr(t, ErrInvalidRequest("cannot parse auth request")),
-			},
-		},
-		// {"decoding fails", args{httptest.NewRecorder(), &http.Request{}, mock.NewAuthorizerExpectValid(t), nil, testErr(t, nil)}},
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
+			op.AuthorizeCallback(tt.args.w, tt.args.r, tt.args.authorizer)
+		})
+	}
+}
+
+func TestAuthResponse(t *testing.T) {
+	type args struct {
+		authReq    op.AuthRequest
+		authorizer op.Authorizer
+		w          http.ResponseWriter
+		r          *http.Request
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
 		})
 	}
 }
