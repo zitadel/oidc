@@ -105,8 +105,8 @@ func (s *Storage) AuthRequestByID(id string) (op.AuthRequest, error) {
 	}, nil
 }
 
-func (s *Storage) GetSigningKey() (jose.SigningKey, error) {
-	return jose.SigningKey{Algorithm: jose.HS256, Key: []byte("test")}, nil
+func (s *Storage) GetSigningKey() (*jose.SigningKey, error) {
+	return &jose.SigningKey{Algorithm: jose.HS256, Key: []byte("test")}, nil
 }
 
 type ConfClient struct {
