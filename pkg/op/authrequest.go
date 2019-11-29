@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
-	str_utils "github.com/caos/utils/strings"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 type Authorizer interface {
@@ -94,7 +94,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 	if len(scopes) == 0 {
 		return ErrInvalidRequest("scope missing")
 	}
-	if !str_utils.Contains(scopes, oidc.ScopeOpenID) {
+	if !utils.Contains(scopes, oidc.ScopeOpenID) {
 		return ErrInvalidRequest("scope openid missing")
 	}
 	return nil
@@ -108,7 +108,7 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 	if err != nil {
 		return ErrServerError(err.Error())
 	}
-	if !str_utils.Contains(client.RedirectURIs(), uri) {
+	if !utils.Contains(client.RedirectURIs(), uri) {
 		return ErrInvalidRequest("redirect_uri not allowed")
 	}
 	if strings.HasPrefix(uri, "https://") {

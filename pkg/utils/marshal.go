@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/caos/utils/logging"
+	"github.com/sirupsen/logrus"
 )
 
 func MarshalJSON(w http.ResponseWriter, i interface{}) {
@@ -14,5 +14,7 @@ func MarshalJSON(w http.ResponseWriter, i interface{}) {
 		return
 	}
 	_, err = w.Write(b)
-	logging.Log("UTILS-zVu9OW").OnError(err).Error("error writing response")
+	if err != nil {
+		logrus.Error("error writing response")
+	}
 }

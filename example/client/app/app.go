@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/google/uuid"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
-	"github.com/caos/utils/logging"
 )
 
 var (
@@ -38,7 +38,9 @@ func main() {
 	}
 	cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
 	provider, err := rp.NewDefaultRP(rpConfig, rp.WithCookieHandler(cookieHandler))
-	logging.Log("APP-nx6PeF").OnError(err).Panic("error creating provider")
+	if err != nil {
+		logrus.Panic("error creating provider")
+	}
 
 	// state := "foobar"
 	state := uuid.New().String()
@@ -89,6 +91,6 @@ func main() {
 		w.Write(data)
 	})
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	logging.Log("APP-upQxIG").Infof("listening on http://%s/", lis)
-	log.Fatal(http.ListenAndServe("127.0.0.1:5556", nil))
+	logrus.Infof("listening on http://%s/", lis)
+	logrus.Fatal(http.ListenAndServe("127.0.0.1:5556", nil))
 }

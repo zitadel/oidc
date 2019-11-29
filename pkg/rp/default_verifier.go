@@ -12,7 +12,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
-	str_utils "github.com/caos/utils/strings"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 //DefaultVerifier implements the `Verifier` interface
@@ -126,7 +126,7 @@ type iatConfig struct {
 //if non of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
-		if !str_utils.Contains(possibleValues, acr) {
+		if !utils.Contains(possibleValues, acr) {
 			return ErrAcrInvalid(possibleValues, acr)
 		}
 		return nil
@@ -243,7 +243,7 @@ func (v *DefaultVerifier) checkIssuer(issuer string) error {
 }
 
 func (v *DefaultVerifier) checkAudience(audiences []string) error {
-	if !str_utils.Contains(audiences, v.config.clientID) {
+	if !utils.Contains(audiences, v.config.clientID) {
 		return ErrAudienceMissingClientID(v.config.clientID)
 	}
 
@@ -281,7 +281,7 @@ func (v *DefaultVerifier) checkSignature(ctx context.Context, idTokenString stri
 	if len(supportedSigAlgs) == 0 {
 		supportedSigAlgs = []string{"RS256"}
 	}
-	if !str_utils.Contains(supportedSigAlgs, sig.Header.Algorithm) {
+	if !utils.Contains(supportedSigAlgs, sig.Header.Algorithm) {
 		return "", fmt.Errorf("oidc: id token signed with unsupported algorithm, expected %q got %q", supportedSigAlgs, sig.Header.Algorithm)
 	}
 

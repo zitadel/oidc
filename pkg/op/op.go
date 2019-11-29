@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/utils/logging"
 )
 
 type OpenIDProvider interface {
@@ -36,12 +36,16 @@ func Start(ctx context.Context, o OpenIDProvider) {
 	go func() {
 		<-ctx.Done()
 		err := o.HttpHandler().Shutdown(ctx)
-		logging.Log("SERVE-REqwpM").OnError(err).Error("graceful shutdown of oidc server failed")
+		if err != nil {
+			logrus.Error("graceful shutdown of oidc server failed")
+		}
 	}()
 
 	go func() {
 		err := o.HttpHandler().ListenAndServe()
-		logging.Log("SERVE-4YNIwG").OnError(err).Panic("oidc server serve failed")
+		if err != nil {
+			logrus.Panic("oidc server serve failed")
+		}
 	}()
-	logging.LogWithFields("SERVE-koAFMs", "port", o.Port()).Info("oidc server is listening")
+	logrus.Infof("oidc server is listening on %s", o.Port())
 }
