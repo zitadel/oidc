@@ -140,10 +140,10 @@ func (mr *MockStorageMockRecorder) GetClientByClientID(arg0 interface{}) *gomock
 }
 
 // GetSigningKey mocks base method
-func (m *MockStorage) GetSigningKey() (go_jose_v2.SigningKey, error) {
+func (m *MockStorage) GetSigningKey() (*go_jose_v2.SigningKey, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSigningKey")
-	ret0, _ := ret[0].(go_jose_v2.SigningKey)
+	ret0, _ := ret[0].(*go_jose_v2.SigningKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

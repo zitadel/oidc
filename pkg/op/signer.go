@@ -32,7 +32,7 @@ func (s *idTokenSigner) initialize() error {
 	if err != nil {
 		return err
 	}
-	s.signer, err = jose.NewSigner(key, &jose.SignerOptions{})
+	s.signer, err = jose.NewSigner(*key, &jose.SignerOptions{})
 	if err != nil {
 		return err
 	}

@@ -14,17 +14,6 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 )
 
-// func ParseTokenRequest(w http.ResponseWriter, r *http.Request) (oidc.TokenRequest, error) {
-// 	reqType := r.FormValue("grant_type")
-// 	if reqType == "" {
-// 		return nil, errors.New("grant_type missing") //TODO: impl
-// 	}
-// 	if reqType == string(oidc.GrantTypeCode) {
-// 		return ParseAccessTokenRequest(w, r)
-// 	}
-// 	return ParseTokenExchangeRequest(w, r)
-// }
-
 type Exchanger interface {
 	Storage() Storage
 	Decoder() *schema.Decoder
@@ -109,18 +98,6 @@ func CreateIDToken(issuer string, authReq AuthRequest, sub string, exp, authTime
 	}
 
 	return signer.SignIDToken(claims)
-}
-
-type Signe struct {
-	signer jose.Signer
-}
-
-func (s *Signe) Sign(payload []byte) (string, error) {
-	result, err := s.signer.Sign(payload)
-	if err != nil {
-		return "", err
-	}
-	return result.CompactSerialize()
 }
 
 func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage Storage) (Client, error) {

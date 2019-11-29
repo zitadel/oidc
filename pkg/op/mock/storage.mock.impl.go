@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"gopkg.in/square/go-jose.v2"
+
 	"github.com/golang/mock/gomock"
 
 	"github.com/caos/oidc/pkg/op"
@@ -33,6 +35,23 @@ func NewMockStorageAny(t *testing.T) op.Storage {
 	return m
 }
 
+func NewMockStorageSigningKeyError(t *testing.T) op.Storage {
+	m := NewStorage(t)
+	ExpectSigningKeyError(m)
+	return m
+}
+
+func NewMockStorageSigningKeyInvalid(t *testing.T) op.Storage {
+	m := NewStorage(t)
+	ExpectSigningKeyInvalid(m)
+	return m
+}
+func NewMockStorageSigningKey(t *testing.T) op.Storage {
+	m := NewStorage(t)
+	ExpectSigningKey(m)
+	return m
+}
+
 func ExpectInvalidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).Return(nil, errors.New("client not found"))
@@ -53,6 +72,21 @@ func ExpectValidClientID(s op.Storage) {
 			}
 			return &ConfClient{appType: appType}, nil
 		})
+}
+
+func ExpectSigningKeyError(s op.Storage) {
+	mockS := s.(*MockStorage)
+	mockS.EXPECT().GetSigningKey().Return(nil, errors.New("error"))
+}
+
+func ExpectSigningKeyInvalid(s op.Storage) {
+	mockS := s.(*MockStorage)
+	mockS.EXPECT().GetSigningKey().Return(&jose.SigningKey{}, nil)
+}
+
+func ExpectSigningKey(s op.Storage) {
+	mockS := s.(*MockStorage)
+	mockS.EXPECT().GetSigningKey().Return(&jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}, nil)
 }
 
 type ConfClient struct {
