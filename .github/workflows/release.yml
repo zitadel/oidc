@@ -13,7 +13,7 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go }}
-      - run: go run main.go
+      - run: go test ./pkg/...
   build:
     runs-on: ubuntu-18.04
     needs: test
