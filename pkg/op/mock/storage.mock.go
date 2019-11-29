@@ -8,6 +8,7 @@ import (
 	oidc "github.com/caos/oidc/pkg/oidc"
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
+	go_jose_v2 "gopkg.in/square/go-jose.v2"
 	reflect "reflect"
 )
 
@@ -136,4 +137,19 @@ func (m *MockStorage) GetClientByClientID(arg0 string) (op.Client, error) {
 func (mr *MockStorageMockRecorder) GetClientByClientID(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientByClientID", reflect.TypeOf((*MockStorage)(nil).GetClientByClientID), arg0)
+}
+
+// GetSigningKey mocks base method
+func (m *MockStorage) GetSigningKey() (go_jose_v2.SigningKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSigningKey")
+	ret0, _ := ret[0].(go_jose_v2.SigningKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSigningKey indicates an expected call of GetSigningKey
+func (mr *MockStorageMockRecorder) GetSigningKey() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey))
 }

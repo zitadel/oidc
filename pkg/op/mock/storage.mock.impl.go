@@ -7,26 +7,25 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/caos/oidc/pkg/op"
-	op2 "github.com/caos/oidc/pkg/op"
 )
 
-func NewStorage(t *testing.T) op2.Storage {
+func NewStorage(t *testing.T) op.Storage {
 	return NewMockStorage(gomock.NewController(t))
 }
 
-func NewMockStorageExpectValidClientID(t *testing.T) op2.Storage {
+func NewMockStorageExpectValidClientID(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	ExpectValidClientID(m)
 	return m
 }
 
-func NewMockStorageExpectInvalidClientID(t *testing.T) op2.Storage {
+func NewMockStorageExpectInvalidClientID(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	ExpectInvalidClientID(m)
 	return m
 }
 
-func NewMockStorageAny(t *testing.T) op2.Storage {
+func NewMockStorageAny(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	mockS := m.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
@@ -34,12 +33,12 @@ func NewMockStorageAny(t *testing.T) op2.Storage {
 	return m
 }
 
-func ExpectInvalidClientID(s op2.Storage) {
+func ExpectInvalidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).Return(nil, errors.New("client not found"))
 }
 
-func ExpectValidClientID(s op2.Storage) {
+func ExpectValidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).DoAndReturn(
 		func(id string) (op.Client, error) {
