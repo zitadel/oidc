@@ -1,4 +1,4 @@
-module github.com/caos/oidc/pkg/client
+module github.com/caos/oidc/pkg/rp
 
 go 1.13
 
