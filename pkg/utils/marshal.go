@@ -13,6 +13,7 @@ func MarshalJSON(w http.ResponseWriter, i interface{}) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("content-type", "application/json")
 	_, err = w.Write(b)
 	if err != nil {
 		logrus.Error("error writing response")
