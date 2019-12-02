@@ -19,7 +19,7 @@ func NewCookieHandler(hashKey, encryptKey []byte, opts ...CookieHandlerOpt) *Coo
 	c := &CookieHandler{
 		securecookie: securecookie.New(hashKey, encryptKey),
 		secureOnly:   true,
-		sameSite:     http.SameSiteNoneMode,
+		sameSite:     http.SameSiteLaxMode,
 	}
 
 	for _, opt := range opts {
