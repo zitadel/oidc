@@ -52,7 +52,7 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 	}
 
 	if p.verifier == nil {
-		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, nil) //utils.NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL)) //TODO: keys endpoint
+		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL)) //TODO: keys endpoint
 	}
 
 	return p, nil
