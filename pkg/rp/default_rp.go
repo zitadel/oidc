@@ -124,12 +124,16 @@ func (p *DefaultRP) CodeExchangeHandler(callback func(http.ResponseWriter, *http
 			http.Error(w, "failed to get state: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
-		tokens, err := p.CodeExchange(r.Context(), r.URL.Query().Get("code"))
-		if err != nil {
-			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
-			return
+		params := r.URL.Query()
+		if params.Get("code") != "" {
+			tokens, err := p.CodeExchange(r.Context(), params.Get("code"))
+			if err != nil {
+				http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
+				return
+			}
+			callback(w, r, tokens, state)
 		}
-		callback(w, r, tokens, state)
+		w.Write([]byte(params.Get("error")))
 	}
 }
 

@@ -2,6 +2,7 @@ package op
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
@@ -92,20 +93,20 @@ func (e *OAuthError) AuthRequestResponse(w http.ResponseWriter, r *http.Request,
 		http.Error(w, e.Error(), http.StatusBadRequest)
 		return
 	}
-	url := authReq.GetRedirectURI()
+	callback := authReq.GetRedirectURI()
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
-		url += "?"
+		callback += "?"
 	} else {
-		url += "#"
+		callback += "#"
 	}
-	url += "error=" + string(e.ErrorType)
+	callback += "error=" + string(e.ErrorType)
 	if e.Description != "" {
-		url += "&error_description=" + e.Description
+		callback += "&error_description=" + url.QueryEscape(e.Description)
 	}
 	if authReq.GetState() != "" {
-		url += "&state=" + authReq.GetState()
+		callback += "&state=" + authReq.GetState()
 	}
-	http.Redirect(w, r, url, http.StatusFound)
+	http.Redirect(w, r, callback, http.StatusFound)
 }
 
 func (e *OAuthError) Error() string {
