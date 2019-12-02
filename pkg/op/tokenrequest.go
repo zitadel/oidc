@@ -15,6 +15,7 @@ import (
 )
 
 type Exchanger interface {
+	Issuer() string
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer
@@ -58,7 +59,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	idToken, err := CreateIDToken("", authReq, "", time.Now(), time.Now(), "", exchanger.Signer())
+	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, "", time.Now(), time.Now(), "", exchanger.Signer())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return

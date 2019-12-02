@@ -44,7 +44,7 @@ func Start(ctx context.Context, o OpenIDProvider) {
 	go func() {
 		err := o.HttpHandler().ListenAndServe()
 		if err != nil {
-			logrus.Panic("oidc server serve failed")
+			logrus.Panicf("oidc server serve failed: %v", err)
 		}
 	}()
 	logrus.Infof("oidc server is listening on %s", o.Port())

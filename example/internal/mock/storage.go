@@ -27,7 +27,9 @@ func (a *AuthRequest) GetAMR() []string {
 }
 
 func (a *AuthRequest) GetAudience() []string {
-	return []string{}
+	return []string{
+		a.ID,
+	}
 }
 
 func (a *AuthRequest) GetClientID() string {
@@ -76,7 +78,7 @@ func (s *Storage) GetClientByClientID(id string) (op.Client, error) {
 	return &ConfClient{applicationType: appType}, nil
 }
 func (s *Storage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
-	return &AuthRequest{ID: "id"}, nil
+	return &AuthRequest{ID: "native"}, nil
 }
 func (s *Storage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
 	return &ConfClient{}, nil
@@ -117,6 +119,7 @@ func (c *ConfClient) RedirectURIs() []string {
 	return []string{
 		"https://registered.com/callback",
 		"http://localhost:9999/callback",
+		"http://localhost:5556/auth/callback",
 		"custom://callback",
 	}
 }
