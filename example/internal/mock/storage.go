@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"time"
 
@@ -11,6 +13,19 @@ import (
 )
 
 type Storage struct {
+	key *rsa.PrivateKey
+}
+
+func NewStorage() op.Storage {
+	reader := rand.Reader
+	bitSize := 2048
+	key, err := rsa.GenerateKey(reader, bitSize)
+	if err != nil {
+		panic(err)
+	}
+	return &Storage{
+		key: key,
+	}
 }
 
 type AuthRequest struct {
@@ -113,7 +128,15 @@ func (s *Storage) AuthRequestByID(id string) (op.AuthRequest, error) {
 }
 
 func (s *Storage) GetSigningKey() (*jose.SigningKey, error) {
-	return &jose.SigningKey{Algorithm: jose.HS256, Key: []byte("test")}, nil
+	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
+}
+func (s *Storage) GetKeySet() (jose.JSONWebKeySet, error) {
+	pubkey := s.key.Public()
+	return jose.JSONWebKeySet{
+		Keys: []jose.JSONWebKey{
+			jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256"},
+		},
+	}, nil
 }
 
 type ConfClient struct {

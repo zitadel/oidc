@@ -17,6 +17,7 @@ type Storage interface {
 	AuthorizeClientIDCodeVerifier(string, string) (Client, error)
 	DeleteAuthRequestAndCode(string, string) error
 	GetSigningKey() (*jose.SigningKey, error)
+	GetKeySet() (jose.JSONWebKeySet, error)
 }
 
 type AuthRequest interface {

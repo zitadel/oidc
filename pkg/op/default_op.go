@@ -14,6 +14,7 @@ const (
 	defaulTokenEndpoint          = "oauth/token"
 	defaultIntrospectEndpoint    = "introspect"
 	defaultUserinfoEndpoint      = "userinfo"
+	defaultKeysEndpoint          = "keys"
 )
 
 var (
@@ -22,6 +23,7 @@ var (
 		Token:                 defaulTokenEndpoint,
 		IntrospectionEndpoint: defaultIntrospectEndpoint,
 		Userinfo:              defaultUserinfoEndpoint,
+		JwksURI:               defaultKeysEndpoint,
 	}
 	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
@@ -146,6 +148,10 @@ func (p *DefaultOP) UserinfoEndpoint() Endpoint {
 	return Endpoint(p.endpoints.Userinfo)
 }
 
+func (p *DefaultOP) KeysEndpoint() Endpoint {
+	return Endpoint(p.endpoints.JwksURI)
+}
+
 func (p *DefaultOP) Port() string {
 	return p.config.Port
 }
@@ -185,6 +191,10 @@ func (p *DefaultOP) IDTokenValidity() time.Duration {
 // func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
 // 	return AuthRequestError
 // }
+
+func (p *DefaultOP) HandleKeys(w http.ResponseWriter, r *http.Request) {
+	Keys(w, r, p)
+}
 
 func (p *DefaultOP) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	Authorize(w, r, p)

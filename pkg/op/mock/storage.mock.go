@@ -139,6 +139,21 @@ func (mr *MockStorageMockRecorder) GetClientByClientID(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientByClientID", reflect.TypeOf((*MockStorage)(nil).GetClientByClientID), arg0)
 }
 
+// GetKeySet mocks base method
+func (m *MockStorage) GetKeySet() (go_jose_v2.JSONWebKeySet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeySet")
+	ret0, _ := ret[0].(go_jose_v2.JSONWebKeySet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKeySet indicates an expected call of GetKeySet
+func (mr *MockStorageMockRecorder) GetKeySet() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySet", reflect.TypeOf((*MockStorage)(nil).GetKeySet))
+}
+
 // GetSigningKey mocks base method
 func (m *MockStorage) GetSigningKey() (*go_jose_v2.SigningKey, error) {
 	m.ctrl.T.Helper()

@@ -11,6 +11,7 @@ type Configuration interface {
 	AuthorizationEndpoint() Endpoint
 	TokenEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
+	KeysEndpoint() Endpoint
 	Port() string
 }
 

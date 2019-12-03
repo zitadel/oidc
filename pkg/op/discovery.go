@@ -20,7 +20,7 @@ func CreateDiscoveryConfig(c Configuration) *oidc.DiscoveryConfiguration {
 		UserinfoEndpoint: c.UserinfoEndpoint().Absolute(c.Issuer()),
 		// EndSessionEndpoint: c.TokenEndpoint().Absolute(c.Issuer())(c.EndSessionEndpoint),
 		// CheckSessionIframe: c.TokenEndpoint().Absolute(c.Issuer())(c.CheckSessionIframe),
-		// JwksURI:            c.TokenEndpoint().Absolute(c.Issuer())(c.JwksURI),
+		JwksURI: c.KeysEndpoint().Absolute(c.Issuer()),
 		// ScopesSupported:                   oidc.SupportedScopes,
 		// ResponseTypesSupported:            responseTypes,
 		// GrantTypesSupported:               oidc.SupportedGrantTypes,
