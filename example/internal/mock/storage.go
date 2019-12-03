@@ -12,18 +12,20 @@ import (
 	"github.com/caos/oidc/pkg/op"
 )
 
-type Storage struct {
+type AuthStorage struct {
 	key *rsa.PrivateKey
 }
 
-func NewStorage() op.Storage {
+type OPStorage struct{}
+
+func NewAuthStorage() op.AuthStorage {
 	reader := rand.Reader
 	bitSize := 2048
 	key, err := rsa.GenerateKey(reader, bitSize)
 	if err != nil {
 		panic(err)
 	}
-	return &Storage{
+	return &AuthStorage{
 		key: key,
 	}
 }
@@ -80,10 +82,10 @@ func (a *AuthRequest) GetSubject() string {
 	return ""
 }
 
-func (s *Storage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
+func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
 	return &AuthRequest{ID: "id"}, nil
 }
-func (s *Storage) GetClientByClientID(id string) (op.Client, error) {
+func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
 	if id == "none" {
 		return nil, errors.New("not found")
 	}
@@ -97,19 +99,19 @@ func (s *Storage) GetClientByClientID(id string) (op.Client, error) {
 	}
 	return &ConfClient{applicationType: appType}, nil
 }
-func (s *Storage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
 	return &AuthRequest{ID: "native"}, nil
 }
-func (s *Storage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
+func (s *OPStorage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
 	return &ConfClient{}, nil
 }
-func (s *Storage) AuthorizeClientIDCodeVerifier(string, string) (op.Client, error) {
+func (s *OPStorage) AuthorizeClientIDCodeVerifier(string, string) (op.Client, error) {
 	return &ConfClient{}, nil
 }
-func (s *Storage) DeleteAuthRequestAndCode(string, string) error {
+func (s *AuthStorage) DeleteAuthRequestAndCode(string, string) error {
 	return nil
 }
-func (s *Storage) AuthRequestByID(id string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
 	if id == "none" {
 		return nil, errors.New("not found")
 	}
@@ -127,10 +129,10 @@ func (s *Storage) AuthRequestByID(id string) (op.AuthRequest, error) {
 	}, nil
 }
 
-func (s *Storage) GetSigningKey() (*jose.SigningKey, error) {
+func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
 	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
 }
-func (s *Storage) GetKeySet() (jose.JSONWebKeySet, error) {
+func (s *AuthStorage) GetKeySet() (jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()
 	return jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{

@@ -17,6 +17,8 @@ type Exchanger interface {
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer
+	AuthMethodBasicSupported() bool
+	AuthMethodPostSupported() bool
 }
 
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
@@ -37,7 +39,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		return
 	}
 
-	client, err := AuthorizeClient(r, tokenReq, exchanger.Storage())
+	client, err := AuthorizeClient(r, tokenReq, exchanger)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -99,19 +101,25 @@ func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, a
 	return signer.SignIDToken(claims)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, storage Storage) (Client, error) {
+func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Client, error) {
 	if tokenReq.ClientID == "" {
+		if !exchanger.AuthMethodBasicSupported() {
+			return nil, errors.New("basic not supported")
+		}
 		clientID, clientSecret, ok := r.BasicAuth()
 		if ok {
-			return storage.AuthorizeClientIDSecret(clientID, clientSecret)
+			return exchanger.Storage().AuthorizeClientIDSecret(clientID, clientSecret)
 		}
 
 	}
 	if tokenReq.ClientSecret != "" {
-		return storage.AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret)
+		if !exchanger.AuthMethodPostSupported() {
+			return nil, errors.New("post not supported")
+		}
+		return exchanger.Storage().AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret)
 	}
 	if tokenReq.CodeVerifier != "" {
-		return storage.AuthorizeClientIDCodeVerifier(tokenReq.ClientID, tokenReq.CodeVerifier)
+		return exchanger.Storage().AuthorizeClientIDCodeVerifier(tokenReq.ClientID, tokenReq.CodeVerifier)
 	}
 	return nil, errors.New("Unimplemented") //TODO: impl
 }

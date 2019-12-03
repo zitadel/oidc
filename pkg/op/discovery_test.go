@@ -42,6 +42,7 @@ func TestDiscover(t *testing.T) {
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
 		c op.Configuration
+		s op.Signer
 	}
 	tests := []struct {
 		name string
@@ -52,7 +53,7 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.CreateDiscoveryConfig(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+			if got := op.CreateDiscoveryConfig(tt.args.c, tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CreateDiscoveryConfig() = %v, want %v", got, tt.want)
 			}
 		})

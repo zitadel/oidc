@@ -15,11 +15,11 @@ type Signer interface {
 
 type idTokenSigner struct {
 	signer    jose.Signer
-	storage   Storage
+	storage   AuthStorage
 	algorithm jose.SignatureAlgorithm
 }
 
-func NewDefaultSigner(storage Storage) (Signer, error) {
+func NewDefaultSigner(storage AuthStorage) (Signer, error) {
 	s := &idTokenSigner{
 		storage: storage,
 	}

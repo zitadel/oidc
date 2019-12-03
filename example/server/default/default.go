@@ -15,8 +15,9 @@ func main() {
 
 		Port: "9998",
 	}
-	storage := mock.NewStorage()
-	handler, err := op.NewDefaultOP(config, storage, op.WithCustomTokenEndpoint("test"))
+	authStorage := mock.NewAuthStorage()
+	opStorage := &mock.OPStorage{}
+	handler, err := op.NewDefaultOP(config, authStorage, opStorage, op.WithCustomTokenEndpoint("test"))
 	if err != nil {
 		log.Fatal(err)
 	}

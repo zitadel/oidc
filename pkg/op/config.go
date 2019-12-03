@@ -12,6 +12,11 @@ type Configuration interface {
 	TokenEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
 	KeysEndpoint() Endpoint
+
+	// SupportedScopes() []string
+	AuthMethodBasicSupported() bool
+	AuthMethodPostSupported() bool
+
 	Port() string
 }
 

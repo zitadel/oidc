@@ -15,6 +15,9 @@ const (
 	defaultIntrospectEndpoint    = "introspect"
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultKeysEndpoint          = "keys"
+
+	authMethodBasic = "client_secret_basic"
+	authMethodPost  = "client_secret_post"
 )
 
 var (
@@ -94,10 +97,18 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
+func NewDefaultOP(config *Config, authStorage AuthStorage, opStorage OPStorage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
 		return nil, err
+	}
+
+	storage := struct {
+		AuthStorage
+		OPStorage
+	}{
+		AuthStorage: authStorage,
+		OPStorage:   opStorage,
 	}
 
 	p := &DefaultOP{
@@ -106,7 +117,7 @@ func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (Ope
 		endpoints: DefaultEndpoints,
 	}
 
-	p.signer, err = NewDefaultSigner(storage)
+	p.signer, err = NewDefaultSigner(authStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +128,7 @@ func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (Ope
 		}
 	}
 
-	p.discoveryConfig = CreateDiscoveryConfig(p)
+	p.discoveryConfig = CreateDiscoveryConfig(p, p.signer)
 
 	router := CreateRouter(p)
 	p.http = &http.Server{
@@ -150,6 +161,14 @@ func (p *DefaultOP) UserinfoEndpoint() Endpoint {
 
 func (p *DefaultOP) KeysEndpoint() Endpoint {
 	return Endpoint(p.endpoints.JwksURI)
+}
+
+func (p *DefaultOP) AuthMethodBasicSupported() bool {
+	return true //TODO: config
+}
+
+func (p *DefaultOP) AuthMethodPostSupported() bool {
+	return true //TODO: config
 }
 
 func (p *DefaultOP) Port() string {
@@ -218,6 +237,8 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) {
+	ExchangeRequestError(w, r, ErrServerError("not implemented"))
+	return
 	tokenRequest, err := ParseTokenExchangeRequest(w, r)
 	if err != nil {
 		//TODO: return err

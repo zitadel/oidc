@@ -8,16 +8,25 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 )
 
-type Storage interface {
+type AuthStorage interface {
 	CreateAuthRequest(*oidc.AuthRequest) (AuthRequest, error)
-	GetClientByClientID(string) (Client, error)
 	AuthRequestByID(string) (AuthRequest, error)
 	AuthRequestByCode(Client, string, string) (AuthRequest, error)
-	AuthorizeClientIDSecret(string, string) (Client, error)
-	AuthorizeClientIDCodeVerifier(string, string) (Client, error)
 	DeleteAuthRequestAndCode(string, string) error
+
 	GetSigningKey() (*jose.SigningKey, error)
 	GetKeySet() (jose.JSONWebKeySet, error)
+}
+
+type OPStorage interface {
+	GetClientByClientID(string) (Client, error)
+	AuthorizeClientIDSecret(string, string) (Client, error)
+	AuthorizeClientIDCodeVerifier(string, string) (Client, error)
+}
+
+type Storage interface {
+	AuthStorage
+	OPStorage
 }
 
 type AuthRequest interface {
