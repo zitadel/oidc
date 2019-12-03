@@ -5,17 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
-
-	"github.com/caos/oidc/pkg/utils"
-
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 type Exchanger interface {
 	Issuer() string
+	IDTokenValidity() time.Duration
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer
@@ -59,7 +57,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, "", time.Now(), time.Now(), "", exchanger.Signer())
+	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, exchanger.IDTokenValidity(), accessToken, exchanger.Signer())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -76,23 +74,23 @@ func CreateAccessToken() (string, error) {
 	return "accessToken", nil
 }
 
-func CreateIDToken(issuer string, authReq AuthRequest, sub string, exp, authTime time.Time, accessToken string, signer Signer) (string, error) {
+func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, accessToken string, signer Signer) (string, error) {
 	var err error
+	exp := time.Now().UTC().Add(validity)
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
 		Subject:                             authReq.GetSubject(),
 		Audiences:                           authReq.GetAudience(),
 		Expiration:                          exp,
 		IssuedAt:                            time.Now().UTC(),
-		AuthTime:                            authTime,
+		AuthTime:                            authReq.GetAuthTime(),
 		Nonce:                               authReq.GetNonce(),
 		AuthenticationContextClassReference: authReq.GetACR(),
 		AuthenticationMethodsReferences:     authReq.GetAMR(),
 		AuthorizedParty:                     authReq.GetClientID(),
 	}
 	if accessToken != "" {
-		var alg jose.SignatureAlgorithm
-		claims.AccessTokenHash, err = oidc.AccessTokenHash(accessToken, alg) //TODO: alg
+		claims.AccessTokenHash, err = oidc.AccessTokenHash(accessToken, signer.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}

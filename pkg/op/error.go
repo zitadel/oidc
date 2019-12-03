@@ -58,9 +58,11 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 func ExchangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	e, ok := err.(*OAuthError)
 	if !ok {
+		e = new(OAuthError)
 		e.ErrorType = ServerError
 		e.Description = err.Error()
 	}
+	w.WriteHeader(http.StatusBadRequest)
 	utils.MarshalJSON(w, e)
 }
 

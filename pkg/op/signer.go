@@ -10,11 +10,13 @@ import (
 
 type Signer interface {
 	SignIDToken(claims *oidc.IDTokenClaims) (string, error)
+	SignatureAlgorithm() jose.SignatureAlgorithm
 }
 
 type idTokenSigner struct {
-	signer  jose.Signer
-	storage Storage
+	signer    jose.Signer
+	storage   Storage
+	algorithm jose.SignatureAlgorithm
 }
 
 func NewDefaultSigner(storage Storage) (Signer, error) {
@@ -36,6 +38,7 @@ func (s *idTokenSigner) initialize() error {
 	if err != nil {
 		return err
 	}
+	s.algorithm = key.Algorithm
 	return nil
 }
 
@@ -46,10 +49,15 @@ func (s *idTokenSigner) SignIDToken(claims *oidc.IDTokenClaims) (string, error) 
 	}
 	return s.Sign(payload)
 }
+
 func (s *idTokenSigner) Sign(payload []byte) (string, error) {
 	result, err := s.signer.Sign(payload)
 	if err != nil {
 		return "", err
 	}
 	return result.CompactSerialize()
+}
+
+func (s *idTokenSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return s.algorithm
 }

@@ -1,6 +1,8 @@
 package op
 
 import (
+	"time"
+
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -22,6 +24,7 @@ type AuthRequest interface {
 	GetACR() string
 	GetAMR() []string
 	GetAudience() []string
+	GetAuthTime() time.Time
 	GetClientID() string
 	GetNonce() string
 	GetRedirectURI() string

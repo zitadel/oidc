@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/schema"
+	"gopkg.in/square/go-jose.v2"
 
 	oidc "github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
@@ -68,6 +69,9 @@ type Sig struct{}
 
 func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
 	return "", nil
+}
+func (s *Sig) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return jose.HS256
 }
 
 func ExpectStorage(a op.Authorizer, t *testing.T) {

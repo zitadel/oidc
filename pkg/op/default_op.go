@@ -2,6 +2,7 @@ package op
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/schema"
 
@@ -22,6 +23,7 @@ var (
 		IntrospectionEndpoint: defaultIntrospectEndpoint,
 		Userinfo:              defaultUserinfoEndpoint,
 	}
+	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
 
 type DefaultOP struct {
@@ -36,7 +38,8 @@ type DefaultOP struct {
 }
 
 type Config struct {
-	Issuer string
+	Issuer          string
+	IDTokenValidity time.Duration
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,
@@ -170,6 +173,13 @@ func (p *DefaultOP) Storage() Storage {
 func (p *DefaultOP) Signer() Signer {
 	return p.signer
 	// return
+}
+
+func (p *DefaultOP) IDTokenValidity() time.Duration {
+	if p.config.IDTokenValidity == 0 {
+		p.config.IDTokenValidity = DefaultIDTokenValidity
+	}
+	return p.config.IDTokenValidity
 }
 
 // func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {

@@ -20,6 +20,12 @@ const (
 	stateParam = "state"
 )
 
+var (
+	DefaultErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
+		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
+	}
+)
+
 //DefaultRP impements the `DelegationTokenExchangeRP` interface extending the `RelayingParty` interface
 type DefaultRP struct {
 	endpoints Endpoints
@@ -29,6 +35,8 @@ type DefaultRP struct {
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
+
+	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
 
 	verifier Verifier
 }
@@ -49,6 +57,10 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 
 	if err := p.discover(); err != nil {
 		return nil, err
+	}
+
+	if p.errorHandler == nil {
+		p.errorHandler = DefaultErrorHandler
 	}
 
 	if p.verifier == nil {
@@ -125,15 +137,16 @@ func (p *DefaultRP) CodeExchangeHandler(callback func(http.ResponseWriter, *http
 			return
 		}
 		params := r.URL.Query()
-		if params.Get("code") != "" {
-			tokens, err := p.CodeExchange(r.Context(), params.Get("code"))
-			if err != nil {
-				http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
-				return
-			}
-			callback(w, r, tokens, state)
+		if params.Get("error") != "" {
+			p.errorHandler(w, r, params.Get("error"), params.Get("error_description"), state)
+			return
 		}
-		w.Write([]byte(params.Get("error")))
+		tokens, err := p.CodeExchange(r.Context(), params.Get("code"))
+		if err != nil {
+			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+		callback(w, r, tokens, state)
 	}
 }
 
@@ -169,18 +182,15 @@ func (p *DefaultRP) DelegationTokenExchange(ctx context.Context, subjectToken st
 
 func (p *DefaultRP) discover() error {
 	wellKnown := strings.TrimSuffix(p.config.Issuer, "/") + oidc.DiscoveryEndpoint
-
 	req, err := http.NewRequest("GET", wellKnown, nil)
 	if err != nil {
 		return err
 	}
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
-
 	err = utils.HttpRequest(p.httpClient, req, &discoveryConfig)
 	if err != nil {
 		return err
 	}
-
 	p.endpoints = GetEndpoints(discoveryConfig)
 	p.oauthConfig = oauth2.Config{
 		ClientID:     p.config.ClientID,

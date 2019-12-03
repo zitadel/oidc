@@ -163,7 +163,7 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 
 			}
 		}
-		idToken, err := CreateIDToken("", authReq, accessToken, time.Now(), time.Now(), "", authorizer.Signer())
+		idToken, err := CreateIDToken("", authReq, time.Duration(0), accessToken, authorizer.Signer())
 		if err != nil {
 
 		}

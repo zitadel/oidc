@@ -2,6 +2,7 @@ package mock
 
 import (
 	"errors"
+	"time"
 
 	"gopkg.in/square/go-jose.v2"
 
@@ -30,6 +31,10 @@ func (a *AuthRequest) GetAudience() []string {
 	return []string{
 		a.ID,
 	}
+}
+
+func (a *AuthRequest) GetAuthTime() time.Time {
+	return time.Now().UTC()
 }
 
 func (a *AuthRequest) GetClientID() string {
