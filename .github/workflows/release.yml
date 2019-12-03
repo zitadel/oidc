@@ -13,24 +13,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go }}
-      - run: go test ./pkg/...
-  build:
-    runs-on: ubuntu-18.04
-    needs: test
-    strategy:
-      matrix:
-        go: ['1.11', '1.12', '1.13']
-    name: Go ${{ matrix.go }} build
-    steps:
-      - uses: actions/checkout@master
-      - name: Setup go
-        uses: actions/setup-go@v1
-        with:
-          go-version: ${{ matrix.go }}
-      - run: go run main.go
+      - run: go test -race ./pkg/...
   release:
     runs-on: ubuntu-18.04
-    needs: [test, build]
+    needs: [test]
     steps:
     - name: Source checkout
       uses: actions/checkout@v1
