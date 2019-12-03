@@ -13,7 +13,6 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 var (
@@ -36,8 +35,8 @@ func main() {
 		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
 		Scopes:       []string{"openid", "profile", "email"},
 	}
-	cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpConfig, rp.WithCookieHandler(cookieHandler))
+	// cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
+	provider, err := rp.NewDefaultRP(rpConfig) //, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		logrus.Panic("error creating provider")
 	}
@@ -64,7 +63,7 @@ func main() {
 	// 	w.Write(data)
 	// })
 
-	var marshal = func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
+	marshal := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
 		_ = state
 		data, err := json.Marshal(tokens)
 		if err != nil {
