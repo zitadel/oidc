@@ -34,6 +34,8 @@ type AuthRequest struct {
 	ID           string
 	ResponseType oidc.ResponseType
 	RedirectURI  string
+	Nonce        string
+	ClientID     string
 }
 
 func (a *AuthRequest) GetACR() string {
@@ -48,7 +50,7 @@ func (a *AuthRequest) GetAMR() []string {
 
 func (a *AuthRequest) GetAudience() []string {
 	return []string{
-		a.ID,
+		a.ClientID,
 	}
 }
 
@@ -57,7 +59,7 @@ func (a *AuthRequest) GetAuthTime() time.Time {
 }
 
 func (a *AuthRequest) GetClientID() string {
-	return a.ID
+	return a.ClientID
 }
 
 func (a *AuthRequest) GetCode() string {
@@ -69,11 +71,12 @@ func (a *AuthRequest) GetID() string {
 }
 
 func (a *AuthRequest) GetNonce() string {
-	return "nonce"
+	return a.Nonce
 }
 
 func (a *AuthRequest) GetRedirectURI() string {
-	return "http://localhost:5556/auth/callback"
+	return "https://op.certification.openid.net:62054/authz_cb"
+	// return "http://localhost:5556/auth/callback"
 }
 
 func (a *AuthRequest) GetResponseType() oidc.ResponseType {
@@ -96,8 +99,13 @@ func (a *AuthRequest) GetSubject() string {
 	return "sub"
 }
 
+var (
+	a = &AuthRequest{}
+)
+
 func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
-	return &AuthRequest{ID: "id"}, nil
+	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce}
+	return a, nil
 }
 func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
 	if id == "none" {
@@ -114,7 +122,7 @@ func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
 	return &ConfClient{applicationType: appType}, nil
 }
 func (s *AuthStorage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
-	return &AuthRequest{ID: "native"}, nil
+	return a, nil
 }
 func (s *OPStorage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
 	return &ConfClient{}, nil

@@ -79,6 +79,9 @@ func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
 	if err := ValidateAuthReqRedirectURI(authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
 		return err
 	}
+	if err := ValidateAuthReqResponseType(authReq.ResponseType); err != nil {
+		return err
+	}
 	return nil
 	// return errors.New("Unimplemented") //TODO: impl https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.2
 
@@ -129,6 +132,13 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
 			return ErrInvalidRequest("redirect_uri not allowed 4")
 		}
+	}
+	return nil
+}
+
+func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
+	if responseType == "" {
+		return ErrInvalidRequest("response_type empty")
 	}
 	return nil
 }

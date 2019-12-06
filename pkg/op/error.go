@@ -60,7 +60,8 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		return
 	}
 	url := authReq.GetRedirectURI()
-	if authReq.GetResponseType() == oidc.ResponseTypeCode {
+	responseType := authReq.GetResponseType()
+	if responseType == "" || responseType == oidc.ResponseTypeCode {
 		url += "?" + params
 	} else {
 		url += "#" + params
