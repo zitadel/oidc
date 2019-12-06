@@ -36,9 +36,11 @@ type AuthRequest interface {
 	GetAudience() []string
 	GetAuthTime() time.Time
 	GetClientID() string
+	GetCode() string
 	GetNonce() string
 	GetRedirectURI() string
 	GetResponseType() oidc.ResponseType
+	GetScopes() []string
 	GetState() string
 	GetSubject() string
 }

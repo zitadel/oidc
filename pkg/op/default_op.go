@@ -18,6 +18,8 @@ const (
 
 	authMethodBasic = "client_secret_basic"
 	authMethodPost  = "client_secret_post"
+
+	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
 
 var (
@@ -28,7 +30,6 @@ var (
 		Userinfo:              defaultUserinfoEndpoint,
 		JwksURI:               defaultKeysEndpoint,
 	}
-	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
 
 type DefaultOP struct {
@@ -250,5 +251,5 @@ func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) 
 }
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
-
+	w.Write([]byte("ok"))
 }

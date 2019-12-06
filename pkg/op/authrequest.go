@@ -3,7 +3,6 @@ package op
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ type Authorizer interface {
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
 	Signer() Signer
+	Issuer() string
 	// ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
 }
 
@@ -37,7 +37,7 @@ type ValidationAuthorizer interface {
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	err := r.ParseForm()
 	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"))
+		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"), authorizer.Encoder())
 		// AuthRequestError(w, r, nil, )
 		return
 	}
@@ -45,7 +45,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 
 	err = authorizer.Decoder().Decode(authReq, r.Form)
 	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)))
+		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)), authorizer.Encoder())
 		return
 	}
 
@@ -54,19 +54,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		validation = validater.ValidateAuthRequest
 	}
 	if err := validation(authReq, authorizer.Storage()); err != nil {
-		AuthRequestError(w, r, authReq, err)
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 
 	req, err := authorizer.Storage().CreateAuthRequest(authReq)
 	if err != nil {
-		AuthRequestError(w, r, authReq, err)
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 
 	client, err := authorizer.Storage().GetClientByClientID(req.GetClientID())
 	if err != nil {
-		AuthRequestError(w, r, req, err)
+		AuthRequestError(w, r, req, err, authorizer.Encoder())
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
@@ -100,7 +100,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage Storage) error {
+func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
 		return ErrInvalidRequest("redirect_uri must not be empty")
 	}
@@ -144,7 +144,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 
 	authReq, err := authorizer.Storage().AuthRequestByID(id)
 	if err != nil {
-		AuthRequestError(w, r, nil, err)
+		AuthRequestError(w, r, nil, err, authorizer.Encoder())
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)
@@ -153,29 +153,32 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	var callback string
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
-		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), "test")
+		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), authReq.GetCode())
 	} else {
 		var accessToken string
 		var err error
+		var exp uint64
 		if authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly {
-			accessToken, err = CreateAccessToken()
+			accessToken, exp, err = CreateAccessToken(authReq, authorizer.Signer())
 			if err != nil {
 
 			}
 		}
-		idToken, err := CreateIDToken("", authReq, time.Duration(0), accessToken, authorizer.Signer())
+		idToken, err := CreateIDToken(authorizer.Issuer(), authReq, time.Duration(0), accessToken, "", authorizer.Signer())
 		if err != nil {
 
 		}
 		resp := &oidc.AccessTokenResponse{
 			AccessToken: accessToken,
 			IDToken:     idToken,
-			TokenType:   "Bearer",
+			TokenType:   oidc.BearerToken,
+			ExpiresIn:   exp,
 		}
-		values := make(map[string][]string)
-		authorizer.Encoder().Encode(resp, values)
-		v := url.Values(values)
-		callback = fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), v.Encode())
+		params, err := utils.URLEncodeResponse(resp, authorizer.Encoder())
+		if err != nil {
+
+		}
+		callback = fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
 	}
 	http.Redirect(w, r, callback, http.StatusFound)
 }

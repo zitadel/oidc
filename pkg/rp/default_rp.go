@@ -64,7 +64,7 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 	}
 
 	if p.verifier == nil {
-		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL)) //TODO: keys endpoint
+		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL))
 	}
 
 	return p, nil
@@ -110,6 +110,7 @@ func (p *DefaultRP) AuthURLHandler(state string) http.HandlerFunc {
 //handling the oauth2 code exchange, extracting and validating the id_token
 //returning it paresed together with the oauth2 tokens (access, refresh)
 func (p *DefaultRP) CodeExchange(ctx context.Context, code string) (tokens *oidc.Tokens, err error) {
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, p.httpClient)
 	token, err := p.oauthConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, err //TODO: our error
@@ -124,7 +125,7 @@ func (p *DefaultRP) CodeExchange(ctx context.Context, code string) (tokens *oidc
 		return nil, err //TODO: err
 	}
 
-	return &oidc.Tokens{Token: token, IDTokenClaims: idToken}, nil
+	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
 }
 
 //AuthURL is the `RelayingParty` interface implementation

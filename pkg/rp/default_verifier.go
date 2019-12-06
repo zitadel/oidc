@@ -443,7 +443,7 @@ func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgor
 		return nil //TODO: return error
 	}
 
-	actual, err := oidc.AccessTokenHash(accessToken, sigAlgorithm)
+	actual, err := oidc.ClaimHash(accessToken, sigAlgorithm)
 	if err != nil {
 		return err
 	}

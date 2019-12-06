@@ -14,17 +14,18 @@ import (
 )
 
 type IDTokenClaims struct {
-	Issuer                              string    `json:"iss,omitempty"`
-	Subject                             string    `json:"sub,omitempty"`
-	Audiences                           []string  `json:"aud,omitempty"`
-	Expiration                          time.Time `json:"exp,omitempty"`
-	IssuedAt                            time.Time `json:"iat,omitempty"`
-	AuthTime                            time.Time `json:"auth_time,omitempty"`
-	Nonce                               string    `json:"nonce,omitempty"`
-	AuthenticationContextClassReference string    `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string  `json:"amr,omitempty"`
-	AuthorizedParty                     string    `json:"azp,omitempty"`
-	AccessTokenHash                     string    `json:"at_hash,omitempty"`
+	Issuer                              string
+	Subject                             string
+	Audiences                           []string
+	Expiration                          time.Time
+	IssuedAt                            time.Time
+	AuthTime                            time.Time
+	Nonce                               string
+	AuthenticationContextClassReference string
+	AuthenticationMethodsReferences     []string
+	AuthorizedParty                     string
+	AccessTokenHash                     string
+	CodeHash                            string
 
 	Signature jose.SignatureAlgorithm //TODO: ???
 }
@@ -46,6 +47,7 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	t.AuthenticationMethodsReferences = i.AuthenticationMethodsReferences
 	t.AuthorizedParty = i.AuthorizedParty
 	t.AccessTokenHash = i.AccessTokenHash
+	t.CodeHash = i.CodeHash
 	return nil
 }
 
@@ -63,6 +65,7 @@ func (t *IDTokenClaims) MarshalJSON() ([]byte, error) {
 		AuthenticationMethodsReferences:     t.AuthenticationMethodsReferences,
 		AuthorizedParty:                     t.AuthorizedParty,
 		AccessTokenHash:                     t.AccessTokenHash,
+		CodeHash:                            t.CodeHash,
 	}
 	return json.Marshal(j)
 }
@@ -81,21 +84,23 @@ type jsonIDToken struct {
 	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
 	AuthorizedParty                     string   `json:"azp,omitempty"`
 	AccessTokenHash                     string   `json:"at_hash,omitempty"`
+	CodeHash                            string   `json:"c_hash,omitempty"`
 }
 
 type Tokens struct {
 	*oauth2.Token
 	IDTokenClaims *IDTokenClaims
+	IDToken       string
 }
 
-func AccessTokenHash(accessToken string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
-	tokenHash, err := getHashAlgorithm(sigAlgorithm)
+func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
+	hash, err := getHashAlgorithm(sigAlgorithm)
 	if err != nil {
 		return "", err
 	}
 
-	tokenHash.Write([]byte(accessToken)) // hash documents that Write will never return an error
-	sum := tokenHash.Sum(nil)[:tokenHash.Size()/2]
+	hash.Write([]byte(claim)) // hash documents that Write will never return an error
+	sum := hash.Sum(nil)[:hash.Size()/2]
 	return base64.RawURLEncoding.EncodeToString(sum), nil
 }
 

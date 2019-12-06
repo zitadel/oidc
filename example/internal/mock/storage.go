@@ -41,7 +41,9 @@ func (a *AuthRequest) GetACR() string {
 }
 
 func (a *AuthRequest) GetAMR() []string {
-	return []string{}
+	return []string{
+		"password",
+	}
 }
 
 func (a *AuthRequest) GetAudience() []string {
@@ -55,7 +57,11 @@ func (a *AuthRequest) GetAuthTime() time.Time {
 }
 
 func (a *AuthRequest) GetClientID() string {
-	return ""
+	return a.ID
+}
+
+func (a *AuthRequest) GetCode() string {
+	return "code"
 }
 
 func (a *AuthRequest) GetID() string {
@@ -63,15 +69,23 @@ func (a *AuthRequest) GetID() string {
 }
 
 func (a *AuthRequest) GetNonce() string {
-	return ""
+	return "nonce"
 }
 
 func (a *AuthRequest) GetRedirectURI() string {
-	return ""
+	return "http://localhost:5556/auth/callback"
 }
 
 func (a *AuthRequest) GetResponseType() oidc.ResponseType {
 	return a.ResponseType
+}
+
+func (a *AuthRequest) GetScopes() []string {
+	return []string{
+		"openid",
+		"profile",
+		"email",
+	}
 }
 
 func (a *AuthRequest) GetState() string {
@@ -79,7 +93,7 @@ func (a *AuthRequest) GetState() string {
 }
 
 func (a *AuthRequest) GetSubject() string {
-	return ""
+	return "sub"
 }
 
 func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
@@ -132,11 +146,14 @@ func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
 func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
 	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
 }
+func (s *AuthStorage) GetKey() (*rsa.PrivateKey, error) {
+	return s.key, nil
+}
 func (s *AuthStorage) GetKeySet() (jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()
 	return jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
-			jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256"},
+			jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
 		},
 	}, nil
 }
@@ -151,6 +168,9 @@ func (c *ConfClient) RedirectURIs() []string {
 		"http://localhost:9999/callback",
 		"http://localhost:5556/auth/callback",
 		"custom://callback",
+		"https://localhost:8443/test/a/instructions-example/callback",
+		"https://op.certification.openid.net:62054/authz_cb",
+		"https://op.certification.openid.net:62054/authz_post",
 	}
 }
 

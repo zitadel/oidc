@@ -62,6 +62,20 @@ func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encoder", reflect.TypeOf((*MockAuthorizer)(nil).Encoder))
 }
 
+// Issuer mocks base method
+func (m *MockAuthorizer) Issuer() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Issuer")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Issuer indicates an expected call of Issuer
+func (mr *MockAuthorizerMockRecorder) Issuer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Issuer", reflect.TypeOf((*MockAuthorizer)(nil).Issuer))
+}
+
 // Signer mocks base method
 func (m *MockAuthorizer) Signer() op.Signer {
 	m.ctrl.T.Helper()

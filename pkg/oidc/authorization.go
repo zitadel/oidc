@@ -25,6 +25,8 @@ const (
 	PromptSelectAccount = "select_account"
 
 	GrantTypeCode GrantType = "authorization_code"
+
+	BearerToken = "Bearer"
 )
 
 var displayValues = map[string]Display{

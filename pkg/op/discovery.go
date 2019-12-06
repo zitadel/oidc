@@ -27,7 +27,7 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		// ClaimsSupported:                   oidc.SupportedClaims,
 		IDTokenSigningAlgValuesSupported:  sigAlgorithms(s),
 		SubjectTypesSupported:             subjectTypes(c),
-		TokenEndpointAuthMethodsSupported: authMethods(c),
+		TokenEndpointAuthMethodsSupported: authMethods(c.AuthMethodBasicSupported(), c.AuthMethodPostSupported()),
 	}
 }
 
@@ -68,12 +68,14 @@ func subjectTypes(c Configuration) []string {
 	return []string{"public"} //TODO: config
 }
 
-func authMethods(c Configuration) []string {
+func authMethods(basic, post bool) []string {
 	authMethods := make([]string, 0, 2)
-	if c.AuthMethodBasicSupported() {
+	if basic {
+		// if c.AuthMethodBasicSupported() {
 		authMethods = append(authMethods, authMethodBasic)
 	}
-	if c.AuthMethodPostSupported() {
+	if post {
+		// if c.AuthMethodPostSupported() {
 		authMethods = append(authMethods, authMethodPost)
 	}
 	return authMethods

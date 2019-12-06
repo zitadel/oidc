@@ -54,12 +54,12 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	accessToken, err := CreateAccessToken()
+	accessToken, exp, err := CreateAccessToken(authReq, exchanger.Signer())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, exchanger.IDTokenValidity(), accessToken, exchanger.Signer())
+	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, exchanger.IDTokenValidity(), accessToken, tokenReq.Code, exchanger.Signer())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -68,37 +68,10 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	resp := &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
 		IDToken:     idToken,
+		TokenType:   oidc.BearerToken,
+		ExpiresIn:   exp,
 	}
 	utils.MarshalJSON(w, resp)
-}
-
-func CreateAccessToken() (string, error) {
-	return "accessToken", nil
-}
-
-func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, accessToken string, signer Signer) (string, error) {
-	var err error
-	exp := time.Now().UTC().Add(validity)
-	claims := &oidc.IDTokenClaims{
-		Issuer:                              issuer,
-		Subject:                             authReq.GetSubject(),
-		Audiences:                           authReq.GetAudience(),
-		Expiration:                          exp,
-		IssuedAt:                            time.Now().UTC(),
-		AuthTime:                            authReq.GetAuthTime(),
-		Nonce:                               authReq.GetNonce(),
-		AuthenticationContextClassReference: authReq.GetACR(),
-		AuthenticationMethodsReferences:     authReq.GetAMR(),
-		AuthorizedParty:                     authReq.GetClientID(),
-	}
-	if accessToken != "" {
-		claims.AccessTokenHash, err = oidc.AccessTokenHash(accessToken, signer.SignatureAlgorithm())
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return signer.SignIDToken(claims)
 }
 
 func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Client, error) {

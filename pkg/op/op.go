@@ -12,14 +12,12 @@ import (
 
 type OpenIDProvider interface {
 	Configuration
-	// Storage() Storage
 	HandleDiscovery(w http.ResponseWriter, r *http.Request)
 	HandleAuthorize(w http.ResponseWriter, r *http.Request)
 	HandleAuthorizeCallback(w http.ResponseWriter, r *http.Request)
 	HandleExchange(w http.ResponseWriter, r *http.Request)
 	HandleUserinfo(w http.ResponseWriter, r *http.Request)
 	HandleKeys(w http.ResponseWriter, r *http.Request)
-	// Storage() Storage
 	HttpHandler() *http.Server
 }
 

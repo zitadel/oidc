@@ -55,3 +55,13 @@ func HttpRequest(client *http.Client, req *http.Request, response interface{}) e
 	}
 	return nil
 }
+
+func URLEncodeResponse(resp interface{}, encoder *schema.Encoder) (string, error) {
+	values := make(map[string][]string)
+	err := encoder.Encode(resp, values)
+	if err != nil {
+		return "", err
+	}
+	v := url.Values(values)
+	return v.Encode(), nil
+}

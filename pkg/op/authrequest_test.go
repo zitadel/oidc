@@ -148,7 +148,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		uri          string
 		clientID     string
 		responseType oidc.ResponseType
-		storage      op.Storage
+		storage      op.OPStorage
 	}
 	tests := []struct {
 		name    string
