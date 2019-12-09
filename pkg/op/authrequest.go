@@ -105,14 +105,14 @@ func ValidateAuthReqScopes(scopes []string) error {
 
 func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
-		return ErrInvalidRequest("redirect_uri must not be empty")
+		return ErrInvalidRequestRedirectURI("redirect_uri must not be empty")
 	}
 	client, err := storage.GetClientByClientID(client_id)
 	if err != nil {
 		return ErrServerError(err.Error())
 	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
-		return ErrInvalidRequest("redirect_uri not allowed")
+		return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
 	}
 	if strings.HasPrefix(uri, "https://") {
 		return nil
@@ -127,10 +127,10 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 		return ErrInvalidRequest("redirect_uri not allowed 2")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequest("redirect_uri not allowed 3")
+			return ErrInvalidRequestRedirectURI("redirect_uri not allowed 3")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequest("redirect_uri not allowed 4")
+			return ErrInvalidRequestRedirectURI("redirect_uri not allowed 4")
 		}
 	}
 	return nil
