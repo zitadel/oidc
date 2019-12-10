@@ -75,7 +75,7 @@ func (a *AuthRequest) GetNonce() string {
 }
 
 func (a *AuthRequest) GetRedirectURI() string {
-	return "https://op.certification.openid.net:62054/authz_cb"
+	return a.RedirectURI
 	// return "http://localhost:5556/auth/callback"
 }
 
@@ -104,7 +104,7 @@ var (
 )
 
 func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
-	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce}
+	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
 	return a, nil
 }
 func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
@@ -134,21 +134,7 @@ func (s *AuthStorage) DeleteAuthRequestAndCode(string, string) error {
 	return nil
 }
 func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
-	if id == "none" {
-		return nil, errors.New("not found")
-	}
-	var responseType oidc.ResponseType
-	if id == "code" {
-		responseType = oidc.ResponseTypeCode
-	} else if id == "id" {
-		responseType = oidc.ResponseTypeIDTokenOnly
-	} else {
-		responseType = oidc.ResponseTypeIDToken
-	}
-	return &AuthRequest{
-		ResponseType: responseType,
-		RedirectURI:  "/callback",
-	}, nil
+	return a, nil
 }
 
 func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
@@ -166,6 +152,49 @@ func (s *AuthStorage) GetKeySet() (jose.JSONWebKeySet, error) {
 	}, nil
 }
 
+func (s *OPStorage) GetUserinfoFromScopes([]string) (interface{}, error) {
+	return &oidc.Test{
+		Userinfo: oidc.Userinfo{
+			Subject: a.GetSubject(),
+			Address: &oidc.UserinfoAddress{
+				StreetAddress: "Hjkhkj 789\ndsf",
+			},
+			UserinfoEmail: oidc.UserinfoEmail{
+				Email:         "test",
+				EmailVerified: true,
+			},
+			UserinfoPhone: oidc.UserinfoPhone{
+				PhoneNumber:         "sadsa",
+				PhoneNumberVerified: true,
+			},
+			UserinfoProfile: oidc.UserinfoProfile{
+				UpdatedAt: time.Now(),
+			},
+			// Claims: map[string]interface{}{
+			// 	"test": "test",
+			// 	"hkjh": "",
+			// },
+		},
+		Add: "jkhnkj",
+	}, nil
+}
+
+type info struct {
+	Subject string
+}
+
+func (i *info) GetSubject() string {
+	return i.Subject
+}
+
+func (i *info) Claims() map[string]interface{} {
+	return map[string]interface{}{
+		"hodor":        "hoidoir",
+		"email":        "asdfd",
+		"emailVerfied": true,
+	}
+}
+
 type ConfClient struct {
 	applicationType op.ApplicationType
 }
@@ -177,8 +206,8 @@ func (c *ConfClient) RedirectURIs() []string {
 		"http://localhost:5556/auth/callback",
 		"custom://callback",
 		"https://localhost:8443/test/a/instructions-example/callback",
-		"https://op.certification.openid.net:62054/authz_cb",
-		"https://op.certification.openid.net:62054/authz_post",
+		"https://op.certification.openid.net:62064/authz_cb",
+		"https://op.certification.openid.net:62064/authz_post",
 	}
 }
 

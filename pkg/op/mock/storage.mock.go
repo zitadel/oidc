@@ -168,3 +168,18 @@ func (mr *MockStorageMockRecorder) GetSigningKey() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey))
 }
+
+// GetUserinfoFromScopes mocks base method
+func (m *MockStorage) GetUserinfoFromScopes(arg0 []string) (*oidc.Userinfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserinfoFromScopes", arg0)
+	ret0, _ := ret[0].(*oidc.Userinfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserinfoFromScopes indicates an expected call of GetUserinfoFromScopes
+func (mr *MockStorageMockRecorder) GetUserinfoFromScopes(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserinfoFromScopes", reflect.TypeOf((*MockStorage)(nil).GetUserinfoFromScopes), arg0)
+}

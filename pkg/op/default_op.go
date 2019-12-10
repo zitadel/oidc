@@ -16,8 +16,8 @@ const (
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultKeysEndpoint          = "keys"
 
-	authMethodBasic = "client_secret_basic"
-	authMethodPost  = "client_secret_post"
+	AuthMethodBasic = "client_secret_basic"
+	AuthMethodPost  = "client_secret_post"
 
 	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
@@ -251,5 +251,5 @@ func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) 
 }
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("ok"))
+	Userinfo(w, r, p)
 }

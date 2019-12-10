@@ -1,4 +1,4 @@
-package op
+package op_test
 
 import (
 	"net/http"
@@ -6,9 +6,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/op/mock"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
 )
 
 func TestDiscover(t *testing.T) {
@@ -30,7 +33,7 @@ func TestDiscover(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			Discover(tt.args.w, tt.args.config)
+			op.Discover(tt.args.w, tt.args.config)
 			rec := tt.args.w.(*httptest.ResponseRecorder)
 			require.Equal(t, http.StatusOK, rec.Code)
 			require.Equal(t, `{"issuer":"https://issuer.com"}`, rec.Body.String())
@@ -40,8 +43,8 @@ func TestDiscover(t *testing.T) {
 
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
-		c Configuration
-		s Signer
+		c op.Configuration
+		s op.Signer
 	}
 	tests := []struct {
 		name string
@@ -52,7 +55,7 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CreateDiscoveryConfig(tt.args.c, tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got := op.CreateDiscoveryConfig(tt.args.c, tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CreateDiscoveryConfig() = %v, want %v", got, tt.want)
 			}
 		})
@@ -61,27 +64,31 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 
 func Test_scopes(t *testing.T) {
 	type args struct {
-		c Configuration
+		c op.Configuration
 	}
 	tests := []struct {
 		name string
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			"default Scopes",
+			args{},
+			op.DefaultSupportedScopes,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := scopes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+			if got := op.Scopes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("scopes() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_responseTypes(t *testing.T) {
+func Test_ResponseTypes(t *testing.T) {
 	type args struct {
-		c Configuration
+		c op.Configuration
 	}
 	tests := []struct {
 		name string
@@ -92,16 +99,16 @@ func Test_responseTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := responseTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+			if got := op.ResponseTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("responseTypes() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_grantTypes(t *testing.T) {
+func Test_GrantTypes(t *testing.T) {
 	type args struct {
-		c Configuration
+		c op.Configuration
 	}
 	tests := []struct {
 		name string
@@ -112,64 +119,64 @@ func Test_grantTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := grantTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+			if got := op.GrantTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("grantTypes() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-// func Test_sigAlgorithms(t *testing.T) {
-// 	type args struct {
-// 		s Signer
-// 	}
-// 	tests := []struct {
-// 		name string
-// 		args args
-// 		want []string
-// 	}{
-// 		{
-// 			"",
-// 			args{},
-// 			[]string{"RS256"},
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if got := sigAlgorithms(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-// 				t.Errorf("sigAlgorithms() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
-
-// func Test_subjectTypes(t *testing.T) {
-// 	type args struct {
-// 		c Configuration
-// 	}
-// 	tests := []struct {
-// 		name string
-// 		args args
-// 		want []string
-// 	}{
-// 		{
-// 			"none",
-// 			args{func()}
-// 		}
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if got := subjectTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-// 				t.Errorf("subjectTypes() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
-
-func Test_authMethods(t *testing.T) {
+func TestSupportedClaims(t *testing.T) {
 	type args struct {
-		basic bool
-		post  bool
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := op.SupportedClaims(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SupportedClaims() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_SigAlgorithms(t *testing.T) {
+	m := mock.NewMockSigner(gomock.NewController((t)))
+	type args struct {
+		s op.Signer
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"",
+			args{func() op.Signer {
+				m.EXPECT().SignatureAlgorithm().Return(jose.RS256)
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := op.SigAlgorithms(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sigAlgorithms() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_SubjectTypes(t *testing.T) {
+	type args struct {
+		c op.Configuration
 	}
 	tests := []struct {
 		name string
@@ -178,28 +185,49 @@ func Test_authMethods(t *testing.T) {
 	}{
 		{
 			"none",
-			args{false, false},
-			[]string{},
-		},
-		{
-			"basic",
-			args{true, false},
-			[]string{authMethodBasic},
-		},
-		{
-			"post",
-			args{false, true},
-			[]string{authMethodPost},
-		},
-		{
-			"basic and post",
-			args{true, true},
-			[]string{authMethodBasic, authMethodPost},
+			args{},
+			[]string{"public"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := authMethods(tt.args.basic, tt.args.post); !reflect.DeepEqual(got, tt.want) {
+			if got := op.SubjectTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("subjectTypes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_AuthMethods(t *testing.T) {
+	m := mock.NewMockConfiguration(gomock.NewController((t)))
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"imlicit basic",
+			args{func() op.Configuration {
+				m.EXPECT().AuthMethodPostSupported().Return(false)
+				return m
+			}()},
+			[]string{op.AuthMethodBasic},
+		},
+		{
+			"basic and post",
+			args{func() op.Configuration {
+				m.EXPECT().AuthMethodPostSupported().Return(true)
+				return m
+			}()},
+			[]string{op.AuthMethodBasic, op.AuthMethodPost},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := op.AuthMethods(tt.args.c); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authMethods() = %v, want %v", got, tt.want)
 			}
 		})

@@ -14,7 +14,6 @@ type Configuration interface {
 	KeysEndpoint() Endpoint
 
 	// SupportedScopes() []string
-	AuthMethodBasicSupported() bool
 	AuthMethodPostSupported() bool
 
 	Port() string
