@@ -7,6 +7,7 @@ const (
 )
 
 type Client interface {
+	GetID() string
 	RedirectURIs() []string
 	ApplicationType() ApplicationType
 	LoginURL(string) string

@@ -11,11 +11,11 @@ import (
 type AuthStorage interface {
 	CreateAuthRequest(*oidc.AuthRequest) (AuthRequest, error)
 	AuthRequestByID(string) (AuthRequest, error)
-	AuthRequestByCode(Client, string, string) (AuthRequest, error)
+	AuthRequestByCode(string) (AuthRequest, error)
 	DeleteAuthRequestAndCode(string, string) error
 
 	GetSigningKey() (*jose.SigningKey, error)
-	GetKeySet() (jose.JSONWebKeySet, error)
+	GetKeySet() (*jose.JSONWebKeySet, error)
 }
 
 type OPStorage interface {
@@ -38,6 +38,7 @@ type AuthRequest interface {
 	GetAuthTime() time.Time
 	GetClientID() string
 	GetCode() string
+	GetCodeChallenge() *oidc.CodeChallenge
 	GetNonce() string
 	GetRedirectURI() string
 	GetResponseType() oidc.ResponseType

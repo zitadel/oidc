@@ -36,18 +36,18 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AuthRequestByCode mocks base method
-func (m *MockStorage) AuthRequestByCode(arg0 op.Client, arg1, arg2 string) (op.AuthRequest, error) {
+func (m *MockStorage) AuthRequestByCode(arg0 string) (op.AuthRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthRequestByCode", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AuthRequestByCode", arg0)
 	ret0, _ := ret[0].(op.AuthRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AuthRequestByCode indicates an expected call of AuthRequestByCode
-func (mr *MockStorageMockRecorder) AuthRequestByCode(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) AuthRequestByCode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByCode", reflect.TypeOf((*MockStorage)(nil).AuthRequestByCode), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByCode", reflect.TypeOf((*MockStorage)(nil).AuthRequestByCode), arg0)
 }
 
 // AuthRequestByID mocks base method
@@ -140,10 +140,10 @@ func (mr *MockStorageMockRecorder) GetClientByClientID(arg0 interface{}) *gomock
 }
 
 // GetKeySet mocks base method
-func (m *MockStorage) GetKeySet() (go_jose_v2.JSONWebKeySet, error) {
+func (m *MockStorage) GetKeySet() (*go_jose_v2.JSONWebKeySet, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKeySet")
-	ret0, _ := ret[0].(go_jose_v2.JSONWebKeySet)
+	ret0, _ := ret[0].(*go_jose_v2.JSONWebKeySet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

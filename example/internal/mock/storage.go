@@ -143,9 +143,9 @@ func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
 func (s *AuthStorage) GetKey() (*rsa.PrivateKey, error) {
 	return s.key, nil
 }
-func (s *AuthStorage) GetKeySet() (jose.JSONWebKeySet, error) {
+func (s *AuthStorage) GetKeySet() (*jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()
-	return jose.JSONWebKeySet{
+	return &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
 			jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
 		},

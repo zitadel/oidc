@@ -39,12 +39,17 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		return
 	}
 
-	client, err := AuthorizeClient(r, tokenReq, exchanger)
+	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	authReq, err := exchanger.Storage().AuthRequestByCode(client, tokenReq.Code, tokenReq.RedirectURI)
+	client, err := AuthorizeClient(r, tokenReq, authReq, exchanger)
+	if err != nil {
+		ExchangeRequestError(w, r, err)
+		return
+	}
+	err = ValidateAccessTokenRequest(tokenReq, client, authReq)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -74,7 +79,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	utils.MarshalJSON(w, resp)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Client, error) {
+func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, authReq AuthRequest, exchanger Exchanger) (Client, error) {
 	if tokenReq.ClientID == "" {
 		if !exchanger.AuthMethodBasicSupported() {
 			return nil, errors.New("basic not supported")
@@ -92,9 +97,22 @@ func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, exchang
 		return exchanger.Storage().AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret)
 	}
 	if tokenReq.CodeVerifier != "" {
-		return exchanger.Storage().AuthorizeClientIDCodeVerifier(tokenReq.ClientID, tokenReq.CodeVerifier)
+		if !authReq.GetCodeChallenge().Verify(tokenReq.CodeVerifier) {
+			return nil, ErrInvalidRequest("code_challenge invalid")
+		}
+		return exchanger.Storage().GetClientByClientID(tokenReq.ClientID)
 	}
 	return nil, errors.New("Unimplemented") //TODO: impl
+}
+
+func ValidateAccessTokenRequest(tokenReq *oidc.AccessTokenRequest, client Client, authReq AuthRequest) error {
+	if client.GetID() != authReq.GetClientID() {
+		return ErrInvalidRequest("invalid auth code")
+	}
+	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
+		return ErrInvalidRequest("redirect_uri does no correspond")
+	}
+	return nil
 }
 
 func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.TokenRequest, error) {
