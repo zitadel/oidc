@@ -10,6 +10,7 @@ type Client interface {
 	GetID() string
 	RedirectURIs() []string
 	ApplicationType() ApplicationType
+	GetAuthMethod() AuthMethod
 	LoginURL(string) string
 }
 
@@ -18,3 +19,5 @@ func IsConfidentialType(c Client) bool {
 }
 
 type ApplicationType int
+
+type AuthMethod string

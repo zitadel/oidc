@@ -20,8 +20,7 @@ type AuthStorage interface {
 
 type OPStorage interface {
 	GetClientByClientID(string) (Client, error)
-	AuthorizeClientIDSecret(string, string) (Client, error)
-	AuthorizeClientIDCodeVerifier(string, string) (Client, error)
+	AuthorizeClientIDSecret(string, string) error
 	GetUserinfoFromScopes([]string) (*oidc.Userinfo, error)
 }
 

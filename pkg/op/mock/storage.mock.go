@@ -65,28 +65,12 @@ func (mr *MockStorageMockRecorder) AuthRequestByID(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByID", reflect.TypeOf((*MockStorage)(nil).AuthRequestByID), arg0)
 }
 
-// AuthorizeClientIDCodeVerifier mocks base method
-func (m *MockStorage) AuthorizeClientIDCodeVerifier(arg0, arg1 string) (op.Client, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthorizeClientIDCodeVerifier", arg0, arg1)
-	ret0, _ := ret[0].(op.Client)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AuthorizeClientIDCodeVerifier indicates an expected call of AuthorizeClientIDCodeVerifier
-func (mr *MockStorageMockRecorder) AuthorizeClientIDCodeVerifier(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizeClientIDCodeVerifier", reflect.TypeOf((*MockStorage)(nil).AuthorizeClientIDCodeVerifier), arg0, arg1)
-}
-
 // AuthorizeClientIDSecret mocks base method
-func (m *MockStorage) AuthorizeClientIDSecret(arg0, arg1 string) (op.Client, error) {
+func (m *MockStorage) AuthorizeClientIDSecret(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthorizeClientIDSecret", arg0, arg1)
-	ret0, _ := ret[0].(op.Client)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AuthorizeClientIDSecret indicates an expected call of AuthorizeClientIDSecret

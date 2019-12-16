@@ -31,7 +31,7 @@ func NewMockStorageAny(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	mockS := m.(*MockStorage)
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
-	mockS.EXPECT().AuthorizeClientIDSecret(gomock.Any(), gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
+	mockS.EXPECT().AuthorizeClientIDSecret(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	return m
 }
 
@@ -62,15 +62,19 @@ func ExpectValidClientID(s op.Storage) {
 	mockS.EXPECT().GetClientByClientID(gomock.Any()).DoAndReturn(
 		func(id string) (op.Client, error) {
 			var appType op.ApplicationType
+			var authMethod op.AuthMethod
 			switch id {
 			case "web_client":
 				appType = op.ApplicationTypeWeb
+				authMethod = op.AuthMethodBasic
 			case "native_client":
 				appType = op.ApplicationTypeNative
+				authMethod = op.AuthMethodNone
 			case "useragent_client":
 				appType = op.ApplicationTypeUserAgent
+				authMethod = op.AuthMethodBasic
 			}
-			return &ConfClient{appType: appType}, nil
+			return &ConfClient{id: id, appType: appType, authMethod: authMethod}, nil
 		})
 }
 
@@ -90,7 +94,9 @@ func ExpectSigningKey(s op.Storage) {
 }
 
 type ConfClient struct {
-	appType op.ApplicationType
+	id         string
+	appType    op.ApplicationType
+	authMethod op.AuthMethod
 }
 
 func (c *ConfClient) RedirectURIs() []string {
@@ -108,4 +114,12 @@ func (c *ConfClient) LoginURL(id string) string {
 
 func (c *ConfClient) ApplicationType() op.ApplicationType {
 	return c.appType
+}
+
+func (c *ConfClient) GetAuthMethod() op.AuthMethod {
+	return c.authMethod
+}
+
+func (c *ConfClient) GetID() string {
+	return c.id
 }

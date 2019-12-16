@@ -214,7 +214,7 @@ func Test_AuthMethods(t *testing.T) {
 				m.EXPECT().AuthMethodPostSupported().Return(false)
 				return m
 			}()},
-			[]string{op.AuthMethodBasic},
+			[]string{string(op.AuthMethodBasic)},
 		},
 		{
 			"basic and post",
@@ -222,7 +222,7 @@ func Test_AuthMethods(t *testing.T) {
 				m.EXPECT().AuthMethodPostSupported().Return(true)
 				return m
 			}()},
-			[]string{op.AuthMethodBasic, op.AuthMethodPost},
+			[]string{string(op.AuthMethodBasic), string(op.AuthMethodPost)},
 		},
 	}
 	for _, tt := range tests {

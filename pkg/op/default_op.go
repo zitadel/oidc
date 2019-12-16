@@ -16,8 +16,9 @@ const (
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultKeysEndpoint          = "keys"
 
-	AuthMethodBasic = "client_secret_basic"
-	AuthMethodPost  = "client_secret_post"
+	AuthMethodBasic AuthMethod = "client_secret_basic"
+	AuthMethodPost             = "client_secret_post"
+	AuthMethodNone             = "none"
 
 	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )

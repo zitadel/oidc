@@ -58,6 +58,9 @@ type AuthRequest struct {
 	IDTokenHint string   `schema:"id_token_hint"`
 	LoginHint   string   `schema:"login_hint"`
 	ACRValues   []string `schema:"acr_values"`
+
+	CodeChallenge       string              `schema:"code_challenge"`
+	CodeChallengeMethod CodeChallengeMethod `schema:"code_challenge_method"`
 }
 
 // func (a *AuthRequest) GetID() string {

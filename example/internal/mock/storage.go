@@ -31,11 +31,12 @@ func NewAuthStorage() op.AuthStorage {
 }
 
 type AuthRequest struct {
-	ID           string
-	ResponseType oidc.ResponseType
-	RedirectURI  string
-	Nonce        string
-	ClientID     string
+	ID            string
+	ResponseType  oidc.ResponseType
+	RedirectURI   string
+	Nonce         string
+	ClientID      string
+	CodeChallenge *oidc.CodeChallenge
 }
 
 func (a *AuthRequest) GetACR() string {
@@ -64,6 +65,10 @@ func (a *AuthRequest) GetClientID() string {
 
 func (a *AuthRequest) GetCode() string {
 	return "code"
+}
+
+func (a *AuthRequest) GetCodeChallenge() *oidc.CodeChallenge {
+	return a.CodeChallenge
 }
 
 func (a *AuthRequest) GetID() string {
@@ -105,30 +110,16 @@ var (
 
 func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
 	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
+	if authReq.CodeChallenge != "" {
+		a.CodeChallenge = &oidc.CodeChallenge{
+			Challenge: authReq.CodeChallenge,
+			Method:    authReq.CodeChallengeMethod,
+		}
+	}
 	return a, nil
 }
-func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
-	if id == "none" {
-		return nil, errors.New("not found")
-	}
-	var appType op.ApplicationType
-	if id == "web" {
-		appType = op.ApplicationTypeWeb
-	} else if id == "native" {
-		appType = op.ApplicationTypeNative
-	} else {
-		appType = op.ApplicationTypeUserAgent
-	}
-	return &ConfClient{applicationType: appType}, nil
-}
-func (s *AuthStorage) AuthRequestByCode(op.Client, string, string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByCode(string) (op.AuthRequest, error) {
 	return a, nil
-}
-func (s *OPStorage) AuthorizeClientIDSecret(string, string) (op.Client, error) {
-	return &ConfClient{}, nil
-}
-func (s *OPStorage) AuthorizeClientIDCodeVerifier(string, string) (op.Client, error) {
-	return &ConfClient{}, nil
 }
 func (s *AuthStorage) DeleteAuthRequestAndCode(string, string) error {
 	return nil
@@ -136,7 +127,6 @@ func (s *AuthStorage) DeleteAuthRequestAndCode(string, string) error {
 func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
 	return a, nil
 }
-
 func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
 	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
 }
@@ -152,53 +142,61 @@ func (s *AuthStorage) GetKeySet() (*jose.JSONWebKeySet, error) {
 	}, nil
 }
 
-func (s *OPStorage) GetUserinfoFromScopes([]string) (interface{}, error) {
-	return &oidc.Test{
-		Userinfo: oidc.Userinfo{
-			Subject: a.GetSubject(),
-			Address: &oidc.UserinfoAddress{
-				StreetAddress: "Hjkhkj 789\ndsf",
-			},
-			UserinfoEmail: oidc.UserinfoEmail{
-				Email:         "test",
-				EmailVerified: true,
-			},
-			UserinfoPhone: oidc.UserinfoPhone{
-				PhoneNumber:         "sadsa",
-				PhoneNumberVerified: true,
-			},
-			UserinfoProfile: oidc.UserinfoProfile{
-				UpdatedAt: time.Now(),
-			},
-			// Claims: map[string]interface{}{
-			// 	"test": "test",
-			// 	"hkjh": "",
-			// },
-		},
-		Add: "jkhnkj",
-	}, nil
-}
-
-type info struct {
-	Subject string
-}
-
-func (i *info) GetSubject() string {
-	return i.Subject
-}
-
-func (i *info) Claims() map[string]interface{} {
-	return map[string]interface{}{
-		"hodor":        "hoidoir",
-		"email":        "asdfd",
-		"emailVerfied": true,
+func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
+	if id == "none" {
+		return nil, errors.New("not found")
 	}
+	var appType op.ApplicationType
+	var authMethod op.AuthMethod
+	if id == "web" {
+		appType = op.ApplicationTypeWeb
+		authMethod = op.AuthMethodBasic
+	} else if id == "native" {
+		appType = op.ApplicationTypeNative
+		authMethod = op.AuthMethodNone
+	} else {
+		appType = op.ApplicationTypeUserAgent
+		authMethod = op.AuthMethodNone
+	}
+	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod}, nil
+}
+
+func (s *OPStorage) AuthorizeClientIDSecret(id string, _ string) error {
+	return nil
+}
+func (s *OPStorage) GetUserinfoFromScopes([]string) (*oidc.Userinfo, error) {
+	return &oidc.Userinfo{
+		Subject: a.GetSubject(),
+		Address: &oidc.UserinfoAddress{
+			StreetAddress: "Hjkhkj 789\ndsf",
+		},
+		UserinfoEmail: oidc.UserinfoEmail{
+			Email:         "test",
+			EmailVerified: true,
+		},
+		UserinfoPhone: oidc.UserinfoPhone{
+			PhoneNumber:         "sadsa",
+			PhoneNumberVerified: true,
+		},
+		UserinfoProfile: oidc.UserinfoProfile{
+			UpdatedAt: time.Now(),
+		},
+		// Claims: map[string]interface{}{
+		// 	"test": "test",
+		// 	"hkjh": "",
+		// },
+	}, nil
 }
 
 type ConfClient struct {
 	applicationType op.ApplicationType
+	authMethod      op.AuthMethod
+	ID              string
 }
 
+func (c *ConfClient) GetID() string {
+	return c.ID
+}
 func (c *ConfClient) RedirectURIs() []string {
 	return []string{
 		"https://registered.com/callback",
@@ -217,4 +215,8 @@ func (c *ConfClient) LoginURL(id string) string {
 
 func (c *ConfClient) ApplicationType() op.ApplicationType {
 	return c.applicationType
+}
+
+func (c *ConfClient) GetAuthMethod() op.AuthMethod {
+	return c.authMethod
 }

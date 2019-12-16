@@ -110,10 +110,10 @@ func SubjectTypes(c Configuration) []string {
 
 func AuthMethods(c Configuration) []string {
 	authMethods := []string{
-		AuthMethodBasic,
+		string(AuthMethodBasic),
 	}
 	if c.AuthMethodPostSupported() {
-		authMethods = append(authMethods, AuthMethodPost)
+		authMethods = append(authMethods, string(AuthMethodPost))
 	}
 	return authMethods
 }

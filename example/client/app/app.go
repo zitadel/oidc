@@ -38,7 +38,7 @@ func main() {
 	// cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
 	provider, err := rp.NewDefaultRP(rpConfig) //, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
-		logrus.Panic("error creating provider")
+		logrus.Panicf("error creating provider %s", err.Error())
 	}
 
 	// state := "foobar"

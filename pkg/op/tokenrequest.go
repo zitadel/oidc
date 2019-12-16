@@ -22,38 +22,21 @@ type Exchanger interface {
 }
 
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	err := r.ParseForm()
+	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		ExchangeRequestError(w, r, ErrInvalidRequest("error parsing form"))
-		return
-	}
-	tokenReq := new(oidc.AccessTokenRequest)
-
-	err = exchanger.Decoder().Decode(tokenReq, r.Form)
-	if err != nil {
-		ExchangeRequestError(w, r, ErrInvalidRequest("error decoding form"))
-		return
+		ExchangeRequestError(w, r, err)
 	}
 	if tokenReq.Code == "" {
 		ExchangeRequestError(w, r, ErrInvalidRequest("code missing"))
 		return
 	}
 
-	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
+	authReq, err := ValidateAccessTokenRequest(tokenReq, exchanger)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	client, err := AuthorizeClient(r, tokenReq, authReq, exchanger)
-	if err != nil {
-		ExchangeRequestError(w, r, err)
-		return
-	}
-	err = ValidateAccessTokenRequest(tokenReq, client, authReq)
-	if err != nil {
-		ExchangeRequestError(w, r, err)
-		return
-	}
+
 	err = exchanger.Storage().DeleteAuthRequestAndCode(authReq.GetID(), tokenReq.Code)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
@@ -79,40 +62,84 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	utils.MarshalJSON(w, resp)
 }
 
-func AuthorizeClient(r *http.Request, tokenReq *oidc.AccessTokenRequest, authReq AuthRequest, exchanger Exchanger) (Client, error) {
-	if tokenReq.ClientID == "" {
-		if !exchanger.AuthMethodBasicSupported() {
-			return nil, errors.New("basic not supported")
-		}
-		clientID, clientSecret, ok := r.BasicAuth()
-		if ok {
-			return exchanger.Storage().AuthorizeClientIDSecret(clientID, clientSecret)
-		}
+func ParseAccessTokenRequest(r *http.Request, decoder *schema.Decoder) (*oidc.AccessTokenRequest, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return nil, ErrInvalidRequest("error parsing form")
+	}
+	tokenReq := new(oidc.AccessTokenRequest)
+	err = decoder.Decode(tokenReq, r.Form)
+	if err != nil {
+		return nil, ErrInvalidRequest("error decoding form")
+	}
+	clientID, clientSecret, ok := r.BasicAuth()
+	if ok {
+		tokenReq.ClientID = clientID
+		tokenReq.ClientSecret = clientSecret
 
 	}
-	if tokenReq.ClientSecret != "" {
-		if !exchanger.AuthMethodPostSupported() {
-			return nil, errors.New("post not supported")
-		}
-		return exchanger.Storage().AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret)
-	}
-	if tokenReq.CodeVerifier != "" {
-		if !authReq.GetCodeChallenge().Verify(tokenReq.CodeVerifier) {
-			return nil, ErrInvalidRequest("code_challenge invalid")
-		}
-		return exchanger.Storage().GetClientByClientID(tokenReq.ClientID)
-	}
-	return nil, errors.New("Unimplemented") //TODO: impl
+	return tokenReq, nil
 }
 
-func ValidateAccessTokenRequest(tokenReq *oidc.AccessTokenRequest, client Client, authReq AuthRequest) error {
+func ValidateAccessTokenRequest(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
+	authReq, client, err := AuthorizeClient(tokenReq, exchanger)
+	if err != nil {
+		return nil, err
+	}
 	if client.GetID() != authReq.GetClientID() {
-		return ErrInvalidRequest("invalid auth code")
+		return nil, ErrInvalidRequest("invalid auth code")
 	}
 	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
-		return ErrInvalidRequest("redirect_uri does no correspond")
+		return nil, ErrInvalidRequest("redirect_uri does no correspond")
 	}
-	return nil
+	return authReq, nil
+}
+
+func AuthorizeClient(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {
+	client, err := exchanger.Storage().GetClientByClientID(tokenReq.ClientID)
+	if err != nil {
+		return nil, nil, err
+	}
+	switch client.GetAuthMethod() {
+	case AuthMethodNone:
+		authReq, err := AuthorizeCodeChallenge(tokenReq, exchanger)
+		return authReq, client, err
+	case AuthMethodPost:
+		if !exchanger.AuthMethodPostSupported() {
+			return nil, nil, errors.New("basic not supported")
+		}
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+	case AuthMethodBasic:
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+	default:
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
+	if err != nil {
+		return nil, nil, err
+	}
+	return authReq, client, nil
+}
+
+func AuthorizeClientIDSecret(clientID, clientSecret string, exchanger Exchanger) error {
+	return exchanger.Storage().AuthorizeClientIDSecret(clientID, clientSecret)
+}
+
+func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
+	if tokenReq.CodeVerifier == "" {
+		return nil, ErrInvalidRequest("code_challenge required")
+	}
+	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
+	if err != nil {
+		return nil, ErrInvalidRequest("invalid code")
+	}
+	if !authReq.GetCodeChallenge().Verify(tokenReq.CodeVerifier) {
+		return nil, ErrInvalidRequest("code_challenge invalid")
+	}
+	return authReq, nil
 }
 
 func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.TokenRequest, error) {
@@ -120,6 +147,5 @@ func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.Tok
 }
 
 func ValidateTokenExchangeRequest(tokenReq oidc.TokenRequest, storage Storage) error {
-
 	return errors.New("Unimplemented") //TODO: impl
 }

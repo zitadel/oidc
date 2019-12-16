@@ -47,6 +47,20 @@ func (mr *MockClientMockRecorder) ApplicationType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplicationType", reflect.TypeOf((*MockClient)(nil).ApplicationType))
 }
 
+// GetAuthMethod mocks base method
+func (m *MockClient) GetAuthMethod() op.AuthMethod {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAuthMethod")
+	ret0, _ := ret[0].(op.AuthMethod)
+	return ret0
+}
+
+// GetAuthMethod indicates an expected call of GetAuthMethod
+func (mr *MockClientMockRecorder) GetAuthMethod() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthMethod", reflect.TypeOf((*MockClient)(nil).GetAuthMethod))
+}
+
 // GetID mocks base method
 func (m *MockClient) GetID() string {
 	m.ctrl.T.Helper()
