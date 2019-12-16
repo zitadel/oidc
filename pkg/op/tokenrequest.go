@@ -17,7 +17,6 @@ type Exchanger interface {
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer
-	AuthMethodBasicSupported() bool
 	AuthMethodPostSupported() bool
 }
 
@@ -140,6 +139,19 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, storage AuthStora
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
+}
+
+func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	tokenRequest, err := ParseTokenExchangeRequest(w, r)
+	if err != nil {
+		ExchangeRequestError(w, r, err)
+		return
+	}
+	err = ValidateTokenExchangeRequest(tokenRequest, exchanger.Storage())
+	if err != nil {
+		ExchangeRequestError(w, r, err)
+		return
+	}
 }
 
 func ParseTokenExchangeRequest(w http.ResponseWriter, r *http.Request) (oidc.TokenRequest, error) {

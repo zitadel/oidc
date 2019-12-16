@@ -19,26 +19,17 @@ type Authorizer interface {
 	Encoder() *schema.Encoder
 	Signer() Signer
 	Issuer() string
-	// ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
 }
-
-// type Signer interface {
-// 	Sign(claims *oidc.IDTokenClaims) (string, error)
-// }
 
 type ValidationAuthorizer interface {
 	Authorizer
 	ValidateAuthRequest(*oidc.AuthRequest, Storage) error
 }
 
-// type errorHandler func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error)
-// type callbackHandler func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request)
-
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	err := r.ParseForm()
 	if err != nil {
 		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"), authorizer.Encoder())
-		// AuthRequestError(w, r, nil, )
 		return
 	}
 	authReq := new(oidc.AuthRequest)
@@ -82,15 +73,13 @@ func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
 	if err := ValidateAuthReqResponseType(authReq.ResponseType); err != nil {
 		return err
 	}
-	return nil
-	// return errors.New("Unimplemented") //TODO: impl https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.2
-
-	// if NeedsExistingSession(authRequest) {
-	// 	session, err := storage.CheckSession(authRequest)
+	// if NeedsExistingSession(authReq) {
+	// 	session, err := storage.CheckSession(authReq.IDTokenHint)
 	// 	if err != nil {
-	// 		//TODO: return err<
+	// 		return err
 	// 	}
 	// }
+	return nil
 }
 
 func ValidateAuthReqScopes(scopes []string) error {
@@ -124,13 +113,13 @@ func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.Respons
 		if client.ApplicationType() == ApplicationTypeNative {
 			return nil
 		}
-		return ErrInvalidRequest("redirect_uri not allowed 2")
+		return ErrInvalidRequest("redirect_uri not allowed")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequestRedirectURI("redirect_uri not allowed 3")
+			return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequestRedirectURI("redirect_uri not allowed 4")
+			return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
 		}
 	}
 	return nil

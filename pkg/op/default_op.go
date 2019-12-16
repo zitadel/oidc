@@ -165,10 +165,6 @@ func (p *DefaultOP) KeysEndpoint() Endpoint {
 	return Endpoint(p.endpoints.JwksURI)
 }
 
-func (p *DefaultOP) AuthMethodBasicSupported() bool {
-	return true //TODO: config
-}
-
 func (p *DefaultOP) AuthMethodPostSupported() bool {
 	return true //TODO: config
 }
@@ -199,7 +195,6 @@ func (p *DefaultOP) Storage() Storage {
 
 func (p *DefaultOP) Signer() Signer {
 	return p.signer
-	// return
 }
 
 func (p *DefaultOP) IDTokenValidity() time.Duration {
@@ -208,10 +203,6 @@ func (p *DefaultOP) IDTokenValidity() time.Duration {
 	}
 	return p.config.IDTokenValidity
 }
-
-// func (p *DefaultOP) ErrorHandler() func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-// 	return AuthRequestError
-// }
 
 func (p *DefaultOP) HandleKeys(w http.ResponseWriter, r *http.Request) {
 	Keys(w, r, p)
@@ -235,20 +226,7 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 		CodeExchange(w, r, p)
 		return
 	}
-	p.handleTokenExchange(w, r)
-}
-
-func (p *DefaultOP) handleTokenExchange(w http.ResponseWriter, r *http.Request) {
-	ExchangeRequestError(w, r, ErrServerError("not implemented"))
-	return
-	tokenRequest, err := ParseTokenExchangeRequest(w, r)
-	if err != nil {
-		//TODO: return err
-	}
-	err = ValidateTokenExchangeRequest(tokenRequest, p.storage)
-	if err != nil {
-		//TODO: return err
-	}
+	TokenExchange(w, r, p)
 }
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
