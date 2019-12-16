@@ -102,17 +102,17 @@ func AuthorizeClient(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Au
 	}
 	switch client.GetAuthMethod() {
 	case AuthMethodNone:
-		authReq, err := AuthorizeCodeChallenge(tokenReq, exchanger)
+		authReq, err := AuthorizeCodeChallenge(tokenReq, exchanger.Storage())
 		return authReq, client, err
 	case AuthMethodPost:
 		if !exchanger.AuthMethodPostSupported() {
 			return nil, nil, errors.New("basic not supported")
 		}
-		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	case AuthMethodBasic:
-		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	default:
-		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger)
+		err = AuthorizeClientIDSecret(tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	}
 	if err != nil {
 		return nil, nil, err
@@ -124,15 +124,15 @@ func AuthorizeClient(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Au
 	return authReq, client, nil
 }
 
-func AuthorizeClientIDSecret(clientID, clientSecret string, exchanger Exchanger) error {
-	return exchanger.Storage().AuthorizeClientIDSecret(clientID, clientSecret)
+func AuthorizeClientIDSecret(clientID, clientSecret string, storage OPStorage) error {
+	return storage.AuthorizeClientIDSecret(clientID, clientSecret)
 }
 
-func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
+func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, storage AuthStorage) (AuthRequest, error) {
 	if tokenReq.CodeVerifier == "" {
 		return nil, ErrInvalidRequest("code_challenge required")
 	}
-	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
+	authReq, err := storage.AuthRequestByCode(tokenReq.Code)
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid code")
 	}
