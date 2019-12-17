@@ -3,7 +3,6 @@ module github.com/caos/oidc
 go 1.13
 
 require (
-	github.com/caos/utils/crypto v0.0.0-20191210140001-db9d0ce57f21
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.1.1
