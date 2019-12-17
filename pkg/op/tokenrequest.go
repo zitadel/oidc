@@ -17,6 +17,7 @@ type Exchanger interface {
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer
+	Crypto() Crypto
 	AuthMethodPostSupported() bool
 }
 
@@ -36,7 +37,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		return
 	}
 
-	err = exchanger.Storage().DeleteAuthRequestAndCode(authReq.GetID(), tokenReq.Code)
+	err = exchanger.Storage().DeleteAuthRequest(authReq.GetID())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
@@ -116,9 +117,9 @@ func AuthorizeClient(tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (Au
 	if err != nil {
 		return nil, nil, err
 	}
-	authReq, err := exchanger.Storage().AuthRequestByCode(tokenReq.Code)
+	authReq, err := AuthRequestByCode(tokenReq.Code, exchanger.Crypto(), exchanger.Storage())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, ErrInvalidRequest("invalid code")
 	}
 	return authReq, client, nil
 }
@@ -131,7 +132,7 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, storage AuthStora
 	if tokenReq.CodeVerifier == "" {
 		return nil, ErrInvalidRequest("code_challenge required")
 	}
-	authReq, err := storage.AuthRequestByCode(tokenReq.Code)
+	authReq, err := AuthRequestByCode(tokenReq.Code, nil, storage)
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid code")
 	}
@@ -139,6 +140,14 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, storage AuthStora
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
+}
+
+func AuthRequestByCode(code string, crypto Crypto, storage AuthStorage) (AuthRequest, error) {
+	id, err := crypto.Decrypt(code)
+	if err != nil {
+		return nil, err
+	}
+	return storage.AuthRequestByID(id)
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {

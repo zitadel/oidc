@@ -39,6 +39,7 @@ type DefaultOP struct {
 	discoveryConfig *oidc.DiscoveryConfiguration
 	storage         Storage
 	signer          Signer
+	crypto          Crypto
 	http            *http.Server
 	decoder         *schema.Decoder
 	encoder         *schema.Encoder
@@ -47,6 +48,7 @@ type DefaultOP struct {
 type Config struct {
 	Issuer          string
 	IDTokenValidity time.Duration
+	CryptoKey       [32]byte
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,
@@ -99,18 +101,10 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-func NewDefaultOP(config *Config, authStorage AuthStorage, opStorage OPStorage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
+func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
 		return nil, err
-	}
-
-	storage := struct {
-		AuthStorage
-		OPStorage
-	}{
-		AuthStorage: authStorage,
-		OPStorage:   opStorage,
 	}
 
 	p := &DefaultOP{
@@ -119,7 +113,7 @@ func NewDefaultOP(config *Config, authStorage AuthStorage, opStorage OPStorage, 
 		endpoints: DefaultEndpoints,
 	}
 
-	p.signer, err = NewDefaultSigner(authStorage)
+	p.signer, err = NewDefaultSigner(storage)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +135,8 @@ func NewDefaultOP(config *Config, authStorage AuthStorage, opStorage OPStorage, 
 	p.decoder.IgnoreUnknownKeys(true)
 
 	p.encoder = schema.NewEncoder()
+
+	p.crypto = NewAESCrypto(config.CryptoKey)
 
 	return p, nil
 }
@@ -195,6 +191,10 @@ func (p *DefaultOP) Storage() Storage {
 
 func (p *DefaultOP) Signer() Signer {
 	return p.signer
+}
+
+func (p *DefaultOP) Crypto() Crypto {
+	return p.crypto
 }
 
 func (p *DefaultOP) IDTokenValidity() time.Duration {

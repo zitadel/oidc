@@ -11,8 +11,7 @@ import (
 type AuthStorage interface {
 	CreateAuthRequest(*oidc.AuthRequest) (AuthRequest, error)
 	AuthRequestByID(string) (AuthRequest, error)
-	AuthRequestByCode(string) (AuthRequest, error)
-	DeleteAuthRequestAndCode(string, string) error
+	DeleteAuthRequest(string) error
 
 	GetSigningKey() (*jose.SigningKey, error)
 	GetKeySet() (*jose.JSONWebKeySet, error)

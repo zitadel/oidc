@@ -18,6 +18,7 @@ type Authorizer interface {
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
 	Signer() Signer
+	Crypto() Crypto
 	Issuer() string
 }
 
@@ -152,7 +153,12 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	var callback string
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
-		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), authReq.GetCode())
+		code, err := BuildAuthRequestCode(authReq, authorizer.Crypto())
+		if err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			return
+		}
+		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), code)
 	} else {
 		var accessToken string
 		var err error
@@ -160,12 +166,14 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 		if authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly {
 			accessToken, exp, err = CreateAccessToken(authReq, authorizer.Signer())
 			if err != nil {
-
+				AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+				return
 			}
 		}
 		idToken, err := CreateIDToken(authorizer.Issuer(), authReq, time.Duration(0), accessToken, "", authorizer.Signer())
 		if err != nil {
-
+			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			return
 		}
 		resp := &oidc.AccessTokenResponse{
 			AccessToken: accessToken,
@@ -175,9 +183,14 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 		}
 		params, err := utils.URLEncodeResponse(resp, authorizer.Encoder())
 		if err != nil {
-
+			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			return
 		}
 		callback = fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
 	}
 	http.Redirect(w, r, callback, http.StatusFound)
+}
+
+func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
+	return crypto.Encrypt(authReq.GetID())
 }

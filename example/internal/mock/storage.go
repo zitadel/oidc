@@ -16,9 +16,7 @@ type AuthStorage struct {
 	key *rsa.PrivateKey
 }
 
-type OPStorage struct{}
-
-func NewAuthStorage() op.AuthStorage {
+func NewAuthStorage() op.Storage {
 	reader := rand.Reader
 	bitSize := 2048
 	key, err := rsa.GenerateKey(reader, bitSize)
@@ -106,6 +104,7 @@ func (a *AuthRequest) GetSubject() string {
 
 var (
 	a = &AuthRequest{}
+	t bool
 )
 
 func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
@@ -116,15 +115,20 @@ func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthReque
 			Method:    authReq.CodeChallengeMethod,
 		}
 	}
+	t = false
 	return a, nil
 }
 func (s *AuthStorage) AuthRequestByCode(string) (op.AuthRequest, error) {
 	return a, nil
 }
-func (s *AuthStorage) DeleteAuthRequestAndCode(string, string) error {
+func (s *AuthStorage) DeleteAuthRequest(string) error {
+	t = true
 	return nil
 }
 func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
+	if id != "id" || t {
+		return nil, errors.New("not found")
+	}
 	return a, nil
 }
 func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
@@ -142,7 +146,7 @@ func (s *AuthStorage) GetKeySet() (*jose.JSONWebKeySet, error) {
 	}, nil
 }
 
-func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
+func (s *AuthStorage) GetClientByClientID(id string) (op.Client, error) {
 	if id == "none" {
 		return nil, errors.New("not found")
 	}
@@ -161,10 +165,11 @@ func (s *OPStorage) GetClientByClientID(id string) (op.Client, error) {
 	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod}, nil
 }
 
-func (s *OPStorage) AuthorizeClientIDSecret(id string, _ string) error {
+func (s *AuthStorage) AuthorizeClientIDSecret(id string, _ string) error {
 	return nil
 }
-func (s *OPStorage) GetUserinfoFromScopes([]string) (*oidc.Userinfo, error) {
+
+func (s *AuthStorage) GetUserinfoFromScopes([]string) (*oidc.Userinfo, error) {
 	return &oidc.Userinfo{
 		Subject: a.GetSubject(),
 		Address: &oidc.UserinfoAddress{
