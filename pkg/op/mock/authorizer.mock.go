@@ -34,6 +34,20 @@ func (m *MockAuthorizer) EXPECT() *MockAuthorizerMockRecorder {
 	return m.recorder
 }
 
+// Crypto mocks base method
+func (m *MockAuthorizer) Crypto() op.Crypto {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Crypto")
+	ret0, _ := ret[0].(op.Crypto)
+	return ret0
+}
+
+// Crypto indicates an expected call of Crypto
+func (mr *MockAuthorizerMockRecorder) Crypto() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Crypto", reflect.TypeOf((*MockAuthorizer)(nil).Crypto))
+}
+
 // Decoder mocks base method
 func (m *MockAuthorizer) Decoder() *schema.Decoder {
 	m.ctrl.T.Helper()

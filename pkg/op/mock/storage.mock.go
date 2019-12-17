@@ -35,21 +35,6 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
-// AuthRequestByCode mocks base method
-func (m *MockStorage) AuthRequestByCode(arg0 string) (op.AuthRequest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthRequestByCode", arg0)
-	ret0, _ := ret[0].(op.AuthRequest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AuthRequestByCode indicates an expected call of AuthRequestByCode
-func (mr *MockStorageMockRecorder) AuthRequestByCode(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByCode", reflect.TypeOf((*MockStorage)(nil).AuthRequestByCode), arg0)
-}
-
 // AuthRequestByID mocks base method
 func (m *MockStorage) AuthRequestByID(arg0 string) (op.AuthRequest, error) {
 	m.ctrl.T.Helper()
@@ -94,18 +79,18 @@ func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuthRequest", reflect.TypeOf((*MockStorage)(nil).CreateAuthRequest), arg0)
 }
 
-// DeleteAuthRequestAndCode mocks base method
-func (m *MockStorage) DeleteAuthRequestAndCode(arg0, arg1 string) error {
+// DeleteAuthRequest mocks base method
+func (m *MockStorage) DeleteAuthRequest(arg0 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAuthRequestAndCode", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteAuthRequest", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteAuthRequestAndCode indicates an expected call of DeleteAuthRequestAndCode
-func (mr *MockStorageMockRecorder) DeleteAuthRequestAndCode(arg0, arg1 interface{}) *gomock.Call {
+// DeleteAuthRequest indicates an expected call of DeleteAuthRequest
+func (mr *MockStorageMockRecorder) DeleteAuthRequest(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAuthRequestAndCode", reflect.TypeOf((*MockStorage)(nil).DeleteAuthRequestAndCode), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAuthRequest", reflect.TypeOf((*MockStorage)(nil).DeleteAuthRequest), arg0)
 }
 
 // GetClientByClientID mocks base method

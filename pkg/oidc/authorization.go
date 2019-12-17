@@ -19,10 +19,10 @@ const (
 	DisplayTouch Display = "touch"
 	DisplayWAP   Display = "wap"
 
-	PromptNone          = "none"
-	PromptLogin         = "login"
-	PromptConsent       = "consent"
-	PromptSelectAccount = "select_account"
+	PromptNone          Prompt = "none"
+	PromptLogin         Prompt = "login"
+	PromptConsent       Prompt = "consent"
+	PromptSelectAccount Prompt = "select_account"
 
 	GrantTypeCode GrantType = "authorization_code"
 
@@ -62,14 +62,6 @@ type AuthRequest struct {
 	CodeChallenge       string              `schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `schema:"code_challenge_method"`
 }
-
-// func (a *AuthRequest) GetID() string {
-// 	return a.ID
-// }
-
-// func (a *AuthRequest) GetClientID() string {
-// 	return a.ClientID
-// }
 
 func (a *AuthRequest) GetRedirectURI() string {
 	return a.RedirectURI
@@ -118,32 +110,6 @@ type TokenExchangeRequest struct {
 	Scope              []string `schema:"scope"`
 	requestedTokenType string   `schema:"requested_token_type"`
 }
-
-// func (a *AuthRequest) UnmarshalText(text []byte) error {
-// 	// var f formAuthRequest
-// 	log.Println(string(text))
-// 	return nil
-// }
-
-// type formAuthRequest struct {
-// 	Scopes       string `schema:"scope"`
-// 	ResponseType string `schema:"response_type"`
-// 	ClientID     string `schema:"client_id"`
-// 	RedirectURI  string `schema:"redirect_uri"` //TODO: type
-
-// 	State string `schema:"state"`
-
-// 	// ResponseMode TODO: ?
-
-// 	Nonce       string   `schema:"nonce"`
-// 	Display     string   `schema:"display"`
-// 	Prompt      string   `schema:"prompt"`
-// 	MaxAge      uint32   `schema:"max_age"`
-// 	UILocales   string   `schema:"ui_locales"`
-// 	IDTokenHint string   `schema:"id_token_hint"`
-// 	LoginHint   string   `schema:"login_hint"`
-// 	ACRValues   []string `schema:"acr_values"`
-// }
 
 type Scopes []string
 

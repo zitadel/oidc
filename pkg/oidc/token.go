@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/caos/oidc/pkg/utils"
@@ -31,10 +32,13 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &i); err != nil {
 		return err
 	}
+	audience := i.Audiences
+	if len(audience) == 1 {
+		audience = strings.Split(audience[0], " ")
+	}
 	t.Issuer = i.Issuer
 	t.Subject = i.Subject
-	// t.Audiences = strings.Split(i.Audiences, " ")
-	t.Audiences = i.Audiences
+	t.Audiences = audience
 	t.Expiration = time.Unix(i.Expiration, 0).UTC()
 	t.IssuedAt = time.Unix(i.IssuedAt, 0).UTC()
 	t.AuthTime = time.Unix(i.AuthTime, 0).UTC()
@@ -49,9 +53,8 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 
 func (t *IDTokenClaims) MarshalJSON() ([]byte, error) {
 	j := jsonIDToken{
-		Issuer:  t.Issuer,
-		Subject: t.Subject,
-		// Audiences:                           strings.Join(t.Audiences, " "),
+		Issuer:                              t.Issuer,
+		Subject:                             t.Subject,
 		Audiences:                           t.Audiences,
 		Expiration:                          t.Expiration.Unix(),
 		IssuedAt:                            t.IssuedAt.Unix(),
@@ -65,8 +68,6 @@ func (t *IDTokenClaims) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(j)
 }
-
-// type jsonTime time.Time
 
 type jsonIDToken struct {
 	Issuer                              string   `json:"iss,omitempty"`
