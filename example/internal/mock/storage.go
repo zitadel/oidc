@@ -103,6 +103,10 @@ func (a *AuthRequest) GetSubject() string {
 	return "sub"
 }
 
+func (a *AuthRequest) Done() bool {
+	return true
+}
+
 var (
 	a = &AuthRequest{}
 	t bool
