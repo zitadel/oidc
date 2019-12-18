@@ -1,6 +1,8 @@
 package op
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,7 +26,7 @@ type Authorizer interface {
 
 type ValidationAuthorizer interface {
 	Authorizer
-	ValidateAuthRequest(*oidc.AuthRequest, Storage) error
+	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage) error
 }
 
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
@@ -45,18 +47,18 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if validater, ok := authorizer.(ValidationAuthorizer); ok {
 		validation = validater.ValidateAuthRequest
 	}
-	if err := validation(authReq, authorizer.Storage()); err != nil {
+	if err := validation(r.Context(), authReq, authorizer.Storage()); err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 
-	req, err := authorizer.Storage().CreateAuthRequest(authReq)
+	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq)
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 
-	client, err := authorizer.Storage().GetClientByClientID(req.GetClientID())
+	client, err := authorizer.Storage().GetClientByClientID(r.Context(), req.GetClientID())
 	if err != nil {
 		AuthRequestError(w, r, req, err, authorizer.Encoder())
 		return
@@ -64,11 +66,11 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req.GetID(), client, w, r)
 }
 
-func ValidateAuthRequest(authReq *oidc.AuthRequest, storage Storage) error {
+func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage) error {
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
 		return err
 	}
-	if err := ValidateAuthReqRedirectURI(authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
+	if err := ValidateAuthReqRedirectURI(ctx, authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
 		return err
 	}
 	if err := ValidateAuthReqResponseType(authReq.ResponseType); err != nil {
@@ -93,11 +95,11 @@ func ValidateAuthReqScopes(scopes []string) error {
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
+func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
 		return ErrInvalidRequestRedirectURI("redirect_uri must not be empty")
 	}
-	client, err := storage.GetClientByClientID(client_id)
+	client, err := storage.GetClientByClientID(ctx, client_id)
 	if err != nil {
 		return ErrServerError(err.Error())
 	}
@@ -142,9 +144,13 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 	params := mux.Vars(r)
 	id := params["id"]
 
-	authReq, err := authorizer.Storage().AuthRequestByID(id)
+	authReq, err := authorizer.Storage().AuthRequestByID(r.Context(), id)
 	if err != nil {
 		AuthRequestError(w, r, nil, err, authorizer.Encoder())
+		return
+	}
+	if !authReq.Done() {
+		AuthRequestError(w, r, authReq, errors.New("user not logged in"), authorizer.Encoder())
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)

@@ -2,7 +2,6 @@ package oidc
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/caos/oidc/pkg/utils"
@@ -33,9 +32,9 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	audience := i.Audiences
-	if len(audience) == 1 {
-		audience = strings.Split(audience[0], " ")
-	}
+	// if len(audience) == 1 {
+	// 	audience = strings.Split(audience[0], " ")
+	// }
 	t.Issuer = i.Issuer
 	t.Subject = i.Subject
 	t.Audiences = audience

@@ -15,7 +15,7 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 	if err != nil {
 		return
 	}
-	info, err := userinfoProvider.Storage().GetUserinfoFromScopes(scopes)
+	info, err := userinfoProvider.Storage().GetUserinfoFromScopes(r.Context(), scopes)
 	if err != nil {
 		utils.MarshalJSON(w, err)
 		return

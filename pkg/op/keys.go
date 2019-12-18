@@ -11,7 +11,7 @@ type KeyProvider interface {
 }
 
 func Keys(w http.ResponseWriter, r *http.Request, k KeyProvider) {
-	keySet, err := k.Storage().GetKeySet()
+	keySet, err := k.Storage().GetKeySet(r.Context())
 	if err != nil {
 
 	}

@@ -1,6 +1,7 @@
 package op
 
 import (
+	"context"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -9,18 +10,18 @@ import (
 )
 
 type AuthStorage interface {
-	CreateAuthRequest(*oidc.AuthRequest) (AuthRequest, error)
-	AuthRequestByID(string) (AuthRequest, error)
-	DeleteAuthRequest(string) error
+	CreateAuthRequest(context.Context, *oidc.AuthRequest) (AuthRequest, error)
+	AuthRequestByID(context.Context, string) (AuthRequest, error)
+	DeleteAuthRequest(context.Context, string) error
 
-	GetSigningKey() (*jose.SigningKey, error)
-	GetKeySet() (*jose.JSONWebKeySet, error)
+	GetSigningKey(context.Context) (*jose.SigningKey, error)
+	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 }
 
 type OPStorage interface {
-	GetClientByClientID(string) (Client, error)
-	AuthorizeClientIDSecret(string, string) error
-	GetUserinfoFromScopes([]string) (*oidc.Userinfo, error)
+	GetClientByClientID(context.Context, string) (Client, error)
+	AuthorizeClientIDSecret(context.Context, string, string) error
+	GetUserinfoFromScopes(context.Context, []string) (*oidc.Userinfo, error)
 }
 
 type Storage interface {
@@ -43,4 +44,5 @@ type AuthRequest interface {
 	GetScopes() []string
 	GetState() string
 	GetSubject() string
+	Done() bool
 }

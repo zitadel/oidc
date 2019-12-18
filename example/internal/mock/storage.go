@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
@@ -107,7 +108,7 @@ var (
 	t bool
 )
 
-func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthRequest, error) {
+func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthRequest) (op.AuthRequest, error) {
 	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
 	if authReq.CodeChallenge != "" {
 		a.CodeChallenge = &oidc.CodeChallenge{
@@ -118,26 +119,26 @@ func (s *AuthStorage) CreateAuthRequest(authReq *oidc.AuthRequest) (op.AuthReque
 	t = false
 	return a, nil
 }
-func (s *AuthStorage) AuthRequestByCode(string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByCode(context.Context, string) (op.AuthRequest, error) {
 	return a, nil
 }
-func (s *AuthStorage) DeleteAuthRequest(string) error {
+func (s *AuthStorage) DeleteAuthRequest(context.Context, string) error {
 	t = true
 	return nil
 }
-func (s *AuthStorage) AuthRequestByID(id string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequest, error) {
 	if id != "id" || t {
 		return nil, errors.New("not found")
 	}
 	return a, nil
 }
-func (s *AuthStorage) GetSigningKey() (*jose.SigningKey, error) {
+func (s *AuthStorage) GetSigningKey(_ context.Context) (*jose.SigningKey, error) {
 	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
 }
-func (s *AuthStorage) GetKey() (*rsa.PrivateKey, error) {
+func (s *AuthStorage) GetKey(_ context.Context) (*rsa.PrivateKey, error) {
 	return s.key, nil
 }
-func (s *AuthStorage) GetKeySet() (*jose.JSONWebKeySet, error) {
+func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()
 	return &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
@@ -146,7 +147,7 @@ func (s *AuthStorage) GetKeySet() (*jose.JSONWebKeySet, error) {
 	}, nil
 }
 
-func (s *AuthStorage) GetClientByClientID(id string) (op.Client, error) {
+func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Client, error) {
 	if id == "none" {
 		return nil, errors.New("not found")
 	}
@@ -165,11 +166,11 @@ func (s *AuthStorage) GetClientByClientID(id string) (op.Client, error) {
 	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod}, nil
 }
 
-func (s *AuthStorage) AuthorizeClientIDSecret(id string, _ string) error {
+func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ string) error {
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromScopes([]string) (*oidc.Userinfo, error) {
+func (s *AuthStorage) GetUserinfoFromScopes(context.Context, []string) (*oidc.Userinfo, error) {
 	return &oidc.Userinfo{
 		Subject: a.GetSubject(),
 		Address: &oidc.UserinfoAddress{

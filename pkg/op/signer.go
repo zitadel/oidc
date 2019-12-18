@@ -3,6 +3,7 @@ package op
 import (
 	"encoding/json"
 
+	"golang.org/x/net/context"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -19,18 +20,18 @@ type idTokenSigner struct {
 	algorithm jose.SignatureAlgorithm
 }
 
-func NewDefaultSigner(storage AuthStorage) (Signer, error) {
+func NewDefaultSigner(ctx context.Context, storage AuthStorage) (Signer, error) {
 	s := &idTokenSigner{
 		storage: storage,
 	}
-	if err := s.initialize(); err != nil {
+	if err := s.initialize(ctx); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func (s *idTokenSigner) initialize() error {
-	key, err := s.storage.GetSigningKey()
+func (s *idTokenSigner) initialize(ctx context.Context) error {
+	key, err := s.storage.GetSigningKey(ctx)
 	if err != nil {
 		return err
 	}

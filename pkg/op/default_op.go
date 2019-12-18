@@ -1,6 +1,7 @@
 package op
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -101,7 +102,7 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
+func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
 		return nil, err
@@ -113,7 +114,7 @@ func NewDefaultOP(config *Config, storage Storage, opOpts ...DefaultOPOpts) (Ope
 		endpoints: DefaultEndpoints,
 	}
 
-	p.signer, err = NewDefaultSigner(storage)
+	p.signer, err = NewDefaultSigner(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
