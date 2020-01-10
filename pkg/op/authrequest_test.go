@@ -108,7 +108,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthRequest(tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthRequest(nil, tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -218,7 +218,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthReqRedirectURI(tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthReqRedirectURI(nil, tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
 			}
 		})

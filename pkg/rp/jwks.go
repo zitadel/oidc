@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/caos/oidc/pkg/utils"
 
@@ -22,7 +21,6 @@ func NewRemoteKeySet(client *http.Client, jwksURL string) oidc.KeySet {
 type remoteKeySet struct {
 	jwksURL    string
 	httpClient *http.Client
-	// now        func() time.Time
 
 	// guard all other fields
 	mu sync.Mutex
@@ -33,7 +31,6 @@ type remoteKeySet struct {
 
 	// A set of cached keys and their expiry.
 	cachedKeys []jose.JSONWebKey
-	expiry     time.Time
 }
 
 // inflight is used to wait on some in-flight request from multiple goroutines.
@@ -76,7 +73,7 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 		break
 	}
 
-	keys, _ := r.keysFromCache()
+	keys := r.keysFromCache()
 	payload, err, ok := checkKey(keyID, keys, jws)
 	if ok {
 		return payload, err
@@ -94,10 +91,10 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	return payload, err
 }
 
-func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey, expiry time.Time) {
+func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.cachedKeys, r.expiry
+	return r.cachedKeys
 }
 
 // keysFromRemote syncs the key set from the remote set, records the values in the
@@ -127,7 +124,7 @@ func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, e
 
 func (r *remoteKeySet) updateKeys(ctx context.Context) {
 	// Sync keys and finish inflight when that's done.
-	keys, expiry, err := r.fetchRemoteKeys(ctx)
+	keys, err := r.fetchRemoteKeys(ctx)
 
 	r.inflight.done(keys, err)
 
@@ -138,33 +135,24 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 
 	if err == nil {
 		r.cachedKeys = keys
-		r.expiry = expiry
 	}
 
 	// Free inflight so a different request can run.
 	r.inflight = nil
 }
 
-func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, time.Time, error) {
+func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, error) {
 	req, err := http.NewRequest("GET", r.jwksURL, nil)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("oidc: can't create request: %v", err)
+		return nil, fmt.Errorf("oidc: can't create request: %v", err)
 	}
 
 	keySet := new(jose.JSONWebKeySet)
 	if err = utils.HttpRequest(r.httpClient, req, keySet); err != nil {
-		return nil, time.Time{}, fmt.Errorf("oidc: failed to get keys: %v", err)
+		return nil, fmt.Errorf("oidc: failed to get keys: %v", err)
 	}
 
-	// If the server doesn't provide cache control headers, assume the
-	// keys expire immediately.
-	// expiry := r.now()
-
-	// _, e, err := cachecontrol.CachableResponse(req, resp, cachecontrol.Options{})
-	// if err == nil && e.After(expiry) {
-	// 	expiry = e
-	// }
-	return keySet.Keys, time.Now(), nil
+	return keySet.Keys, nil
 }
 
 func checkKey(keyID string, keys []jose.JSONWebKey, jws *jose.JSONWebSignature) ([]byte, error, bool) {

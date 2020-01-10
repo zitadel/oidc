@@ -13,7 +13,6 @@ type Configuration interface {
 	UserinfoEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 
-	// SupportedScopes() []string
 	AuthMethodPostSupported() bool
 
 	Port() string

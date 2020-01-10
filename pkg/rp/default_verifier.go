@@ -96,12 +96,6 @@ func WithSupportedSigningAlgorithms(algs ...string) func(*verifierConfig) {
 	}
 }
 
-// func WithVerifierHTTPClient(client *http.Client) func(*verifierConfig) {
-// 	return func(conf *verifierConfig) {
-// 		conf.httpClient = client
-// 	}
-// }
-
 type verifierConfig struct {
 	issuer            string
 	clientID          string
@@ -213,12 +207,8 @@ func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString strin
 	if err = v.checkAuthTime(claims.AuthTime); err != nil {
 		return nil, err
 	}
-	//return idtoken struct, err
 
 	return claims, nil
-	// })
-	// _ = token
-	// return err
 }
 
 func (v *DefaultVerifier) parseToken(tokenString string) (*oidc.IDTokenClaims, []byte, error) {
@@ -297,68 +287,6 @@ func (v *DefaultVerifier) checkSignature(ctx context.Context, idTokenString stri
 	return jose.SignatureAlgorithm(sig.Header.Algorithm), nil
 }
 
-// type KeySet struct {
-// 	remoteURL  url.URL
-// 	httpClient *http.Client
-// 	keys       []jose.JSONWebKey
-
-// 	m        sync.Mutex
-// 	inflight *inflight
-// }
-
-// func (k *KeySet) GetKey(ctx context.Context, keyID string) (*jose.JSONWebKey, error) {
-// 	key, err := k.getKey(keyID)
-// 	if err != nil {
-// 		//lock
-// 		k.updateKeys(ctx)
-// 		//unlock
-// 		return k.getKey(keyID)
-// 	}
-// 	return key, nil
-// }
-
-// func (k *KeySet) getKey(keyID string) (*jose.JSONWebKey, error) {
-// 	k.m.Lock()
-// 	keys := k.keys
-// 	k.m.Unlock()
-// 	for _, key := range keys {
-// 		if key.KeyID == keyID {
-// 			return &key, nil
-// 		}
-// 	}
-// 	return nil, nil //TODO: err
-// }
-
-// func (k *KeySet) retrieveNewKeys(ctx context.Context) ([]jose.JSONWebKey, error) {
-// 	resp, err := k.httpClient.Get(k.remoteURL.String())
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if resp.StatusCode != http.StatusOK {
-// 		return nil, nil //TODO: errs
-// 	}
-
-// 	defer resp.Body.Close()
-// 	body, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var keySet jose.JSONWebKeySet
-// 	err = json.Unmarshal(body, keySet)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return keySet.Keys, nil
-// }
-
-// func (k *KeySet) updateKeys(ctx context.Context) error {
-// 	k.inflight
-// 	k.m.Lock()
-// 	k.keys = keySet.Keys
-// 	return nil
-// }
-
 func (v *DefaultVerifier) checkExpiration(expiration time.Time) error {
 	expiration = expiration.Round(time.Second)
 	if !v.now().Before(expiration) {
@@ -418,25 +346,6 @@ func (v *DefaultVerifier) checkAuthTime(authTime time.Time) error {
 func (v *DefaultVerifier) decryptToken(tokenString string) (string, error) {
 	return tokenString, nil //TODO: impl
 }
-
-// func (v *Verifier) parseIDToken(tokenString string) (IDToken, error) {
-// 	var claims jwt.StandardClaims
-// 	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
-// 		claims.VerifyIssuer(v.config.Issuer, true)
-
-// 		// return token.Header["alg"]
-// 	})
-
-// 	payload, err := parseJWT(rawIDToken)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
-// 	}
-// 	var token IDToken
-// 	if err := json.Unmarshal(payload, &token); err != nil {
-// 		return nil, fmt.Errorf("oidc: failed to unmarshal claims: %v", err)
-// 	}
-// 	return token, nil //TODO: impl
-// }
 
 func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
 	if atHash == "" {
