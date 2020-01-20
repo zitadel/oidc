@@ -18,7 +18,10 @@ type CodeChallenge struct {
 	Method    CodeChallengeMethod
 }
 
-func (c *CodeChallenge) Verify(codeVerifier string) bool {
+func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {
+	if c == nil {
+		return false //TODO: ?
+	}
 	if c.Method == CodeChallengeMethodS256 {
 		codeVerifier = utils.HashString(sha256.New(), codeVerifier)
 	}

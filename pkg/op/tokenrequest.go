@@ -102,7 +102,7 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 		return nil, nil, err
 	}
 	if client.GetAuthMethod() == AuthMethodNone {
-		authReq, err := AuthorizeCodeChallenge(ctx, tokenReq, exchanger.Storage())
+		authReq, err := AuthorizeCodeChallenge(ctx, tokenReq, exchanger)
 		return authReq, client, err
 	}
 	if client.GetAuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
@@ -123,15 +123,15 @@ func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string,
 	return storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
 }
 
-func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenRequest, storage AuthStorage) (AuthRequest, error) {
+func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
 	if tokenReq.CodeVerifier == "" {
 		return nil, ErrInvalidRequest("code_challenge required")
 	}
-	authReq, err := AuthRequestByCode(ctx, tokenReq.Code, nil, storage)
+	authReq, err := AuthRequestByCode(ctx, tokenReq.Code, exchanger.Crypto(), exchanger.Storage())
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid code")
 	}
-	if !authReq.GetCodeChallenge().Verify(tokenReq.CodeVerifier) {
+	if !oidc.VerifyCodeChallenge(authReq.GetCodeChallenge(), tokenReq.CodeVerifier) {
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
