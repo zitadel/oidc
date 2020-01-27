@@ -3,6 +3,7 @@ package op
 import (
 	"errors"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func ValidateIssuer(issuer string) error {
 		return errors.New("host for issuer missing")
 	}
 	if u.Scheme != "https" {
-		if !(u.Scheme == "http" && (u.Host == "localhost" || u.Host == "127.0.0.1" || u.Host == "::1" || strings.HasPrefix(u.Host, "localhost:"))) { //TODO: ?
+		if devLocalAllowed(u) {
 			return errors.New("scheme for issuer must be `https`")
 		}
 	}
@@ -38,4 +39,16 @@ func ValidateIssuer(issuer string) error {
 		return errors.New("no fragments or query allowed for issuer")
 	}
 	return nil
+}
+
+func devLocalAllowed(url *url.URL) bool {
+	_, b := os.LookupEnv("CAOS_OIDC_DEV")
+	if !b {
+		return b
+	}
+	return url.Scheme == "http" &&
+		url.Host == "localhost" ||
+		url.Host == "127.0.0.1" ||
+		url.Host == "::1" ||
+		strings.HasPrefix(url.Host, "localhost:")
 }
