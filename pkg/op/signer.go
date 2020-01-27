@@ -31,9 +31,14 @@ func NewDefaultSigner(ctx context.Context, storage AuthStorage) (Signer, error) 
 }
 
 func (s *idTokenSigner) initialize(ctx context.Context) error {
-	key, err := s.storage.GetSigningKey(ctx)
+	var key *jose.SigningKey
+	var err error
+	key, err = s.storage.GetSigningKey(ctx)
 	if err != nil {
-		return err
+		key, err = s.storage.SaveKeyPair(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	s.signer, err = jose.NewSigner(*key, &jose.SignerOptions{})
 	if err != nil {

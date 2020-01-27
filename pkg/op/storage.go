@@ -16,6 +16,7 @@ type AuthStorage interface {
 
 	GetSigningKey(context.Context) (*jose.SigningKey, error)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
+	SaveKeyPair(context.Context) (*jose.SigningKey, error)
 }
 
 type OPStorage interface {
