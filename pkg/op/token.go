@@ -1,17 +1,64 @@
 package op
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/caos/oidc/pkg/oidc"
 )
 
-func CreateAccessToken(authReq AuthRequest, signer Signer) (string, uint64, error) {
-	var err error
-	accessToken := fmt.Sprintf("%s:%s:%s:%s", authReq.GetSubject(), authReq.GetClientID(), authReq.GetAudience(), authReq.GetScopes())
-	exp := time.Duration(5 * time.Minute)
-	return accessToken, uint64(exp.Seconds()), err
+type TokenCreator interface {
+	Issuer() string
+	Signer() Signer
+	Storage() Storage
+	Crypto() Crypto
+}
+
+func CreateTokenResponse(authReq AuthRequest, client Client, creator TokenCreator, createAccessToken bool, code string) (*oidc.AccessTokenResponse, error) {
+	var accessToken string
+	if createAccessToken {
+		var err error
+		accessToken, err = CreateAccessToken(authReq, client, creator)
+		if err != nil {
+			return nil, err
+		}
+	}
+	idToken, err := CreateIDToken(creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Signer())
+	if err != nil {
+		return nil, err
+	}
+	exp := uint64(client.AccessTokenLifetime().Seconds())
+	return &oidc.AccessTokenResponse{
+		AccessToken: accessToken,
+		IDToken:     idToken,
+		TokenType:   oidc.BearerToken,
+		ExpiresIn:   exp,
+	}, nil
+}
+
+func CreateAccessToken(authReq AuthRequest, client Client, creator TokenCreator) (string, error) {
+	if client.AccessTokenType() == AccessTokenTypeJWT {
+		return CreateJWT(creator.Issuer(), authReq, client, creator.Signer())
+	}
+	return CreateBearerToken(authReq, creator.Crypto())
+}
+
+func CreateBearerToken(authReq AuthRequest, crypto Crypto) (string, error) {
+	return crypto.Encrypt(authReq.GetID())
+}
+
+func CreateJWT(issuer string, authReq AuthRequest, client Client, signer Signer) (string, error) {
+	now := time.Now().UTC()
+	nbf := now
+	exp := now.Add(client.AccessTokenLifetime())
+	claims := &oidc.AccessTokenClaims{
+		Issuer:     issuer,
+		Subject:    authReq.GetSubject(),
+		Audiences:  authReq.GetAudience(),
+		Expiration: exp,
+		IssuedAt:   now,
+		NotBefore:  nbf,
+	}
+	return signer.SignAccessToken(claims)
 }
 
 func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, signer Signer) (string, error) {

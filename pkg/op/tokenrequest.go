@@ -31,34 +31,20 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		ExchangeRequestError(w, r, ErrInvalidRequest("code missing"))
 		return
 	}
-
-	authReq, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
+	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-
 	err = exchanger.Storage().DeleteAuthRequest(r.Context(), authReq.GetID())
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
 	}
-	accessToken, exp, err := CreateAccessToken(authReq, exchanger.Signer())
+	resp, err := CreateTokenResponse(authReq, client, exchanger, true, tokenReq.Code)
 	if err != nil {
 		ExchangeRequestError(w, r, err)
 		return
-	}
-	idToken, err := CreateIDToken(exchanger.Issuer(), authReq, exchanger.IDTokenValidity(), accessToken, tokenReq.Code, exchanger.Signer())
-	if err != nil {
-		ExchangeRequestError(w, r, err)
-		return
-	}
-
-	resp := &oidc.AccessTokenResponse{
-		AccessToken: accessToken,
-		IDToken:     idToken,
-		TokenType:   oidc.BearerToken,
-		ExpiresIn:   exp,
 	}
 	utils.MarshalJSON(w, resp)
 }
@@ -82,18 +68,18 @@ func ParseAccessTokenRequest(r *http.Request, decoder *schema.Decoder) (*oidc.Ac
 	return tokenReq, nil
 }
 
-func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
+func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {
 	authReq, client, err := AuthorizeClient(ctx, tokenReq, exchanger)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if client.GetID() != authReq.GetClientID() {
-		return nil, ErrInvalidRequest("invalid auth code")
+		return nil, nil, ErrInvalidRequest("invalid auth code")
 	}
 	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
-		return nil, ErrInvalidRequest("redirect_uri does no correspond")
+		return nil, nil, ErrInvalidRequest("redirect_uri does no correspond")
 	}
-	return authReq, nil
+	return authReq, client, nil
 }
 
 func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {

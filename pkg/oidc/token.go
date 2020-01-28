@@ -89,6 +89,15 @@ type Tokens struct {
 	IDToken       string
 }
 
+type AccessTokenClaims struct {
+	Issuer     string
+	Subject    string
+	Audiences  []string
+	Expiration time.Time
+	IssuedAt   time.Time
+	NotBefore  time.Time
+}
+
 func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
 	hash, err := utils.GetHashAlgorithm(sigAlgorithm)
 	if err != nil {

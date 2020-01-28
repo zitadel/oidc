@@ -70,6 +70,9 @@ type Sig struct{}
 func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
 	return "", nil
 }
+func (s *Sig) SignAccessToken(*oidc.AccessTokenClaims) (string, error) {
+	return "", nil
+}
 func (s *Sig) SignatureAlgorithm() jose.SignatureAlgorithm {
 	return jose.HS256
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"gopkg.in/square/go-jose.v2"
 
@@ -64,18 +65,22 @@ func ExpectValidClientID(s op.Storage) {
 		func(_ context.Context, id string) (op.Client, error) {
 			var appType op.ApplicationType
 			var authMethod op.AuthMethod
+			var accessTokenType op.AccessTokenType
 			switch id {
 			case "web_client":
 				appType = op.ApplicationTypeWeb
 				authMethod = op.AuthMethodBasic
+				accessTokenType = op.AccessTokenTypeBearer
 			case "native_client":
 				appType = op.ApplicationTypeNative
 				authMethod = op.AuthMethodNone
+				accessTokenType = op.AccessTokenTypeBearer
 			case "useragent_client":
 				appType = op.ApplicationTypeUserAgent
 				authMethod = op.AuthMethodBasic
+				accessTokenType = op.AccessTokenTypeJWT
 			}
-			return &ConfClient{id: id, appType: appType, authMethod: authMethod}, nil
+			return &ConfClient{id: id, appType: appType, authMethod: authMethod, accessTokenType: accessTokenType}, nil
 		})
 }
 
@@ -95,9 +100,10 @@ func ExpectSigningKey(s op.Storage) {
 }
 
 type ConfClient struct {
-	id         string
-	appType    op.ApplicationType
-	authMethod op.AuthMethod
+	id              string
+	appType         op.ApplicationType
+	authMethod      op.AuthMethod
+	accessTokenType op.AccessTokenType
 }
 
 func (c *ConfClient) RedirectURIs() []string {
@@ -123,4 +129,14 @@ func (c *ConfClient) GetAuthMethod() op.AuthMethod {
 
 func (c *ConfClient) GetID() string {
 	return c.id
+}
+
+func (c *ConfClient) AccessTokenLifetime() time.Duration {
+	return time.Duration(5 * time.Minute)
+}
+func (c *ConfClient) IDTokenLifetime() time.Duration {
+	return time.Duration(5 * time.Minute)
+}
+func (c *ConfClient) AccessTokenType() op.AccessTokenType {
+	return c.accessTokenType
 }

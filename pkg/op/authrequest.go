@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -36,13 +35,11 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		return
 	}
 	authReq := new(oidc.AuthRequest)
-
 	err = authorizer.Decoder().Decode(authReq, r.Form)
 	if err != nil {
 		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)), authorizer.Encoder())
 		return
 	}
-
 	validation := ValidateAuthRequest
 	if validater, ok := authorizer.(ValidationAuthorizer); ok {
 		validation = validater.ValidateAuthRequest
@@ -51,13 +48,11 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-
 	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq)
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-
 	client, err := authorizer.Storage().GetClientByClientID(r.Context(), req.GetClientID())
 	if err != nil {
 		AuthRequestError(w, r, req, err, authorizer.Encoder())
@@ -157,46 +152,44 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 }
 
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
-	var callback string
-	if authReq.GetResponseType() == oidc.ResponseTypeCode {
-		code, err := BuildAuthRequestCode(authReq, authorizer.Crypto())
-		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
-			return
-		}
-		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), code)
-		if authReq.GetState() != "" {
-			callback = callback + "&state=" + authReq.GetState()
-		}
-	} else {
-		var accessToken string
-		var err error
-		var exp uint64
-		if authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly {
-			accessToken, exp, err = CreateAccessToken(authReq, authorizer.Signer())
-			if err != nil {
-				AuthRequestError(w, r, authReq, err, authorizer.Encoder())
-				return
-			}
-		}
-		idToken, err := CreateIDToken(authorizer.Issuer(), authReq, time.Duration(0), accessToken, "", authorizer.Signer())
-		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
-			return
-		}
-		resp := &oidc.AccessTokenResponse{
-			AccessToken: accessToken,
-			IDToken:     idToken,
-			TokenType:   oidc.BearerToken,
-			ExpiresIn:   exp,
-		}
-		params, err := utils.URLEncodeResponse(resp, authorizer.Encoder())
-		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
-			return
-		}
-		callback = fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
+	client, err := authorizer.Storage().GetClientByClientID(r.Context(), authReq.GetClientID())
+	if err != nil {
+
 	}
+	if authReq.GetResponseType() == oidc.ResponseTypeCode {
+		AuthResponseCode(w, r, authReq, authorizer)
+		return
+	}
+	AuthResponseToken(w, r, authReq, authorizer, client)
+	return
+}
+
+func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
+	code, err := BuildAuthRequestCode(authReq, authorizer.Crypto())
+	if err != nil {
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
+	}
+	callback := fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), code)
+	if authReq.GetState() != "" {
+		callback = callback + "&state=" + authReq.GetState()
+	}
+	http.Redirect(w, r, callback, http.StatusFound)
+}
+
+func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
+	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
+	resp, err := CreateTokenResponse(authReq, client, authorizer, createAccessToken, "")
+	if err != nil {
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
+	}
+	params, err := utils.URLEncodeResponse(resp, authorizer.Encoder())
+	if err != nil {
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
+	}
+	callback := fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
 	http.Redirect(w, r, callback, http.StatusFound)
 }
 

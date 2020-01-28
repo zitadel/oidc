@@ -34,6 +34,21 @@ func (m *MockSigner) EXPECT() *MockSignerMockRecorder {
 	return m.recorder
 }
 
+// SignAccessToken mocks base method
+func (m *MockSigner) SignAccessToken(arg0 *oidc.AccessTokenClaims) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SignAccessToken", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SignAccessToken indicates an expected call of SignAccessToken
+func (mr *MockSignerMockRecorder) SignAccessToken(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignAccessToken", reflect.TypeOf((*MockSigner)(nil).SignAccessToken), arg0)
+}
+
 // SignIDToken mocks base method
 func (m *MockSigner) SignIDToken(arg0 *oidc.IDTokenClaims) (string, error) {
 	m.ctrl.T.Helper()

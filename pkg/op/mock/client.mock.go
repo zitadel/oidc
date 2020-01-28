@@ -8,6 +8,7 @@ import (
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+	time "time"
 )
 
 // MockClient is a mock of Client interface
@@ -31,6 +32,34 @@ func NewMockClient(ctrl *gomock.Controller) *MockClient {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
+}
+
+// AccessTokenLifetime mocks base method
+func (m *MockClient) AccessTokenLifetime() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccessTokenLifetime")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// AccessTokenLifetime indicates an expected call of AccessTokenLifetime
+func (mr *MockClientMockRecorder) AccessTokenLifetime() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenLifetime", reflect.TypeOf((*MockClient)(nil).AccessTokenLifetime))
+}
+
+// AccessTokenType mocks base method
+func (m *MockClient) AccessTokenType() op.AccessTokenType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccessTokenType")
+	ret0, _ := ret[0].(op.AccessTokenType)
+	return ret0
+}
+
+// AccessTokenType indicates an expected call of AccessTokenType
+func (mr *MockClientMockRecorder) AccessTokenType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenType", reflect.TypeOf((*MockClient)(nil).AccessTokenType))
 }
 
 // ApplicationType mocks base method
@@ -73,6 +102,20 @@ func (m *MockClient) GetID() string {
 func (mr *MockClientMockRecorder) GetID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetID", reflect.TypeOf((*MockClient)(nil).GetID))
+}
+
+// IDTokenLifetime mocks base method
+func (m *MockClient) IDTokenLifetime() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTokenLifetime")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// IDTokenLifetime indicates an expected call of IDTokenLifetime
+func (mr *MockClientMockRecorder) IDTokenLifetime() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenLifetime", reflect.TypeOf((*MockClient)(nil).IDTokenLifetime))
 }
 
 // LoginURL mocks base method

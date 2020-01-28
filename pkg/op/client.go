@@ -1,9 +1,14 @@
 package op
 
+import "time"
+
 const (
 	ApplicationTypeWeb ApplicationType = iota
 	ApplicationTypeUserAgent
 	ApplicationTypeNative
+
+	AccessTokenTypeBearer AccessTokenType = iota
+	AccessTokenTypeJWT
 )
 
 type Client interface {
@@ -12,6 +17,9 @@ type Client interface {
 	ApplicationType() ApplicationType
 	GetAuthMethod() AuthMethod
 	LoginURL(string) string
+	AccessTokenType() AccessTokenType
+	AccessTokenLifetime() time.Duration
+	IDTokenLifetime() time.Duration
 }
 
 func IsConfidentialType(c Client) bool {
@@ -21,3 +29,5 @@ func IsConfidentialType(c Client) bool {
 type ApplicationType int
 
 type AuthMethod string
+
+type AccessTokenType int

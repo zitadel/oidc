@@ -160,17 +160,21 @@ func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Clie
 	}
 	var appType op.ApplicationType
 	var authMethod op.AuthMethod
+	var accessTokenType op.AccessTokenType
 	if id == "web" {
 		appType = op.ApplicationTypeWeb
 		authMethod = op.AuthMethodBasic
+		accessTokenType = op.AccessTokenTypeBearer
 	} else if id == "native" {
 		appType = op.ApplicationTypeNative
 		authMethod = op.AuthMethodNone
+		accessTokenType = op.AccessTokenTypeBearer
 	} else {
 		appType = op.ApplicationTypeUserAgent
 		authMethod = op.AuthMethodNone
+		accessTokenType = op.AccessTokenTypeJWT
 	}
-	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod}, nil
+	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType}, nil
 }
 
 func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ string) error {
@@ -205,6 +209,7 @@ type ConfClient struct {
 	applicationType op.ApplicationType
 	authMethod      op.AuthMethod
 	ID              string
+	accessTokenType op.AccessTokenType
 }
 
 func (c *ConfClient) GetID() string {
@@ -232,4 +237,14 @@ func (c *ConfClient) ApplicationType() op.ApplicationType {
 
 func (c *ConfClient) GetAuthMethod() op.AuthMethod {
 	return c.authMethod
+}
+
+func (c *ConfClient) AccessTokenLifetime() time.Duration {
+	return time.Duration(5 * time.Minute)
+}
+func (c *ConfClient) IDTokenLifetime() time.Duration {
+	return time.Duration(5 * time.Minute)
+}
+func (c *ConfClient) AccessTokenType() op.AccessTokenType {
+	return c.accessTokenType
 }

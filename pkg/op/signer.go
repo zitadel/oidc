@@ -11,6 +11,7 @@ import (
 
 type Signer interface {
 	SignIDToken(claims *oidc.IDTokenClaims) (string, error)
+	SignAccessToken(claims *oidc.AccessTokenClaims) (string, error)
 	SignatureAlgorithm() jose.SignatureAlgorithm
 }
 
@@ -49,6 +50,14 @@ func (s *idTokenSigner) initialize(ctx context.Context) error {
 }
 
 func (s *idTokenSigner) SignIDToken(claims *oidc.IDTokenClaims) (string, error) {
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	return s.Sign(payload)
+}
+
+func (s *idTokenSigner) SignAccessToken(claims *oidc.AccessTokenClaims) (string, error) {
 	payload, err := json.Marshal(claims)
 	if err != nil {
 		return "", err
