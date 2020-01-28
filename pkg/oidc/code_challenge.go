@@ -18,6 +18,10 @@ type CodeChallenge struct {
 	Method    CodeChallengeMethod
 }
 
+func NewSHACodeChallenge(code string) string {
+	return utils.HashString(sha256.New(), code)
+}
+
 func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {
 	if c == nil {
 		return false //TODO: ?

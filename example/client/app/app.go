@@ -13,11 +13,12 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 var (
 	callbackPath string = "/auth/callback"
-	hashKey      []byte = []byte("test")
+	key          []byte = []byte("test1234test1234")
 )
 
 func main() {
@@ -35,10 +36,10 @@ func main() {
 		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
 		Scopes:       []string{"openid", "profile", "email"},
 	}
-	// cookieHandler := utils.NewCookieHandler(hashKey, nil, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpConfig) //, rp.WithCookieHandler(cookieHandler))
+	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
+	provider, err := rp.NewDefaultRP(rpConfig, rp.WithPKCE(cookieHandler)) //, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
-		logrus.Panicf("error creating provider %s", err.Error())
+		logrus.Fatalf("error creating provider %s", err.Error())
 	}
 
 	// state := "foobar"

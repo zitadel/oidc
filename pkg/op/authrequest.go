@@ -165,6 +165,9 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 			return
 		}
 		callback = fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), code)
+		if authReq.GetState() != "" {
+			callback = callback + "&state=" + authReq.GetState()
+		}
 	} else {
 		var accessToken string
 		var err error

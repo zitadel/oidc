@@ -13,7 +13,7 @@ import (
 type RelayingParty interface {
 
 	//AuthURL returns the authorization endpoint with a given state
-	AuthURL(state string) string
+	AuthURL(state string, opts ...AuthURLOpt) string
 
 	//AuthURLHandler should implement the AuthURL func as http.HandlerFunc
 	//(redirecting to the auth endpoint)
@@ -21,7 +21,7 @@ type RelayingParty interface {
 
 	//CodeExchange implements the OIDC Token Request (oauth2 Authorization Code Grant)
 	//returning an `Access Token` and `ID Token Claims`
-	CodeExchange(ctx context.Context, code string) (*oidc.Tokens, error)
+	CodeExchange(ctx context.Context, code string, opts ...CodeExchangeOpt) (*oidc.Tokens, error)
 
 	//CodeExchangeHandler extends the CodeExchange func,
 	//calling the provided callback func on success with additional returned `state`
@@ -80,5 +80,26 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 		IntrospectURL: discoveryConfig.IntrospectionEndpoint,
 		UserinfoURL:   discoveryConfig.UserinfoEndpoint,
 		JKWsURL:       discoveryConfig.JwksURI,
+	}
+}
+
+type AuthURLOpt func() []oauth2.AuthCodeOption
+
+//WithCodeChallenge sets the `code_challenge` params in the auth request
+func WithCodeChallenge(codeChallenge string) AuthURLOpt {
+	return func() []oauth2.AuthCodeOption {
+		return []oauth2.AuthCodeOption{
+			oauth2.SetAuthURLParam("code_challenge", codeChallenge),
+			oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		}
+	}
+}
+
+type CodeExchangeOpt func() []oauth2.AuthCodeOption
+
+//WithCodeVerifier sets the `code_verifier` param in the token request
+func WithCodeVerifier(codeVerifier string) CodeExchangeOpt {
+	return func() []oauth2.AuthCodeOption {
+		return []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("code_verifier", codeVerifier)}
 	}
 }

@@ -55,7 +55,7 @@ func WithDomain(domain string) CookieHandlerOpt {
 	}
 }
 
-func (c *CookieHandler) CheckQueryCookie(r *http.Request, name string) (string, error) {
+func (c *CookieHandler) CheckCookie(r *http.Request, name string) (string, error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
 		return "", err
@@ -64,13 +64,21 @@ func (c *CookieHandler) CheckQueryCookie(r *http.Request, name string) (string, 
 	if err := c.securecookie.Decode(name, cookie.Value, &value); err != nil {
 		return "", err
 	}
+	return value, nil
+}
+
+func (c *CookieHandler) CheckQueryCookie(r *http.Request, name string) (string, error) {
+	value, err := c.CheckCookie(r, name)
+	if err != nil {
+		return "", err
+	}
 	if value != r.FormValue(name) {
 		return "", errors.New(name + " does not compare")
 	}
 	return value, nil
 }
 
-func (c *CookieHandler) SetQueryCookie(w http.ResponseWriter, name, value string) error {
+func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) error {
 	encoded, err := c.securecookie.Encode(name, value)
 	if err != nil {
 		return err
