@@ -153,3 +153,18 @@ func (mr *MockStorageMockRecorder) GetUserinfoFromScopes(arg0, arg1 interface{})
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserinfoFromScopes", reflect.TypeOf((*MockStorage)(nil).GetUserinfoFromScopes), arg0, arg1)
 }
+
+// SaveKeyPair mocks base method
+func (m *MockStorage) SaveKeyPair(arg0 context.Context) (*go_jose_v2.SigningKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveKeyPair", arg0)
+	ret0, _ := ret[0].(*go_jose_v2.SigningKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveKeyPair indicates an expected call of SaveKeyPair
+func (mr *MockStorageMockRecorder) SaveKeyPair(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveKeyPair", reflect.TypeOf((*MockStorage)(nil).SaveKeyPair), arg0)
+}

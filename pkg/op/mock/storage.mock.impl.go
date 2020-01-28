@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -30,8 +31,8 @@ func NewMockStorageExpectInvalidClientID(t *testing.T) op.Storage {
 func NewMockStorageAny(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	mockS := m.(*MockStorage)
-	mockS.EXPECT().GetClientByClientID(gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
-	mockS.EXPECT().AuthorizeClientIDSecret(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	mockS.EXPECT().GetClientByClientID(gomock.Any(), gomock.Any()).AnyTimes().Return(&ConfClient{}, nil)
+	mockS.EXPECT().AuthorizeClientIDSecret(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	return m
 }
 
@@ -54,13 +55,13 @@ func NewMockStorageSigningKey(t *testing.T) op.Storage {
 
 func ExpectInvalidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetClientByClientID(gomock.Any()).Return(nil, errors.New("client not found"))
+	mockS.EXPECT().GetClientByClientID(gomock.Any(), gomock.Any()).Return(nil, errors.New("client not found"))
 }
 
 func ExpectValidClientID(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetClientByClientID(gomock.Any()).DoAndReturn(
-		func(id string) (op.Client, error) {
+	mockS.EXPECT().GetClientByClientID(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, id string) (op.Client, error) {
 			var appType op.ApplicationType
 			var authMethod op.AuthMethod
 			switch id {
@@ -80,17 +81,17 @@ func ExpectValidClientID(s op.Storage) {
 
 func ExpectSigningKeyError(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey().Return(nil, errors.New("error"))
+	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(nil, errors.New("error"))
 }
 
 func ExpectSigningKeyInvalid(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey().Return(&jose.SigningKey{}, nil)
+	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(&jose.SigningKey{}, nil)
 }
 
 func ExpectSigningKey(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey().Return(&jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}, nil)
+	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(&jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}, nil)
 }
 
 type ConfClient struct {

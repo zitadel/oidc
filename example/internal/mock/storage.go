@@ -142,6 +142,9 @@ func (s *AuthStorage) GetSigningKey(_ context.Context) (*jose.SigningKey, error)
 func (s *AuthStorage) GetKey(_ context.Context) (*rsa.PrivateKey, error) {
 	return s.key, nil
 }
+func (s *AuthStorage) SaveKeyPair(ctx context.Context) (*jose.SigningKey, error) {
+	return s.GetSigningKey(ctx)
+}
 func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()
 	return &jose.JSONWebKeySet{
