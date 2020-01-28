@@ -31,7 +31,7 @@ func ValidateIssuer(issuer string) error {
 		return errors.New("host for issuer missing")
 	}
 	if u.Scheme != "https" {
-		if devLocalAllowed(u) {
+		if !devLocalAllowed(u) {
 			return errors.New("scheme for issuer must be `https`")
 		}
 	}
