@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/schema"
 
@@ -14,7 +13,6 @@ import (
 
 type Exchanger interface {
 	Issuer() string
-	IDTokenValidity() time.Duration
 	Storage() Storage
 	Decoder() *schema.Decoder
 	Signer() Signer

@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/schema"
 
@@ -20,8 +19,6 @@ const (
 	AuthMethodBasic AuthMethod = "client_secret_basic"
 	AuthMethodPost             = "client_secret_post"
 	AuthMethodNone             = "none"
-
-	DefaultIDTokenValidity = time.Duration(5 * time.Minute)
 )
 
 var (
@@ -47,9 +44,8 @@ type DefaultOP struct {
 }
 
 type Config struct {
-	Issuer          string
-	IDTokenValidity time.Duration
-	CryptoKey       [32]byte
+	Issuer    string
+	CryptoKey [32]byte
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,
@@ -196,13 +192,6 @@ func (p *DefaultOP) Signer() Signer {
 
 func (p *DefaultOP) Crypto() Crypto {
 	return p.crypto
-}
-
-func (p *DefaultOP) IDTokenValidity() time.Duration {
-	if p.config.IDTokenValidity == 0 {
-		p.config.IDTokenValidity = DefaultIDTokenValidity
-	}
-	return p.config.IDTokenValidity
 }
 
 func (p *DefaultOP) HandleKeys(w http.ResponseWriter, r *http.Request) {

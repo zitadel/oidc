@@ -27,7 +27,7 @@ func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {
 		return false //TODO: ?
 	}
 	if c.Method == CodeChallengeMethodS256 {
-		codeVerifier = utils.HashString(sha256.New(), codeVerifier)
+		codeVerifier = NewSHACodeChallenge(codeVerifier)
 	}
 	return codeVerifier == c.Challenge
 }
