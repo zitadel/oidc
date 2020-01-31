@@ -74,7 +74,7 @@ type jsonToken struct {
 	AuthenticationContextClassReference string      `json:"acr,omitempty"`
 	AuthenticationMethodsReferences     []string    `json:"amr,omitempty"`
 	SessionID                           string      `json:"sid,omitempty"`
-	Actor                               interface{} `json:"act,omitempty"`
+	Actor                               interface{} `json:"act,omitempty"` //TODO: impl
 	Scopes                              string      `json:"scope,omitempty"`
 	ClientID                            string      `json:"client_id,omitempty"`
 	AuthorizedActor                     interface{} `json:"may_act,omitempty"` //TODO: impl

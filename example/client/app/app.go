@@ -77,7 +77,7 @@ func main() {
 	http.Handle(callbackPath, provider.CodeExchangeHandler(marshal))
 
 	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		tokens, err := provider.ClientCredentials(ctx, "urn:abraxas:iam:audience_client_id:TM-V3")
+		tokens, err := provider.ClientCredentials(ctx, "scope")
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
 			return
