@@ -37,7 +37,7 @@ func main() {
 		Scopes:       []string{"openid", "profile", "email"},
 	}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpConfig, rp.WithPKCE(cookieHandler)) //, rp.WithCookieHandler(cookieHandler))
+	provider, err := rp.NewDefaultRP(rpConfig, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
