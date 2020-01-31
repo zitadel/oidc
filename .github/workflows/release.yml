@@ -1,0 +1,29 @@
+name: Release
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        go: ['1.11', '1.12', '1.13']
+    name: Go ${{ matrix.go }} test
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go test -race ./pkg/...
+  release:
+    runs-on: ubuntu-18.04
+    needs: [test]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Source checkout
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Create Version
+      uses: caos/semantic-release@v0.2.4
+
