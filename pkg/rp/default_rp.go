@@ -181,16 +181,16 @@ func (p *DefaultRP) CodeExchangeHandler(callback func(http.ResponseWriter, *http
 			p.errorHandler(w, r, params.Get("error"), params.Get("error_description"), state)
 			return
 		}
-		var codeOpts CodeExchangeOpt
+		codeOpts := make([]CodeExchangeOpt, 0)
 		if p.pkce {
 			codeVerifier, err := p.cookieHandler.CheckCookie(r, pkceCode)
 			if err != nil {
 				http.Error(w, "failed to get code verifier: "+err.Error(), http.StatusUnauthorized)
 				return
 			}
-			codeOpts = WithCodeVerifier(codeVerifier)
+			codeOpts = append(codeOpts, WithCodeVerifier(codeVerifier))
 		}
-		tokens, err := p.CodeExchange(r.Context(), params.Get("code"), codeOpts)
+		tokens, err := p.CodeExchange(r.Context(), params.Get("code"), codeOpts...)
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
 			return
