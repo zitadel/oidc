@@ -23,7 +23,5 @@ jobs:
       with:
         fetch-depth: 1
     - name: Create Version
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      uses: docker://docker.pkg.github.com/caos/semantic-release/semantic-release:v0.1.2
-      run: npx semantic-release
+      uses: caos/semantic-release@v0.2.4
+
