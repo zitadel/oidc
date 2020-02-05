@@ -33,6 +33,16 @@ For your convinience you can find the relevant standards linked below.
 [OAuth 2.0 Token Exchange](https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-19)
 [OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://tools.ietf.org/html/draft-ietf-oauth-mtls-17)
 
+## Supported Go Versions
+
+| Version | Supported          |
+|---------|--------------------|
+| <1.11   | :x:                |
+| 1.11    | :white_check_mark: |
+| 1.12    | :white_check_mark: |
+| 1.13    | :white_check_mark: |
+| 1.14    | not yet tested     |
+
 ## Why another library
 
 As of 2020 there are not a lot of `OIDC` librarys in `Go` which can handle server and client implementations. CAOS is strongly commited to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
