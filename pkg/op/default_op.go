@@ -41,6 +41,7 @@ type DefaultOP struct {
 	http            *http.Server
 	decoder         *schema.Decoder
 	encoder         *schema.Encoder
+	interceptor     HttpInterceptor
 }
 
 type Config struct {
@@ -98,6 +99,13 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
+func WithHttpInterceptor(h HttpInterceptor) DefaultOPOpts {
+	return func(o *DefaultOP) error {
+		o.interceptor = h
+		return nil
+	}
+}
+
 func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
@@ -123,7 +131,7 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 
 	p.discoveryConfig = CreateDiscoveryConfig(p, p.signer)
 
-	router := CreateRouter(p)
+	router := CreateRouter(p, p.interceptor)
 	p.http = &http.Server{
 		Addr:    ":" + config.Port,
 		Handler: router,

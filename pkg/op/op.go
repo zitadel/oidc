@@ -21,12 +21,25 @@ type OpenIDProvider interface {
 	HttpHandler() *http.Server
 }
 
-func CreateRouter(o OpenIDProvider) *mux.Router {
+type HttpInterceptor func(http.HandlerFunc) http.HandlerFunc
+
+var (
+	DefaultInterceptor = func(h http.HandlerFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		})
+	}
+)
+
+func CreateRouter(o OpenIDProvider, h HttpInterceptor) *mux.Router {
+	if h == nil {
+		h = DefaultInterceptor
+	}
 	router := mux.NewRouter()
 	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
-	router.HandleFunc(o.AuthorizationEndpoint().Relative(), o.HandleAuthorize)
-	router.HandleFunc(o.AuthorizationEndpoint().Relative()+"/{id}", o.HandleAuthorizeCallback)
-	router.HandleFunc(o.TokenEndpoint().Relative(), o.HandleExchange)
+	router.HandleFunc(o.AuthorizationEndpoint().Relative(), h(o.HandleAuthorize))
+	router.HandleFunc(o.AuthorizationEndpoint().Relative()+"/{id}", h(o.HandleAuthorizeCallback))
+	router.HandleFunc(o.TokenEndpoint().Relative(), h(o.HandleExchange))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), o.HandleUserinfo)
 	router.HandleFunc(o.KeysEndpoint().Relative(), o.HandleKeys)
 	return router
