@@ -74,7 +74,7 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	}
 
 	keys := r.keysFromCache()
-	payload, err, ok := checkKey(keyID, keys, jws)
+	payload, err, ok := CheckKey(keyID, keys, jws)
 	if ok {
 		return payload, err
 	}
@@ -84,7 +84,7 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 		return nil, fmt.Errorf("fetching keys %v", err)
 	}
 
-	payload, err, ok = checkKey(keyID, keys, jws)
+	payload, err, ok = CheckKey(keyID, keys, jws)
 	if !ok {
 		return nil, errors.New("invalid kid")
 	}
@@ -153,14 +153,4 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 	}
 
 	return keySet.Keys, nil
-}
-
-func checkKey(keyID string, keys []jose.JSONWebKey, jws *jose.JSONWebSignature) ([]byte, error, bool) {
-	for _, key := range keys {
-		if keyID == "" || key.KeyID == keyID {
-			payload, err := jws.Verify(&key)
-			return payload, err, true
-		}
-	}
-	return nil, nil, false
 }
