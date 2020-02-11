@@ -89,7 +89,7 @@ func ExchangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 
 type OAuthError struct {
 	ErrorType        errorType `json:"error" schema:"error"`
-	Description      string    `json:"description" schema:"description"`
+	Description      string    `json:"error_description" schema:"error_description"`
 	state            string    `json:"state" schema:"state"`
 	redirectDisabled bool
 }

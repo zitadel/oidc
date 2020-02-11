@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -66,6 +67,10 @@ func ExpectSigner(a op.Authorizer, t *testing.T) {
 // }
 
 type Sig struct{}
+
+func (s *Sig) Health(ctx context.Context) error {
+	return nil
+}
 
 func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
 	return "", nil

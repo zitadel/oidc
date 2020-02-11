@@ -112,6 +112,10 @@ var (
 	t bool
 )
 
+func (s *AuthStorage) Health(ctx context.Context) error {
+	return nil
+}
+
 func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthRequest) (op.AuthRequest, error) {
 	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
 	if authReq.CodeChallenge != "" {
@@ -136,14 +140,14 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 	}
 	return a, nil
 }
-func (s *AuthStorage) GetSigningKey(_ context.Context) (*jose.SigningKey, error) {
-	return &jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, nil
+func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey, _ chan<- error, _ <-chan bool) {
+	keyCh <- jose.SigningKey{Algorithm: jose.RS256, Key: s.key}
 }
 func (s *AuthStorage) GetKey(_ context.Context) (*rsa.PrivateKey, error) {
 	return s.key, nil
 }
-func (s *AuthStorage) SaveKeyPair(ctx context.Context) (*jose.SigningKey, error) {
-	return s.GetSigningKey(ctx)
+func (s *AuthStorage) SaveNewKeyPair(ctx context.Context) error {
+	return nil
 }
 func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()

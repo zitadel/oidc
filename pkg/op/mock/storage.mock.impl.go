@@ -86,17 +86,29 @@ func ExpectValidClientID(s op.Storage) {
 
 func ExpectSigningKeyError(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(nil, errors.New("error"))
+	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
+			errCh <- errors.New("error")
+		},
+	)
 }
 
 func ExpectSigningKeyInvalid(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(&jose.SigningKey{}, nil)
+	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
+			keyCh <- jose.SigningKey{}
+		},
+	)
 }
 
 func ExpectSigningKey(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any()).Return(&jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}, nil)
+	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
+			keyCh <- jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}
+		},
+	)
 }
 
 type ConfClient struct {

@@ -14,9 +14,9 @@ type AuthStorage interface {
 	AuthRequestByID(context.Context, string) (AuthRequest, error)
 	DeleteAuthRequest(context.Context, string) error
 
-	GetSigningKey(context.Context) (*jose.SigningKey, error)
+	GetSigningKey(context.Context, chan<- jose.SigningKey, chan<- error, <-chan bool)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
-	SaveKeyPair(context.Context) (*jose.SigningKey, error)
+	SaveNewKeyPair(context.Context) error
 }
 
 type OPStorage interface {
@@ -28,6 +28,11 @@ type OPStorage interface {
 type Storage interface {
 	AuthStorage
 	OPStorage
+	Health(context.Context) error
+}
+
+type StorageNotFoundError interface {
+	IsNotFound()
 }
 
 type AuthRequest interface {

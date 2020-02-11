@@ -78,7 +78,7 @@ func Test_idTokenSigner_Sign(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &idTokenSigner{
+			s := &tokenSigner{
 				signer:  tt.fields.signer,
 				storage: tt.fields.storage,
 			}

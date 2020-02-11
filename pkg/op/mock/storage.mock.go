@@ -125,18 +125,15 @@ func (mr *MockStorageMockRecorder) GetKeySet(arg0 interface{}) *gomock.Call {
 }
 
 // GetSigningKey mocks base method
-func (m *MockStorage) GetSigningKey(arg0 context.Context) (*go_jose_v2.SigningKey, error) {
+func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- go_jose_v2.SigningKey, arg2 chan<- error, arg3 <-chan bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSigningKey", arg0)
-	ret0, _ := ret[0].(*go_jose_v2.SigningKey)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	m.ctrl.Call(m, "GetSigningKey", arg0, arg1, arg2, arg3)
 }
 
 // GetSigningKey indicates an expected call of GetSigningKey
-func (mr *MockStorageMockRecorder) GetSigningKey(arg0 interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetSigningKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey), arg0, arg1, arg2, arg3)
 }
 
 // GetUserinfoFromScopes mocks base method
@@ -154,17 +151,30 @@ func (mr *MockStorageMockRecorder) GetUserinfoFromScopes(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserinfoFromScopes", reflect.TypeOf((*MockStorage)(nil).GetUserinfoFromScopes), arg0, arg1)
 }
 
-// SaveKeyPair mocks base method
-func (m *MockStorage) SaveKeyPair(arg0 context.Context) (*go_jose_v2.SigningKey, error) {
+// Health mocks base method
+func (m *MockStorage) Health(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveKeyPair", arg0)
-	ret0, _ := ret[0].(*go_jose_v2.SigningKey)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Health", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// SaveKeyPair indicates an expected call of SaveKeyPair
-func (mr *MockStorageMockRecorder) SaveKeyPair(arg0 interface{}) *gomock.Call {
+// Health indicates an expected call of Health
+func (mr *MockStorageMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveKeyPair", reflect.TypeOf((*MockStorage)(nil).SaveKeyPair), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockStorage)(nil).Health), arg0)
+}
+
+// SaveNewKeyPair mocks base method
+func (m *MockStorage) SaveNewKeyPair(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveNewKeyPair", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveNewKeyPair indicates an expected call of SaveNewKeyPair
+func (mr *MockStorageMockRecorder) SaveNewKeyPair(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveNewKeyPair", reflect.TypeOf((*MockStorage)(nil).SaveNewKeyPair), arg0)
 }
