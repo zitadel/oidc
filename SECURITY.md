@@ -1,6 +1,6 @@
 # Security Policy
 
-At caos we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
+At CAOS we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
 
 ## Supported Versions
 
@@ -8,7 +8,7 @@ After the initial Release the following version support will apply
 
 | Version | Supported                               |
 | ------- | ------------------                      |
-| 1.x.x   | :white_check_mark: (note yet available) |
+| 1.x.x   | :white_check_mark: (not yet available)  |
 | 0.x.x   | :x:                                     |
 
 ## Reporting a vulnerability
