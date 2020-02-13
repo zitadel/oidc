@@ -136,7 +136,6 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 	}
 
 	keyCh := make(chan jose.SigningKey)
-	// ctx, cancel := context.WithCancel(ctx)
 	p.signer = NewDefaultSigner(ctx, storage, keyCh)
 	go p.ensureKey(ctx, storage, keyCh)
 
