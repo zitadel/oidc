@@ -3,9 +3,12 @@ package op
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/schema"
+	"gopkg.in/square/go-jose.v2"
 
+	"github.com/caos/logging"
 	"github.com/caos/oidc/pkg/oidc"
 )
 
@@ -32,16 +35,16 @@ var (
 )
 
 type DefaultOP struct {
-	config          *Config
-	endpoints       *endpoints
-	discoveryConfig *oidc.DiscoveryConfiguration
-	storage         Storage
-	signer          Signer
-	crypto          Crypto
-	http            *http.Server
-	decoder         *schema.Decoder
-	encoder         *schema.Encoder
-	interceptor     HttpInterceptor
+	config      *Config
+	endpoints   *endpoints
+	storage     Storage
+	signer      Signer
+	crypto      Crypto
+	http        *http.Server
+	decoder     *schema.Decoder
+	encoder     *schema.Encoder
+	interceptor HttpInterceptor
+	retry       func(int) (bool, int)
 }
 
 type Config struct {
@@ -106,6 +109,20 @@ func WithHttpInterceptor(h HttpInterceptor) DefaultOPOpts {
 	}
 }
 
+func WithRetry(max int, sleep time.Duration) DefaultOPOpts {
+	return func(o *DefaultOP) error {
+		o.retry = func(count int) (bool, int) {
+			count++
+			if count == max {
+				return false, count
+			}
+			time.Sleep(sleep)
+			return true, count
+		}
+		return nil
+	}
+}
+
 func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
@@ -118,18 +135,16 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 		endpoints: DefaultEndpoints,
 	}
 
-	p.signer, err = NewDefaultSigner(ctx, storage)
-	if err != nil {
-		return nil, err
-	}
+	keyCh := make(chan jose.SigningKey)
+	// ctx, cancel := context.WithCancel(ctx)
+	p.signer = NewDefaultSigner(ctx, storage, keyCh)
+	go p.ensureKey(ctx, storage, keyCh)
 
 	for _, optFunc := range opOpts {
 		if err := optFunc(p); err != nil {
 			return nil, err
 		}
 	}
-
-	p.discoveryConfig = CreateDiscoveryConfig(p, p.signer)
 
 	router := CreateRouter(p, p.interceptor)
 	p.http = &http.Server{
@@ -179,7 +194,7 @@ func (p *DefaultOP) HttpHandler() *http.Server {
 }
 
 func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
-	Discover(w, p.discoveryConfig)
+	Discover(w, CreateDiscoveryConfig(p, p.Signer()))
 }
 
 func (p *DefaultOP) Decoder() *schema.Decoder {
@@ -200,6 +215,13 @@ func (p *DefaultOP) Signer() Signer {
 
 func (p *DefaultOP) Crypto() Crypto {
 	return p.crypto
+}
+func (p *DefaultOP) HandleReady(w http.ResponseWriter, r *http.Request) {
+	probes := []ProbesFn{
+		ReadySigner(p.Signer()),
+		ReadyStorage(p.Storage()),
+	}
+	Readiness(w, r, probes...)
 }
 
 func (p *DefaultOP) HandleKeys(w http.ResponseWriter, r *http.Request) {
@@ -229,4 +251,35 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
 	Userinfo(w, r, p)
+}
+
+func (p *DefaultOP) ensureKey(ctx context.Context, storage Storage, keyCh chan<- jose.SigningKey) {
+	count := 0
+	explicit := make(chan bool)
+	errCh := make(chan error)
+	go storage.GetSigningKey(ctx, keyCh, errCh, explicit)
+	explicit <- true
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case err := <-errCh:
+			if err == nil {
+				continue
+			}
+			_, ok := err.(StorageNotFoundError)
+			if ok {
+				err := storage.SaveNewKeyPair(ctx)
+				if err == nil {
+					continue
+				}
+			}
+			ok, count = p.retry(count)
+			if ok {
+				explicit <- true
+				continue
+			}
+			logging.Log("OP-n6ynVE").WithError(err).Panic("error in key signer")
+		}
+	}
 }

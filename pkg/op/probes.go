@@ -1,0 +1,51 @@
+package op
+
+import (
+	"context"
+	"errors"
+	"net/http"
+
+	"github.com/caos/oidc/pkg/utils"
+)
+
+type ProbesFn func(context.Context) error
+
+func Healthz(w http.ResponseWriter, r *http.Request) {
+	ok(w)
+}
+
+func Readiness(w http.ResponseWriter, r *http.Request, probes ...ProbesFn) {
+	ctx := r.Context()
+	for _, probe := range probes {
+		if err := probe(ctx); err != nil {
+			http.Error(w, "not ready", http.StatusInternalServerError)
+			return
+		}
+	}
+	ok(w)
+}
+
+func ReadySigner(s Signer) ProbesFn {
+	return func(ctx context.Context) error {
+		if s == nil {
+			return errors.New("no signer")
+		}
+		return s.Health(ctx)
+	}
+}
+func ReadyStorage(s Storage) ProbesFn {
+	return func(ctx context.Context) error {
+		if s == nil {
+			return errors.New("no storage")
+		}
+		return s.Health(ctx)
+	}
+}
+
+func ok(w http.ResponseWriter) {
+	utils.MarshalJSON(w, status{"ok"})
+}
+
+type status struct {
+	Status string `json:"status,omitempty"`
+}

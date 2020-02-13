@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	oidc "github.com/caos/oidc/pkg/oidc"
 	gomock "github.com/golang/mock/gomock"
 	go_jose_v2 "gopkg.in/square/go-jose.v2"
@@ -32,6 +33,20 @@ func NewMockSigner(ctrl *gomock.Controller) *MockSigner {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockSigner) EXPECT() *MockSignerMockRecorder {
 	return m.recorder
+}
+
+// Health mocks base method
+func (m *MockSigner) Health(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Health", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Health indicates an expected call of Health
+func (mr *MockSignerMockRecorder) Health(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockSigner)(nil).Health), arg0)
 }
 
 // SignAccessToken mocks base method
