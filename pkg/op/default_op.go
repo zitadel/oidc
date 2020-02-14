@@ -45,6 +45,7 @@ type DefaultOP struct {
 	encoder     *schema.Encoder
 	interceptor HttpInterceptor
 	retry       func(int) (bool, int)
+	timer       <-chan time.Time
 }
 
 type Config struct {
@@ -123,6 +124,13 @@ func WithRetry(max int, sleep time.Duration) DefaultOPOpts {
 	}
 }
 
+func WithTimer(timer <-chan time.Time) DefaultOPOpts {
+	return func(o *DefaultOP) error {
+		o.timer = timer
+		return nil
+	}
+}
+
 func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts ...DefaultOPOpts) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
@@ -133,17 +141,18 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 		config:    config,
 		storage:   storage,
 		endpoints: DefaultEndpoints,
+		timer:     make(<-chan time.Time),
 	}
-
-	keyCh := make(chan jose.SigningKey)
-	p.signer = NewDefaultSigner(ctx, storage, keyCh)
-	go p.ensureKey(ctx, storage, keyCh)
 
 	for _, optFunc := range opOpts {
 		if err := optFunc(p); err != nil {
 			return nil, err
 		}
 	}
+
+	keyCh := make(chan jose.SigningKey)
+	p.signer = NewDefaultSigner(ctx, storage, keyCh)
+	go p.ensureKey(ctx, storage, keyCh, p.timer)
 
 	router := CreateRouter(p, p.interceptor)
 	p.http = &http.Server{
@@ -252,12 +261,11 @@ func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
 	Userinfo(w, r, p)
 }
 
-func (p *DefaultOP) ensureKey(ctx context.Context, storage Storage, keyCh chan<- jose.SigningKey) {
+func (p *DefaultOP) ensureKey(ctx context.Context, storage Storage, keyCh chan<- jose.SigningKey, timer <-chan time.Time) {
 	count := 0
-	explicit := make(chan bool)
+	timer = time.After(0)
 	errCh := make(chan error)
-	go storage.GetSigningKey(ctx, keyCh, errCh, explicit)
-	explicit <- true
+	go storage.GetSigningKey(ctx, keyCh, errCh, timer)
 	for {
 		select {
 		case <-ctx.Done():
@@ -275,7 +283,7 @@ func (p *DefaultOP) ensureKey(ctx context.Context, storage Storage, keyCh chan<-
 			}
 			ok, count = p.retry(count)
 			if ok {
-				explicit <- true
+				timer = time.After(0)
 				continue
 			}
 			logging.Log("OP-n6ynVE").WithError(err).Panic("error in key signer")
