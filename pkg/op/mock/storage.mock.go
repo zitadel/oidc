@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	go_jose_v2 "gopkg.in/square/go-jose.v2"
 	reflect "reflect"
+	time "time"
 )
 
 // MockStorage is a mock of Storage interface
@@ -125,7 +126,7 @@ func (mr *MockStorageMockRecorder) GetKeySet(arg0 interface{}) *gomock.Call {
 }
 
 // GetSigningKey mocks base method
-func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- go_jose_v2.SigningKey, arg2 chan<- error, arg3 <-chan bool) {
+func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- go_jose_v2.SigningKey, arg2 chan<- error, arg3 <-chan time.Time) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "GetSigningKey", arg0, arg1, arg2, arg3)
 }

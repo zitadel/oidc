@@ -140,7 +140,7 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 	}
 	return a, nil
 }
-func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey, _ chan<- error, _ <-chan bool) {
+func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey, _ chan<- error, _ <-chan time.Time) {
 	keyCh <- jose.SigningKey{Algorithm: jose.RS256, Key: s.key}
 }
 func (s *AuthStorage) GetKey(_ context.Context) (*rsa.PrivateKey, error) {

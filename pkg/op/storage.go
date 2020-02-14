@@ -14,7 +14,7 @@ type AuthStorage interface {
 	AuthRequestByID(context.Context, string) (AuthRequest, error)
 	DeleteAuthRequest(context.Context, string) error
 
-	GetSigningKey(context.Context, chan<- jose.SigningKey, chan<- error, <-chan bool)
+	GetSigningKey(context.Context, chan<- jose.SigningKey, chan<- error, <-chan time.Time)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 	SaveNewKeyPair(context.Context) error
 }
