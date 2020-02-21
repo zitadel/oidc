@@ -26,11 +26,11 @@ const (
 
 var (
 	DefaultEndpoints = &endpoints{
-		Authorization:         defaultAuthorizationEndpoint,
-		Token:                 defaulTokenEndpoint,
-		IntrospectionEndpoint: defaultIntrospectEndpoint,
-		Userinfo:              defaultUserinfoEndpoint,
-		JwksURI:               defaultKeysEndpoint,
+		Authorization:         NewEndpoint(defaultAuthorizationEndpoint),
+		Token:                 NewEndpoint(defaulTokenEndpoint),
+		IntrospectionEndpoint: NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:              NewEndpoint(defaultUserinfoEndpoint),
+		JwksURI:               NewEndpoint(defaultKeysEndpoint),
 	}
 )
 

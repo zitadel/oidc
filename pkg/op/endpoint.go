@@ -2,14 +2,28 @@ package op
 
 import "strings"
 
-type Endpoint string
+type Endpoint struct {
+	path string
+	url  string
+}
+
+func NewEndpoint(path string) Endpoint {
+	return Endpoint{path: path}
+}
+
+func NewEndpointWithURL(path, url string) Endpoint {
+	return Endpoint{path: path, url: url}
+}
 
 func (e Endpoint) Relative() string {
-	return relativeEndpoint(string(e))
+	return relativeEndpoint(e.path)
 }
 
 func (e Endpoint) Absolute(host string) string {
-	return absoluteEndpoint(host, string(e))
+	if e.url != "" {
+		return e.url
+	}
+	return absoluteEndpoint(host, e.path)
 }
 
 func (e Endpoint) Validate() error {
