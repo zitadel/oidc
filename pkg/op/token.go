@@ -1,6 +1,7 @@
 package op
 
 import (
+	"context"
 	"time"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -13,11 +14,12 @@ type TokenCreator interface {
 	Crypto() Crypto
 }
 
-func CreateTokenResponse(authReq AuthRequest, client Client, creator TokenCreator, createAccessToken bool, code string) (*oidc.AccessTokenResponse, error) {
+func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client, creator TokenCreator, createAccessToken bool, code string) (*oidc.AccessTokenResponse, error) {
 	var accessToken string
+	var validity time.Duration
 	if createAccessToken {
 		var err error
-		accessToken, err = CreateAccessToken(authReq, client, creator)
+		accessToken, validity, err = CreateAccessToken(ctx, authReq, client, creator)
 		if err != nil {
 			return nil, err
 		}
@@ -26,7 +28,8 @@ func CreateTokenResponse(authReq AuthRequest, client Client, creator TokenCreato
 	if err != nil {
 		return nil, err
 	}
-	exp := uint64(client.AccessTokenLifetime().Seconds())
+
+	exp := uint64(validity.Seconds())
 	return &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
 		IDToken:     idToken,
@@ -35,21 +38,27 @@ func CreateTokenResponse(authReq AuthRequest, client Client, creator TokenCreato
 	}, nil
 }
 
-func CreateAccessToken(authReq AuthRequest, client Client, creator TokenCreator) (string, error) {
-	if client.AccessTokenType() == AccessTokenTypeJWT {
-		return CreateJWT(creator.Issuer(), authReq, client, creator.Signer())
+func CreateAccessToken(ctx context.Context, authReq AuthRequest, client Client, creator TokenCreator) (token string, validity time.Duration, err error) {
+	id, exp, err := creator.Storage().CreateToken(ctx, authReq)
+	if err != nil {
+		return "", 0, err
 	}
-	return CreateBearerToken(authReq, creator.Crypto())
+	validity = exp.Sub(time.Now().UTC())
+	if client.AccessTokenType() == AccessTokenTypeJWT {
+		token, err = CreateJWT(creator.Issuer(), authReq, exp, id, creator.Signer())
+		return
+	}
+	token, err = CreateBearerToken(id, creator.Crypto())
+	return
 }
 
-func CreateBearerToken(authReq AuthRequest, crypto Crypto) (string, error) {
-	return crypto.Encrypt(authReq.GetID())
+func CreateBearerToken(id string, crypto Crypto) (string, error) {
+	return crypto.Encrypt(id)
 }
 
-func CreateJWT(issuer string, authReq AuthRequest, client Client, signer Signer) (string, error) {
+func CreateJWT(issuer string, authReq AuthRequest, exp time.Time, id string, signer Signer) (string, error) {
 	now := time.Now().UTC()
 	nbf := now
-	exp := now.Add(client.AccessTokenLifetime())
 	claims := &oidc.AccessTokenClaims{
 		Issuer:     issuer,
 		Subject:    authReq.GetSubject(),
@@ -57,6 +66,7 @@ func CreateJWT(issuer string, authReq AuthRequest, client Client, signer Signer)
 		Expiration: exp,
 		IssuedAt:   now,
 		NotBefore:  nbf,
+		JWTID:      id,
 	}
 	return signer.SignAccessToken(claims)
 }
