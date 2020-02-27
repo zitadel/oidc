@@ -34,20 +34,6 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
-// AccessTokenLifetime mocks base method
-func (m *MockClient) AccessTokenLifetime() time.Duration {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AccessTokenLifetime")
-	ret0, _ := ret[0].(time.Duration)
-	return ret0
-}
-
-// AccessTokenLifetime indicates an expected call of AccessTokenLifetime
-func (mr *MockClientMockRecorder) AccessTokenLifetime() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenLifetime", reflect.TypeOf((*MockClient)(nil).AccessTokenLifetime))
-}
-
 // AccessTokenType mocks base method
 func (m *MockClient) AccessTokenType() op.AccessTokenType {
 	m.ctrl.T.Helper()

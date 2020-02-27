@@ -140,6 +140,9 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 	}
 	return a, nil
 }
+func (s *AuthStorage) CreateToken(_ context.Context, authReq op.AuthRequest) (string, time.Time, error) {
+	return authReq.GetID(), time.Now().UTC().Add(5 * time.Minute), nil
+}
 func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey, _ chan<- error, _ <-chan time.Time) {
 	keyCh <- jose.SigningKey{Algorithm: jose.RS256, Key: s.key}
 }
@@ -243,9 +246,6 @@ func (c *ConfClient) GetAuthMethod() op.AuthMethod {
 	return c.authMethod
 }
 
-func (c *ConfClient) AccessTokenLifetime() time.Duration {
-	return time.Duration(5 * time.Minute)
-}
 func (c *ConfClient) IDTokenLifetime() time.Duration {
 	return time.Duration(5 * time.Minute)
 }
