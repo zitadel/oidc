@@ -103,6 +103,16 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
+func WithCustomKeysEndpoint(endpoint Endpoint) DefaultOPOpts {
+	return func(o *DefaultOP) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.JwksURI = endpoint
+		return nil
+	}
+}
+
 func WithHttpInterceptor(h HttpInterceptor) DefaultOPOpts {
 	return func(o *DefaultOP) error {
 		o.interceptor = h
