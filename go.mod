@@ -6,11 +6,14 @@ require (
 	github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/schema v1.1.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20191128160524-b544559bb6d1 // indirect

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -40,6 +41,7 @@ func CreateRouter(o OpenIDProvider, h HttpInterceptor) *mux.Router {
 		h = DefaultInterceptor
 	}
 	router := mux.NewRouter()
+	router.Use(handlers.CORS())
 	router.HandleFunc(healthzEndpoint, Healthz)
 	router.HandleFunc(readinessEndpoint, o.HandleReady)
 	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
