@@ -21,7 +21,7 @@ func main() {
 		Port:      "9998",
 	}
 	storage := mock.NewAuthStorage()
-	handler, err := op.NewDefaultOP(ctx, config, storage, op.WithCustomTokenEndpoint("test"))
+	handler, err := op.NewDefaultOP(ctx, config, storage, op.WithCustomTokenEndpoint(op.NewEndpoint("test")))
 	if err != nil {
 		log.Fatal(err)
 	}

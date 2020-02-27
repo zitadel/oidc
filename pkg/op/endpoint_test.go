@@ -6,7 +6,7 @@ import (
 	"github.com/caos/oidc/pkg/op"
 )
 
-func TestEndpoint_Relative(t *testing.T) {
+func TestEndpoint_Path(t *testing.T) {
 	tests := []struct {
 		name string
 		e    op.Endpoint
@@ -14,12 +14,17 @@ func TestEndpoint_Relative(t *testing.T) {
 	}{
 		{
 			"without starting /",
-			op.Endpoint("test"),
+			op.NewEndpoint("test"),
 			"/test",
 		},
 		{
 			"with starting /",
-			op.Endpoint("/test"),
+			op.NewEndpoint("/test"),
+			"/test",
+		},
+		{
+			"with url",
+			op.NewEndpointWithURL("/test", "http://test.com/test"),
 			"/test",
 		},
 	}
@@ -44,27 +49,33 @@ func TestEndpoint_Absolute(t *testing.T) {
 	}{
 		{
 			"no /",
-			op.Endpoint("test"),
+			op.NewEndpoint("test"),
 			args{"https://host"},
 			"https://host/test",
 		},
 		{
 			"endpoint without /",
-			op.Endpoint("test"),
+			op.NewEndpoint("test"),
 			args{"https://host/"},
 			"https://host/test",
 		},
 		{
 			"host without /",
-			op.Endpoint("/test"),
+			op.NewEndpoint("/test"),
 			args{"https://host"},
 			"https://host/test",
 		},
 		{
 			"both /",
-			op.Endpoint("/test"),
+			op.NewEndpoint("/test"),
 			args{"https://host/"},
 			"https://host/test",
+		},
+		{
+			"with url",
+			op.NewEndpointWithURL("test", "https://test.com/test"),
+			args{"https://host"},
+			"https://test.com/test",
 		},
 	}
 	for _, tt := range tests {
