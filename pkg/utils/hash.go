@@ -25,7 +25,7 @@ func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 
 func HashString(hash hash.Hash, s string, firstHalf bool) string {
 	hash.Write([]byte(s)) // hash documents that Write will never return an error
-	size = hash.Size()
+	size := hash.Size()
 	if firstHalf {
 		size = size / 2
 	}
