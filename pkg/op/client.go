@@ -18,7 +18,6 @@ type Client interface {
 	GetAuthMethod() AuthMethod
 	LoginURL(string) string
 	AccessTokenType() AccessTokenType
-	AccessTokenLifetime() time.Duration
 	IDTokenLifetime() time.Duration
 }
 

@@ -81,6 +81,22 @@ func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuthRequest", reflect.TypeOf((*MockStorage)(nil).CreateAuthRequest), arg0, arg1)
 }
 
+// CreateToken mocks base method
+func (m *MockStorage) CreateToken(arg0 context.Context, arg1 op.AuthRequest) (string, time.Time, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateToken", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(time.Time)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateToken indicates an expected call of CreateToken
+func (mr *MockStorageMockRecorder) CreateToken(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateToken", reflect.TypeOf((*MockStorage)(nil).CreateToken), arg0, arg1)
+}
+
 // DeleteAuthRequest mocks base method
 func (m *MockStorage) DeleteAuthRequest(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()

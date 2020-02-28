@@ -179,7 +179,7 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 
 func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
 	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
-	resp, err := CreateTokenResponse(authReq, client, authorizer, createAccessToken, "")
+	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "")
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
