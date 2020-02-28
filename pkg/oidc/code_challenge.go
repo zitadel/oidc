@@ -19,7 +19,7 @@ type CodeChallenge struct {
 }
 
 func NewSHACodeChallenge(code string) string {
-	return utils.HashString(sha256.New(), code)
+	return utils.HashString(sha256.New(), code.false)
 }
 
 func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {

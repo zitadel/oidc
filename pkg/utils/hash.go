@@ -23,8 +23,12 @@ func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 	}
 }
 
-func HashString(hash hash.Hash, s string) string {
+func HashString(hash hash.Hash, s string, firstHalf bool) string {
 	hash.Write([]byte(s)) // hash documents that Write will never return an error
-	sum := hash.Sum(nil)[:hash.Size()/2]
+	size = hash.Size()
+	if firstHalf {
+		size = size / 2
+	}
+	sum := hash.Sum(nil)[:size]
 	return base64.RawURLEncoding.EncodeToString(sum)
 }

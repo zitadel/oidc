@@ -185,7 +185,7 @@ func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, erro
 		return "", err
 	}
 
-	return utils.HashString(hash, claim), nil
+	return utils.HashString(hash, claim, true), nil
 }
 
 func timeToJSON(t time.Time) int64 {
