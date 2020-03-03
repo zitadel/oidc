@@ -16,6 +16,8 @@ type AuthStorage interface {
 
 	CreateToken(context.Context, AuthRequest) (string, time.Time, error)
 
+	TerminateSession(context.Context, string, string) error
+
 	GetSigningKey(context.Context, chan<- jose.SigningKey, chan<- error, <-chan time.Time)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 	SaveNewKeyPair(context.Context) error
@@ -52,4 +54,10 @@ type AuthRequest interface {
 	GetState() string
 	GetSubject() string
 	Done() bool
+}
+
+type EndSessionRequest struct {
+	UserID      string
+	Client      Client
+	RedirectURI string
 }

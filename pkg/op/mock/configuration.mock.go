@@ -61,6 +61,20 @@ func (mr *MockConfigurationMockRecorder) AuthorizationEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).AuthorizationEndpoint))
 }
 
+// EndSessionEndpoint mocks base method
+func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EndSessionEndpoint")
+	ret0, _ := ret[0].(op.Endpoint)
+	return ret0
+}
+
+// EndSessionEndpoint indicates an expected call of EndSessionEndpoint
+func (mr *MockConfigurationMockRecorder) EndSessionEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSessionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).EndSessionEndpoint))
+}
+
 // Issuer mocks base method
 func (m *MockConfiguration) Issuer() string {
 	m.ctrl.T.Helper()

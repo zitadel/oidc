@@ -76,7 +76,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func ExchangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
+func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 	e, ok := err.(*OAuthError)
 	if !ok {
 		e = new(OAuthError)

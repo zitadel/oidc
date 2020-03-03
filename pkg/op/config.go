@@ -12,6 +12,7 @@ type Configuration interface {
 	AuthorizationEndpoint() Endpoint
 	TokenEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
+	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
