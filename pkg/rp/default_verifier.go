@@ -46,6 +46,13 @@ func NewDefaultVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ..
 	return &DefaultVerifier{config: conf, keySet: keySet}
 }
 
+//WithIgnoreAudience will turn off audience claim (should only be used for id_token_hints)
+func WithIgnoreAudience() func(*verifierConfig) {
+	return func(conf *verifierConfig) {
+		conf.ignoreAudience = true
+	}
+}
+
 //WithIgnoreIssuedAt will turn off iat claim verification
 func WithIgnoreIssuedAt() func(*verifierConfig) {
 	return func(conf *verifierConfig) {
@@ -100,6 +107,7 @@ type verifierConfig struct {
 	issuer            string
 	clientID          string
 	nonce             string
+	ignoreAudience    bool
 	iat               *iatConfig
 	acr               ACRVerifier
 	maxAge            time.Duration
@@ -233,6 +241,9 @@ func (v *DefaultVerifier) checkIssuer(issuer string) error {
 }
 
 func (v *DefaultVerifier) checkAudience(audiences []string) error {
+	if v.config.ignoreAudience {
+		return nil
+	}
 	if !utils.Contains(audiences, v.config.clientID) {
 		return ErrAudienceMissingClientID(v.config.clientID)
 	}
@@ -244,6 +255,9 @@ func (v *DefaultVerifier) checkAudience(audiences []string) error {
 //4. if multiple aud strings --> check if azp
 //5. if azp --> check azp == client_id
 func (v *DefaultVerifier) checkAuthorizedParty(audiences []string, authorizedParty string) error {
+	if v.config.ignoreAudience {
+		return nil
+	}
 	if len(audiences) > 1 {
 		if authorizedParty == "" {
 			return ErrAzpMissing()

@@ -126,6 +126,9 @@ func (c *ConfClient) RedirectURIs() []string {
 		"custom://callback",
 	}
 }
+func (c *ConfClient) PostLogoutRedirectURIs() []string {
+	return []string{}
+}
 
 func (c *ConfClient) LoginURL(id string) string {
 	return "login?id=" + id

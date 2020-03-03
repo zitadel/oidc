@@ -14,6 +14,7 @@ const (
 type Client interface {
 	GetID() string
 	RedirectURIs() []string
+	PostLogoutRedirectURIs() []string
 	ApplicationType() ApplicationType
 	GetAuthMethod() AuthMethod
 	LoginURL(string) string

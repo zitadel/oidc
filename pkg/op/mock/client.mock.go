@@ -118,6 +118,20 @@ func (mr *MockClientMockRecorder) LoginURL(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoginURL", reflect.TypeOf((*MockClient)(nil).LoginURL), arg0)
 }
 
+// PostLogoutRedirectURIs mocks base method
+func (m *MockClient) PostLogoutRedirectURIs() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostLogoutRedirectURIs")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// PostLogoutRedirectURIs indicates an expected call of PostLogoutRedirectURIs
+func (mr *MockClientMockRecorder) PostLogoutRedirectURIs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostLogoutRedirectURIs", reflect.TypeOf((*MockClient)(nil).PostLogoutRedirectURIs))
+}
+
 // RedirectURIs mocks base method
 func (m *MockClient) RedirectURIs() []string {
 	m.ctrl.T.Helper()

@@ -23,25 +23,25 @@ type Exchanger interface {
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 	}
 	if tokenReq.Code == "" {
-		ExchangeRequestError(w, r, ErrInvalidRequest("code missing"))
+		RequestError(w, r, ErrInvalidRequest("code missing"))
 		return
 	}
 	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 		return
 	}
 	err = exchanger.Storage().DeleteAuthRequest(r.Context(), authReq.GetID())
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 		return
 	}
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code)
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 		return
 	}
 	utils.MarshalJSON(w, resp)
@@ -132,12 +132,12 @@ func AuthRequestByCode(ctx context.Context, code string, crypto Crypto, storage 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenRequest, err := ParseTokenExchangeRequest(w, r)
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 		return
 	}
 	err = ValidateTokenExchangeRequest(tokenRequest, exchanger.Storage())
 	if err != nil {
-		ExchangeRequestError(w, r, err)
+		RequestError(w, r, err)
 		return
 	}
 }

@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/caos/logging"
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
 )
 
 const (
@@ -17,6 +19,7 @@ const (
 	defaulTokenEndpoint          = "oauth/token"
 	defaultIntrospectEndpoint    = "introspect"
 	defaultUserinfoEndpoint      = "userinfo"
+	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 
 	AuthMethodBasic AuthMethod = "client_secret_basic"
@@ -30,6 +33,7 @@ var (
 		Token:                 NewEndpoint(defaulTokenEndpoint),
 		IntrospectionEndpoint: NewEndpoint(defaultIntrospectEndpoint),
 		Userinfo:              NewEndpoint(defaultUserinfoEndpoint),
+		EndSessionEndpoint:    NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:               NewEndpoint(defaultKeysEndpoint),
 	}
 )
@@ -39,6 +43,7 @@ type DefaultOP struct {
 	endpoints   *endpoints
 	storage     Storage
 	signer      Signer
+	verifier    rp.Verifier
 	crypto      Crypto
 	http        *http.Server
 	decoder     *schema.Decoder
@@ -49,8 +54,9 @@ type DefaultOP struct {
 }
 
 type Config struct {
-	Issuer    string
-	CryptoKey [32]byte
+	Issuer                   string
+	CryptoKey                [32]byte
+	DefaultLogoutRedirectURI string
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,
@@ -164,6 +170,8 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 	p.signer = NewDefaultSigner(ctx, storage, keyCh)
 	go p.ensureKey(ctx, storage, keyCh, p.timer)
 
+	p.verifier = rp.NewDefaultVerifier(config.Issuer, "", p, rp.WithIgnoreAudience())
+
 	router := CreateRouter(p, p.interceptor)
 	p.http = &http.Server{
 		Addr:    ":" + config.Port,
@@ -195,6 +203,10 @@ func (p *DefaultOP) UserinfoEndpoint() Endpoint {
 	return Endpoint(p.endpoints.Userinfo)
 }
 
+func (p *DefaultOP) EndSessionEndpoint() Endpoint {
+	return Endpoint(p.endpoints.EndSessionEndpoint)
+}
+
 func (p *DefaultOP) KeysEndpoint() Endpoint {
 	return Endpoint(p.endpoints.JwksURI)
 }
@@ -213,6 +225,23 @@ func (p *DefaultOP) HttpHandler() *http.Server {
 
 func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 	Discover(w, CreateDiscoveryConfig(p, p.Signer()))
+}
+
+func (p *DefaultOP) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
+	keyID := ""
+	for _, sig := range jws.Signatures {
+		keyID = sig.Header.KeyID
+		break
+	}
+	keySet, err := p.Storage().GetKeySet(ctx)
+	if err != nil {
+		return nil, errors.New("error fetching keys")
+	}
+	payload, err, ok := rp.CheckKey(keyID, keySet.Keys, jws)
+	if !ok {
+		return nil, errors.New("invalid kid")
+	}
+	return payload, err
 }
 
 func (p *DefaultOP) Decoder() *schema.Decoder {
@@ -257,7 +286,7 @@ func (p *DefaultOP) HandleAuthorizeCallback(w http.ResponseWriter, r *http.Reque
 func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 	reqType := r.FormValue("grant_type")
 	if reqType == "" {
-		ExchangeRequestError(w, r, ErrInvalidRequest("grant_type missing"))
+		RequestError(w, r, ErrInvalidRequest("grant_type missing"))
 		return
 	}
 	if reqType == string(oidc.GrantTypeCode) {
@@ -269,6 +298,17 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 
 func (p *DefaultOP) HandleUserinfo(w http.ResponseWriter, r *http.Request) {
 	Userinfo(w, r, p)
+}
+
+func (p *DefaultOP) HandleEndSession(w http.ResponseWriter, r *http.Request) {
+	EndSession(w, r, p)
+}
+
+func (p *DefaultOP) DefaultLogoutRedirectURI() string {
+	return p.config.DefaultLogoutRedirectURI
+}
+func (p *DefaultOP) IDTokenVerifier() rp.Verifier {
+	return p.verifier
 }
 
 func (p *DefaultOP) ensureKey(ctx context.Context, storage Storage, keyCh chan<- jose.SigningKey, timer <-chan time.Time) {
