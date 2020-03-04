@@ -29,12 +29,12 @@ const (
 
 var (
 	DefaultEndpoints = &endpoints{
-		Authorization:         NewEndpoint(defaultAuthorizationEndpoint),
-		Token:                 NewEndpoint(defaulTokenEndpoint),
-		IntrospectionEndpoint: NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:              NewEndpoint(defaultUserinfoEndpoint),
-		EndSessionEndpoint:    NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:               NewEndpoint(defaultKeysEndpoint),
+		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
+		Token:         NewEndpoint(defaulTokenEndpoint),
+		Introspection: NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
+		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:       NewEndpoint(defaultKeysEndpoint),
 	}
 )
 
@@ -68,13 +68,13 @@ type Config struct {
 }
 
 type endpoints struct {
-	Authorization         Endpoint
-	Token                 Endpoint
-	IntrospectionEndpoint Endpoint
-	Userinfo              Endpoint
-	EndSessionEndpoint    Endpoint
-	CheckSessionIframe    Endpoint
-	JwksURI               Endpoint
+	Authorization      Endpoint
+	Token              Endpoint
+	Introspection      Endpoint
+	Userinfo           Endpoint
+	EndSession         Endpoint
+	CheckSessionIframe Endpoint
+	JwksURI            Endpoint
 }
 
 type DefaultOPOpts func(o *DefaultOP) error
@@ -105,6 +105,16 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) DefaultOPOpts {
 			return err
 		}
 		o.endpoints.Userinfo = endpoint
+		return nil
+	}
+}
+
+func WithCustomEndSessionEndpoint(endpoint Endpoint) DefaultOPOpts {
+	return func(o *DefaultOP) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.EndSession = endpoint
 		return nil
 	}
 }
@@ -204,7 +214,7 @@ func (p *DefaultOP) UserinfoEndpoint() Endpoint {
 }
 
 func (p *DefaultOP) EndSessionEndpoint() Endpoint {
-	return Endpoint(p.endpoints.EndSessionEndpoint)
+	return Endpoint(p.endpoints.EndSession)
 }
 
 func (p *DefaultOP) KeysEndpoint() Endpoint {
