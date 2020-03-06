@@ -80,7 +80,6 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 	}
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
-		Subject:                             authReq.GetSubject(),
 		Audiences:                           authReq.GetAudience(),
 		Expiration:                          exp,
 		IssuedAt:                            time.Now().UTC(),
@@ -89,10 +88,10 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 		AuthenticationContextClassReference: authReq.GetACR(),
 		AuthenticationMethodsReferences:     authReq.GetAMR(),
 		AuthorizedParty:                     authReq.GetClientID(),
-		UserinfoProfile:                     userinfo.UserinfoProfile,
-		UserinfoEmail:                       userinfo.UserinfoEmail,
-		UserinfoPhone:                       userinfo.UserinfoPhone,
-		UserinfoAddress:                     userinfo.Address,
+		Userinfo:                     *userinfo,
+		//UserinfoEmail:                       userinfo.UserinfoEmail,
+		//UserinfoPhone:                       userinfo.UserinfoPhone,
+		//UserinfoAddress:                     userinfo.Address,
 	}
 	if accessToken != "" {
 		claims.AccessTokenHash, err = oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())

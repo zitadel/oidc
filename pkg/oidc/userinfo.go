@@ -7,69 +7,14 @@ import (
 	"golang.org/x/text/language"
 )
 
-type userinfo interface {
-	GetUserinfoProfile() UserinfoProfile
-	GetUserinfoEmail() UserinfoEmail
-	GetUserinfoPhone() UserinfoPhone
-	GetAddress() *UserinfoAddress
-}
-
-type UserinfoProfileI interface {
-	GetName() string
-	GetGivenName() string
-	GetFamilyName() string
-	GetMiddleName() string
-	GetNickname() string
-	GetProfile() string
-	GetPicture() string
-	GetWebsite() string
-	GetGender() Gender
-	GetBirthdate() string
-	GetZoneinfo() string
-	GetLocale() language.Tag
-	GetUpdatedAt() time.Time
-	GetPreferredUsername() string
-}
-
-type UserinfoEmailI interface {
-	GetEmail() string
-	IsEmailVerified() bool
-}
-
 type Userinfo struct {
 	Subject string
-	Address *UserinfoAddress
 	UserinfoProfile
 	UserinfoEmail
 	UserinfoPhone
+	Address *UserinfoAddress
 
 	claims map[string]interface{}
-}
-
-type UserinfoPhoneI interface {
-	GetPhoneNumber() string
-	IsPhoneNumberVerified() bool
-}
-type UserinfoPhone struct {
-	PhoneNumber         string
-	PhoneNumberVerified bool
-}
-
-func (u UserinfoPhone) GetPhoneNumber() string {
-	return u.PhoneNumber
-}
-
-func (u UserinfoPhone) IsPhoneNumberVerified() bool {
-	return u.PhoneNumberVerified
-}
-
-type UserinfoAddressI interface {
-	GetCountry() string
-	GetFormatted() string
-	GetLocality() string
-	GetPostalCode() string
-	GetRegion() string
-	GetStreetAddress() string
 }
 
 type UserinfoProfile struct {
@@ -89,50 +34,17 @@ type UserinfoProfile struct {
 	PreferredUsername string
 }
 
-func (u UserinfoProfile) GetName() string {
-	return u.Name
-}
-func (u UserinfoProfile) GetGivenName() string {
-	return u.GivenName
-}
-func (u UserinfoProfile) GetFamilyName() string {
-	return u.FamilyName
-}
-func (u UserinfoProfile) GetMiddleName() string {
-	return u.MiddleName
-}
-func (u UserinfoProfile) GetNickname() string {
-	return u.Nickname
-}
-func (u UserinfoProfile) GetProfile() string {
-	return u.Profile
-}
-func (u UserinfoProfile) GetPicture() string {
-	return u.Picture
-}
-func (u UserinfoProfile) GetWebsite() string {
-	return u.Website
-}
-func (u UserinfoProfile) GetGender() Gender {
-	return u.Gender
-}
-func (u UserinfoProfile) GetBirthdate() string {
-	return u.Birthdate
-}
-func (u UserinfoProfile) GetZoneinfo() string {
-	return u.Zoneinfo
-}
-func (u UserinfoProfile) GetLocale() language.Tag {
-	return u.Locale
-}
-func (u UserinfoProfile) GetUpdatedAt() time.Time {
-	return u.UpdatedAt
-}
-func (u UserinfoProfile) GetPreferredUsername() string {
-	return u.PreferredUsername
+type Gender string
+
+type UserinfoEmail struct {
+	Email         string
+	EmailVerified bool
 }
 
-type Gender string
+type UserinfoPhone struct {
+	PhoneNumber         string
+	PhoneNumberVerified bool
+}
 
 type UserinfoAddress struct {
 	Formatted     string
@@ -141,45 +53,6 @@ type UserinfoAddress struct {
 	Region        string
 	PostalCode    string
 	Country       string
-}
-
-func (u UserinfoAddress) GetCountry() string {
-	return u.Country
-}
-func (u UserinfoAddress) GetFormatted() string {
-	return u.Formatted
-}
-func (u UserinfoAddress) GetLocality() string {
-	return u.Locality
-}
-func (u UserinfoAddress) GetPostalCode() string {
-	return u.PostalCode
-}
-func (u UserinfoAddress) GetRegion() string {
-	return u.Region
-}
-func (u UserinfoAddress) GetStreetAddress() string {
-	return u.StreetAddress
-}
-
-type UserinfoEmail struct {
-	Email         string
-	EmailVerified bool
-}
-
-func (u UserinfoEmail) GetEmail() string {
-	return u.Email
-}
-
-func (u UserinfoEmail) IsEmailVerified() bool {
-	return u.EmailVerified
-}
-
-type jsonUserinfo struct {
-	jsonUserinfoProfile
-	jsonUserinfoEmail
-	jsonUserinfoPhone
-	jsonUserinfoAddress *jsonUserinfoAddress `json:"address,omitempty"`
 }
 
 type jsonUserinfoProfile struct {
@@ -218,93 +91,33 @@ type jsonUserinfoAddress struct {
 	Country       string `json:"country,omitempty"`
 }
 
-// func (t *Userinfo) setUserinfoProfile(j *jsonToken) {
-// 	j.Name = t.Name
-// 	j.GivenName = t.GivenName
-// 	j.FamilyName = t.FamilyName
-// 	j.MiddleName = t.MiddleName
-// 	j.Nickname = t.Nickname
-// 	j.Profile = t.Profile
-// 	j.Picture = t.Picture
-// 	j.Website = t.Website
-// 	j.Gender = string(t.Gender)
-// 	j.Birthdate = t.Birthdate
-// 	j.Zoneinfo = t.Zoneinfo
-// 	j.Locale = t.Locale.String()
-// 	j.UpdatedAt = timeToJSON(t.UpdatedAt)
-// 	j.PreferredUsername = t.PreferredUsername
-// }
-
-// func marshalUserinfoProfile(i UserinfoProfile, claims map[string]interface{}) {
-// 	claims["name"] = i.Name
-// 	claims["given_name"] = i.GivenName
-// 	claims["family_name"] = i.FamilyName
-// 	claims["middle_name"] = i.MiddleName
-// 	claims["nickname"] = i.Nickname
-// 	claims["profile"] = i.Profile
-// 	claims["picture"] = i.Picture
-// 	claims["website"] = i.Website
-// 	claims["gender"] = i.Gender
-// 	claims["birthdate"] = i.Birthdate
-// 	claims["Zoneinfo"] = i.Zoneinfo
-// 	claims["locale"] = i.Locale.String()
-// 	claims["updated_at"] = i.UpdatedAt.UTC().Unix()
-// 	claims["preferred_username"] = i.PreferredUsername
-// }
-
-// func marshalUserinfoEmail(i UserinfoEmail, claims map[string]interface{}) {
-// 	if i.Email != "" {
-// 		claims["email"] = i.Email
-// 	}
-// 	if i.EmailVerified {
-// 		claims["email_verified"] = i.EmailVerified
-// 	}
-// }
-
-// func marshalUserinfoAddress(i *UserinfoAddress, claims map[string]interface{}) {
-// 	if i == nil {
-// 		return
-// 	}
-// 	address := make(map[string]interface{})
-// 	if i.Formatted != "" {
-// 		address["formatted"] = i.Formatted
-// 	}
-// 	if i.StreetAddress != "" {
-// 		address["street_address"] = i.StreetAddress
-// 	}
-// 	claims["address"] = address
-// }
-
-// func marshalUserinfoPhone(i UserinfoPhone, claims map[string]interface{}) {
-// 	claims["phone_number"] = i.PhoneNumber
-// 	claims["phone_number_verified"] = i.PhoneNumberVerified
-// }
-
 func (i *Userinfo) MarshalJSON() ([]byte, error) {
 	j := new(jsonUserinfo)
-	j.setUserinfo(i)
+	j.Subject = i.Subject
+	j.setUserinfo(*i)
 	return json.Marshal(j)
 }
 
-func (i *Userinfo) GetAddress() *UserinfoAddress {
-	return i.Address
+func (i *Userinfo) UnmmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, i); err != nil {
+		return err
+	}
+	return json.Unmarshal(data, i.claims)
 }
 
-func (i *Userinfo) GetUserinfoProfile() UserinfoProfile {
-	return i.UserinfoProfile
-}
-func (i *Userinfo) GetUserinfoEmail() UserinfoEmail {
-	return i.UserinfoEmail
-}
-func (i *Userinfo) GetUserinfoPhone() UserinfoPhone {
-	return i.UserinfoPhone
+type jsonUserinfo struct {
+	Subject string `json:"sub,omitempty"`
+	jsonUserinfoProfile
+	jsonUserinfoEmail
+	jsonUserinfoPhone
+	JsonUserinfoAddress *jsonUserinfoAddress `json:"address,omitempty"`
 }
 
-func (j *jsonUserinfo) setUserinfo(i userinfo) {
-	j.setUserinfoProfile(i.GetUserinfoProfile())
-	j.setUserinfoEmail(i.GetUserinfoEmail())
-	j.setUserinfoPhone(i.GetUserinfoPhone())
-	j.setUserinfoAddress(i.GetAddress())
+func (j *jsonUserinfo) setUserinfo(i Userinfo) {
+	j.setUserinfoProfile(i.UserinfoProfile)
+	j.setUserinfoEmail(i.UserinfoEmail)
+	j.setUserinfoPhone(i.UserinfoPhone)
+	j.setUserinfoAddress(i.Address)
 }
 
 func (j *jsonUserinfo) setUserinfoProfile(i UserinfoProfile) {
@@ -340,19 +153,12 @@ func (j *jsonUserinfo) setUserinfoAddress(i *UserinfoAddress) {
 	if i == nil {
 		return
 	}
-	j.jsonUserinfoAddress.Country = i.Country
-	j.jsonUserinfoAddress.Formatted = i.Formatted
-	j.jsonUserinfoAddress.Locality = i.Locality
-	j.jsonUserinfoAddress.PostalCode = i.PostalCode
-	j.jsonUserinfoAddress.Region = i.Region
-	j.jsonUserinfoAddress.StreetAddress = i.StreetAddress
-}
-
-func (i *Userinfo) UnmmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, i); err != nil {
-		return err
-	}
-	return json.Unmarshal(data, i.claims)
+	j.JsonUserinfoAddress.Country = i.Country
+	j.JsonUserinfoAddress.Formatted = i.Formatted
+	j.JsonUserinfoAddress.Locality = i.Locality
+	j.JsonUserinfoAddress.PostalCode = i.PostalCode
+	j.JsonUserinfoAddress.Region = i.Region
+	j.JsonUserinfoAddress.StreetAddress = i.StreetAddress
 }
 
 type UserInfoRequest struct {
