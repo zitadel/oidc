@@ -191,7 +191,10 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromScopes(context.Context, []string) (*oidc.Userinfo, error) {
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _ string) (*oidc.Userinfo, error) {
+	return s.GetUserinfoFromScopes(ctx, "", []string{})
+}
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (*oidc.Userinfo, error) {
 	return &oidc.Userinfo{
 		Subject: a.GetSubject(),
 		Address: &oidc.UserinfoAddress{

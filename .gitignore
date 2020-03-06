@@ -14,3 +14,4 @@
 **/__debug_bin
 .vscode
 .DS_Store
+.idea

@@ -9,18 +9,14 @@ import (
 
 type Userinfo struct {
 	Subject string
-	Address *UserinfoAddress
 	UserinfoProfile
 	UserinfoEmail
 	UserinfoPhone
+	Address *UserinfoAddress
 
 	claims map[string]interface{}
 }
 
-type UserinfoPhone struct {
-	PhoneNumber         string
-	PhoneNumberVerified bool
-}
 type UserinfoProfile struct {
 	Name              string
 	GivenName         string
@@ -40,6 +36,16 @@ type UserinfoProfile struct {
 
 type Gender string
 
+type UserinfoEmail struct {
+	Email         string
+	EmailVerified bool
+}
+
+type UserinfoPhone struct {
+	PhoneNumber         string
+	PhoneNumberVerified bool
+}
+
 type UserinfoAddress struct {
 	Formatted     string
 	StreetAddress string
@@ -49,67 +55,47 @@ type UserinfoAddress struct {
 	Country       string
 }
 
-type UserinfoEmail struct {
-	Email         string
-	EmailVerified bool
+type jsonUserinfoProfile struct {
+	Name              string `json:"name,omitempty"`
+	GivenName         string `json:"given_name,omitempty"`
+	FamilyName        string `json:"family_name,omitempty"`
+	MiddleName        string `json:"middle_name,omitempty"`
+	Nickname          string `json:"nickname,omitempty"`
+	Profile           string `json:"profile,omitempty"`
+	Picture           string `json:"picture,omitempty"`
+	Website           string `json:"website,omitempty"`
+	Gender            string `json:"gender,omitempty"`
+	Birthdate         string `json:"birthdate,omitempty"`
+	Zoneinfo          string `json:"zoneinfo,omitempty"`
+	Locale            string `json:"locale,omitempty"`
+	UpdatedAt         int64  `json:"updated_at,omitempty"`
+	PreferredUsername string `json:"preferred_username,omitempty"`
 }
 
-func marshalUserinfoProfile(i UserinfoProfile, claims map[string]interface{}) {
-	claims["name"] = i.Name
-	claims["given_name"] = i.GivenName
-	claims["family_name"] = i.FamilyName
-	claims["middle_name"] = i.MiddleName
-	claims["nickname"] = i.Nickname
-	claims["profile"] = i.Profile
-	claims["picture"] = i.Picture
-	claims["website"] = i.Website
-	claims["gender"] = i.Gender
-	claims["birthdate"] = i.Birthdate
-	claims["Zoneinfo"] = i.Zoneinfo
-	claims["locale"] = i.Locale.String()
-	claims["updated_at"] = i.UpdatedAt.UTC().Unix()
-	claims["preferred_username"] = i.PreferredUsername
+type jsonUserinfoEmail struct {
+	Email         string `json:"email,omitempty"`
+	EmailVerified bool   `json:"email_verified,omitempty"`
 }
 
-func marshalUserinfoEmail(i UserinfoEmail, claims map[string]interface{}) {
-	if i.Email != "" {
-		claims["email"] = i.Email
-	}
-	if i.EmailVerified {
-		claims["email_verified"] = i.EmailVerified
-	}
+type jsonUserinfoPhone struct {
+	Phone         string `json:"phone_number,omitempty"`
+	PhoneVerified bool   `json:"phone_number_verified,omitempty"`
 }
 
-func marshalUserinfoAddress(i *UserinfoAddress, claims map[string]interface{}) {
-	if i == nil {
-		return
-	}
-	address := make(map[string]interface{})
-	if i.Formatted != "" {
-		address["formatted"] = i.Formatted
-	}
-	if i.StreetAddress != "" {
-		address["street_address"] = i.StreetAddress
-	}
-	claims["address"] = address
-}
-
-func marshalUserinfoPhone(i UserinfoPhone, claims map[string]interface{}) {
-	claims["phone_number"] = i.PhoneNumber
-	claims["phone_number_verified"] = i.PhoneNumberVerified
+type jsonUserinfoAddress struct {
+	Formatted     string `json:"formatted,omitempty"`
+	StreetAddress string `json:"street_address,omitempty"`
+	Locality      string `json:"locality,omitempty"`
+	Region        string `json:"region,omitempty"`
+	PostalCode    string `json:"postal_code,omitempty"`
+	Country       string `json:"country,omitempty"`
 }
 
 func (i *Userinfo) MarshalJSON() ([]byte, error) {
-	claims := i.claims
-	if claims == nil {
-		claims = make(map[string]interface{})
-	}
-	claims["sub"] = i.Subject
-	marshalUserinfoAddress(i.Address, claims)
-	marshalUserinfoEmail(i.UserinfoEmail, claims)
-	marshalUserinfoPhone(i.UserinfoPhone, claims)
-	marshalUserinfoProfile(i.UserinfoProfile, claims)
-	return json.Marshal(claims)
+	j := new(jsonUserinfo)
+	j.Subject = i.Subject
+	j.setUserinfo(*i)
+	return json.Marshal(j)
 }
 
 func (i *Userinfo) UnmmarshalJSON(data []byte) error {
@@ -117,4 +103,64 @@ func (i *Userinfo) UnmmarshalJSON(data []byte) error {
 		return err
 	}
 	return json.Unmarshal(data, i.claims)
+}
+
+type jsonUserinfo struct {
+	Subject string `json:"sub,omitempty"`
+	jsonUserinfoProfile
+	jsonUserinfoEmail
+	jsonUserinfoPhone
+	JsonUserinfoAddress *jsonUserinfoAddress `json:"address,omitempty"`
+}
+
+func (j *jsonUserinfo) setUserinfo(i Userinfo) {
+	j.setUserinfoProfile(i.UserinfoProfile)
+	j.setUserinfoEmail(i.UserinfoEmail)
+	j.setUserinfoPhone(i.UserinfoPhone)
+	j.setUserinfoAddress(i.Address)
+}
+
+func (j *jsonUserinfo) setUserinfoProfile(i UserinfoProfile) {
+	j.Name = i.Name
+	j.GivenName = i.GivenName
+	j.FamilyName = i.FamilyName
+	j.MiddleName = i.MiddleName
+	j.Nickname = i.Nickname
+	j.Profile = i.Profile
+	j.Picture = i.Picture
+	j.Website = i.Website
+	j.Gender = string(i.Gender)
+	j.Birthdate = i.Birthdate
+	j.Zoneinfo = i.Zoneinfo
+	if i.Locale != language.Und {
+		j.Locale = i.Locale.String()
+	}
+	j.UpdatedAt = timeToJSON(i.UpdatedAt)
+	j.PreferredUsername = i.PreferredUsername
+}
+
+func (j *jsonUserinfo) setUserinfoEmail(i UserinfoEmail) {
+	j.Email = i.Email
+	j.EmailVerified = i.EmailVerified
+}
+
+func (j *jsonUserinfo) setUserinfoPhone(i UserinfoPhone) {
+	j.Phone = i.PhoneNumber
+	j.PhoneVerified = i.PhoneNumberVerified
+}
+
+func (j *jsonUserinfo) setUserinfoAddress(i *UserinfoAddress) {
+	if i == nil {
+		return
+	}
+	j.JsonUserinfoAddress.Country = i.Country
+	j.JsonUserinfoAddress.Formatted = i.Formatted
+	j.JsonUserinfoAddress.Locality = i.Locality
+	j.JsonUserinfoAddress.PostalCode = i.PostalCode
+	j.JsonUserinfoAddress.Region = i.Region
+	j.JsonUserinfoAddress.StreetAddress = i.StreetAddress
+}
+
+type UserInfoRequest struct {
+	AccessToken string `schema:"access_token"`
 }

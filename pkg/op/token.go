@@ -24,7 +24,7 @@ func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client
 			return nil, err
 		}
 	}
-	idToken, err := CreateIDToken(creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Signer())
+	idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer())
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +71,15 @@ func CreateJWT(issuer string, authReq AuthRequest, exp time.Time, id string, sig
 	return signer.SignAccessToken(claims)
 }
 
-func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, signer Signer) (string, error) {
+func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer) (string, error) {
 	var err error
 	exp := time.Now().UTC().Add(validity)
+	userinfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetScopes())
+	if err != nil {
+
+	}
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
-		Subject:                             authReq.GetSubject(),
 		Audiences:                           authReq.GetAudience(),
 		Expiration:                          exp,
 		IssuedAt:                            time.Now().UTC(),
@@ -85,6 +88,7 @@ func CreateIDToken(issuer string, authReq AuthRequest, validity time.Duration, a
 		AuthenticationContextClassReference: authReq.GetACR(),
 		AuthenticationMethodsReferences:     authReq.GetAMR(),
 		AuthorizedParty:                     authReq.GetClientID(),
+		Userinfo:                            *userinfo,
 	}
 	if accessToken != "" {
 		claims.AccessTokenHash, err = oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
