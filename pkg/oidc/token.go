@@ -7,6 +7,7 @@ import (
 
 	"github.com/caos/oidc/pkg/utils"
 	"golang.org/x/oauth2"
+	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -53,6 +54,10 @@ type IDTokenClaims struct {
 	AuthenticationContextClassReference string
 	AuthenticationMethodsReferences     []string
 	ClientID                            string
+	UserinfoProfile
+	UserinfoEmail
+	UserinfoPhone
+	UserinfoAddress *UserinfoAddress
 
 	Signature jose.SignatureAlgorithm //TODO: ???
 }
@@ -65,7 +70,6 @@ type jsonToken struct {
 	NotBefore                           int64       `json:"nbf,omitempty"`
 	IssuedAt                            int64       `json:"iat,omitempty"`
 	JWTID                               string      `json:"jti,omitempty"`
-	UpdatedAt                           int64       `json:"updated_at,omitempty"`
 	AuthorizedParty                     string      `json:"azp,omitempty"`
 	Nonce                               string      `json:"nonce,omitempty"`
 	AuthTime                            int64       `json:"auth_time,omitempty"`
@@ -79,6 +83,7 @@ type jsonToken struct {
 	ClientID                            string      `json:"client_id,omitempty"`
 	AuthorizedActor                     interface{} `json:"may_act,omitempty"` //TODO: impl
 	AccessTokenUseNumber                int         `json:"at_use_nbr,omitempty"`
+	jsonUserinfo
 }
 
 func (t *AccessTokenClaims) MarshalJSON() ([]byte, error) {
@@ -142,7 +147,6 @@ func (t *IDTokenClaims) MarshalJSON() ([]byte, error) {
 		NotBefore:                           timeToJSON(t.NotBefore),
 		IssuedAt:                            timeToJSON(t.IssuedAt),
 		JWTID:                               t.JWTID,
-		UpdatedAt:                           timeToJSON(t.UpdatedAt),
 		AuthorizedParty:                     t.AuthorizedParty,
 		Nonce:                               t.Nonce,
 		AuthTime:                            timeToJSON(t.AuthTime),
@@ -152,8 +156,71 @@ func (t *IDTokenClaims) MarshalJSON() ([]byte, error) {
 		AuthenticationMethodsReferences:     t.AuthenticationMethodsReferences,
 		ClientID:                            t.ClientID,
 	}
+	j.setUserinfo(t)
 	return json.Marshal(j)
 }
+func (t *IDTokenClaims) GetUserinfoProfile() UserinfoProfile {
+	return t.UserinfoProfile
+}
+func (t *IDTokenClaims) GetUserinfoEmail() UserinfoEmail {
+	return t.UserinfoEmail
+}
+func (t *IDTokenClaims) GetUserinfoPhone() UserinfoPhone {
+	return t.UserinfoPhone
+}
+func (t *IDTokenClaims) GetAddress() *UserinfoAddress {
+	return t.UserinfoAddress
+}
+
+// func (t *IDTokenClaims) GetUserinfoEmail() UserinfoEmailI {
+// 	return t.UserinfoEmail
+// }
+
+// func (t *IDTokenClaims) setUserinfo(j *jsonToken) {
+// 	t.setUserinfoProfile(j)
+// 	t.setUserinfoEmail(j)
+// 	t.setUserinfoPhone(j)
+// 	t.setUserinfoAddress(j)
+// }
+
+// func (t *IDTokenClaims) setUserinfoProfile(j *jsonToken) {
+// 	j.Name = t.Name
+// 	j.GivenName = t.GivenName
+// 	j.FamilyName = t.FamilyName
+// 	j.MiddleName = t.MiddleName
+// 	j.Nickname = t.Nickname
+// 	j.Profile = t.Profile
+// 	j.Picture = t.Picture
+// 	j.Website = t.Website
+// 	j.Gender = string(t.Gender)
+// 	j.Birthdate = t.Birthdate
+// 	j.Zoneinfo = t.Zoneinfo
+// 	j.Locale = t.Locale.String()
+// 	j.UpdatedAt = timeToJSON(t.UpdatedAt)
+// 	j.PreferredUsername = t.PreferredUsername
+// }
+
+// func (t *IDTokenClaims) setUserinfoEmail(j *jsonToken) {
+// 	j.Email = t.Email
+// 	j.EmailVerified = t.EmailVerified
+// }
+
+// func (t *IDTokenClaims) setUserinfoPhone(j *jsonToken) {
+// 	j.Phone = t.PhoneNumber
+// 	j.PhoneVerified = t.PhoneNumberVerified
+// }
+
+// func (t *IDTokenClaims) setUserinfoAddress(j *jsonToken) {
+// 	if t.UserinfoAddress == nil {
+// 		return
+// 	}
+// 	j.jsonUserinfoAddress.Country = t.UserinfoAddress.Country
+// 	j.jsonUserinfoAddress.Formatted = t.UserinfoAddress.Formatted
+// 	j.jsonUserinfoAddress.Locality = t.UserinfoAddress.Locality
+// 	j.jsonUserinfoAddress.PostalCode = t.UserinfoAddress.PostalCode
+// 	j.jsonUserinfoAddress.Region = t.UserinfoAddress.Region
+// 	j.jsonUserinfoAddress.StreetAddress = t.UserinfoAddress.StreetAddress
+// }
 
 func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	var i jsonToken
@@ -176,7 +243,59 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	t.AuthorizedParty = i.AuthorizedParty
 	t.AccessTokenHash = i.AccessTokenHash
 	t.CodeHash = i.CodeHash
+	t.UserinfoProfile = i.UnmarshalUserinfoProfile()
+	t.UserinfoEmail = i.UnmarshalUserinfoEmail()
+	t.UserinfoPhone = i.UnmarshalUserinfoPhone()
+	t.UserinfoAddress = i.UnmarshalUserinfoAddress()
 	return nil
+}
+
+func (j *jsonToken) UnmarshalUserinfoProfile() UserinfoProfile {
+	locale, _ := language.Parse(j.Locale)
+	return UserinfoProfile{
+		Name:              j.Name,
+		GivenName:         j.GivenName,
+		FamilyName:        j.FamilyName,
+		MiddleName:        j.MiddleName,
+		Nickname:          j.Nickname,
+		Profile:           j.Profile,
+		Picture:           j.Picture,
+		Website:           j.Website,
+		Gender:            Gender(j.Gender),
+		Birthdate:         j.Birthdate,
+		Zoneinfo:          j.Zoneinfo,
+		Locale:            locale,
+		UpdatedAt:         time.Unix(j.UpdatedAt, 0).UTC(),
+		PreferredUsername: j.PreferredUsername,
+	}
+}
+
+func (j *jsonToken) UnmarshalUserinfoEmail() UserinfoEmail {
+	return UserinfoEmail{
+		Email:         j.Email,
+		EmailVerified: j.EmailVerified,
+	}
+}
+
+func (j *jsonToken) UnmarshalUserinfoPhone() UserinfoPhone {
+	return UserinfoPhone{
+		PhoneNumber:         j.Phone,
+		PhoneNumberVerified: j.PhoneVerified,
+	}
+}
+
+func (j *jsonToken) UnmarshalUserinfoAddress() *UserinfoAddress {
+	if j.jsonUserinfoAddress == nil {
+		return nil
+	}
+	return &UserinfoAddress{
+		Country:       j.jsonUserinfoAddress.Country,
+		Formatted:     j.jsonUserinfoAddress.Formatted,
+		Locality:      j.jsonUserinfoAddress.Locality,
+		PostalCode:    j.jsonUserinfoAddress.PostalCode,
+		Region:        j.jsonUserinfoAddress.Region,
+		StreetAddress: j.jsonUserinfoAddress.StreetAddress,
+	}
 }
 
 func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
