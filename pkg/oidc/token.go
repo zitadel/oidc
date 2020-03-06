@@ -219,16 +219,16 @@ func (j *jsonToken) UnmarshalUserinfoPhone() UserinfoPhone {
 }
 
 func (j *jsonToken) UnmarshalUserinfoAddress() *UserinfoAddress {
-	if j.jsonUserinfoAddress == nil {
+	if j.JsonUserinfoAddress == nil {
 		return nil
 	}
 	return &UserinfoAddress{
-		Country:       j.jsonUserinfoAddress.Country,
-		Formatted:     j.jsonUserinfoAddress.Formatted,
-		Locality:      j.jsonUserinfoAddress.Locality,
-		PostalCode:    j.jsonUserinfoAddress.PostalCode,
-		Region:        j.jsonUserinfoAddress.Region,
-		StreetAddress: j.jsonUserinfoAddress.StreetAddress,
+		Country:       j.JsonUserinfoAddress.Country,
+		Formatted:     j.JsonUserinfoAddress.Formatted,
+		Locality:      j.JsonUserinfoAddress.Locality,
+		PostalCode:    j.JsonUserinfoAddress.PostalCode,
+		Region:        j.JsonUserinfoAddress.Region,
+		StreetAddress: j.JsonUserinfoAddress.StreetAddress,
 	}
 }
 
