@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -19,13 +20,14 @@ type Authorizer interface {
 	Decoder() *schema.Decoder
 	Encoder() *schema.Encoder
 	Signer() Signer
+	IDTokenVerifier() rp.Verifier
 	Crypto() Crypto
 	Issuer() string
 }
 
 type ValidationAuthorizer interface {
 	Authorizer
-	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage) error
+	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, rp.Verifier) (string, error)
 }
 
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
@@ -44,11 +46,12 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if validater, ok := authorizer.(ValidationAuthorizer); ok {
 		validation = validater.ValidateAuthRequest
 	}
-	if err := validation(r.Context(), authReq, authorizer.Storage()); err != nil {
+	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenVerifier())
+	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq)
+	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
@@ -61,23 +64,17 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req.GetID(), client, w, r)
 }
 
-func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage) error {
+func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier rp.Verifier) (string, error) {
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
-		return err
+		return "", err
 	}
 	if err := ValidateAuthReqRedirectURI(ctx, authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
-		return err
+		return "", err
 	}
 	if err := ValidateAuthReqResponseType(authReq.ResponseType); err != nil {
-		return err
+		return "", err
 	}
-	// if NeedsExistingSession(authReq) {
-	// 	session, err := storage.CheckSession(authReq.IDTokenHint)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	return nil
+	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
 func ValidateAuthReqScopes(scopes []string) error {
@@ -128,6 +125,17 @@ func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
 		return ErrInvalidRequest("response_type empty")
 	}
 	return nil
+}
+
+func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier rp.Verifier) (string, error) {
+	if idTokenHint == "" {
+		return "", nil
+	}
+	claims, err := verifier.Verify(ctx, "", idTokenHint)
+	if err != nil {
+		return "", ErrInvalidRequest("id_token_hint invalid")
+	}
+	return claims.Subject, nil
 }
 
 func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *http.Request) {

@@ -8,8 +8,9 @@ import (
 	"github.com/gorilla/schema"
 	"gopkg.in/square/go-jose.v2"
 
-	oidc "github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/rp"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {
@@ -22,6 +23,7 @@ func NewAuthorizerExpectValid(t *testing.T, wantErr bool) op.Authorizer {
 	ExpectEncoder(m)
 	ExpectSigner(m, t)
 	ExpectStorage(m, t)
+	ExpectVerifier(m, t)
 	// ExpectErrorHandler(m, t, wantErr)
 	return m
 }
@@ -54,17 +56,19 @@ func ExpectSigner(a op.Authorizer, t *testing.T) {
 		})
 }
 
-// func ExpectErrorHandler(a op.Authorizer, t *testing.T, wantErr bool) {
-// 	mockA := a.(*MockAuthorizer)
-// 	mockA.EXPECT().ErrorHandler().AnyTimes().
-// 		Return(func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-// 			if wantErr {
-// 				require.Error(t, err)
-// 				return
-// 			}
-// 			require.NoError(t, err)
-// 		})
-// }
+func ExpectVerifier(a op.Authorizer, t *testing.T) {
+	mockA := a.(*MockAuthorizer)
+	mockA.EXPECT().IDTokenVerifier().DoAndReturn(
+		func() rp.Verifier {
+			return &Verifier{}
+		})
+}
+
+type Verifier struct{}
+
+func (v *Verifier) Verify(ctx context.Context, accessToken, idToken string) (*oidc.IDTokenClaims, error) {
+	return nil, nil
+}
 
 type Sig struct{}
 

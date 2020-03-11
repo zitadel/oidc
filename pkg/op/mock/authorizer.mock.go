@@ -6,6 +6,7 @@ package mock
 
 import (
 	op "github.com/caos/oidc/pkg/op"
+	rp "github.com/caos/oidc/pkg/rp"
 	gomock "github.com/golang/mock/gomock"
 	schema "github.com/gorilla/schema"
 	reflect "reflect"
@@ -74,6 +75,20 @@ func (m *MockAuthorizer) Encoder() *schema.Encoder {
 func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encoder", reflect.TypeOf((*MockAuthorizer)(nil).Encoder))
+}
+
+// IDTokenVerifier mocks base method
+func (m *MockAuthorizer) IDTokenVerifier() rp.Verifier {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTokenVerifier")
+	ret0, _ := ret[0].(rp.Verifier)
+	return ret0
+}
+
+// IDTokenVerifier indicates an expected call of IDTokenVerifier
+func (mr *MockAuthorizerMockRecorder) IDTokenVerifier() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenVerifier", reflect.TypeOf((*MockAuthorizer)(nil).IDTokenVerifier))
 }
 
 // Issuer mocks base method

@@ -67,18 +67,18 @@ func (mr *MockStorageMockRecorder) AuthorizeClientIDSecret(arg0, arg1, arg2 inte
 }
 
 // CreateAuthRequest mocks base method
-func (m *MockStorage) CreateAuthRequest(arg0 context.Context, arg1 *oidc.AuthRequest) (op.AuthRequest, error) {
+func (m *MockStorage) CreateAuthRequest(arg0 context.Context, arg1 *oidc.AuthRequest, arg2 string) (op.AuthRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAuthRequest", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateAuthRequest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(op.AuthRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateAuthRequest indicates an expected call of CreateAuthRequest
-func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuthRequest", reflect.TypeOf((*MockStorage)(nil).CreateAuthRequest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuthRequest", reflect.TypeOf((*MockStorage)(nil).CreateAuthRequest), arg0, arg1, arg2)
 }
 
 // CreateToken mocks base method
