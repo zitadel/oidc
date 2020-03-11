@@ -116,7 +116,7 @@ func (s *AuthStorage) Health(ctx context.Context) error {
 	return nil
 }
 
-func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthRequest) (op.AuthRequest, error) {
+func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthRequest, _ string) (op.AuthRequest, error) {
 	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
 	if authReq.CodeChallenge != "" {
 		a.CodeChallenge = &oidc.CodeChallenge{
