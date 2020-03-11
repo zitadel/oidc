@@ -11,6 +11,7 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
+	"github.com/caos/oidc/pkg/rp"
 )
 
 func TestAuthorize(t *testing.T) {
@@ -70,6 +71,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
 		storage     op.Storage
+		verifier    rp.Verifier
 	}
 	tests := []struct {
 		name    string
@@ -82,33 +84,34 @@ func TestValidateAuthRequest(t *testing.T) {
 		// }
 		{
 			"scope missing fails",
-			args{&oidc.AuthRequest{}, nil},
+			args{&oidc.AuthRequest{}, nil, nil},
 			true,
 		},
 		{
 			"scope openid missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, nil, nil},
 			true,
 		},
 		{
 			"response_type missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, nil, nil},
 			true,
 		},
 		{
 			"client_id missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, nil, nil},
 			true,
 		},
 		{
 			"redirect_uri missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, nil, nil},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthRequest(nil, tt.args.authRequest, tt.args.storage); (err != nil) != tt.wantErr {
+			_, err := op.ValidateAuthRequest(nil, tt.args.authRequest, tt.args.storage, tt.args.verifier)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
