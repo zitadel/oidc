@@ -4,6 +4,7 @@
 ![Github Release Badge](https://github.com/caos/oidc/workflows/Release/badge.svg)
 [![GitHub release](https://img.shields.io/github/release/caos/oidc)](https://GitHub.com/caos/oidc/releases/)
 [![GitHub license](https://img.shields.io/github/license/caos/oidc)](https://github.com/caos/oidc/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caos/oidc)](https://goreportcard.com/report/github.com/caos/oidc)
 
 > This project is in alpha state. It can AND will continue breaking until version 1.0.0 is released
 
@@ -41,7 +42,7 @@ For your convinience you can find the relevant standards linked below.
 | 1.11    | :white_check_mark: |
 | 1.12    | :white_check_mark: |
 | 1.13    | :white_check_mark: |
-| 1.14    | not yet tested     |
+| 1.14    | :white_check_mark: |
 
 ## Why another library
 
