@@ -42,7 +42,7 @@ For your convinience you can find the relevant standards linked below.
 | 1.11    | :white_check_mark: |
 | 1.12    | :white_check_mark: |
 | 1.13    | :white_check_mark: |
-| 1.14    | not yet tested     |
+| 1.14    | :white_check_mark: |
 
 ## Why another library
 
