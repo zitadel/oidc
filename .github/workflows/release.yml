@@ -15,9 +15,9 @@ jobs:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov ./pkg/...
       - uses: codecov/codecov-action@v1
-      with:
-        file: ./profile.cov
-        name: codecov-go
+        with:
+          file: ./profile.cov
+          name: codecov-go
   release:
     runs-on: ubuntu-18.04
     needs: [test]
