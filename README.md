@@ -5,6 +5,7 @@
 [![license](https://badgen.net/github/license/caos/oidc/)](https://github.com/caos/oidc/blob/master/LICENSE)
 [![release](https://badgen.net/github/release/caos/oidc/stable)](https://github.com/caos/oidc/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/oidc)](https://goreportcard.com/report/github.com/caos/oidc)
+[![codecov](https://codecov.io/gh/caos/oidc/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/oidc)
 
 > This project is in alpha state. It can AND will continue breaking until version 1.0.0 is released
 
