@@ -8,12 +8,16 @@ jobs:
         go: ['1.11', '1.12', '1.13', '1.14']
     name: Go ${{ matrix.go }} test
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2-beta
         with:
           go-version: ${{ matrix.go }}
-      - run: go test -race ./pkg/...
+      - run: go test -race -v -coverprofile=profile.cov ./pkg/...
+      - uses: codecov/codecov-action@v1
+        with:
+          file: ./profile.cov
+          name: codecov-go
   release:
     runs-on: ubuntu-18.04
     needs: [test]
