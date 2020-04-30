@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a
 	github.com/golang/mock v1.4.3
-	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4

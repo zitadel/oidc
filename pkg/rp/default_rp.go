@@ -40,7 +40,8 @@ type DefaultRP struct {
 
 	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
 
-	verifier Verifier
+	verifier   Verifier
+	onlyOAuth2 bool
 }
 
 //NewDefaultRP creates `DefaultRP` with the given
@@ -48,17 +49,29 @@ type DefaultRP struct {
 //it will run discovery on the provided issuer
 //if no verifier is provided using the options the `DefaultVerifier` is set
 func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExchangeRP, error) {
+	foundOpenID := false
+	for _, scope := range rpConfig.Scopes {
+		if scope == "openid" {
+			foundOpenID = true
+		}
+	}
+
 	p := &DefaultRP{
 		config:     rpConfig,
 		httpClient: utils.DefaultHTTPClient,
+		onlyOAuth2: !foundOpenID,
 	}
 
 	for _, optFunc := range rpOpts {
 		optFunc(p)
 	}
 
-	if err := p.discover(); err != nil {
-		return nil, err
+	if rpConfig.Endpoints.TokenURL != "" && rpConfig.Endpoints.AuthURL != "" {
+		p.oauthConfig = p.getOAuthConfig(rpConfig.Endpoints)
+	} else {
+		if err := p.discover(); err != nil {
+			return nil, err
+		}
 	}
 
 	if p.errorHandler == nil {
@@ -159,9 +172,12 @@ func (p *DefaultRP) CodeExchange(ctx context.Context, code string, opts ...CodeE
 		//TODO: implement
 	}
 
-	idToken, err := p.verifier.Verify(ctx, token.AccessToken, idTokenString)
-	if err != nil {
-		return nil, err //TODO: err
+	idToken := new(oidc.IDTokenClaims)
+	if !p.onlyOAuth2 {
+		idToken, err = p.verifier.Verify(ctx, token.AccessToken, idTokenString)
+		if err != nil {
+			return nil, err //TODO: err
+		}
 	}
 
 	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
@@ -241,14 +257,18 @@ func (p *DefaultRP) discover() error {
 		return err
 	}
 	p.endpoints = GetEndpoints(discoveryConfig)
-	p.oauthConfig = oauth2.Config{
+	p.oauthConfig = p.getOAuthConfig(p.endpoints.Endpoint)
+	return nil
+}
+
+func (p *DefaultRP) getOAuthConfig(endpoint oauth2.Endpoint) oauth2.Config {
+	return oauth2.Config{
 		ClientID:     p.config.ClientID,
 		ClientSecret: p.config.ClientSecret,
-		Endpoint:     p.endpoints.Endpoint,
+		Endpoint:     endpoint,
 		RedirectURL:  p.config.CallbackURL,
 		Scopes:       p.config.Scopes,
 	}
-	return nil
 }
 
 func (p *DefaultRP) callTokenEndpoint(request interface{}) (newToken *oauth2.Token, err error) {
@@ -284,4 +304,8 @@ func (p *DefaultRP) tryReadStateCookie(w http.ResponseWriter, r *http.Request) (
 	}
 	p.cookieHandler.DeleteCookie(w, stateParam)
 	return state, nil
+}
+
+func (p *DefaultRP) Client(ctx context.Context, token *oauth2.Token) *http.Client {
+	return p.oauthConfig.Client(ctx, token)
 }

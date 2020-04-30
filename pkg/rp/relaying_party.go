@@ -11,6 +11,8 @@ import (
 
 //RelayingParty declares the minimal interface for oidc clients
 type RelayingParty interface {
+	//Client return a standard http client where the token can be used
+	Client(ctx context.Context, token *oauth2.Token) *http.Client
 
 	//AuthURL returns the authorization endpoint with a given state
 	AuthURL(state string, opts ...AuthURLOpt) string
@@ -59,6 +61,7 @@ type Config struct {
 	CallbackURL  string
 	Issuer       string
 	Scopes       []string
+	Endpoints    oauth2.Endpoint
 }
 
 type OptionFunc func(RelayingParty)
