@@ -24,6 +24,16 @@ func CodeFlow(rpc *rp.Config, key []byte, callbackPath string, port string) *oid
 	return codeFlow(provider, callbackPath, port)
 }
 
+func TokenForClient(rpc *rp.Config, key []byte, token *oidc.Tokens) *http.Client {
+	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
+	provider, err := rp.NewDefaultRP(rpc, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
+	if err != nil {
+		logrus.Fatalf("error creating provider %s", err.Error())
+	}
+
+	return provider.Client(context.Background(), token.Token)
+}
+
 func CodeFlowForClient(rpc *rp.Config, key []byte, callbackPath string, port string) *http.Client {
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
 	provider, err := rp.NewDefaultRP(rpc, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
