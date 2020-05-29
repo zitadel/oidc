@@ -110,6 +110,7 @@ func (a *AuthRequest) Done() bool {
 var (
 	a = &AuthRequest{}
 	t bool
+	c string
 )
 
 func (s *AuthStorage) Health(ctx context.Context) error {
@@ -127,8 +128,18 @@ func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthReq
 	t = false
 	return a, nil
 }
-func (s *AuthStorage) AuthRequestByCode(context.Context, string) (op.AuthRequest, error) {
+func (s *AuthStorage) AuthRequestByCode(_ context.Context, code string) (op.AuthRequest, error) {
+	if code != c {
+		return nil, errors.New("invalid code")
+	}
 	return a, nil
+}
+func (s *AuthStorage) SaveAuthCode(_ context.Context, id, code string) error {
+	if a.ID != id {
+		return errors.New("not found")
+	}
+	c = code
+	return nil
 }
 func (s *AuthStorage) DeleteAuthRequest(context.Context, string) error {
 	t = true

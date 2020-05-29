@@ -173,7 +173,7 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 }
 
 func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
-	code, err := BuildAuthRequestCode(authReq, authorizer.Crypto())
+	code, err := CreateAuthRequestCode(r.Context(), authReq, authorizer.Storage(), authorizer.Crypto())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
@@ -199,6 +199,17 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 	}
 	callback := fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
 	http.Redirect(w, r, callback, http.StatusFound)
+}
+
+func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Storage, crypto Crypto) (string, error) {
+	code, err := BuildAuthRequestCode(authReq, crypto)
+	if err != nil {
+		return "", err
+	}
+	if err := storage.SaveAuthCode(ctx, authReq.GetID(), code); err != nil {
+		return "", err
+	}
+	return code, nil
 }
 
 func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {

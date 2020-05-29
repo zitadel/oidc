@@ -8,7 +8,7 @@ import (
 	context "context"
 	oidc "github.com/caos/oidc/pkg/oidc"
 	gomock "github.com/golang/mock/gomock"
-	go_jose_v2 "gopkg.in/square/go-jose.v2"
+	jose "gopkg.in/square/go-jose.v2"
 	reflect "reflect"
 )
 
@@ -80,10 +80,10 @@ func (mr *MockSignerMockRecorder) SignIDToken(arg0 interface{}) *gomock.Call {
 }
 
 // SignatureAlgorithm mocks base method
-func (m *MockSigner) SignatureAlgorithm() go_jose_v2.SignatureAlgorithm {
+func (m *MockSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignatureAlgorithm")
-	ret0, _ := ret[0].(go_jose_v2.SignatureAlgorithm)
+	ret0, _ := ret[0].(jose.SignatureAlgorithm)
 	return ret0
 }
 

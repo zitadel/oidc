@@ -29,6 +29,11 @@ func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client
 		return nil, err
 	}
 
+	err = creator.Storage().DeleteAuthRequest(ctx, authReq.GetID())
+	if err != nil {
+		return nil, err
+	}
+
 	exp := uint64(validity.Seconds())
 	return &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
