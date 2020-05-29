@@ -9,7 +9,7 @@ import (
 	oidc "github.com/caos/oidc/pkg/oidc"
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
-	go_jose_v2 "gopkg.in/square/go-jose.v2"
+	jose "gopkg.in/square/go-jose.v2"
 	reflect "reflect"
 	time "time"
 )
@@ -35,6 +35,21 @@ func NewMockStorage(ctrl *gomock.Controller) *MockStorage {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
+}
+
+// AuthRequestByCode mocks base method
+func (m *MockStorage) AuthRequestByCode(arg0 context.Context, arg1 string) (op.AuthRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthRequestByCode", arg0, arg1)
+	ret0, _ := ret[0].(op.AuthRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AuthRequestByCode indicates an expected call of AuthRequestByCode
+func (mr *MockStorageMockRecorder) AuthRequestByCode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthRequestByCode", reflect.TypeOf((*MockStorage)(nil).AuthRequestByCode), arg0, arg1)
 }
 
 // AuthRequestByID mocks base method
@@ -127,10 +142,10 @@ func (mr *MockStorageMockRecorder) GetClientByClientID(arg0, arg1 interface{}) *
 }
 
 // GetKeySet mocks base method
-func (m *MockStorage) GetKeySet(arg0 context.Context) (*go_jose_v2.JSONWebKeySet, error) {
+func (m *MockStorage) GetKeySet(arg0 context.Context) (*jose.JSONWebKeySet, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKeySet", arg0)
-	ret0, _ := ret[0].(*go_jose_v2.JSONWebKeySet)
+	ret0, _ := ret[0].(*jose.JSONWebKeySet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -142,7 +157,7 @@ func (mr *MockStorageMockRecorder) GetKeySet(arg0 interface{}) *gomock.Call {
 }
 
 // GetSigningKey mocks base method
-func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- go_jose_v2.SigningKey, arg2 chan<- error, arg3 <-chan time.Time) {
+func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- jose.SigningKey, arg2 chan<- error, arg3 <-chan time.Time) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "GetSigningKey", arg0, arg1, arg2, arg3)
 }
@@ -195,6 +210,20 @@ func (m *MockStorage) Health(arg0 context.Context) error {
 func (mr *MockStorageMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockStorage)(nil).Health), arg0)
+}
+
+// SaveAuthCode mocks base method
+func (m *MockStorage) SaveAuthCode(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveAuthCode", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveAuthCode indicates an expected call of SaveAuthCode
+func (mr *MockStorageMockRecorder) SaveAuthCode(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAuthCode", reflect.TypeOf((*MockStorage)(nil).SaveAuthCode), arg0, arg1, arg2)
 }
 
 // SaveNewKeyPair mocks base method

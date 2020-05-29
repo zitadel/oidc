@@ -34,11 +34,6 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err)
 		return
 	}
-	err = exchanger.Storage().DeleteAuthRequest(r.Context(), authReq.GetID())
-	if err != nil {
-		RequestError(w, r, err)
-		return
-	}
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code)
 	if err != nil {
 		RequestError(w, r, err)
@@ -96,7 +91,7 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 	if err != nil {
 		return nil, nil, err
 	}
-	authReq, err := AuthRequestByCode(ctx, tokenReq.Code, exchanger.Crypto(), exchanger.Storage())
+	authReq, err := exchanger.Storage().AuthRequestByCode(ctx, tokenReq.Code)
 	if err != nil {
 		return nil, nil, ErrInvalidRequest("invalid code")
 	}
@@ -111,7 +106,7 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 	if tokenReq.CodeVerifier == "" {
 		return nil, ErrInvalidRequest("code_challenge required")
 	}
-	authReq, err := AuthRequestByCode(ctx, tokenReq.Code, exchanger.Crypto(), exchanger.Storage())
+	authReq, err := exchanger.Storage().AuthRequestByCode(ctx, tokenReq.Code)
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid code")
 	}
@@ -119,14 +114,6 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
-}
-
-func AuthRequestByCode(ctx context.Context, code string, crypto Crypto, storage AuthStorage) (AuthRequest, error) {
-	id, err := crypto.Decrypt(code)
-	if err != nil {
-		return nil, err
-	}
-	return storage.AuthRequestByID(ctx, id)
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
