@@ -27,7 +27,11 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 		RequestError(w, r, err)
 		return
 	}
-	err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.Client.GetID())
+	var clientID string
+	if session.Client != nil {
+		clientID = session.Client.GetID()
+	}
+	err = ender.Storage().TerminateSession(r.Context(), session.UserID, clientID)
 	if err != nil {
 		RequestError(w, r, ErrServerError("error terminating session"))
 		return
@@ -50,6 +54,9 @@ func ParseEndSessionRequest(r *http.Request, decoder *schema.Decoder) (*oidc.End
 
 func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest, ender SessionEnder) (*EndSessionRequest, error) {
 	session := new(EndSessionRequest)
+	if req.IdTokenHint == "" {
+		return session, nil
+	}
 	claims, err := ender.IDTokenVerifier().Verify(ctx, "", req.IdTokenHint)
 	if err != nil {
 		return nil, ErrInvalidRequest("id_token_hint invalid")
