@@ -16,8 +16,6 @@ type Configuration interface {
 	KeysEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
-
-	Port() string
 }
 
 func ValidateIssuer(issuer string) error {

@@ -1,12 +1,10 @@
 package op
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 
 	"github.com/caos/oidc/pkg/oidc"
 )
@@ -26,7 +24,7 @@ type OpenIDProvider interface {
 	HandleUserinfo(w http.ResponseWriter, r *http.Request)
 	HandleEndSession(w http.ResponseWriter, r *http.Request)
 	HandleKeys(w http.ResponseWriter, r *http.Request)
-	HttpHandler() *http.Server
+	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.HandlerFunc) http.HandlerFunc
@@ -53,22 +51,4 @@ func CreateRouter(o OpenIDProvider, h HttpInterceptor) *mux.Router {
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), h(o.HandleEndSession))
 	router.HandleFunc(o.KeysEndpoint().Relative(), o.HandleKeys)
 	return router
-}
-
-func Start(ctx context.Context, o OpenIDProvider) {
-	go func() {
-		<-ctx.Done()
-		err := o.HttpHandler().Shutdown(ctx)
-		if err != nil {
-			logrus.Error("graceful shutdown of oidc server failed")
-		}
-	}()
-
-	go func() {
-		err := o.HttpHandler().ListenAndServe()
-		if err != nil {
-			logrus.Panicf("oidc server serve failed: %v", err)
-		}
-	}()
-	logrus.Infof("oidc server is listening on %s", o.Port())
 }

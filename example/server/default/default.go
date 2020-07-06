@@ -15,20 +15,27 @@ import (
 
 func main() {
 	ctx := context.Background()
+	port := "9998"
 	config := &op.Config{
 		Issuer:    "http://localhost:9998/",
 		CryptoKey: sha256.Sum256([]byte("test")),
-		Port:      "9998",
 	}
 	storage := mock.NewAuthStorage()
 	handler, err := op.NewDefaultOP(ctx, config, storage, op.WithCustomTokenEndpoint(op.NewEndpoint("test")))
 	if err != nil {
 		log.Fatal(err)
 	}
-	router := handler.HttpHandler().Handler.(*mux.Router)
+	router := handler.HttpHandler().(*mux.Router)
 	router.Methods("GET").Path("/login").HandlerFunc(HandleLogin)
 	router.Methods("POST").Path("/login").HandlerFunc(HandleCallback)
-	op.Start(ctx, handler)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
+	}
+	err = server.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}
 	<-ctx.Done()
 }
 
