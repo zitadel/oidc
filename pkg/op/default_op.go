@@ -10,6 +10,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/logging"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
 )
@@ -45,7 +46,7 @@ type DefaultOP struct {
 	signer      Signer
 	verifier    rp.Verifier
 	crypto      Crypto
-	http        *http.Server
+	http        http.Handler
 	decoder     *schema.Decoder
 	encoder     *schema.Encoder
 	interceptor HttpInterceptor
@@ -64,7 +65,6 @@ type Config struct {
 	// IdTokenSigningAlgValuesSupported:  []string{keys.SigningAlgorithm},
 	// SubjectTypesSupported:             []string{"public"},
 	// TokenEndpointAuthMethodsSupported:
-	Port string
 }
 
 type endpoints struct {
@@ -180,13 +180,10 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 	p.signer = NewDefaultSigner(ctx, storage, keyCh)
 	go p.ensureKey(ctx, storage, keyCh, p.timer)
 
-	p.verifier = rp.NewDefaultVerifier(config.Issuer, "", p, rp.WithIgnoreAudience())
+	p.verifier = rp.NewDefaultVerifier(config.Issuer, "", p, rp.WithIgnoreAudience(), rp.WithIgnoreExpiration())
 
-	router := CreateRouter(p, p.interceptor)
-	p.http = &http.Server{
-		Addr:    ":" + config.Port,
-		Handler: router,
-	}
+	p.http = CreateRouter(p, p.interceptor)
+
 	p.decoder = schema.NewDecoder()
 	p.decoder.IgnoreUnknownKeys(true)
 
@@ -225,11 +222,7 @@ func (p *DefaultOP) AuthMethodPostSupported() bool {
 	return true //TODO: config
 }
 
-func (p *DefaultOP) Port() string {
-	return p.config.Port
-}
-
-func (p *DefaultOP) HttpHandler() *http.Server {
+func (p *DefaultOP) HttpHandler() http.Handler {
 	return p.http
 }
 

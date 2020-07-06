@@ -46,10 +46,17 @@ func NewDefaultVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ..
 	return &DefaultVerifier{config: conf, keySet: keySet}
 }
 
-//WithIgnoreAudience will turn off audience claim (should only be used for id_token_hints)
+//WithIgnoreAudience will turn off validation for audience claim (should only be used for id_token_hints)
 func WithIgnoreAudience() func(*verifierConfig) {
 	return func(conf *verifierConfig) {
 		conf.ignoreAudience = true
+	}
+}
+
+//WithIgnoreExpiration will turn off validation for expiration claim (should only be used for id_token_hints)
+func WithIgnoreExpiration() func(*verifierConfig) {
+	return func(conf *verifierConfig) {
+		conf.ignoreExpiration = true
 	}
 }
 
@@ -108,6 +115,7 @@ type verifierConfig struct {
 	clientID          string
 	nonce             string
 	ignoreAudience    bool
+	ignoreExpiration  bool
 	iat               *iatConfig
 	acr               ACRVerifier
 	maxAge            time.Duration
@@ -275,10 +283,10 @@ func (v *DefaultVerifier) checkSignature(ctx context.Context, idTokenString stri
 		return "", err
 	}
 	if len(jws.Signatures) == 0 {
-		return "", nil //TODO: error
+		return "", ErrSignatureMissing()
 	}
 	if len(jws.Signatures) > 1 {
-		return "", nil //TODO: error
+		return "", ErrSignatureMultiple()
 	}
 	sig := jws.Signatures[0]
 	supportedSigAlgs := v.config.supportedSignAlgs
@@ -292,16 +300,18 @@ func (v *DefaultVerifier) checkSignature(ctx context.Context, idTokenString stri
 	signedPayload, err := v.keySet.VerifySignature(ctx, jws)
 	if err != nil {
 		return "", err
-		//TODO:
 	}
 
 	if !bytes.Equal(signedPayload, payload) {
-		return "", ErrSignatureInvalidPayload() //TODO: err
+		return "", ErrSignatureInvalidPayload()
 	}
 	return jose.SignatureAlgorithm(sig.Header.Algorithm), nil
 }
 
 func (v *DefaultVerifier) checkExpiration(expiration time.Time) error {
+	if v.config.ignoreExpiration {
+		return nil
+	}
 	expiration = expiration.Round(time.Second)
 	if !v.now().Before(expiration) {
 		return ErrExpInvalid(expiration)
@@ -362,8 +372,8 @@ func (v *DefaultVerifier) decryptToken(tokenString string) (string, error) {
 }
 
 func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
-	if atHash == "" {
-		return nil //TODO: return error
+	if accessToken == "" {
+		return nil
 	}
 
 	actual, err := oidc.ClaimHash(accessToken, sigAlgorithm)
@@ -371,7 +381,7 @@ func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgor
 		return err
 	}
 	if actual != atHash {
-		return nil //TODO: error
+		return ErrAtHash()
 	}
 	return nil
 }

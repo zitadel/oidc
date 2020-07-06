@@ -40,8 +40,17 @@ var (
 	ErrAuthTimeToOld = func(maxAge, authTime time.Time) *validationError {
 		return ValidationError("Auth Time of token must not be older than %v, but was %v (%v to old)", maxAge, authTime, maxAge.Sub(authTime))
 	}
+	ErrSignatureMissing = func() *validationError {
+		return ValidationError("id_token does not contain a signature")
+	}
+	ErrSignatureMultiple = func() *validationError {
+		return ValidationError("id_token contains multiple signatures")
+	}
 	ErrSignatureInvalidPayload = func() *validationError {
 		return ValidationError("Signature does not match Payload")
+	}
+	ErrAtHash = func() *validationError {
+		return ValidationError("at_hash does not correspond to access token")
 	}
 )
 
