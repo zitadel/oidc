@@ -14,6 +14,8 @@ type Userinfo struct {
 	UserinfoPhone
 	Address *UserinfoAddress
 
+	Authorizations []string
+
 	claims map[string]interface{}
 }
 
@@ -95,6 +97,7 @@ func (i *Userinfo) MarshalJSON() ([]byte, error) {
 	j := new(jsonUserinfo)
 	j.Subject = i.Subject
 	j.setUserinfo(*i)
+	j.Authorizations = i.Authorizations
 	return json.Marshal(j)
 }
 
@@ -111,6 +114,7 @@ type jsonUserinfo struct {
 	jsonUserinfoEmail
 	jsonUserinfoPhone
 	JsonUserinfoAddress *jsonUserinfoAddress `json:"address,omitempty"`
+	Authorizations      []string             `json:"authorizations,omitempty"`
 }
 
 func (j *jsonUserinfo) setUserinfo(i Userinfo) {
