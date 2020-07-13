@@ -56,7 +56,7 @@ func TestValidateIssuer(t *testing.T) {
 		{
 			"localhost with http ok",
 			args{"http://localhost:9999"},
-			true,
+			false,
 		},
 	}
 	for _, tt := range tests {

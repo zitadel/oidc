@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -17,33 +16,37 @@ import (
 
 type Authorizer interface {
 	Storage() Storage
-	Decoder() *schema.Decoder
-	Encoder() *schema.Encoder
+	Decoder() utils.Decoder
+	Encoder() utils.Encoder
 	Signer() Signer
 	IDTokenVerifier() rp.Verifier
 	Crypto() Crypto
 	Issuer() string
 }
 
-type ValidationAuthorizer interface {
+//AuthorizeValidator is an extension of Authorizer interface
+//implementing it's own validation mechanism for the auth request
+type AuthorizeValidator interface {
 	Authorizer
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, rp.Verifier) (string, error)
 }
 
+//ValidationAuthorizer  is an extension of Authorizer interface
+//implementing it's own validation mechanism for the auth request
+//
+//Deprecated: ValidationAuthorizer exists for historical compatibility. Use ValidationAuthorizer itself
+type ValidationAuthorizer AuthorizeValidator
+
+//Authorize handles the authorization request, including
+//parsing, validating, storing and finally redirecting to the login handler
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	err := r.ParseForm()
+	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"), authorizer.Encoder())
-		return
-	}
-	authReq := new(oidc.AuthRequest)
-	err = authorizer.Decoder().Decode(authReq, r.Form)
-	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 	validation := ValidateAuthRequest
-	if validater, ok := authorizer.(ValidationAuthorizer); ok {
+	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
 	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenVerifier())
@@ -62,6 +65,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
+}
+
+func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRequest, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return nil, ErrInvalidRequest("cannot parse form")
+	}
+	authReq := new(oidc.AuthRequest)
+	err = decoder.Decode(authReq, r.Form)
+	if err != nil {
+		return nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err))
+	}
+	return authReq, nil
 }
 
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier rp.Verifier) (string, error) {
@@ -121,10 +137,16 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 }
 
 func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
-	if responseType == "" {
+	switch responseType {
+	case oidc.ResponseTypeCode,
+		oidc.ResponseTypeIDToken,
+		oidc.ResponseTypeIDTokenOnly:
+		return nil
+	case "":
 		return ErrInvalidRequest("response_type empty")
+	default:
+		return ErrInvalidRequest("response_type invalid")
 	}
-	return nil
 }
 
 func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier rp.Verifier) (string, error) {

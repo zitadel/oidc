@@ -3,66 +3,140 @@ package op_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"net/url"
+	"reflect"
 	"testing"
 
+	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
 	"github.com/caos/oidc/pkg/rp"
+	rp_mock "github.com/caos/oidc/pkg/rp/mock"
+	"github.com/caos/oidc/pkg/utils"
 )
 
-func TestAuthorize(t *testing.T) {
-	// testCallback := func(t *testing.T, clienID string) callbackHandler {
-	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
-	// 		// require.Equal(t, clientID, client.)
-	// 	}
-	// }
-	// testErr := func(t *testing.T, expected error) errorHandler {
-	// 	return func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-	// 		require.Equal(t, expected, err)
-	// 	}
-	// }
+//
+//func TestAuthorize(t *testing.T) {
+//	// testCallback := func(t *testing.T, clienID string) callbackHandler {
+//	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
+//	// 		// require.Equal(t, clientID, client.)
+//	// 	}
+//	// }
+//	// testErr := func(t *testing.T, expected error) errorHandler {
+//	// 	return func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
+//	// 		require.Equal(t, expected, err)
+//	// 	}
+//	// }
+//	type args struct {
+//		w          http.ResponseWriter
+//		r          *http.Request
+//		authorizer op.Authorizer
+//	}
+//	tests := []struct {
+//		name string
+//		args args
+//	}{
+//		{
+//			"parsing fails",
+//			args{
+//				httptest.NewRecorder(),
+//				&http.Request{Method: "POST", Body: nil},
+//				mock.NewAuthorizerExpectValid(t, true),
+//				// testCallback(t, ""),
+//				// testErr(t, ErrInvalidRequest("cannot parse form")),
+//			},
+//		},
+//		{
+//			"decoding fails",
+//			args{
+//				httptest.NewRecorder(),
+//				func() *http.Request {
+//					r := httptest.NewRequest("POST", "/authorize", strings.NewReader("client_id=foo"))
+//					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+//					return r
+//				}(),
+//				mock.NewAuthorizerExpectValid(t, true),
+//				// testCallback(t, ""),
+//				// testErr(t, ErrInvalidRequest("cannot parse auth request")),
+//			},
+//		},
+//		// {"decoding fails", args{httptest.NewRecorder(), &http.Request{}, mock.NewAuthorizerExpectValid(t), nil, testErr(t, nil)}},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
+//		})
+//	}
+//}
+
+func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
-		w          http.ResponseWriter
-		r          *http.Request
-		authorizer op.Authorizer
+		r       *http.Request
+		decoder utils.Decoder
+	}
+	type res struct {
+		want *oidc.AuthRequest
+		err  bool
 	}
 	tests := []struct {
 		name string
 		args args
+		res  res
 	}{
 		{
-			"parsing fails",
+			"parsing form error",
 			args{
-				httptest.NewRecorder(),
-				&http.Request{Method: "POST", Body: nil},
-				mock.NewAuthorizerExpectValid(t, true),
-				// testCallback(t, ""),
-				// testErr(t, ErrInvalidRequest("cannot parse form")),
+				&http.Request{URL: &url.URL{RawQuery: "invalid=%%param"}},
+				schema.NewDecoder(),
+			},
+			res{
+				nil,
+				true,
 			},
 		},
 		{
-			"decoding fails",
+			"decoding error",
 			args{
-				httptest.NewRecorder(),
-				func() *http.Request {
-					r := httptest.NewRequest("POST", "/authorize", strings.NewReader("client_id=foo"))
-					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-					return r
+				&http.Request{URL: &url.URL{RawQuery: "unknown=value"}},
+				func() utils.Decoder {
+					decoder := schema.NewDecoder()
+					decoder.IgnoreUnknownKeys(false)
+					return decoder
 				}(),
-				mock.NewAuthorizerExpectValid(t, true),
-				// testCallback(t, ""),
-				// testErr(t, ErrInvalidRequest("cannot parse auth request")),
+			},
+			res{
+				nil,
+				true,
 			},
 		},
-		// {"decoding fails", args{httptest.NewRecorder(), &http.Request{}, mock.NewAuthorizerExpectValid(t), nil, testErr(t, nil)}},
+		{
+			"parsing ok",
+			args{
+				&http.Request{URL: &url.URL{RawQuery: "scope=openid"}},
+				func() utils.Decoder {
+					decoder := schema.NewDecoder()
+					decoder.IgnoreUnknownKeys(false)
+					return decoder
+				}(),
+			},
+			res{
+				&oidc.AuthRequest{Scopes: oidc.Scopes{"openid"}},
+				false,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
+			got, err := op.ParseAuthorizeRequest(tt.args.r, tt.args.decoder)
+			if (err != nil) != tt.res.err {
+				t.Errorf("ParseAuthorizeRequest() error = %v, wantErr %v", err, tt.res.err)
+			}
+			if !reflect.DeepEqual(got, tt.res.want) {
+				t.Errorf("ParseAuthorizeRequest() got = %v, want %v", got, tt.res.want)
+			}
 		})
 	}
 }
@@ -223,6 +297,115 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op.ValidateAuthReqRedirectURI(nil, tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAuthReqResponseType(t *testing.T) {
+	type args struct {
+		responseType oidc.ResponseType
+	}
+	type res struct {
+		err bool
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"code no error",
+			args{"code"},
+			res{false},
+		},
+		{
+			"id_token token no error",
+			args{"id_token token"},
+			res{false},
+		},
+		{
+			"id_token no error",
+			args{"id_token"},
+			res{false},
+		},
+		{
+			"no response_type error",
+			args{},
+			res{true},
+		},
+		{
+			"invalid response_type error",
+			args{"invalid"},
+			res{true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op.ValidateAuthReqResponseType(tt.args.responseType); (err != nil) != tt.res.err {
+				t.Errorf("ValidateAuthReqResponseType() error = %v, wantErr %v", err, tt.res.err)
+			}
+		})
+	}
+}
+
+func TestValidateAuthReqIDTokenHint(t *testing.T) {
+	type args struct {
+		idTokenHint string
+		verifier    rp.Verifier
+	}
+	type res struct {
+		userID string
+		err    bool
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"no id_token_hint, no id and ok",
+			args{
+				"",
+				nil,
+			},
+			res{
+				"",
+				false,
+			},
+		},
+		{
+			"invalid id_token_hint, no id and error",
+			args{
+				"invalid",
+				rp_mock.NewMockVerifierExpectInvalid(t),
+			},
+			res{
+				"",
+				true,
+			},
+		},
+		{
+			"no id_token_hint ok",
+			args{
+				"valid",
+				rp_mock.NewMockVerifierExpectValid(t),
+			},
+			res{
+				"id",
+				false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := op.ValidateAuthReqIDTokenHint(nil, tt.args.idTokenHint, tt.args.verifier)
+			if (err != nil) != tt.res.err {
+				t.Errorf("ValidateAuthReqIDTokenHint() error = %v, wantErr %v", err, tt.res.err)
+				return
+			}
+			if got != tt.res.userID {
+				t.Errorf("ValidateAuthReqIDTokenHint() got = %v, want %v", got, tt.res.userID)
 			}
 		})
 	}

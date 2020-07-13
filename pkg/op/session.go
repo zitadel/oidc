@@ -6,11 +6,11 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
-	"github.com/gorilla/schema"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 type SessionEnder interface {
-	Decoder() *schema.Decoder
+	Decoder() utils.Decoder
 	Storage() Storage
 	IDTokenVerifier() rp.Verifier
 	DefaultLogoutRedirectURI() string
@@ -39,7 +39,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	http.Redirect(w, r, session.RedirectURI, http.StatusFound)
 }
 
-func ParseEndSessionRequest(r *http.Request, decoder *schema.Decoder) (*oidc.EndSessionRequest, error) {
+func ParseEndSessionRequest(r *http.Request, decoder utils.Decoder) (*oidc.EndSessionRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, ErrInvalidRequest("error parsing form")

@@ -13,6 +13,7 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -247,11 +248,11 @@ func (p *DefaultOP) VerifySignature(ctx context.Context, jws *jose.JSONWebSignat
 	return payload, err
 }
 
-func (p *DefaultOP) Decoder() *schema.Decoder {
+func (p *DefaultOP) Decoder() utils.Decoder {
 	return p.decoder
 }
 
-func (p *DefaultOP) Encoder() *schema.Encoder {
+func (p *DefaultOP) Encoder() utils.Encoder {
 	return p.encoder
 }
 
