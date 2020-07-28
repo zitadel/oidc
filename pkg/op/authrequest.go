@@ -82,7 +82,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 		return ErrInvalidRequest("Unforuntately, the scope of your request is missing. Please ensure your scope value is not 0, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest)("Unfortunately, the scope openid of your request is missing. Please ensure your scope openid is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application at:")
+		return ErrInvalidRequest)("Unfortunately, the scope openid of your request is missing. Please ensure your scope openid is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
