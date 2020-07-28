@@ -108,7 +108,7 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 		if client.ApplicationType() == ApplicationTypeNative {
 			return nil
 		}
-		return ErrInvalidRequest("Unfortunately, this client's redirect_uri is private and is not allowed. If you have any questions, you may contact the administrator of the application at:")
+		return ErrInvalidRequest("Unfortunately, this client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
 			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for native applications. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application.")
