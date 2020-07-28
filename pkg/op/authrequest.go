@@ -122,7 +122,7 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 
 func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
 	if responseType == "" {
-		return ErrInvalidRequest("Unfortunately, a response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application at:")
+		return ErrInvalidRequest("Unfortunately, a response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
