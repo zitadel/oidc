@@ -114,7 +114,7 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for native applications. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application.")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequestRedirectURI("Unfortunately, this redirect_uri lacks a 'http://localhost/' prefix. Please ensure the redirect_uri has the appropiate prefix, and try again. If you have any questions, you may contact the administrator of the application at:")
+			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for localhost url. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application at:")
 		}
 	}
 	return nil
