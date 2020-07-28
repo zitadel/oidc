@@ -111,7 +111,7 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 		return ErrInvalidRequest("Unfortunately, this client's redirect_uri is private and is not allowed. If you have any questions, you may contact the administrator of the application at:")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequestRedirectURI("Unfortunately, the client's application type does not match the native platform. Please ensure the client's application type is compatible, and try again. If you have any questions, you may contact the administrator of the application at:") //(Writer's note: This may not be correct. Please double check its accuracy.)
+			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for native applications. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application.")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
 			return ErrInvalidRequestRedirectURI("Unfortunately, this redirect_uri lacks a 'http://localhost/' prefix. Please ensure the redirect_uri has the appropiate prefix, and try again. If you have any questions, you may contact the administrator of the application at:")
