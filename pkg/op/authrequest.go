@@ -96,7 +96,7 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 		return ErrServerError(err.Error())
 	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
-		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application at:")//(Writer's note: This may not be correct. Please double check its accuracy.)
+		return ErrInvalidRequestRedirectURI("Unfortunately, the redirect_uri is missing in the client configuration. Please ensure your redirect_uri is added in the client configuration, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
 		return nil
