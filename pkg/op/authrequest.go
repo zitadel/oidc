@@ -89,7 +89,7 @@ func ValidateAuthReqScopes(scopes []string) error {
 
 func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
-		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application at:")
+		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is included in the request, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	client, err := storage.GetClientByClientID(ctx, client_id)
 	if err != nil {
