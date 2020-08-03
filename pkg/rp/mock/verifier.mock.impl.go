@@ -22,7 +22,7 @@ func NewMockVerifierExpectInvalid(t *testing.T) rp.Verifier {
 
 func ExpectVerifyInvalid(v rp.Verifier) {
 	mock := v.(*MockVerifier)
-	mock.EXPECT().Verify(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid"))
+	mock.EXPECT().VerifyIdToken(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid"))
 }
 
 func NewMockVerifierExpectValid(t *testing.T) rp.Verifier {
@@ -33,5 +33,5 @@ func NewMockVerifierExpectValid(t *testing.T) rp.Verifier {
 
 func ExpectVerifyValid(v rp.Verifier) {
 	mock := v.(*MockVerifier)
-	mock.EXPECT().Verify(gomock.Any(), gomock.Any(), gomock.Any()).Return(&oidc.IDTokenClaims{Userinfo: oidc.Userinfo{Subject: "id"}}, nil)
+	mock.EXPECT().VerifyIdToken(gomock.Any(), gomock.Any()).Return(&oidc.IDTokenClaims{Userinfo: oidc.Userinfo{Subject: "id"}}, nil)
 }
