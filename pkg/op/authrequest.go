@@ -95,24 +95,24 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 
 func ValidateAuthReqScopes(scopes []string) error {
 	if len(scopes) == 0 {
-		return ErrInvalidRequest("scope missing")
+		return ErrInvalidRequest("Unforuntately, the scope of your request is missing. Please ensure your scope value is not 0, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest("scope openid missing")
+		return ErrInvalidRequest("Unfortunately, the scope openid of your request is missing. Please ensure your scope openid is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
 
 func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
-		return ErrInvalidRequestRedirectURI("redirect_uri must not be empty")
+		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is included in the request, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	client, err := storage.GetClientByClientID(ctx, client_id)
 	if err != nil {
 		return ErrServerError(err.Error())
 	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
-		return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
+		return ErrInvalidRequestRedirectURI("Unfortunately, the redirect_uri is missing in the client configuration. Please ensure your redirect_uri is added in the client configuration, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
 		return nil
@@ -124,13 +124,13 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, resp
 		if client.ApplicationType() == ApplicationTypeNative {
 			return nil
 		}
-		return ErrInvalidRequest("redirect_uri not allowed")
+		return ErrInvalidRequest("Unfortunately, this client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
+			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for native applications. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application.")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequestRedirectURI("redirect_uri not allowed")
+			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for localhost url. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application at:")
 		}
 	}
 	return nil
@@ -143,7 +143,7 @@ func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
 		oidc.ResponseTypeIDTokenOnly:
 		return nil
 	case "":
-		return ErrInvalidRequest("response_type empty")
+		return ErrInvalidRequest("Unfortunately, a response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	default:
 		return ErrInvalidRequest("response_type invalid")
 	}
@@ -155,7 +155,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	}
 	claims, err := verifier.Verify(ctx, "", idTokenHint)
 	if err != nil {
-		return "", ErrInvalidRequest("id_token_hint invalid")
+		return "", ErrInvalidRequest("Unfortunately, the id_token_hint is invalid. Please ensure the id_token_hint is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	return claims.Subject, nil
 }
