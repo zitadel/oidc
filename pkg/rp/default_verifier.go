@@ -148,7 +148,7 @@ func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 //and https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error) {
 	v.config.now = time.Now().UTC()
-	idToken, err := v.VerifyIDToken(ctx, idTokenString)
+	idToken, err := v.VerifyIdToken(ctx, idTokenString)
 	if err != nil {
 		return nil, err
 	}
@@ -158,15 +158,9 @@ func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString
 	return idToken, nil
 }
 
-func (v *DefaultVerifier) now() time.Time {
-	if v.config.now.IsZero() {
-		v.config.now = time.Now().UTC().Round(time.Second)
-	}
-	return v.config.now
-}
-
-//VerifyIDToken: https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
+//Verify implements the `VerifyIdToken` method of the `Verifier` interface
+//according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+func (v *DefaultVerifier) VerifyIdToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
 	//1. if encrypted --> decrypt
 	decrypted, err := v.decryptToken(idTokenString)
 	if err != nil {
@@ -225,6 +219,13 @@ func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString strin
 	}
 
 	return claims, nil
+}
+
+func (v *DefaultVerifier) now() time.Time {
+	if v.config.now.IsZero() {
+		v.config.now = time.Now().UTC().Round(time.Second)
+	}
+	return v.config.now
 }
 
 func (v *DefaultVerifier) parseToken(tokenString string) (*oidc.IDTokenClaims, []byte, error) {
@@ -372,7 +373,7 @@ func (v *DefaultVerifier) decryptToken(tokenString string) (string, error) {
 }
 
 func (v *DefaultVerifier) verifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
-	if accessToken == "" {
+	if atHash == "" {
 		return nil
 	}
 

@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -95,19 +94,19 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 
 func ValidateAuthReqScopes(scopes []string) error {
 	if len(scopes) == 0 {
-		return ErrInvalidRequest("Unforuntately, the scope of your request is missing. Please ensure your scope value is not 0, and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("Unfortunately, the scope parameter of your request is missing. Please ensure your scope value is not empty, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest("Unfortunately, the scope openid of your request is missing. Please ensure your scope openid is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("Unfortunately, the scope `openid` is missing. Please ensure your scope configuration is correct (containing the `openid` value), and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(ctx context.Context, uri, client_id string, responseType oidc.ResponseType, storage OPStorage) error {
+func ValidateAuthReqRedirectURI(ctx context.Context, uri, clientID string, responseType oidc.ResponseType, storage OPStorage) error {
 	if uri == "" {
 		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is included in the request, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
-	client, err := storage.GetClientByClientID(ctx, client_id)
+	client, err := storage.GetClientByClientID(ctx, clientID)
 	if err != nil {
 		return ErrServerError(err.Error())
 	}
@@ -143,9 +142,9 @@ func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
 		oidc.ResponseTypeIDTokenOnly:
 		return nil
 	case "":
-		return ErrInvalidRequest("Unfortunately, a response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("Unfortunately, the response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	default:
-		return ErrInvalidRequest("response_type invalid")
+		return ErrInvalidRequest("Unfortunately, the response type provided in your request is invalid. Please ensure the response type is valid, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
 }
 
@@ -153,7 +152,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	if idTokenHint == "" {
 		return "", nil
 	}
-	claims, err := verifier.Verify(ctx, "", idTokenHint)
+	claims, err := verifier.VerifyIdToken(ctx, idTokenHint)
 	if err != nil {
 		return "", ErrInvalidRequest("Unfortunately, the id_token_hint is invalid. Please ensure the id_token_hint is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
 	}
@@ -175,7 +174,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 		return
 	}
 	if !authReq.Done() {
-		AuthRequestError(w, r, authReq, errors.New("user not logged in"), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, ErrInteractionRequired("Unfortunately, the user may is not logged in and/or additional interaction is required."), authorizer.Encoder())
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)

@@ -48,3 +48,18 @@ func (mr *MockVerifierMockRecorder) Verify(arg0, arg1, arg2 interface{}) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockVerifier)(nil).Verify), arg0, arg1, arg2)
 }
+
+// VerifyIdToken mocks base method
+func (m *MockVerifier) VerifyIdToken(arg0 context.Context, arg1 string) (*oidc.IDTokenClaims, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyIdToken", arg0, arg1)
+	ret0, _ := ret[0].(*oidc.IDTokenClaims)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VerifyIdToken indicates an expected call of VerifyIdToken
+func (mr *MockVerifierMockRecorder) VerifyIdToken(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyIdToken", reflect.TypeOf((*MockVerifier)(nil).VerifyIdToken), arg0, arg1)
+}

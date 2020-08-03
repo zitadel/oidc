@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	InvalidRequest errorType = "invalid_request"
-	ServerError    errorType = "server_error"
+	InvalidRequest      errorType = "invalid_request"
+	InvalidRequestUri   errorType = "invalid_request_uri"
+	InteractionRequired errorType = "interaction_required"
+	ServerError         errorType = "server_error"
 )
 
 var (
@@ -22,9 +24,15 @@ var (
 	}
 	ErrInvalidRequestRedirectURI = func(description string) *OAuthError {
 		return &OAuthError{
-			ErrorType:        InvalidRequest,
+			ErrorType:        InvalidRequestUri,
 			Description:      description,
 			redirectDisabled: true,
+		}
+	}
+	ErrInteractionRequired = func(description string) *OAuthError {
+		return &OAuthError{
+			ErrorType:   InteractionRequired,
+			Description: description,
 		}
 	}
 	ErrServerError = func(description string) *OAuthError {
@@ -54,7 +62,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		e.ErrorType = ServerError
 		e.Description = err.Error()
 	}
-	e.state = authReq.GetState()
+	e.State = authReq.GetState()
 	if authReq.GetRedirectURI() == "" || e.redirectDisabled {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
@@ -87,9 +95,9 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 
 type OAuthError struct {
 	ErrorType        errorType `json:"error" schema:"error"`
-	Description      string    `json:"error_description" schema:"error_description"`
-	state            string    `json:"state" schema:"state"`
-	redirectDisabled bool
+	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
+	State            string    `json:"state,omitempty" schema:"state,omitempty"`
+	redirectDisabled bool      `json:"-" schema:"-"`
 }
 
 func (e *OAuthError) Error() string {
