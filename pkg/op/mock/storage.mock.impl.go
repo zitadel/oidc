@@ -3,6 +3,7 @@ package mock
 import (
 	"context"
 	"errors"
+	"github.com/caos/oidc/pkg/oidc"
 	"testing"
 	"time"
 
@@ -66,21 +67,25 @@ func ExpectValidClientID(s op.Storage) {
 			var appType op.ApplicationType
 			var authMethod op.AuthMethod
 			var accessTokenType op.AccessTokenType
+			var responseTypes []oidc.ResponseType
 			switch id {
 			case "web_client":
 				appType = op.ApplicationTypeWeb
 				authMethod = op.AuthMethodBasic
 				accessTokenType = op.AccessTokenTypeBearer
+				responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 			case "native_client":
 				appType = op.ApplicationTypeNative
 				authMethod = op.AuthMethodNone
 				accessTokenType = op.AccessTokenTypeBearer
+				responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 			case "useragent_client":
 				appType = op.ApplicationTypeUserAgent
 				authMethod = op.AuthMethodBasic
 				accessTokenType = op.AccessTokenTypeJWT
+				responseTypes = []oidc.ResponseType{oidc.ResponseTypeIDToken}
 			}
-			return &ConfClient{id: id, appType: appType, authMethod: authMethod, accessTokenType: accessTokenType}, nil
+			return &ConfClient{id: id, appType: appType, authMethod: authMethod, accessTokenType: accessTokenType, responseTypes: responseTypes}, nil
 		})
 }
 
@@ -116,6 +121,8 @@ type ConfClient struct {
 	appType         op.ApplicationType
 	authMethod      op.AuthMethod
 	accessTokenType op.AccessTokenType
+	responseTypes   []oidc.ResponseType
+	devMode         bool
 }
 
 func (c *ConfClient) RedirectURIs() []string {
@@ -138,7 +145,7 @@ func (c *ConfClient) ApplicationType() op.ApplicationType {
 	return c.appType
 }
 
-func (c *ConfClient) GetAuthMethod() op.AuthMethod {
+func (c *ConfClient) AuthMethod() op.AuthMethod {
 	return c.authMethod
 }
 
@@ -154,4 +161,10 @@ func (c *ConfClient) IDTokenLifetime() time.Duration {
 }
 func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 	return c.accessTokenType
+}
+func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
+	return c.responseTypes
+}
+func (c *ConfClient) DevMode() bool {
+	return c.devMode
 }

@@ -5,6 +5,7 @@
 package mock
 
 import (
+	oidc "github.com/caos/oidc/pkg/oidc"
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -62,18 +63,32 @@ func (mr *MockClientMockRecorder) ApplicationType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplicationType", reflect.TypeOf((*MockClient)(nil).ApplicationType))
 }
 
-// GetAuthMethod mocks base method
-func (m *MockClient) GetAuthMethod() op.AuthMethod {
+// AuthMethod mocks base method
+func (m *MockClient) AuthMethod() op.AuthMethod {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAuthMethod")
+	ret := m.ctrl.Call(m, "AuthMethod")
 	ret0, _ := ret[0].(op.AuthMethod)
 	return ret0
 }
 
-// GetAuthMethod indicates an expected call of GetAuthMethod
-func (mr *MockClientMockRecorder) GetAuthMethod() *gomock.Call {
+// AuthMethod indicates an expected call of AuthMethod
+func (mr *MockClientMockRecorder) AuthMethod() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthMethod", reflect.TypeOf((*MockClient)(nil).GetAuthMethod))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethod", reflect.TypeOf((*MockClient)(nil).AuthMethod))
+}
+
+// DevMode mocks base method
+func (m *MockClient) DevMode() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DevMode")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// DevMode indicates an expected call of DevMode
+func (mr *MockClientMockRecorder) DevMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DevMode", reflect.TypeOf((*MockClient)(nil).DevMode))
 }
 
 // GetID mocks base method
@@ -144,4 +159,18 @@ func (m *MockClient) RedirectURIs() []string {
 func (mr *MockClientMockRecorder) RedirectURIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedirectURIs", reflect.TypeOf((*MockClient)(nil).RedirectURIs))
+}
+
+// ResponseTypes mocks base method
+func (m *MockClient) ResponseTypes() []oidc.ResponseType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResponseTypes")
+	ret0, _ := ret[0].([]oidc.ResponseType)
+	return ret0
+}
+
+// ResponseTypes indicates an expected call of ResponseTypes
+func (mr *MockClientMockRecorder) ResponseTypes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResponseTypes", reflect.TypeOf((*MockClient)(nil).ResponseTypes))
 }

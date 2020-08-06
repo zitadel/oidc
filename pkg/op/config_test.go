@@ -54,7 +54,7 @@ func TestValidateIssuer(t *testing.T) {
 			false,
 		},
 		{
-			"localhost with http ok",
+			"localhost with http fails",
 			args{"http://localhost:9999"},
 			true,
 		},

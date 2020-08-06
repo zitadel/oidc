@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"github.com/caos/oidc/pkg/oidc"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
@@ -25,5 +26,15 @@ func NewClientExpectAny(t *testing.T, appType op.ApplicationType) op.Client {
 		func(id string) string {
 			return "login?id=" + id
 		})
+	return c
+}
+
+func NewClientWithConfig(t *testing.T, uri []string, appType op.ApplicationType, responseTypes []oidc.ResponseType, devMode bool) op.Client {
+	c := NewClient(t)
+	m := c.(*MockClient)
+	m.EXPECT().RedirectURIs().AnyTimes().Return(uri)
+	m.EXPECT().ApplicationType().AnyTimes().Return(appType)
+	m.EXPECT().ResponseTypes().AnyTimes().Return(responseTypes)
+	m.EXPECT().DevMode().AnyTimes().Return(devMode)
 	return c
 }
