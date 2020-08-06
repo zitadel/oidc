@@ -195,7 +195,7 @@ func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Clie
 		authMethod = op.AuthMethodNone
 		accessTokenType = op.AccessTokenTypeJWT
 	}
-	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType}, nil
+	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType, devMode: false}, nil
 }
 
 func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ string) error {
@@ -232,8 +232,10 @@ func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []str
 type ConfClient struct {
 	applicationType op.ApplicationType
 	authMethod      op.AuthMethod
+	responseTypes   []oidc.ResponseType
 	ID              string
 	accessTokenType op.AccessTokenType
+	devMode         bool
 }
 
 func (c *ConfClient) GetID() string {
@@ -262,7 +264,7 @@ func (c *ConfClient) ApplicationType() op.ApplicationType {
 	return c.applicationType
 }
 
-func (c *ConfClient) GetAuthMethod() op.AuthMethod {
+func (c *ConfClient) AuthMethod() op.AuthMethod {
 	return c.authMethod
 }
 
@@ -271,4 +273,11 @@ func (c *ConfClient) IDTokenLifetime() time.Duration {
 }
 func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 	return c.accessTokenType
+}
+func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
+	return c.responseTypes
+}
+
+func (c *ConfClient) DevMode() bool {
+	return c.devMode
 }

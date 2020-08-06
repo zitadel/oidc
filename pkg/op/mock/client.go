@@ -27,3 +27,12 @@ func NewClientExpectAny(t *testing.T, appType op.ApplicationType) op.Client {
 		})
 	return c
 }
+
+func NewClientWithConfig(t *testing.T, uri []string, appType op.ApplicationType, devMode bool) op.Client {
+	c := NewClient(t)
+	m := c.(*MockClient)
+	m.EXPECT().RedirectURIs().AnyTimes().Return(uri)
+	m.EXPECT().ApplicationType().AnyTimes().Return(appType)
+	m.EXPECT().DevMode().AnyTimes().Return(devMode)
+	return c
+}

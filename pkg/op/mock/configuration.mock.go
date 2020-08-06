@@ -103,20 +103,6 @@ func (mr *MockConfigurationMockRecorder) KeysEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeysEndpoint", reflect.TypeOf((*MockConfiguration)(nil).KeysEndpoint))
 }
 
-// Port mocks base method
-func (m *MockConfiguration) Port() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Port")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Port indicates an expected call of Port
-func (mr *MockConfigurationMockRecorder) Port() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Port", reflect.TypeOf((*MockConfiguration)(nil).Port))
-}
-
 // TokenEndpoint mocks base method
 func (m *MockConfiguration) TokenEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()

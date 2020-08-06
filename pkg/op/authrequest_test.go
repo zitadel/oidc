@@ -84,27 +84,27 @@ func TestValidateAuthRequest(t *testing.T) {
 		// }
 		{
 			"scope missing fails",
-			args{&oidc.AuthRequest{}, nil, nil},
+			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
 			true,
 		},
 		{
 			"scope openid missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, nil, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			true,
 		},
 		{
 			"response_type missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, nil, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			true,
 		},
 		{
 			"client_id missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, nil, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
 			true,
 		},
 		{
 			"redirect_uri missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, nil, nil},
+			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
 			true,
 		},
 	}
@@ -149,9 +149,8 @@ func TestValidateAuthReqScopes(t *testing.T) {
 func TestValidateAuthReqRedirectURI(t *testing.T) {
 	type args struct {
 		uri          string
-		clientID     string
+		client       op.Client
 		responseType oidc.ResponseType
-		storage      op.OPStorage
 	}
 	tests := []struct {
 		name    string
@@ -160,68 +159,106 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}{
 		{
 			"empty fails",
-			args{"", "", oidc.ResponseTypeCode, nil},
+			args{"",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"unregistered fails",
-			args{"https://unregistered.com/callback", "web_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
-			true,
-		},
-		{
-			"storage error fails",
-			args{"https://registered.com/callback", "non_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectInvalidClientID(t)},
+			args{"https://unregistered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered http not confidential fails",
-			args{"http://registered.com/callback", "useragent_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered http confidential ok",
-			args{"http://registered.com/callback", "web_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				oidc.ResponseTypeCode},
 			false,
 		},
 		{
 			"code flow registered custom not native fails",
-			args{"custom://callback", "useragent_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			args{"custom://callback",
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeUserAgent, false),
+				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered custom native ok",
-			args{"http://registered.com/callback", "native_client", oidc.ResponseTypeCode, mock.NewMockStorageExpectValidClientID(t)},
+			args{"custom://callback",
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow dev mode http ok",
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, true),
+				oidc.ResponseTypeCode},
 			false,
 		},
 		{
 			"implicit flow registered ok",
-			args{"https://registered.com/callback", "useragent_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			args{"https://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				oidc.ResponseTypeIDToken},
 			false,
 		},
 		{
+			"implicit flow unregistered ok",
+			args{"https://unregistered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				oidc.ResponseTypeIDToken},
+			true,
+		},
+		{
 			"implicit flow registered http localhost native ok",
-			args{"http://localhost:9999/callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			args{"http://localhost:9999/callback",
+				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeNative, false),
+				oidc.ResponseTypeIDToken},
 			false,
 		},
 		{
 			"implicit flow registered http localhost user agent fails",
-			args{"http://localhost:9999/callback", "useragent_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			args{"http://localhost:9999/callback",
+				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeUserAgent, false),
+				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow http non localhost fails",
-			args{"http://registered.com/callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, false),
+				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow custom fails",
-			args{"custom://callback", "native_client", oidc.ResponseTypeIDToken, mock.NewMockStorageExpectValidClientID(t)},
+			args{"custom://callback",
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, false),
+				oidc.ResponseTypeIDToken},
 			true,
+		},
+		{
+			"implicit flow dev mode http ok",
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, true),
+				oidc.ResponseTypeIDToken},
+			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthReqRedirectURI(nil, tt.args.uri, tt.args.clientID, tt.args.responseType, tt.args.storage); (err != nil) != tt.wantErr {
+			if err := op.ValidateAuthReqRedirectURI(tt.args.client, tt.args.uri, tt.args.responseType); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
 			}
 		})
