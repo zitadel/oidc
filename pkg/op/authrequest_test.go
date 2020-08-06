@@ -160,98 +160,98 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		{
 			"empty fails",
 			args{"",
-				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"unregistered fails",
 			args{"https://unregistered.com/callback",
-				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered http not confidential fails",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered http confidential ok",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeWeb, false),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			false,
 		},
 		{
 			"code flow registered custom not native fails",
 			args{"custom://callback",
-				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeUserAgent, false),
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
 			"code flow registered custom native ok",
 			args{"custom://callback",
-				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, false),
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeCode},
 			false,
 		},
 		{
 			"code flow dev mode http ok",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, true),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, true),
 				oidc.ResponseTypeCode},
 			false,
 		},
 		{
 			"implicit flow registered ok",
 			args{"https://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeIDToken},
 			false,
 		},
 		{
 			"implicit flow unregistered ok",
 			args{"https://unregistered.com/callback",
-				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, false),
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow registered http localhost native ok",
 			args{"http://localhost:9999/callback",
-				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeNative, false),
+				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeIDToken},
 			false,
 		},
 		{
 			"implicit flow registered http localhost user agent fails",
 			args{"http://localhost:9999/callback",
-				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeUserAgent, false),
+				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow http non localhost fails",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, false),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow custom fails",
 			args{"custom://callback",
-				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, false),
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeIDToken},
 			true,
 		},
 		{
 			"implicit flow dev mode http ok",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, true),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, true),
 				oidc.ResponseTypeIDToken},
 			false,
 		},
@@ -260,6 +260,44 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op.ValidateAuthReqRedirectURI(tt.args.client, tt.args.uri, tt.args.responseType); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAuthReqResponseType(t *testing.T) {
+	type args struct {
+		responseType oidc.ResponseType
+		client       op.Client
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"empty response type",
+			args{"",
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			true,
+		},
+		{
+			"response type missing in client config",
+			args{oidc.ResponseTypeIDToken,
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			true,
+		},
+		{
+			"valid response type",
+			args{oidc.ResponseTypeCode,
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op.ValidateAuthReqResponseType(tt.args.client, tt.args.responseType); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
