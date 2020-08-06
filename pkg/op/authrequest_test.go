@@ -214,7 +214,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			false,
 		},
 		{
-			"implicit flow unregistered ok",
+			"implicit flow unregistered fails",
 			args{"https://unregistered.com/callback",
 				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeIDToken},
