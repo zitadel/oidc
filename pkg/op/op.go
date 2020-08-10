@@ -35,12 +35,16 @@ var DefaultInterceptor = func(h http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+var allowAllOrigins = func(_ string) bool {
+	return true
+}
+
 func CreateRouter(o OpenIDProvider, h HttpInterceptor) *mux.Router {
 	if h == nil {
 		h = DefaultInterceptor
 	}
 	router := mux.NewRouter()
-	router.Use(handlers.CORS())
+	router.Use(handlers.CORS(handlers.AllowedOriginValidator(allowAllOrigins)))
 	router.HandleFunc(healthzEndpoint, Healthz)
 	router.HandleFunc(readinessEndpoint, o.HandleReady)
 	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
