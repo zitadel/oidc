@@ -26,6 +26,8 @@ const (
 	AuthMethodBasic AuthMethod = "client_secret_basic"
 	AuthMethodPost             = "client_secret_post"
 	AuthMethodNone             = "none"
+
+	CodeMethodS256 = "S256"
 )
 
 var (
@@ -58,6 +60,7 @@ type Config struct {
 	Issuer                   string
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
+	CodeMethodS256           bool
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,
@@ -220,6 +223,10 @@ func (p *DefaultOP) KeysEndpoint() Endpoint {
 
 func (p *DefaultOP) AuthMethodPostSupported() bool {
 	return true //TODO: config
+}
+
+func (p *DefaultOP) CodeMethodS256Supported() bool {
+	return p.config.CodeMethodS256
 }
 
 func (p *DefaultOP) HttpHandler() http.Handler {

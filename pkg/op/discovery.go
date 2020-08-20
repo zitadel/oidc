@@ -28,6 +28,7 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		IDTokenSigningAlgValuesSupported:  SigAlgorithms(s),
 		SubjectTypesSupported:             SubjectTypes(c),
 		TokenEndpointAuthMethodsSupported: AuthMethods(c),
+		CodeChallengeMethodsSupported:     CodeChallengeMethods(c),
 	}
 }
 
@@ -116,4 +117,12 @@ func AuthMethods(c Configuration) []string {
 		authMethods = append(authMethods, string(AuthMethodPost))
 	}
 	return authMethods
+}
+
+func CodeChallengeMethods(c Configuration) []string {
+	codeMethods := make([]string, 0, 1)
+	if c.CodeMethodS256Supported() {
+		codeMethods = append(codeMethods, CodeMethodS256)
+	}
+	return codeMethods
 }

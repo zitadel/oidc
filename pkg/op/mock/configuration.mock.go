@@ -61,6 +61,20 @@ func (mr *MockConfigurationMockRecorder) AuthorizationEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).AuthorizationEndpoint))
 }
 
+// CodeMethodS256Supported mocks base method
+func (m *MockConfiguration) CodeMethodS256Supported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CodeMethodS256Supported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CodeMethodS256Supported indicates an expected call of CodeMethodS256Supported
+func (mr *MockConfigurationMockRecorder) CodeMethodS256Supported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeMethodS256Supported", reflect.TypeOf((*MockConfiguration)(nil).CodeMethodS256Supported))
+}
+
 // EndSessionEndpoint mocks base method
 func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
