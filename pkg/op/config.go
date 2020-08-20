@@ -16,6 +16,7 @@ type Configuration interface {
 	KeysEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
+	CodeMethodS256Supported() bool
 }
 
 func ValidateIssuer(issuer string) error {
