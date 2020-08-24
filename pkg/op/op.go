@@ -44,7 +44,7 @@ func CreateRouter(o OpenIDProvider, h HttpInterceptor) *mux.Router {
 		h = DefaultInterceptor
 	}
 	router := mux.NewRouter()
-	router.Use(handlers.CORS(handlers.AllowedOriginValidator(allowAllOrigins)))
+	router.Use(handlers.CORS(handlers.AllowedOriginValidator(allowAllOrigins), handlers.AllowedHeaders([]string{"content-type"})))
 	router.HandleFunc(healthzEndpoint, Healthz)
 	router.HandleFunc(readinessEndpoint, o.HandleReady)
 	router.HandleFunc(oidc.DiscoveryEndpoint, o.HandleDiscovery)
