@@ -29,7 +29,7 @@ type OPStorage interface {
 	GetClientByClientID(context.Context, string) (Client, error)
 	AuthorizeClientIDSecret(context.Context, string, string) error
 	GetUserinfoFromScopes(context.Context, string, []string) (*oidc.Userinfo, error)
-	GetUserinfoFromToken(context.Context, string) (*oidc.Userinfo, error)
+	GetUserinfoFromToken(context.Context, string, string) (*oidc.Userinfo, error)
 }
 
 type Storage interface {
