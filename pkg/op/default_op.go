@@ -42,18 +42,18 @@ var (
 )
 
 type DefaultOP struct {
-	config      *Config
-	endpoints   *endpoints
-	storage     Storage
-	signer      Signer
-	verifier    rp.Verifier
-	crypto      Crypto
-	http        http.Handler
-	decoder     *schema.Decoder
-	encoder     *schema.Encoder
-	interceptor HttpInterceptor
-	retry       func(int) (bool, int)
-	timer       <-chan time.Time
+	config       *Config
+	endpoints    *endpoints
+	storage      Storage
+	signer       Signer
+	verifier     rp.Verifier
+	crypto       Crypto
+	http         http.Handler
+	decoder      *schema.Decoder
+	encoder      *schema.Encoder
+	interceptors []HttpInterceptor
+	retry        func(int) (bool, int)
+	timer        <-chan time.Time
 }
 
 type Config struct {
@@ -132,9 +132,9 @@ func WithCustomKeysEndpoint(endpoint Endpoint) DefaultOPOpts {
 	}
 }
 
-func WithHttpInterceptor(h HttpInterceptor) DefaultOPOpts {
+func WithHttpInterceptors(interceptors ...HttpInterceptor) DefaultOPOpts {
 	return func(o *DefaultOP) error {
-		o.interceptor = h
+		o.interceptors = append(o.interceptors, interceptors...)
 		return nil
 	}
 }
@@ -185,7 +185,7 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 
 	p.verifier = rp.NewDefaultVerifier(config.Issuer, "", p, rp.WithIgnoreAudience(), rp.WithIgnoreExpiration())
 
-	p.http = CreateRouter(p, p.interceptor)
+	p.http = CreateRouter(p, p.interceptors...)
 
 	p.decoder = schema.NewDecoder()
 	p.decoder.IgnoreUnknownKeys(true)
