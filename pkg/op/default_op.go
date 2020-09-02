@@ -273,6 +273,11 @@ func (p *DefaultOP) Signer() Signer {
 func (p *DefaultOP) Crypto() Crypto {
 	return p.crypto
 }
+
+func (p *DefaultOP) Verifier() rp.Verifier {
+	return p.verifier
+}
+
 func (p *DefaultOP) HandleReady(w http.ResponseWriter, r *http.Request) {
 	probes := []ProbesFn{
 		ReadySigner(p.Signer()),
@@ -299,8 +304,12 @@ func (p *DefaultOP) HandleExchange(w http.ResponseWriter, r *http.Request) {
 		RequestError(w, r, ErrInvalidRequest("grant_type missing"))
 		return
 	}
-	if reqType == string(oidc.GrantTypeCode) {
+	switch reqType {
+	case string(oidc.GrantTypeCode):
 		CodeExchange(w, r, p)
+		return
+	case string(oidc.GrantTypeBearer):
+		JWTExchange(w, r, p)
 		return
 	}
 	TokenExchange(w, r, p)

@@ -3,11 +3,13 @@ package op
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -18,6 +20,11 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
+}
+
+type VerifyExchanger interface {
+	Exchanger
+	Verifier() rp.Verifier
 }
 
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
@@ -114,6 +121,33 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
+}
+
+func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchanger) {
+	assertion, err := ParseJWTTokenRequest(r, exchanger.Decoder())
+	if err != nil {
+		RequestError(w, r, err)
+	}
+	claims, err := exchanger.Verifier().Verify(r.Context(), "", assertion)
+	fmt.Println(claims, err)
+
+	_ = assertion
+}
+
+func ParseJWTTokenRequest(r *http.Request, decoder *schema.Decoder) (string, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return "", ErrInvalidRequest("error parsing form")
+	}
+	tokenReq := new(struct {
+		Token string `schema:"assertion"`
+	})
+	err = decoder.Decode(tokenReq, r.Form)
+	if err != nil {
+		return "", ErrInvalidRequest("error decoding form")
+	}
+	//TODO: validations
+	return tokenReq.Token, nil
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {

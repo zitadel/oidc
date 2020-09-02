@@ -3,6 +3,7 @@ package oidc
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"golang.org/x/text/language"
 )
@@ -24,7 +25,8 @@ const (
 	PromptConsent       Prompt = "consent"
 	PromptSelectAccount Prompt = "select_account"
 
-	GrantTypeCode GrantType = "authorization_code"
+	GrantTypeCode   GrantType = "authorization_code"
+	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
 	BearerToken = "Bearer"
 )
@@ -98,6 +100,13 @@ type AccessTokenResponse struct {
 	RefreshToken string `json:"refresh_token,omitempty" schema:"refresh_token,omitempty"`
 	ExpiresIn    uint64 `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
 	IDToken      string `json:"id_token,omitempty" schema:"id_token,omitempty"`
+}
+
+type JWTTokenRequest struct {
+	Scopes    Scopes    `schema:"scope"`
+	Audience  []string  `schema:"aud"`
+	IssuedAt  time.Time `schema:"iat"`
+	ExpiresAt time.Time `schema:"exp"`
 }
 
 type TokenExchangeRequest struct {

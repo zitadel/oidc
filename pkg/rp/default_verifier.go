@@ -148,14 +148,25 @@ func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 //and https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error) {
 	v.config.now = time.Now().UTC()
-	idToken, err := v.VerifyIDToken(ctx, idTokenString)
+	// idToken, err := v.VerifyIDToken(ctx, idTokenString)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if err := v.verifyAccessToken(accessToken, idToken.AccessTokenHash, idToken.Signature); err != nil { //TODO: sig from token
+	// 	return nil, err
+	// }
+	// return idToken, nil
+
+	// TODO: verifiy
+	decrypted, err := v.decryptToken(idTokenString)
 	if err != nil {
 		return nil, err
 	}
-	if err := v.verifyAccessToken(accessToken, idToken.AccessTokenHash, idToken.Signature); err != nil { //TODO: sig from token
+	claims, _, err := v.parseToken(decrypted)
+	if err != nil {
 		return nil, err
 	}
-	return idToken, nil
+	return claims, nil
 }
 
 func (v *DefaultVerifier) now() time.Time {

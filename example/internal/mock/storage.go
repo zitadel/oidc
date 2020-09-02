@@ -170,7 +170,7 @@ func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) 
 	pubkey := s.key.Public()
 	return &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
-			jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
+			{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
 		},
 	}, nil
 }

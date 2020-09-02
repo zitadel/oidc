@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/caos/oidc/pkg/cli"
 	"github.com/caos/oidc/pkg/rp"
 	"github.com/google/go-github/v31/github"
 	githubOAuth "golang.org/x/oauth2/github"
-	"os"
 )
 
 var (
@@ -37,7 +38,6 @@ func main() {
 	if err != nil {
 		fmt.Println("OAuth flow failed")
 	} else {
-
 		fmt.Println("OAuth flow success")
 	}
 }
