@@ -2,13 +2,11 @@ package op
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -17,33 +15,37 @@ import (
 
 type Authorizer interface {
 	Storage() Storage
-	Decoder() *schema.Decoder
-	Encoder() *schema.Encoder
+	Decoder() utils.Decoder
+	Encoder() utils.Encoder
 	Signer() Signer
 	IDTokenVerifier() rp.Verifier
 	Crypto() Crypto
 	Issuer() string
 }
 
-type ValidationAuthorizer interface {
+//AuthorizeValidator is an extension of Authorizer interface
+//implementing it's own validation mechanism for the auth request
+type AuthorizeValidator interface {
 	Authorizer
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, rp.Verifier) (string, error)
 }
 
+//ValidationAuthorizer  is an extension of Authorizer interface
+//implementing it's own validation mechanism for the auth request
+//
+//Deprecated: ValidationAuthorizer exists for historical compatibility. Use ValidationAuthorizer itself
+type ValidationAuthorizer AuthorizeValidator
+
+//Authorize handles the authorization request, including
+//parsing, validating, storing and finally redirecting to the login handler
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	err := r.ParseForm()
+	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest("cannot parse form"), authorizer.Encoder())
-		return
-	}
-	authReq := new(oidc.AuthRequest)
-	err = authorizer.Decoder().Decode(authReq, r.Form)
-	if err != nil {
-		AuthRequestError(w, r, nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err)), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
 	validation := ValidateAuthRequest
-	if validater, ok := authorizer.(ValidationAuthorizer); ok {
+	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
 	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenVerifier())
@@ -62,6 +64,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
+}
+
+func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRequest, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return nil, ErrInvalidRequest("cannot parse form")
+	}
+	authReq := new(oidc.AuthRequest)
+	err = decoder.Decode(authReq, r.Form)
+	if err != nil {
+		return nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err))
+	}
+	return authReq, nil
 }
 
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier rp.Verifier) (string, error) {
@@ -95,7 +110,6 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 	if uri == "" {
 		return ErrInvalidRequestRedirectURI("The redirect_uri is missing in the request. Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
-
 	if !utils.Contains(client.RedirectURIs(), uri) {
 		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
 	}
@@ -138,7 +152,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	if idTokenHint == "" {
 		return "", nil
 	}
-	claims, err := verifier.Verify(ctx, "", idTokenHint)
+	claims, err := verifier.VerifyIDToken(ctx, idTokenHint)
 	if err != nil {
 		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
 	}
@@ -160,7 +174,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 		return
 	}
 	if !authReq.Done() {
-		AuthRequestError(w, r, authReq, errors.New("user not logged in"), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, ErrInteractionRequired("Unfortunately, the user may is not logged in and/or additional interaction is required."), authorizer.Encoder())
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)

@@ -18,6 +18,13 @@ var (
 	}
 )
 
+type Decoder interface {
+	Decode(dst interface{}, src map[string][]string) error
+}
+type Encoder interface {
+	Encode(src interface{}, dst map[string][]string) error
+}
+
 func FormRequest(endpoint string, request interface{}) (*http.Request, error) {
 	form := make(map[string][]string)
 	encoder := schema.NewEncoder()
@@ -56,7 +63,7 @@ func HttpRequest(client *http.Client, req *http.Request, response interface{}) e
 	return nil
 }
 
-func URLEncodeResponse(resp interface{}, encoder *schema.Encoder) (string, error) {
+func URLEncodeResponse(resp interface{}, encoder Encoder) (string, error) {
 	values := make(map[string][]string)
 	err := encoder.Encode(resp, values)
 	if err != nil {

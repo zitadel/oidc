@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/schema"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
-	InvalidRequest errorType = "invalid_request"
-	ServerError    errorType = "server_error"
+	InvalidRequest      errorType = "invalid_request"
+	InvalidRequestURI   errorType = "invalid_request_uri"
+	InteractionRequired errorType = "interaction_required"
+	ServerError         errorType = "server_error"
 )
 
 var (
@@ -24,9 +24,15 @@ var (
 	}
 	ErrInvalidRequestRedirectURI = func(description string) *OAuthError {
 		return &OAuthError{
-			ErrorType:        InvalidRequest,
+			ErrorType:        InvalidRequestURI,
 			Description:      description,
 			redirectDisabled: true,
+		}
+	}
+	ErrInteractionRequired = func(description string) *OAuthError {
+		return &OAuthError{
+			ErrorType:   InteractionRequired,
+			Description: description,
 		}
 	}
 	ErrServerError = func(description string) *OAuthError {
@@ -45,7 +51,7 @@ type ErrAuthRequest interface {
 	GetState() string
 }
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder *schema.Encoder) {
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder utils.Encoder) {
 	if authReq == nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -56,7 +62,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		e.ErrorType = ServerError
 		e.Description = err.Error()
 	}
-	e.state = authReq.GetState()
+	e.State = authReq.GetState()
 	if authReq.GetRedirectURI() == "" || e.redirectDisabled {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
@@ -89,9 +95,9 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 
 type OAuthError struct {
 	ErrorType        errorType `json:"error" schema:"error"`
-	Description      string    `json:"error_description" schema:"error_description"`
-	state            string    `json:"state" schema:"state"`
-	redirectDisabled bool
+	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
+	State            string    `json:"state,omitempty" schema:"state,omitempty"`
+	redirectDisabled bool      `json:"-" schema:"-"`
 }
 
 func (e *OAuthError) Error() string {
