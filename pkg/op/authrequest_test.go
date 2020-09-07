@@ -18,6 +18,7 @@ import (
 )
 
 //
+//TOOD: tests will be implemented in branch for service accounts
 //func TestAuthorize(t *testing.T) {
 //	// testCallback := func(t *testing.T, clienID string) callbackHandler {
 //	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
