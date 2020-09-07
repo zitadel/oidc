@@ -59,7 +59,7 @@ const (
 	//PromptConsent (`consent`) directs the Authorization Server to prompt the End-User for consent (of sharing information).
 	PromptConsent Prompt = "consent"
 
-	//PromptSelectAccount (``) directs the Authorization Server to prompt the End-User to select a user account (to enable multi user / session switching)
+	//PromptSelectAccount (`select_account `) directs the Authorization Server to prompt the End-User to select a user account (to enable multi user / session switching)
 	PromptSelectAccount Prompt = "select_account"
 
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
