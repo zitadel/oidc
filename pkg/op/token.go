@@ -43,6 +43,20 @@ func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client
 	}, nil
 }
 
+func CreateJWTTokenResponse(ctx context.Context, authReq AuthRequest, client Client, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
+	accessToken, validity, err := CreateAccessToken(ctx, authReq, client, creator)
+	if err != nil {
+		return nil, err
+	}
+
+	exp := uint64(validity.Seconds())
+	return &oidc.AccessTokenResponse{
+		AccessToken: accessToken,
+		TokenType:   oidc.BearerToken,
+		ExpiresIn:   exp,
+	}, nil
+}
+
 func CreateAccessToken(ctx context.Context, authReq AuthRequest, client Client, creator TokenCreator) (token string, validity time.Duration, err error) {
 	id, exp, err := creator.Storage().CreateToken(ctx, authReq)
 	if err != nil {
