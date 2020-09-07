@@ -127,9 +127,16 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 		RequestError(w, r, err)
 	}
 	claims, err := exchanger.Verifier().Verify(r.Context(), "", assertion)
-	fmt.Println(claims, err)
 
-	_ = assertion
+	fmt.Println(claims, err)
+	var authReq AuthRequest
+	var client Client
+	resp, err := CreateJWTTokenResponse(r.Context(), authReq, client, exchanger)
+	if err != nil {
+		RequestError(w, r, err)
+		return
+	}
+	utils.MarshalJSON(w, resp)
 }
 
 func ParseJWTTokenRequest(r *http.Request, decoder *schema.Decoder) (string, error) {
