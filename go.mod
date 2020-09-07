@@ -8,9 +8,9 @@ require (
 	github.com/google/go-cmp v0.4.1 // indirect
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.1.2
-	github.com/gorilla/handlers v1.4.2
+	github.com/gorilla/handlers v1.5.0
 	github.com/gorilla/mux v1.8.0
-	github.com/gorilla/schema v1.1.0
+	github.com/gorilla/schema v1.2.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
