@@ -80,13 +80,17 @@ func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRe
 }
 
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier rp.Verifier) (string, error) {
+	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
+	if err != nil {
+		return "", ErrServerError(err.Error())
+	}
 	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
 		return "", err
 	}
-	if err := ValidateAuthReqRedirectURI(ctx, authReq.RedirectURI, authReq.ClientID, authReq.ResponseType, storage); err != nil {
+	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return "", err
 	}
-	if err := ValidateAuthReqResponseType(authReq.ResponseType); err != nil {
+	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
@@ -94,24 +98,23 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 
 func ValidateAuthReqScopes(scopes []string) error {
 	if len(scopes) == 0 {
-		return ErrInvalidRequest("Unfortunately, the scope parameter of your request is missing. Please ensure your scope value is not empty, and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
 	}
 	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest("Unfortunately, the scope `openid` is missing. Please ensure your scope configuration is correct (containing the `openid` value), and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
 
-func ValidateAuthReqRedirectURI(ctx context.Context, uri, clientID string, responseType oidc.ResponseType, storage OPStorage) error {
+func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
 	if uri == "" {
-		return ErrInvalidRequestRedirectURI("Unfortunately, the client's redirect_uri is missing. Please ensure your redirect_uri is included in the request, and try again. If you have any questions, you may contact the administrator of the application.")
-	}
-	client, err := storage.GetClientByClientID(ctx, clientID)
-	if err != nil {
-		return ErrServerError(err.Error())
+		return ErrInvalidRequestRedirectURI("The redirect_uri is missing in the request. Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
-		return ErrInvalidRequestRedirectURI("Unfortunately, the redirect_uri is missing in the client configuration. Please ensure your redirect_uri is added in the client configuration, and try again. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+	}
+	if client.DevMode() {
+		return nil
 	}
 	if strings.HasPrefix(uri, "https://") {
 		return nil
@@ -120,32 +123,29 @@ func ValidateAuthReqRedirectURI(ctx context.Context, uri, clientID string, respo
 		if strings.HasPrefix(uri, "http://") && IsConfidentialType(client) {
 			return nil
 		}
-		if client.ApplicationType() == ApplicationTypeNative {
+		if !strings.HasPrefix(uri, "http://") && client.ApplicationType() == ApplicationTypeNative {
 			return nil
 		}
-		return ErrInvalidRequest("Unfortunately, this client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
+		return ErrInvalidRequest("This client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
 	} else {
 		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for native applications. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application.")
+			return ErrInvalidRequestRedirectURI("Http is only allowed for native applications. Please change your redirect uri try again. If you have any questions, you may contact the administrator of the application.")
 		}
 		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequestRedirectURI("Unfortunately, http is only allowed for localhost url. Please change your redirect uri configuration and try again. If you have any questions, you may contact the administrator of the application at:")
+			return ErrInvalidRequestRedirectURI("Http is only allowed for localhost uri. Please change your redirect uri try again. If you have any questions, you may contact the administrator of the application at:")
 		}
 	}
 	return nil
 }
 
-func ValidateAuthReqResponseType(responseType oidc.ResponseType) error {
-	switch responseType {
-	case oidc.ResponseTypeCode,
-		oidc.ResponseTypeIDToken,
-		oidc.ResponseTypeIDTokenOnly:
-		return nil
-	case "":
-		return ErrInvalidRequest("Unfortunately, the response type is missing in your request. Please ensure the response type is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
-	default:
-		return ErrInvalidRequest("Unfortunately, the response type provided in your request is invalid. Please ensure the response type is valid, and try again. If you have any questions, you may contact the administrator of the application.")
+func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) error {
+	if responseType == "" {
+		return ErrInvalidRequest("The response type is missing in your request. If you have any questions, you may contact the administrator of the application.")
 	}
+	if !ContainsResponseType(client.ResponseTypes(), responseType) {
+		return ErrInvalidRequest("The requested response type is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+	}
+	return nil
 }
 
 func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier rp.Verifier) (string, error) {
@@ -154,7 +154,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	}
 	claims, err := verifier.VerifyIdToken(ctx, idTokenHint)
 	if err != nil {
-		return "", ErrInvalidRequest("Unfortunately, the id_token_hint is invalid. Please ensure the id_token_hint is complete and accurate, and try again. If you have any questions, you may contact the administrator of the application.")
+		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
 	}
 	return claims.Subject, nil
 }

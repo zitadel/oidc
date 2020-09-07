@@ -78,11 +78,11 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 	if err != nil {
 		return nil, nil, err
 	}
-	if client.GetAuthMethod() == AuthMethodNone {
+	if client.AuthMethod() == AuthMethodNone {
 		authReq, err := AuthorizeCodeChallenge(ctx, tokenReq, exchanger)
 		return authReq, client, err
 	}
-	if client.GetAuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
+	if client.AuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
 		return nil, nil, errors.New("basic not supported")
 	}
 	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())

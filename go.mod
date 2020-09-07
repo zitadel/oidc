@@ -4,12 +4,12 @@ go 1.13
 
 require (
 	github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a
-	github.com/golang/mock v1.4.3
+	github.com/golang/mock v1.4.4
 	github.com/google/go-cmp v0.4.1 // indirect
 	github.com/google/go-github/v31 v31.0.0
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/gorilla/handlers v1.4.2
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.1.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/kr/pretty v0.1.0 // indirect

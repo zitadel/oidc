@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/schema"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
@@ -26,8 +28,9 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
 	}
-	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID)
+	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID, r.Header.Get("origin"))
 	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
 		utils.MarshalJSON(w, err)
 		return
 	}

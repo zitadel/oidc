@@ -61,6 +61,20 @@ func (mr *MockConfigurationMockRecorder) AuthorizationEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).AuthorizationEndpoint))
 }
 
+// CodeMethodS256Supported mocks base method
+func (m *MockConfiguration) CodeMethodS256Supported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CodeMethodS256Supported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CodeMethodS256Supported indicates an expected call of CodeMethodS256Supported
+func (mr *MockConfigurationMockRecorder) CodeMethodS256Supported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeMethodS256Supported", reflect.TypeOf((*MockConfiguration)(nil).CodeMethodS256Supported))
+}
+
 // EndSessionEndpoint mocks base method
 func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
@@ -101,20 +115,6 @@ func (m *MockConfiguration) KeysEndpoint() op.Endpoint {
 func (mr *MockConfigurationMockRecorder) KeysEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeysEndpoint", reflect.TypeOf((*MockConfiguration)(nil).KeysEndpoint))
-}
-
-// Port mocks base method
-func (m *MockConfiguration) Port() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Port")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Port indicates an expected call of Port
-func (mr *MockConfigurationMockRecorder) Port() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Port", reflect.TypeOf((*MockConfiguration)(nil).Port))
 }
 
 // TokenEndpoint mocks base method
