@@ -30,7 +30,7 @@ const (
 	//This (optional) scope value requests access to the phone_number and phone_number_verified Claims.
 	ScopePhone = "phone"
 
-	//ScopeOfflineAccess defines the scope `profile`
+	//ScopeOfflineAccess defines the scope `offline_access`
 	//This (optional) scope value requests that an OAuth 2.0 Refresh Token be issued that can be used to obtain an Access Token
 	//that grants access to the End-User's UserInfo Endpoint even when the End-User is not present (not logged in).
 	ScopeOfflineAccess = "offline_access"
