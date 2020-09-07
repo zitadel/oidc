@@ -14,7 +14,6 @@ import (
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
 	"github.com/caos/oidc/pkg/rp"
-	rp_mock "github.com/caos/oidc/pkg/rp/mock"
 	"github.com/caos/oidc/pkg/utils"
 )
 

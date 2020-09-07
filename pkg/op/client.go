@@ -1,8 +1,9 @@
 package op
 
 import (
-	"github.com/caos/oidc/pkg/oidc"
 	"time"
+
+	"github.com/caos/oidc/pkg/oidc"
 )
 
 const (

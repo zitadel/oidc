@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/schema"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )

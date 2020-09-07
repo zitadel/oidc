@@ -1,8 +1,9 @@
 package op
 
-import "testing"
-
-import "os"
+import (
+	"os"
+	"testing"
+)
 
 func TestValidateIssuer(t *testing.T) {
 	type args struct {
