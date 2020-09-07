@@ -57,7 +57,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	if req.IdTokenHint == "" {
 		return session, nil
 	}
-	claims, err := ender.IDTokenVerifier().VerifyIdToken(ctx, req.IdTokenHint)
+	claims, err := ender.IDTokenVerifier().VerifyIDToken(ctx, req.IdTokenHint)
 	if err != nil {
 		return nil, ErrInvalidRequest("id_token_hint invalid")
 	}

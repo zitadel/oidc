@@ -10,7 +10,7 @@ import (
 
 const (
 	InvalidRequest      errorType = "invalid_request"
-	InvalidRequestUri   errorType = "invalid_request_uri"
+	InvalidRequestURI   errorType = "invalid_request_uri"
 	InteractionRequired errorType = "interaction_required"
 	ServerError         errorType = "server_error"
 )
@@ -24,7 +24,7 @@ var (
 	}
 	ErrInvalidRequestRedirectURI = func(description string) *OAuthError {
 		return &OAuthError{
-			ErrorType:        InvalidRequestUri,
+			ErrorType:        InvalidRequestURI,
 			Description:      description,
 			redirectDisabled: true,
 		}

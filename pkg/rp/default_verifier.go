@@ -148,7 +148,7 @@ func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 //and https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error) {
 	v.config.now = time.Now().UTC()
-	idToken, err := v.VerifyIdToken(ctx, idTokenString)
+	idToken, err := v.VerifyIDToken(ctx, idTokenString)
 	if err != nil {
 		return nil, err
 	}
@@ -158,9 +158,9 @@ func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString
 	return idToken, nil
 }
 
-//Verify implements the `VerifyIdToken` method of the `Verifier` interface
+//Verify implements the `VerifyIDToken` method of the `Verifier` interface
 //according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func (v *DefaultVerifier) VerifyIdToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
+func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
 	//1. if encrypted --> decrypt
 	decrypted, err := v.decryptToken(idTokenString)
 	if err != nil {
