@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/schema"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
@@ -16,7 +14,7 @@ import (
 type Exchanger interface {
 	Issuer() string
 	Storage() Storage
-	Decoder() *schema.Decoder
+	Decoder() utils.Decoder
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
@@ -49,7 +47,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	utils.MarshalJSON(w, resp)
 }
 
-func ParseAccessTokenRequest(r *http.Request, decoder *schema.Decoder) (*oidc.AccessTokenRequest, error) {
+func ParseAccessTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.AccessTokenRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, ErrInvalidRequest("error parsing form")

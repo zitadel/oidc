@@ -8,6 +8,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/logging"
+
 	"github.com/caos/oidc/pkg/oidc"
 )
 

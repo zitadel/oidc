@@ -69,6 +69,9 @@ type Verifier struct{}
 func (v *Verifier) Verify(ctx context.Context, accessToken, idToken string) (*oidc.IDTokenClaims, error) {
 	return nil, nil
 }
+func (v *Verifier) VerifyIDToken(ctx context.Context, idToken string) (*oidc.IDTokenClaims, error) {
+	return nil, nil
+}
 
 type Sig struct{}
 

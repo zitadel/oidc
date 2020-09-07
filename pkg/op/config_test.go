@@ -1,8 +1,9 @@
 package op
 
-import "testing"
-
-import "os"
+import (
+	"os"
+	"testing"
+)
 
 func TestValidateIssuer(t *testing.T) {
 	type args struct {
@@ -78,7 +79,7 @@ func TestValidateIssuerDevLocalAllowed(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"localhost with http ok",
+			"localhost with http with dev ok",
 			args{"http://localhost:9999"},
 			false,
 		},

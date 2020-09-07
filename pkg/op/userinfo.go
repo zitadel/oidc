@@ -5,14 +5,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/schema"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
 
 type UserinfoProvider interface {
-	Decoder() *schema.Decoder
+	Decoder() utils.Decoder
 	Crypto() Crypto
 	Storage() Storage
 }
@@ -37,7 +35,7 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 	utils.MarshalJSON(w, info)
 }
 
-func getAccessToken(r *http.Request, decoder *schema.Decoder) (string, error) {
+func getAccessToken(r *http.Request, decoder utils.Decoder) (string, error) {
 	authHeader := r.Header.Get("authorization")
 	if authHeader != "" {
 		parts := strings.Split(authHeader, "Bearer ")

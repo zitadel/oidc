@@ -6,12 +6,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op"
-	"github.com/caos/oidc/pkg/op/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
+
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/op/mock"
 )
 
 func TestDiscover(t *testing.T) {
@@ -147,7 +148,7 @@ func TestSupportedClaims(t *testing.T) {
 }
 
 func Test_SigAlgorithms(t *testing.T) {
-	m := mock.NewMockSigner(gomock.NewController((t)))
+	m := mock.NewMockSigner(gomock.NewController(t))
 	type args struct {
 		s op.Signer
 	}
@@ -199,7 +200,7 @@ func Test_SubjectTypes(t *testing.T) {
 }
 
 func Test_AuthMethods(t *testing.T) {
-	m := mock.NewMockConfiguration(gomock.NewController((t)))
+	m := mock.NewMockConfiguration(gomock.NewController(t))
 	type args struct {
 		c op.Configuration
 	}

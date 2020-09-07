@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/oidc/pkg/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
+
+	"github.com/caos/oidc/pkg/utils"
 )
 
 type Tokens struct {
@@ -61,7 +62,7 @@ type IDTokenClaims struct {
 type jsonToken struct {
 	Issuer                              string      `json:"iss,omitempty"`
 	Subject                             string      `json:"sub,omitempty"`
-	Audiences                           []string    `json:"aud,omitempty"`
+	Audiences                           interface{} `json:"aud,omitempty"`
 	Expiration                          int64       `json:"exp,omitempty"`
 	NotBefore                           int64       `json:"nbf,omitempty"`
 	IssuedAt                            int64       `json:"iat,omitempty"`
@@ -110,13 +111,9 @@ func (t *AccessTokenClaims) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-	audience := j.Audiences
-	if len(audience) == 1 {
-		audience = strings.Split(audience[0], " ")
-	}
 	t.Issuer = j.Issuer
 	t.Subject = j.Subject
-	t.Audiences = audience
+	t.Audiences = audienceFromJSON(j.Audiences)
 	t.Expiration = time.Unix(j.Expiration, 0).UTC()
 	t.NotBefore = time.Unix(j.NotBefore, 0).UTC()
 	t.IssuedAt = time.Unix(j.IssuedAt, 0).UTC()
@@ -161,13 +158,9 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &i); err != nil {
 		return err
 	}
-	audience := i.Audiences
-	if len(audience) == 1 {
-		audience = strings.Split(audience[0], " ")
-	}
 	t.Issuer = i.Issuer
 	t.Subject = i.Subject
-	t.Audiences = audience
+	t.Audiences = audienceFromJSON(i.Audiences)
 	t.Expiration = time.Unix(i.Expiration, 0).UTC()
 	t.IssuedAt = time.Unix(i.IssuedAt, 0).UTC()
 	t.AuthTime = time.Unix(i.AuthTime, 0).UTC()
@@ -246,4 +239,14 @@ func timeToJSON(t time.Time) int64 {
 		return 0
 	}
 	return t.Unix()
+}
+
+func audienceFromJSON(audience interface{}) []string {
+	switch aud := audience.(type) {
+	case []string:
+		return aud
+	case string:
+		return []string{aud}
+	}
+	return nil
 }

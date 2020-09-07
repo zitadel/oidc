@@ -7,8 +7,8 @@ package mock
 import (
 	op "github.com/caos/oidc/pkg/op"
 	rp "github.com/caos/oidc/pkg/rp"
+	utils "github.com/caos/oidc/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
-	schema "github.com/gorilla/schema"
 	reflect "reflect"
 )
 
@@ -50,10 +50,10 @@ func (mr *MockAuthorizerMockRecorder) Crypto() *gomock.Call {
 }
 
 // Decoder mocks base method
-func (m *MockAuthorizer) Decoder() *schema.Decoder {
+func (m *MockAuthorizer) Decoder() utils.Decoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Decoder")
-	ret0, _ := ret[0].(*schema.Decoder)
+	ret0, _ := ret[0].(utils.Decoder)
 	return ret0
 }
 
@@ -64,10 +64,10 @@ func (mr *MockAuthorizerMockRecorder) Decoder() *gomock.Call {
 }
 
 // Encoder mocks base method
-func (m *MockAuthorizer) Encoder() *schema.Encoder {
+func (m *MockAuthorizer) Encoder() utils.Encoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Encoder")
-	ret0, _ := ret[0].(*schema.Encoder)
+	ret0, _ := ret[0].(utils.Encoder)
 	return ret0
 }
 
