@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
+
+	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -125,9 +128,40 @@ type ClientJWTVerifier struct {
 	Storage
 }
 
-func (c *ClientJWTVerifier) Issuer() string {
-	client, err := Storage.GetClientByClientID(context.TODO(), c.claims.Issuer)
-	return client.GetID()
+func (c ClientJWTVerifier) Storage() Storage {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) Issuer() string {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) ClientID() string {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) SupportedSignAlgs() []string {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) KeySet() oidc.KeySet {
+	return c.claims
+}
+
+func (c ClientJWTVerifier) ACR() oidc.ACRVerifier {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) MaxAge() time.Duration {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) MaxAgeIAT() time.Duration {
+	panic("implement me")
+}
+
+func (c ClientJWTVerifier) Offset() time.Duration {
+	panic("implement me")
 }
 
 func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchanger) {
@@ -138,8 +172,7 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 	claims := new(oidc.JWTTokenRequest)
 	//var keyset oidc.KeySet
 	verifier := new(ClientJWTVerifier)
-	verifier.claims = claims
-	err = verifier.VerifyToken(r.Context(), assertion, claims)
+	req, err := VerifyJWTAssertion(r.Context(), assertion, verifier)
 	if err != nil {
 		RequestError(w, r, err)
 	}
@@ -150,6 +183,53 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 		return
 	}
 	utils.MarshalJSON(w, resp)
+}
+
+type JWTAssertionVerifier interface {
+	Storage() Storage
+	oidc.Verifier
+}
+
+func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTAssertionVerifier) (*oidc.JWTTokenRequest, error) {
+	claims := new(oidc.JWTTokenRequest)
+	payload, err := oidc.ParseToken(assertion, claims)
+
+	oidc.CheckAudience(claims.Audience, v)
+
+	oidc.CheckExpiration(claims.ExpiresAt, v)
+
+	oidc.CheckIssuedAt(claims.IssuedAt, v)
+
+	if claims.Issuer != claims.Subject {
+
+	}
+	v.Storage().GetClientByClientID(ctx, claims.Issuer)
+
+	keySet := &ClientAssertionKeySet{v.Storage(), claims.Issuer}
+
+	oidc.CheckSignature(ctx, assertion, payload, claims, nil, keySet)
+}
+
+type ClientAssertionKeySet struct {
+	Storage
+	id string
+}
+
+func (c *ClientAssertionKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
+	keyID := ""
+	for _, sig := range jws.Signatures {
+		keyID = sig.Header.KeyID
+		break
+	}
+	keySet, err := c.Storage.GetKeysByServiceAccount(id)
+	if err != nil {
+		return nil, errors.New("error fetching keys")
+	}
+	payload, err, ok := rp.CheckKey(keyID, keySet.Keys, jws)
+	if !ok {
+		return nil, errors.New("invalid kid")
+	}
+	return payload, err
 }
 
 func ParseJWTTokenRequest(r *http.Request, decoder utils.Decoder) (string, error) {

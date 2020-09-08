@@ -118,8 +118,8 @@ func CheckAuthorizedParty(audiences []string, authorizedParty string, v Verifier
 	return nil
 }
 
-func CheckSignature(ctx context.Context, idTokenString string, payload []byte, claims Claims, v Verifier) error {
-	jws, err := jose.ParseSigned(idTokenString)
+func CheckSignature(ctx context.Context, token string, payload []byte, claims Claims, supportedSigAlgs []string, set KeySet) error {
+	jws, err := jose.ParseSigned(token)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,6 @@ func CheckSignature(ctx context.Context, idTokenString string, payload []byte, c
 		return ErrSignatureMultiple
 	}
 	sig := jws.Signatures[0]
-	supportedSigAlgs := v.SupportedSignAlgs()
 	if len(supportedSigAlgs) == 0 {
 		supportedSigAlgs = []string{"RS256"}
 	}
@@ -138,7 +137,7 @@ func CheckSignature(ctx context.Context, idTokenString string, payload []byte, c
 		return fmt.Errorf("%w: id token signed with unsupported algorithm, expected %q got %q", ErrSignatureUnsupportedAlg, supportedSigAlgs, sig.Header.Algorithm)
 	}
 
-	signedPayload, err := v.KeySet().VerifySignature(ctx, jws)
+	signedPayload, err := set.VerifySignature(ctx, jws)
 	if err != nil {
 		return err
 	}
