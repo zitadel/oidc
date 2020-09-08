@@ -16,6 +16,12 @@ type SessionEnder interface {
 	DefaultLogoutRedirectURI() string
 }
 
+func EndSessionHandler(ender SessionEnder) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		EndSession(w, r, ender)
+	}
+}
+
 func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	req, err := ParseEndSessionRequest(r, ender.Decoder())
 	if err != nil {

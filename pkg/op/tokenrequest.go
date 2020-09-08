@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -22,7 +21,7 @@ type Exchanger interface {
 
 type VerifyExchanger interface {
 	Exchanger
-	Verifier() rp.Verifier
+	ClientJWTVerifier() rp.Verifier
 }
 
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
@@ -121,17 +120,31 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 	return authReq, nil
 }
 
+type ClientJWTVerifier struct {
+	claims *oidc.JWTTokenRequest
+	Storage
+}
+
+func (c *ClientJWTVerifier) Issuer() string {
+	client, err := Storage.GetClientByClientID(context.TODO(), c.claims.Issuer)
+	return client.GetID()
+}
+
 func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchanger) {
 	assertion, err := ParseJWTTokenRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
 	}
-	claims, err := exchanger.Verifier().Verify(r.Context(), "", assertion)
+	claims := new(oidc.JWTTokenRequest)
+	//var keyset oidc.KeySet
+	verifier := new(ClientJWTVerifier)
+	verifier.claims = claims
+	err = verifier.VerifyToken(r.Context(), assertion, claims)
+	if err != nil {
+		RequestError(w, r, err)
+	}
 
-	fmt.Println(claims, err)
-	var authReq AuthRequest
-	var client Client
-	resp, err := CreateJWTTokenResponse(r.Context(), authReq, client, exchanger)
+	resp, err := CreateJWTTokenResponse(r.Context(), claims, exchanger)
 	if err != nil {
 		RequestError(w, r, err)
 		return
@@ -139,7 +152,7 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 	utils.MarshalJSON(w, resp)
 }
 
-func ParseJWTTokenRequest(r *http.Request, decoder *schema.Decoder) (string, error) {
+func ParseJWTTokenRequest(r *http.Request, decoder utils.Decoder) (string, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return "", ErrInvalidRequest("error parsing form")

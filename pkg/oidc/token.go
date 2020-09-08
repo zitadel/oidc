@@ -177,6 +177,42 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (t *IDTokenClaims) GetIssuer() string {
+	return t.Issuer
+}
+
+func (t *IDTokenClaims) GetAudience() []string {
+	return t.Audiences
+}
+
+func (t *IDTokenClaims) GetExpiration() time.Time {
+	return t.Expiration
+}
+
+func (t *IDTokenClaims) GetIssuedAt() time.Time {
+	return t.IssuedAt
+}
+
+func (t *IDTokenClaims) GetNonce() string {
+	return t.Nonce
+}
+
+func (t *IDTokenClaims) GetAuthenticationContextClassReference() string {
+	return t.AuthenticationContextClassReference
+}
+
+func (t *IDTokenClaims) GetAuthTime() time.Time {
+	return t.AuthTime
+}
+
+func (t *IDTokenClaims) GetAuthorizedParty() string {
+	return t.AuthorizedParty
+}
+
+func (t *IDTokenClaims) SetSignature(alg jose.SignatureAlgorithm) {
+	t.Signature = alg
+}
+
 func (j *jsonToken) UnmarshalUserinfoProfile() UserinfoProfile {
 	locale, _ := language.Parse(j.Locale)
 	return UserinfoProfile{

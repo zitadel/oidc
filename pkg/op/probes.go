@@ -14,6 +14,12 @@ func Healthz(w http.ResponseWriter, r *http.Request) {
 	ok(w)
 }
 
+func Ready(probes []ProbesFn) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		Readiness(w, r, probes...)
+	}
+}
+
 func Readiness(w http.ResponseWriter, r *http.Request, probes ...ProbesFn) {
 	ctx := r.Context()
 	for _, probe := range probes {

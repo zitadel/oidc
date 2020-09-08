@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -64,7 +65,7 @@ const (
 	PromptSelectAccount Prompt = "select_account"
 
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
-	GrantTypeCode   GrantType = "authorization_code"
+	GrantTypeCode GrantType = "authorization_code"
 	//GrantTypeBearer define the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
 	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
@@ -148,10 +149,67 @@ type AccessTokenResponse struct {
 }
 
 type JWTTokenRequest struct {
-	Scopes    Scopes    `schema:"scope"`
-	Audience  []string  `schema:"aud"`
-	IssuedAt  time.Time `schema:"iat"`
-	ExpiresAt time.Time `schema:"exp"`
+	Issuer    string `json:"iss"`
+	Subject   string `json:"sub"`
+	Scopes    Scopes `json:"scope"`
+	Audience  string `json:"aud"`
+	IssuedAt  Time   `json:"iat"`
+	ExpiresAt Time   `json:"exp"`
+}
+
+func (j *JWTTokenRequest) GetClientID() string {
+	return j.Subject
+}
+
+func (j *JWTTokenRequest) GetSubject() string {
+	return j.Subject
+}
+
+func (j *JWTTokenRequest) GetScopes() []string {
+	return j.Scopes
+}
+
+type Time time.Time
+
+func (t *Time) UnmarshalJSON(data []byte) error {
+	var i int64
+	if err := json.Unmarshal(data, &i); err != nil {
+		return err
+	}
+	*t = Time(time.Unix(i, 0).UTC())
+	return nil
+}
+
+func (j *JWTTokenRequest) GetIssuer() string {
+	return j.Issuer
+}
+
+func (j *JWTTokenRequest) GetAudience() []string {
+	return []string{j.Audience}
+}
+
+func (j *JWTTokenRequest) GetExpiration() time.Time {
+	return time.Time(j.ExpiresAt)
+}
+
+func (j *JWTTokenRequest) GetIssuedAt() time.Time {
+	return time.Time(j.IssuedAt)
+}
+
+func (j *JWTTokenRequest) GetNonce() string {
+	return ""
+}
+
+func (j *JWTTokenRequest) GetAuthenticationContextClassReference() string {
+	return ""
+}
+
+func (j *JWTTokenRequest) GetAuthTime() time.Time {
+	return time.Time{}
+}
+
+func (j *JWTTokenRequest) GetAuthorizedParty() string {
+	return ""
 }
 
 type TokenExchangeRequest struct {

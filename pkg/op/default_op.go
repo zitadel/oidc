@@ -275,7 +275,7 @@ func (p *DefaultOP) Crypto() Crypto {
 	return p.crypto
 }
 
-func (p *DefaultOP) Verifier() rp.Verifier {
+func (p *DefaultOP) ClientJWTVerifier() rp.Verifier {
 	return p.verifier
 }
 

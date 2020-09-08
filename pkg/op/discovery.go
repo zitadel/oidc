@@ -7,6 +7,12 @@ import (
 	"github.com/caos/oidc/pkg/utils"
 )
 
+func DiscoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		Discover(w, CreateDiscoveryConfig(c, s))
+	}
+}
+
 func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
 	utils.MarshalJSON(w, config)
 }
