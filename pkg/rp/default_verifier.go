@@ -145,7 +145,7 @@ func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString
 //Verify implements the `VerifyIDToken` method of the `Verifier` interface
 //according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
-	return VerifyIDToken(ctx, idTokenString, v)
+	return VerifywIDToken(ctx, idTokenString, v)
 }
 
 func (v *DefaultVerifier) now() time.Time {

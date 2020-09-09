@@ -36,6 +36,18 @@ type AuthorizeValidator interface {
 //Deprecated: ValidationAuthorizer exists for historical compatibility. Use ValidationAuthorizer itself
 type ValidationAuthorizer AuthorizeValidator
 
+func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		Authorize(w, r, authorizer)
+	}
+}
+
+func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		AuthorizeCallback(w, r, authorizer)
+	}
+}
+
 //Authorize handles the authorization request, including
 //parsing, validating, storing and finally redirecting to the login handler
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
@@ -152,7 +164,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	if idTokenHint == "" {
 		return "", nil
 	}
-	claims, err := verifier.VerifyIDToken(ctx, idTokenHint)
+	claims, err := VerifyIDTokenHint(ctx, idTokenHint, verifier)
 	if err != nil {
 		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
 	}

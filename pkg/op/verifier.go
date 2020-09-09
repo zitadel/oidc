@@ -1,43 +1,17 @@
-package rp
+package op
 
 import (
 	"context"
 
-	"gopkg.in/square/go-jose.v2"
-
 	"github.com/caos/oidc/pkg/oidc"
 )
 
-//deprecated: Use IDTokenVerifier or oidc.Verifier
-type Verifier interface {
-
-	//Verify checks the access_token and id_token and returns the `id token claims`
-	Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error)
-
-	//VerifyIDToken checks the id_token only and returns its `id token claims`
-	VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error)
-}
-
-type IDTokenVerifier interface {
-	oidc.Verifier
-}
-
-//VerifyTokens implement the Token Response Validation as defined in OIDC specification
-//https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) {
-	idToken, err := VerifyIDToken(ctx, idTokenString, v)
-	if err != nil {
-		return nil, err
-	}
-	if err := VerifyAccessToken(accessToken, idToken.AccessTokenHash, idToken.Signature); err != nil {
-		return nil, err
-	}
-	return idToken, nil
+type IDTokenHintVerifier interface {
 }
 
 //VerifyIDToken validates the id token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) {
+func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier) (*oidc.IDTokenClaims, error) {
 	claims := new(oidc.IDTokenClaims)
 
 	decrypted, err := oidc.DecryptToken(token)
@@ -96,21 +70,4 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.
 		return nil, err
 	}
 	return claims, nil
-}
-
-//VerifyAccessToken validates the access token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
-func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
-	if atHash == "" {
-		return nil
-	}
-
-	actual, err := oidc.ClaimHash(accessToken, sigAlgorithm)
-	if err != nil {
-		return err
-	}
-	if actual != atHash {
-		return oidc.ErrAtHash
-	}
-	return nil
 }

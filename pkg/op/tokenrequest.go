@@ -27,6 +27,26 @@ type VerifyExchanger interface {
 	ClientJWTVerifier() rp.Verifier
 }
 
+func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.FormValue("grant_type") {
+		case string(oidc.GrantTypeCode):
+			CodeExchange(w, r, exchanger)
+			return
+		case string(oidc.GrantTypeBearer):
+			JWTExchange(w, r, exchanger)
+			return
+		case "excahnge":
+			TokenExchange(w, r, exchanger)
+		case "":
+			RequestError(w, r, ErrInvalidRequest("grant_type missing"))
+			return
+		default:
+
+		}
+	}
+}
+
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {

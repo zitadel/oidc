@@ -279,12 +279,11 @@ func (p *DefaultOP) ClientJWTVerifier() rp.Verifier {
 	return p.verifier
 }
 
-func (p *DefaultOP) HandleReady(w http.ResponseWriter, r *http.Request) {
-	probes := []ProbesFn{
+func (p *DefaultOP) Probes() []ProbesFn {
+	return []ProbesFn{
 		ReadySigner(p.Signer()),
 		ReadyStorage(p.Storage()),
 	}
-	Readiness(w, r, probes...)
 }
 
 func (p *DefaultOP) HandleKeys(w http.ResponseWriter, r *http.Request) {

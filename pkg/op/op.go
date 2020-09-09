@@ -16,15 +16,9 @@ const (
 
 type OpenIDProvider interface {
 	Configuration
-	HandleReady(w http.ResponseWriter, r *http.Request)
-	HandleDiscovery(w http.ResponseWriter, r *http.Request)
-	HandleAuthorize(w http.ResponseWriter, r *http.Request)
-	HandleAuthorizeCallback(w http.ResponseWriter, r *http.Request)
-	HandleExchange(w http.ResponseWriter, r *http.Request)
-	HandleUserinfo(w http.ResponseWriter, r *http.Request)
-	//HandleEndSession(w http.ResponseWriter, r *http.Request)
 	HandleKeys(w http.ResponseWriter, r *http.Request)
 	HttpHandler() http.Handler
+	Authorizer
 	SessionEnder
 	Signer() Signer
 	Probes() []ProbesFn
@@ -47,12 +41,12 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(healthzEndpoint, Healthz)
 	router.HandleFunc(readinessEndpoint, Ready(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, DiscoveryHandler(o, o.Signer()))
-	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(o.HandleAuthorize))
-	router.Handle(o.AuthorizationEndpoint().Relative()+"/{id}", intercept(o.HandleAuthorizeCallback))
-	router.Handle(o.TokenEndpoint().Relative(), intercept(o.HandleExchange))
-	router.HandleFunc(o.UserinfoEndpoint().Relative(), o.HandleUserinfo)
-	router.Handle(o.EndSessionEndpoint().Relative(), intercept(EndSessionHandler(o)))
-	router.HandleFunc(o.KeysEndpoint().Relative(), o.HandleKeys)
+	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
+	router.Handle(o.AuthorizationEndpoint().Relative()+"/{id}", intercept(authorizeCallbackHandler(o)))
+	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
+	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
+	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
+	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o))
 	return router
 }
 
