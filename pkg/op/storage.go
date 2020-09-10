@@ -31,6 +31,7 @@ type OPStorage interface {
 	GetUserinfoFromScopes(context.Context, string, []string) (*oidc.Userinfo, error)
 	GetUserinfoFromToken(context.Context, string, string) (*oidc.Userinfo, error)
 	GetKeysByServiceAccount(ctx context.Context, id string) (*jose.JSONWebKeySet, error)
+	GetKeyByID(ctx context.Context, keyID string) (*jose.JSONWebKeySet, error)
 }
 
 type Storage interface {

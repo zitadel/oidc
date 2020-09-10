@@ -97,7 +97,7 @@ func CheckIssuer(issuer string, i Verifier) error {
 
 func CheckAudience(audiences []string, i Verifier) error {
 	if !utils.Contains(audiences, i.ClientID()) {
-		return fmt.Errorf("%w: Audience must contain client_id (%s)", ErrAudience, i.ClientID())
+		return fmt.Errorf("%w: Audience must contain client_id %q", ErrAudience, i.ClientID())
 	}
 
 	//TODO: check aud trusted

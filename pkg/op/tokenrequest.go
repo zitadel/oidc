@@ -146,6 +146,7 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 type ClientJWTVerifier struct {
 	claims  *oidc.JWTTokenRequest
 	storage Storage
+	issuer  string
 }
 
 func (c ClientJWTVerifier) Storage() Storage {
@@ -157,7 +158,7 @@ func (c ClientJWTVerifier) Issuer() string {
 }
 
 func (c ClientJWTVerifier) ClientID() string {
-	return c.claims.Issuer
+	return c.issuer
 }
 
 func (c ClientJWTVerifier) SupportedSignAlgs() []string {
@@ -193,7 +194,7 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 		RequestError(w, r, err)
 	}
 
-	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger.Storage())
+	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger)
 	if err != nil {
 		RequestError(w, r, err)
 		return
@@ -212,9 +213,10 @@ type JWTAssertionVerifier interface {
 	oidc.Verifier
 }
 
-func VerifyJWTAssertion(ctx context.Context, assertion string, storage Storage) (*oidc.JWTTokenRequest, error) {
+func VerifyJWTAssertion(ctx context.Context, assertion string, exchanger Exchanger) (*oidc.JWTTokenRequest, error) {
 	verifier := &ClientJWTVerifier{
-		storage: storage,
+		storage: exchanger.Storage(),
+		issuer:  exchanger.Issuer(),
 		claims:  new(oidc.JWTTokenRequest),
 	}
 	payload, err := oidc.ParseToken(assertion, verifier.claims)
@@ -239,7 +241,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, storage Storage) 
 	}
 	verifier.Storage().GetClientByClientID(ctx, verifier.claims.Subject)
 
-	keySet := &ClientAssertionKeySet{storage, verifier.claims.Subject}
+	keySet := &ClientAssertionKeySet{exchanger.Storage(), verifier.claims.Subject}
 
 	if err = oidc.CheckSignature(ctx, assertion, payload, verifier.claims, nil, keySet); err != nil {
 		return nil, err
@@ -258,7 +260,7 @@ func (c *ClientAssertionKeySet) VerifySignature(ctx context.Context, jws *jose.J
 		keyID = sig.Header.KeyID
 		break
 	}
-	keySet, err := c.Storage.GetKeysByServiceAccount(ctx, c.id)
+	keySet, err := c.Storage.GetKeyByID(ctx, keyID)
 	if err != nil {
 		return nil, errors.New("error fetching keys")
 	}
