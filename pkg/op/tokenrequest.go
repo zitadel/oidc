@@ -144,20 +144,20 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 }
 
 type ClientJWTVerifier struct {
-	claims *oidc.JWTTokenRequest
-	Storage
+	claims  *oidc.JWTTokenRequest
+	storage Storage
 }
 
 func (c ClientJWTVerifier) Storage() Storage {
-	panic("implement me")
+	return c.storage
 }
 
 func (c ClientJWTVerifier) Issuer() string {
-	panic("implement me")
+	return c.claims.Issuer
 }
 
 func (c ClientJWTVerifier) ClientID() string {
-	panic("implement me")
+	return c.claims.Issuer
 }
 
 func (c ClientJWTVerifier) SupportedSignAlgs() []string {
@@ -165,7 +165,8 @@ func (c ClientJWTVerifier) SupportedSignAlgs() []string {
 }
 
 func (c ClientJWTVerifier) KeySet() oidc.KeySet {
-	return c.claims
+	// return c.claims
+	return nil
 }
 
 func (c ClientJWTVerifier) ACR() oidc.ACRVerifier {
@@ -177,11 +178,13 @@ func (c ClientJWTVerifier) MaxAge() time.Duration {
 }
 
 func (c ClientJWTVerifier) MaxAgeIAT() time.Duration {
-	panic("implement me")
+	//TODO: define in conf/opts
+	return 1 * time.Hour
 }
 
 func (c ClientJWTVerifier) Offset() time.Duration {
-	panic("implement me")
+	//TODO: define in conf/opts
+	return time.Second
 }
 
 func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchanger) {
@@ -189,12 +192,11 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 	if err != nil {
 		RequestError(w, r, err)
 	}
-	claims := new(oidc.JWTTokenRequest)
-	//var keyset oidc.KeySet
-	verifier := new(ClientJWTVerifier)
-	req, err := VerifyJWTAssertion(r.Context(), assertion, verifier)
+
+	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger.Storage())
 	if err != nil {
 		RequestError(w, r, err)
+		return
 	}
 
 	resp, err := CreateJWTTokenResponse(r.Context(), claims, exchanger)
@@ -210,24 +212,39 @@ type JWTAssertionVerifier interface {
 	oidc.Verifier
 }
 
-func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTAssertionVerifier) (*oidc.JWTTokenRequest, error) {
-	claims := new(oidc.JWTTokenRequest)
-	payload, err := oidc.ParseToken(assertion, claims)
-
-	oidc.CheckAudience(claims.Audience, v)
-
-	oidc.CheckExpiration(claims.ExpiresAt, v)
-
-	oidc.CheckIssuedAt(claims.IssuedAt, v)
-
-	if claims.Issuer != claims.Subject {
-
+func VerifyJWTAssertion(ctx context.Context, assertion string, storage Storage) (*oidc.JWTTokenRequest, error) {
+	verifier := &ClientJWTVerifier{
+		storage: storage,
+		claims:  new(oidc.JWTTokenRequest),
 	}
-	v.Storage().GetClientByClientID(ctx, claims.Issuer)
+	payload, err := oidc.ParseToken(assertion, verifier.claims)
+	if err != nil {
+		return nil, err
+	}
 
-	keySet := &ClientAssertionKeySet{v.Storage(), claims.Issuer}
+	if err = oidc.CheckAudience(verifier.claims.GetAudience(), verifier); err != nil {
+		return nil, err
+	}
 
-	oidc.CheckSignature(ctx, assertion, payload, claims, nil, keySet)
+	if err = oidc.CheckExpiration(verifier.claims.GetExpiration(), verifier); err != nil {
+		return nil, err
+	}
+
+	if err = oidc.CheckIssuedAt(verifier.claims.GetIssuedAt(), verifier); err != nil {
+		return nil, err
+	}
+
+	if verifier.claims.Issuer != verifier.claims.Subject {
+		//TODO: implement delegation (openid core / oauth rfc)
+	}
+	verifier.Storage().GetClientByClientID(ctx, verifier.claims.Subject)
+
+	keySet := &ClientAssertionKeySet{storage, verifier.claims.Subject}
+
+	if err = oidc.CheckSignature(ctx, assertion, payload, verifier.claims, nil, keySet); err != nil {
+		return nil, err
+	}
+	return verifier.claims, nil
 }
 
 type ClientAssertionKeySet struct {
@@ -241,7 +258,7 @@ func (c *ClientAssertionKeySet) VerifySignature(ctx context.Context, jws *jose.J
 		keyID = sig.Header.KeyID
 		break
 	}
-	keySet, err := c.Storage.GetKeysByServiceAccount(id)
+	keySet, err := c.Storage.GetKeysByServiceAccount(ctx, c.id)
 	if err != nil {
 		return nil, errors.New("error fetching keys")
 	}

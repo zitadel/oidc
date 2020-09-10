@@ -238,6 +238,10 @@ func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 	Discover(w, CreateDiscoveryConfig(p, p.Signer()))
 }
 
+func (p *DefaultOP) Probes() []ProbesFn {
+	return nil
+}
+
 func (p *DefaultOP) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keyID := ""
 	for _, sig := range jws.Signatures {

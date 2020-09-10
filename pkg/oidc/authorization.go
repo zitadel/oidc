@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"golang.org/x/text/language"
+	"gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -149,12 +150,12 @@ type AccessTokenResponse struct {
 }
 
 type JWTTokenRequest struct {
-	Issuer    string `json:"iss"`
-	Subject   string `json:"sub"`
-	Scopes    Scopes `json:"scope"`
-	Audience  string `json:"aud"`
-	IssuedAt  Time   `json:"iat"`
-	ExpiresAt Time   `json:"exp"`
+	Issuer    string   `json:"iss"`
+	Subject   string   `json:"sub"`
+	Scopes    Scopes   `json:"scope"`
+	Audience  []string `json:"aud"`
+	IssuedAt  Time     `json:"iat"`
+	ExpiresAt Time     `json:"exp"`
 }
 
 func (j *JWTTokenRequest) GetClientID() string {
@@ -185,7 +186,7 @@ func (j *JWTTokenRequest) GetIssuer() string {
 }
 
 func (j *JWTTokenRequest) GetAudience() []string {
-	return []string{j.Audience}
+	return j.Audience
 }
 
 func (j *JWTTokenRequest) GetExpiration() time.Time {
@@ -211,6 +212,8 @@ func (j *JWTTokenRequest) GetAuthTime() time.Time {
 func (j *JWTTokenRequest) GetAuthorizedParty() string {
 	return ""
 }
+
+func (j *JWTTokenRequest) SetSignature(algorithm jose.SignatureAlgorithm) {}
 
 type TokenExchangeRequest struct {
 	subjectToken       string   `schema:"subject_token"`
