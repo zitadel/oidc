@@ -39,11 +39,9 @@ For your convinience you can find the relevant standards linked below.
 
 | Version | Supported          |
 |---------|--------------------|
-| <1.11   | :x:                |
-| 1.11    | :white_check_mark: |
-| 1.12    | :white_check_mark: |
-| 1.13    | :white_check_mark: |
+| <1.13   | :x:                |
 | 1.14    | :white_check_mark: |
+| 1.15    | :white_check_mark: |
 
 ## Why another library
 
