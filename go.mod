@@ -1,6 +1,6 @@
 module github.com/caos/oidc
 
-go 1.13
+go 1.15
 
 require (
 	github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a
