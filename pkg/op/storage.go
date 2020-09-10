@@ -30,6 +30,7 @@ type OPStorage interface {
 	AuthorizeClientIDSecret(context.Context, string, string) error
 	GetUserinfoFromScopes(context.Context, string, []string) (*oidc.Userinfo, error)
 	GetUserinfoFromToken(context.Context, string, string) (*oidc.Userinfo, error)
+	GetKeysByServiceAccount(ctx context.Context, id string) (*jose.JSONWebKeySet, error)
 }
 
 type Storage interface {

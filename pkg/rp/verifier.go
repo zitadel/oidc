@@ -65,7 +65,7 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.
 	//6. check signature by keys
 	//7. check alg default is rs256
 	//8. check if alg is mac based (hs...) -> audience contains client_id. for validation use utf-8 representation of your client_secret
-	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v); err != nil {
+	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
 		return nil, err
 	}
 
