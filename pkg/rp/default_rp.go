@@ -40,8 +40,9 @@ type DefaultRP struct {
 
 	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
 
-	verifier   Verifier
-	onlyOAuth2 bool
+	verifier     Verifier
+	verifierOpts []ConfFunc
+	onlyOAuth2   bool
 }
 
 //NewDefaultRP creates `DefaultRP` with the given
@@ -79,7 +80,7 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 	}
 
 	if p.verifier == nil {
-		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL))
+		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL), p.verifierOpts...)
 	}
 
 	return p, nil
@@ -109,6 +110,12 @@ func WithPKCE(cookieHandler *utils.CookieHandler) DefaultRPOpts {
 func WithHTTPClient(client *http.Client) DefaultRPOpts {
 	return func(p *DefaultRP) {
 		p.httpClient = client
+	}
+}
+
+func WithVerifierOpts(opts ...ConfFunc) DefaultRPOpts {
+	return func(p *DefaultRP) {
+		p.verifierOpts = opts
 	}
 }
 
