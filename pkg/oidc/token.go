@@ -277,10 +277,16 @@ func timeToJSON(t time.Time) int64 {
 	return t.Unix()
 }
 
-func audienceFromJSON(audience interface{}) []string {
-	switch aud := audience.(type) {
+func audienceFromJSON(i interface{}) []string {
+	switch aud := i.(type) {
 	case []string:
 		return aud
+	case []interface{}:
+		audience := make([]string, len(aud))
+		for i, a := range aud {
+			audience[i] = a.(string)
+		}
+		return audience
 	case string:
 		return []string{aud}
 	}
