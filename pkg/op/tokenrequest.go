@@ -24,7 +24,7 @@ type Exchanger interface {
 
 type VerifyExchanger interface {
 	Exchanger
-	ClientJWTVerifier() rp.Verifier
+	ClientJWTVerifier() oidc.Verifier
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +34,8 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 			CodeExchange(w, r, exchanger)
 			return
 		case string(oidc.GrantTypeBearer):
-			JWTExchange(w, r, exchanger)
+			ex, _ := exchanger.(VerifyExchanger)
+			JWTExchange(w, r, ex)
 			return
 		case "excahnge":
 			TokenExchange(w, r, exchanger)
@@ -161,23 +162,6 @@ func (c ClientJWTVerifier) ClientID() string {
 	return c.issuer
 }
 
-func (c ClientJWTVerifier) SupportedSignAlgs() []string {
-	panic("implement me")
-}
-
-func (c ClientJWTVerifier) KeySet() oidc.KeySet {
-	// return c.claims
-	return nil
-}
-
-func (c ClientJWTVerifier) ACR() oidc.ACRVerifier {
-	panic("implement me")
-}
-
-func (c ClientJWTVerifier) MaxAge() time.Duration {
-	panic("implement me")
-}
-
 func (c ClientJWTVerifier) MaxAgeIAT() time.Duration {
 	//TODO: define in conf/opts
 	return 1 * time.Hour
@@ -224,15 +208,15 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, exchanger Exchang
 		return nil, err
 	}
 
-	if err = oidc.CheckAudience(verifier.claims.GetAudience(), verifier); err != nil {
+	if err = oidc.CheckAudience(verifier.claims, verifier.issuer); err != nil {
 		return nil, err
 	}
 
-	if err = oidc.CheckExpiration(verifier.claims.GetExpiration(), verifier); err != nil {
+	if err = oidc.CheckExpiration(verifier.claims, verifier.Offset()); err != nil {
 		return nil, err
 	}
 
-	if err = oidc.CheckIssuedAt(verifier.claims.GetIssuedAt(), verifier); err != nil {
+	if err = oidc.CheckIssuedAt(verifier.claims, verifier.MaxAgeIAT(), verifier.Offset()); err != nil {
 		return nil, err
 	}
 

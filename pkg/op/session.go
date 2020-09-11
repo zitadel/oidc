@@ -5,14 +5,13 @@ import (
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
 type SessionEnder interface {
 	Decoder() utils.Decoder
 	Storage() Storage
-	IDTokenVerifier() rp.Verifier
+	IDTokenVerifier() IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
 }
 
@@ -63,7 +62,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	if req.IdTokenHint == "" {
 		return session, nil
 	}
-	claims, err := ender.IDTokenVerifier().VerifyIDToken(ctx, req.IdTokenHint)
+	claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenVerifier())
 	if err != nil {
 		return nil, ErrInvalidRequest("id_token_hint invalid")
 	}

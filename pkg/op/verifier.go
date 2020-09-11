@@ -2,14 +2,66 @@ package op
 
 import (
 	"context"
+	"time"
 
 	"github.com/caos/oidc/pkg/oidc"
 )
 
 type IDTokenHintVerifier interface {
+	oidc.Verifier
+	SupportedSignAlgs() []string
+	KeySet() oidc.KeySet
+	ACR() oidc.ACRVerifier
+	MaxAge() time.Duration
 }
 
-//VerifyIDToken validates the id token according to
+type idTokenHintVerifier struct {
+	issuer            string
+	maxAgeIAT         time.Duration
+	offset            time.Duration
+	supportedSignAlgs []string
+	maxAge            time.Duration
+	acr               oidc.ACRVerifier
+	keySet            oidc.KeySet
+}
+
+func (i *idTokenHintVerifier) Issuer() string {
+	return i.issuer
+}
+
+func (i *idTokenHintVerifier) MaxAgeIAT() time.Duration {
+	return i.maxAgeIAT
+}
+
+func (i *idTokenHintVerifier) Offset() time.Duration {
+	return i.offset
+}
+
+func (i *idTokenHintVerifier) SupportedSignAlgs() []string {
+	return i.supportedSignAlgs
+}
+
+func (i *idTokenHintVerifier) KeySet() oidc.KeySet {
+	return i.keySet
+}
+
+func (i *idTokenHintVerifier) ACR() oidc.ACRVerifier {
+	return i.acr
+}
+
+func (i *idTokenHintVerifier) MaxAge() time.Duration {
+	return i.maxAge
+}
+
+func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet) IDTokenHintVerifier {
+	verifier := &idTokenHintVerifier{
+		issuer: issuer,
+		keySet: keySet,
+	}
+	return verifier
+}
+
+//VerifyIDTokenHint validates the id token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier) (*oidc.IDTokenClaims, error) {
 	claims := new(oidc.IDTokenClaims)
@@ -22,51 +74,28 @@ func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier)
 	if err != nil {
 		return nil, err
 	}
-	//2, check issuer (exact match)
-	if err := oidc.CheckIssuer(claims.GetIssuer(), v); err != nil {
+
+	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
 		return nil, err
 	}
 
-	//3. check aud (aud must contain client_id, all aud strings must be allowed)
-	if err = oidc.CheckAudience(claims.GetAudience(), v); err != nil {
-		return nil, err
-	}
-
-	if err = oidc.CheckAuthorizedParty(claims.GetAudience(), claims.GetAuthorizedParty(), v); err != nil {
-		return nil, err
-	}
-
-	//6. check signature by keys
-	//7. check alg default is rs256
-	//8. check if alg is mac based (hs...) -> audience contains client_id. for validation use utf-8 representation of your client_secret
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
 		return nil, err
 	}
 
-	//9. check exp before now
-	if err = oidc.CheckExpiration(claims.GetExpiration(), v); err != nil {
+	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
 		return nil, err
 	}
 
-	//10. check iat duration is optional (can be checked)
-	if err = oidc.CheckIssuedAt(claims.GetIssuedAt(), v); err != nil {
+	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT(), v.Offset()); err != nil {
 		return nil, err
 	}
 
-	/*
-		//11. check nonce (check if optional possible) id_token.nonce == sentNonce
-		if err = oidc.CheckNonce(claims.GetNonce()); err != nil {
-			return nil, err
-		}
-	*/
-
-	//12. if acr requested check acr
-	if err = oidc.CheckAuthorizationContextClassReference(claims.GetAuthenticationContextClassReference(), v); err != nil {
+	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR()); err != nil {
 		return nil, err
 	}
 
-	//13. if auth_time requested check if auth_time is less than max age
-	if err = oidc.CheckAuthTime(claims.GetAuthTime(), v); err != nil {
+	if err = oidc.CheckAuthTime(claims, v.MaxAge()); err != nil {
 		return nil, err
 	}
 	return claims, nil

@@ -15,7 +15,7 @@ type DefaultVerifier struct {
 	keySet oidc.KeySet
 }
 
-//ConfFunc is the type for providing dynamic options to the DefaultVerfifier
+//ConfFunc is the type for providing dynamic options to the DefaultVerifier
 type ConfFunc func(*verifierConfig)
 
 //NewDefaultVerifier creates `DefaultVerifier` with the given
@@ -145,7 +145,7 @@ func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString
 //Verify implements the `VerifyIDToken` method of the `Verifier` interface
 //according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {
-	return VerifywIDToken(ctx, idTokenString, v)
+	return VerifyIDToken(ctx, idTokenString, v)
 }
 
 func (v *DefaultVerifier) now() time.Time {
@@ -185,4 +185,8 @@ func (v *DefaultVerifier) MaxAgeIAT() time.Duration {
 
 func (v *DefaultVerifier) Offset() time.Duration {
 	return v.config.iat.offset
+}
+
+func (v *DefaultVerifier) Nonce(ctx context.Context) string {
+	return ""
 }

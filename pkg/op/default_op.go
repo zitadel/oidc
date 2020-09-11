@@ -47,7 +47,7 @@ type DefaultOP struct {
 	endpoints    *endpoints
 	storage      Storage
 	signer       Signer
-	verifier     rp.Verifier
+	verifier     IDTokenHintVerifier
 	crypto       Crypto
 	http         http.Handler
 	decoder      *schema.Decoder
@@ -184,7 +184,7 @@ func NewDefaultOP(ctx context.Context, config *Config, storage Storage, opOpts .
 	p.signer = NewDefaultSigner(ctx, storage, keyCh)
 	go p.ensureKey(ctx, storage, keyCh, p.timer)
 
-	p.verifier = rp.NewDefaultVerifier(config.Issuer, "", p, rp.WithIgnoreAudience(), rp.WithIgnoreExpiration())
+	p.verifier = NewIDTokenHintVerifier(config.Issuer, p)
 
 	p.http = CreateRouter(p, p.interceptors...)
 
@@ -238,10 +238,6 @@ func (p *DefaultOP) HandleDiscovery(w http.ResponseWriter, r *http.Request) {
 	Discover(w, CreateDiscoveryConfig(p, p.Signer()))
 }
 
-func (p *DefaultOP) Probes() []ProbesFn {
-	return nil
-}
-
 func (p *DefaultOP) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keyID := ""
 	for _, sig := range jws.Signatures {
@@ -279,7 +275,7 @@ func (p *DefaultOP) Crypto() Crypto {
 	return p.crypto
 }
 
-func (p *DefaultOP) ClientJWTVerifier() rp.Verifier {
+func (p *DefaultOP) ClientJWTVerifier() oidc.Verifier {
 	return p.verifier
 }
 
@@ -330,7 +326,7 @@ func (p *DefaultOP) HandleEndSession(w http.ResponseWriter, r *http.Request) {
 func (p *DefaultOP) DefaultLogoutRedirectURI() string {
 	return p.config.DefaultLogoutRedirectURI
 }
-func (p *DefaultOP) IDTokenVerifier() rp.Verifier {
+func (p *DefaultOP) IDTokenVerifier() IDTokenHintVerifier {
 	return p.verifier
 }
 

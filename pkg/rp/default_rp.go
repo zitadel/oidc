@@ -27,7 +27,7 @@ var (
 	}
 )
 
-//DefaultRP impements the `DelegationTokenExchangeRP` interface extending the `RelayingParty` interface
+//DefaultRP implements the `DelegationTokenExchangeRP` interface extending the `RelayingParty` interface
 type DefaultRP struct {
 	endpoints Endpoints
 
@@ -40,9 +40,9 @@ type DefaultRP struct {
 
 	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
 
-	verifier     Verifier
-	verifierOpts []ConfFunc
-	onlyOAuth2   bool
+	idTokenVerifier IDTokenVerifier
+	verifierOpts    []ConfFunc
+	onlyOAuth2      bool
 }
 
 //NewDefaultRP creates `DefaultRP` with the given
@@ -79,8 +79,8 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 		p.errorHandler = DefaultErrorHandler
 	}
 
-	if p.verifier == nil {
-		p.verifier = NewDefaultVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL), p.verifierOpts...)
+	if p.idTokenVerifier == nil {
+		p.idTokenVerifier = NewIDTokenVerifier(rpConfig.Issuer, rpConfig.ClientID, NewRemoteKeySet(p.httpClient, p.endpoints.JKWsURL))
 	}
 
 	return p, nil
@@ -181,7 +181,7 @@ func (p *DefaultRP) CodeExchange(ctx context.Context, code string, opts ...CodeE
 
 	idToken := new(oidc.IDTokenClaims)
 	if !p.onlyOAuth2 {
-		idToken, err = p.verifier.Verify(ctx, token.AccessToken, idTokenString)
+		idToken, err = VerifyTokens(ctx, token.AccessToken, idTokenString, p.idTokenVerifier)
 		if err != nil {
 			return nil, err //TODO: err
 		}

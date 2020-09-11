@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"time"
 
 	"gopkg.in/square/go-jose.v2"
 
@@ -20,6 +21,69 @@ type Verifier interface {
 
 type IDTokenVerifier interface {
 	oidc.Verifier
+	ClientID() string
+	SupportedSignAlgs() []string
+	KeySet() oidc.KeySet
+	Nonce(context.Context) string
+	ACR() oidc.ACRVerifier
+	MaxAge() time.Duration
+}
+
+type idTokenVerifier struct {
+	issuer            string
+	maxAgeIAT         time.Duration
+	offset            time.Duration
+	clientID          string
+	supportedSignAlgs []string
+	keySet            oidc.KeySet
+	acr               oidc.ACRVerifier
+	maxAge            time.Duration
+	nonce             func(ctx context.Context) string
+}
+
+func (i *idTokenVerifier) Issuer() string {
+	return i.issuer
+}
+
+func (i *idTokenVerifier) MaxAgeIAT() time.Duration {
+	return i.maxAgeIAT
+}
+
+func (i *idTokenVerifier) Offset() time.Duration {
+	return i.offset
+}
+
+func (i *idTokenVerifier) ClientID() string {
+	return i.clientID
+}
+
+func (i *idTokenVerifier) SupportedSignAlgs() []string {
+	return i.supportedSignAlgs
+}
+
+func (i *idTokenVerifier) KeySet() oidc.KeySet {
+	return i.keySet
+}
+
+func (i *idTokenVerifier) Nonce(ctx context.Context) string {
+	return i.nonce(ctx)
+}
+
+func (i *idTokenVerifier) ACR() oidc.ACRVerifier {
+	return i.acr
+}
+
+func (i *idTokenVerifier) MaxAge() time.Duration {
+	return i.maxAge
+}
+
+func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet) IDTokenVerifier {
+	return &idTokenVerifier{
+		issuer:   issuer,
+		clientID: clientID,
+		keySet:   keySet,
+		offset:   5 * time.Second,
+	}
 }
 
 //VerifyTokens implement the Token Response Validation as defined in OIDC specification
@@ -48,51 +112,40 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.
 	if err != nil {
 		return nil, err
 	}
-	//2, check issuer (exact match)
-	if err := oidc.CheckIssuer(claims.GetIssuer(), v); err != nil {
+
+	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
 		return nil, err
 	}
 
-	//3. check aud (aud must contain client_id, all aud strings must be allowed)
-	if err = oidc.CheckAudience(claims.GetAudience(), v); err != nil {
+	if err = oidc.CheckAudience(claims, v.ClientID()); err != nil {
 		return nil, err
 	}
 
-	if err = oidc.CheckAuthorizedParty(claims.GetAudience(), claims.GetAuthorizedParty(), v); err != nil {
+	if err = oidc.CheckAuthorizedParty(claims, v.ClientID()); err != nil {
 		return nil, err
 	}
 
-	//6. check signature by keys
-	//7. check alg default is rs256
-	//8. check if alg is mac based (hs...) -> audience contains client_id. for validation use utf-8 representation of your client_secret
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
 		return nil, err
 	}
 
-	//9. check exp before now
-	if err = oidc.CheckExpiration(claims.GetExpiration(), v); err != nil {
+	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
 		return nil, err
 	}
 
-	//10. check iat duration is optional (can be checked)
-	if err = oidc.CheckIssuedAt(claims.GetIssuedAt(), v); err != nil {
+	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT(), v.Offset()); err != nil {
 		return nil, err
 	}
 
-	/*
-		//11. check nonce (check if optional possible) id_token.nonce == sentNonce
-		if err = oidc.CheckNonce(claims.GetNonce()); err != nil {
-			return nil, err
-		}
-	*/
-
-	//12. if acr requested check acr
-	if err = oidc.CheckAuthorizationContextClassReference(claims.GetAuthenticationContextClassReference(), v); err != nil {
+	if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
 		return nil, err
 	}
 
-	//13. if auth_time requested check if auth_time is less than max age
-	if err = oidc.CheckAuthTime(claims.GetAuthTime(), v); err != nil {
+	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR()); err != nil {
+		return nil, err
+	}
+
+	if err = oidc.CheckAuthTime(claims, v.MaxAge()); err != nil {
 		return nil, err
 	}
 	return claims, nil

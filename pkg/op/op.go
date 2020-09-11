@@ -16,12 +16,11 @@ const (
 
 type OpenIDProvider interface {
 	Configuration
-	HandleKeys(w http.ResponseWriter, r *http.Request)
-	HttpHandler() http.Handler
 	Authorizer
 	SessionEnder
 	Signer() Signer
 	Probes() []ProbesFn
+	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
