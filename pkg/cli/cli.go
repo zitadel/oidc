@@ -3,20 +3,22 @@ package cli
 import (
 	"context"
 	"fmt"
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
-	"github.com/caos/oidc/pkg/utils"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/oidc/pkg/utils"
 )
 
-func CodeFlow(rpc *rp.Config, key []byte, callbackPath string, port string) *oidc.Tokens {
+func CodeFlow(rpc *rp.Configuration, key []byte, callbackPath string, port string) *oidc.Tokens {
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpc, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
+	provider, err := rp.NewRelayingParty(rpc, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
@@ -24,9 +26,9 @@ func CodeFlow(rpc *rp.Config, key []byte, callbackPath string, port string) *oid
 	return codeFlow(provider, callbackPath, port)
 }
 
-func TokenForClient(rpc *rp.Config, key []byte, token *oidc.Tokens) *http.Client {
+func TokenForClient(rpc *rp.Configuration, key []byte, token *oidc.Tokens) *http.Client {
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpc, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
+	provider, err := rp.NewRelayingParty(rpc, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
@@ -34,9 +36,9 @@ func TokenForClient(rpc *rp.Config, key []byte, token *oidc.Tokens) *http.Client
 	return provider.Client(context.Background(), token.Token)
 }
 
-func CodeFlowForClient(rpc *rp.Config, key []byte, callbackPath string, port string) *http.Client {
+func CodeFlowForClient(rpc *rp.Configuration, key []byte, callbackPath string, port string) *http.Client {
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpc, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
+	provider, err := rp.NewRelayingParty(rpc, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
@@ -45,7 +47,7 @@ func CodeFlowForClient(rpc *rp.Config, key []byte, callbackPath string, port str
 	return provider.Client(context.Background(), token.Token)
 }
 
-func codeFlow(provider rp.DelegationTokenExchangeRP, callbackPath string, port string) *oidc.Tokens {
+func codeFlow(provider rp.RelayingParty, callbackPath string, port string) *oidc.Tokens {
 	loginPath := "/login"
 	portStr := port
 	if !strings.HasPrefix(port, ":") {
@@ -55,12 +57,12 @@ func codeFlow(provider rp.DelegationTokenExchangeRP, callbackPath string, port s
 	getToken, setToken := getAndSetTokens()
 
 	state := uuid.New().String()
-	http.Handle(loginPath, provider.AuthURLHandler(state))
+	http.Handle(loginPath, rp.AuthURLHandler(state, provider))
 
 	marshal := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
 		setToken(w, tokens)
 	}
-	http.Handle(callbackPath, provider.CodeExchangeHandler(marshal))
+	http.Handle(callbackPath, rp.CodeExchangeHandler(marshal, provider))
 
 	// start  http-server
 	stopHttpServer := startHttpServer(portStr)

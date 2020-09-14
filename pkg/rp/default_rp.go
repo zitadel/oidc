@@ -2,11 +2,8 @@ package rp
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"strings"
-
-	"github.com/caos/oidc/pkg/oidc/grants"
 
 	"golang.org/x/oauth2"
 
@@ -21,12 +18,7 @@ const (
 	pkceCode   = "pkce"
 )
 
-var (
-	DefaultErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
-		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
-	}
-)
-
+//deprecated: use NewRelayingParty instead
 //DefaultRP implements the `DelegationTokenExchangeRP` interface extending the `RelayingParty` interface
 type DefaultRP struct {
 	endpoints Endpoints
@@ -45,6 +37,36 @@ type DefaultRP struct {
 	onlyOAuth2      bool
 }
 
+func (p *DefaultRP) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
+	return p.errorHandler
+}
+
+func (p *DefaultRP) OAuthConfig() *oauth2.Config {
+	return &p.oauthConfig
+}
+
+func (p *DefaultRP) IsPKCE() bool {
+	return p.pkce
+}
+
+func (p *DefaultRP) CookieHandler() *utils.CookieHandler {
+	return p.cookieHandler
+}
+
+func (p *DefaultRP) HttpClient() *http.Client {
+	return p.httpClient
+}
+
+func (p *DefaultRP) IsOAuth2Only() bool {
+	return p.onlyOAuth2
+}
+
+func (p *DefaultRP) IDTokenVerifier() IDTokenVerifier {
+	return p.idTokenVerifier
+}
+
+//deprecated: use NewRelayingParty instead
+//
 //NewDefaultRP creates `DefaultRP` with the given
 //Config and possible configOptions
 //it will run discovery on the provided issuer
@@ -89,6 +111,7 @@ func NewDefaultRP(rpConfig *Config, rpOpts ...DefaultRPOpts) (DelegationTokenExc
 //DefaultRPOpts is the type for providing dynamic options to the DefaultRP
 type DefaultRPOpts func(p *DefaultRP)
 
+/*
 //WithCookieHandler set a `CookieHandler` for securing the various redirects
 func WithCookieHandler(cookieHandler *utils.CookieHandler) DefaultRPOpts {
 	return func(p *DefaultRP) {
@@ -118,108 +141,34 @@ func WithVerifierOpts(opts ...ConfFunc) DefaultRPOpts {
 		p.verifierOpts = opts
 	}
 }
+*/
 
 //AuthURL is the `RelayingParty` interface implementation
 //wrapping the oauth2 `AuthCodeURL`
 //returning the url of the auth request
 func (p *DefaultRP) AuthURL(state string, opts ...AuthURLOpt) string {
-	authOpts := make([]oauth2.AuthCodeOption, 0)
-	for _, opt := range opts {
-		authOpts = append(authOpts, opt()...)
-	}
-	return p.oauthConfig.AuthCodeURL(state, authOpts...)
+	return AuthURL(state, p, opts...)
 }
 
 //AuthURL is the `RelayingParty` interface implementation
 //extending the `AuthURL` method with a http redirect handler
 func (p *DefaultRP) AuthURLHandler(state string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		opts := make([]AuthURLOpt, 0)
-		if err := p.trySetStateCookie(w, state); err != nil {
-			http.Error(w, "failed to create state cookie: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-		if p.pkce {
-			codeChallenge, err := p.generateAndStoreCodeChallenge(w)
-			if err != nil {
-				http.Error(w, "failed to create code challenge: "+err.Error(), http.StatusUnauthorized)
-				return
-			}
-			opts = append(opts, WithCodeChallenge(codeChallenge))
-		}
-		http.Redirect(w, r, p.AuthURL(state, opts...), http.StatusFound)
-	}
+	return AuthURLHandler(state, p)
 }
 
-func (p *DefaultRP) generateAndStoreCodeChallenge(w http.ResponseWriter) (string, error) {
-	var codeVerifier string
-	codeVerifier = "s"
-	if err := p.cookieHandler.SetCookie(w, pkceCode, codeVerifier); err != nil {
-		return "", err
-	}
-	return oidc.NewSHACodeChallenge(codeVerifier), nil
-}
-
+//deprecated: Use CodeExchange func and provide a RelayingParty
+//
 //AuthURL is the `RelayingParty` interface implementation
 //handling the oauth2 code exchange, extracting and validating the id_token
-//returning it paresed together with the oauth2 tokens (access, refresh)
+//returning it parsed together with the oauth2 tokens (access, refresh)
 func (p *DefaultRP) CodeExchange(ctx context.Context, code string, opts ...CodeExchangeOpt) (tokens *oidc.Tokens, err error) {
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, p.httpClient)
-	codeOpts := make([]oauth2.AuthCodeOption, 0)
-	for _, opt := range opts {
-		codeOpts = append(codeOpts, opt()...)
-	}
-
-	token, err := p.oauthConfig.Exchange(ctx, code, codeOpts...)
-	if err != nil {
-		return nil, err //TODO: our error
-	}
-	idTokenString, ok := token.Extra(idTokenKey).(string)
-	if !ok {
-		//TODO: implement
-	}
-
-	idToken := new(oidc.IDTokenClaims)
-	if !p.onlyOAuth2 {
-		idToken, err = VerifyTokens(ctx, token.AccessToken, idTokenString, p.idTokenVerifier)
-		if err != nil {
-			return nil, err //TODO: err
-		}
-	}
-
-	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
+	return CodeExchange(ctx, code, p, opts...)
 }
 
 //AuthURL is the `RelayingParty` interface implementation
 //extending the `CodeExchange` method with callback function
 func (p *DefaultRP) CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc.Tokens, string)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		state, err := p.tryReadStateCookie(w, r)
-		if err != nil {
-			http.Error(w, "failed to get state: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-		params := r.URL.Query()
-		if params.Get("error") != "" {
-			p.errorHandler(w, r, params.Get("error"), params.Get("error_description"), state)
-			return
-		}
-		codeOpts := make([]CodeExchangeOpt, 0)
-		if p.pkce {
-			codeVerifier, err := p.cookieHandler.CheckCookie(r, pkceCode)
-			if err != nil {
-				http.Error(w, "failed to get code verifier: "+err.Error(), http.StatusUnauthorized)
-				return
-			}
-			codeOpts = append(codeOpts, WithCodeVerifier(codeVerifier))
-		}
-		tokens, err := p.CodeExchange(r.Context(), params.Get("code"), codeOpts...)
-		if err != nil {
-			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-		callback(w, r, tokens, state)
-	}
+	return CodeExchangeHandler(callback, p)
 }
 
 // func (p *DefaultRP) Introspect(ctx context.Context, accessToken string) (oidc.TokenIntrospectResponse, error) {
@@ -237,19 +186,19 @@ func (p *DefaultRP) Userinfo() {}
 //ClientCredentials is the `RelayingParty` interface implementation
 //handling the oauth2 client credentials grant
 func (p *DefaultRP) ClientCredentials(ctx context.Context, scopes ...string) (newToken *oauth2.Token, err error) {
-	return p.callTokenEndpoint(grants.ClientCredentialsGrantBasic(scopes...))
+	return ClientCredentials(ctx, p, scopes...)
 }
 
 //TokenExchange is the `TokenExchangeRP` interface implementation
 //handling the oauth2 token exchange (draft)
 func (p *DefaultRP) TokenExchange(ctx context.Context, request *grants_tx.TokenExchangeRequest) (newToken *oauth2.Token, err error) {
-	return p.callTokenEndpoint(request)
+	return TokenExchange(ctx, request, p)
 }
 
 //DelegationTokenExchange is the `TokenExchangeRP` interface implementation
 //handling the oauth2 token exchange for a delegation token (draft)
 func (p *DefaultRP) DelegationTokenExchange(ctx context.Context, subjectToken string, reqOpts ...grants_tx.TokenExchangeOption) (newToken *oauth2.Token, err error) {
-	return p.TokenExchange(ctx, DelegationTokenRequest(subjectToken, reqOpts...))
+	return TokenExchange(ctx, DelegationTokenRequest(subjectToken, reqOpts...), p)
 }
 
 func (p *DefaultRP) discover() error {
@@ -276,41 +225,6 @@ func (p *DefaultRP) getOAuthConfig(endpoint oauth2.Endpoint) oauth2.Config {
 		RedirectURL:  p.config.CallbackURL,
 		Scopes:       p.config.Scopes,
 	}
-}
-
-func (p *DefaultRP) callTokenEndpoint(request interface{}) (newToken *oauth2.Token, err error) {
-	req, err := utils.FormRequest(p.endpoints.TokenURL, request)
-	if err != nil {
-		return nil, err
-	}
-	auth := base64.StdEncoding.EncodeToString([]byte(p.config.ClientID + ":" + p.config.ClientSecret))
-	req.Header.Set("Authorization", "Basic "+auth)
-	token := new(oauth2.Token)
-	if err := utils.HttpRequest(p.httpClient, req, token); err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
-func (p *DefaultRP) trySetStateCookie(w http.ResponseWriter, state string) error {
-	if p.cookieHandler != nil {
-		if err := p.cookieHandler.SetCookie(w, stateParam, state); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (p *DefaultRP) tryReadStateCookie(w http.ResponseWriter, r *http.Request) (state string, err error) {
-	if p.cookieHandler == nil {
-		return r.FormValue(stateParam), nil
-	}
-	state, err = p.cookieHandler.CheckQueryCookie(r, stateParam)
-	if err != nil {
-		return "", err
-	}
-	p.cookieHandler.DeleteCookie(w, stateParam)
-	return state, nil
 }
 
 func (p *DefaultRP) Client(ctx context.Context, token *oauth2.Token) *http.Client {

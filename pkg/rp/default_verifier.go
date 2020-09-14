@@ -2,13 +2,12 @@ package rp
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
+//deprecated: use IDTokenVerifier or oidc.Verifier interfaces
 //DefaultVerifier implements the `Verifier` interface
 type DefaultVerifier struct {
 	config *verifierConfig
@@ -18,6 +17,7 @@ type DefaultVerifier struct {
 //ConfFunc is the type for providing dynamic options to the DefaultVerifier
 type ConfFunc func(*verifierConfig)
 
+//deprecated: use NewIDTokenVerifier
 //NewDefaultVerifier creates `DefaultVerifier` with the given
 //issuer, clientID, keyset and possible configOptions
 func NewDefaultVerifier(issuer, clientID string, keySet oidc.KeySet, confOpts ...ConfFunc) Verifier {
@@ -123,17 +123,14 @@ type iatConfig struct {
 	maxAge time.Duration
 }
 
+//deprecated: use oidc.DefaultACRVerifier directly
 //DefaultACRVerifier implements `ACRVerifier` returning an error
 //if non of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) oidc.ACRVerifier {
-	return func(acr string) error {
-		if !utils.Contains(possibleValues, acr) {
-			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, acr)
-		}
-		return nil
-	}
+	return oidc.DefaultACRVerifier(possibleValues)
 }
 
+//deprecated: use VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) instead
 //Verify implements the `Verify` method of the `Verifier` interface
 //according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 //and https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
@@ -142,6 +139,7 @@ func (v *DefaultVerifier) Verify(ctx context.Context, accessToken, idTokenString
 	return VerifyTokens(ctx, accessToken, idTokenString, v)
 }
 
+//deprecated: use VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) instead
 //Verify implements the `VerifyIDToken` method of the `Verifier` interface
 //according to https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func (v *DefaultVerifier) VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error) {

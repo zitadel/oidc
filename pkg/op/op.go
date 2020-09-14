@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -16,8 +17,12 @@ const (
 
 type OpenIDProvider interface {
 	Configuration
-	Authorizer
-	SessionEnder
+	Storage() Storage
+	Decoder() utils.Decoder
+	Encoder() utils.Encoder
+	IDTokenVerifier() IDTokenHintVerifier
+	Crypto() Crypto
+	DefaultLogoutRedirectURI() string
 	Signer() Signer
 	Probes() []ProbesFn
 	HttpHandler() http.Handler

@@ -72,6 +72,17 @@ type verifierConfig struct {
 //ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
 type ACRVerifier func(string) error
 
+//DefaultACRVerifier implements `ACRVerifier` returning an error
+//if non of the provided values matches the acr claim
+func DefaultACRVerifier(possibleValues []string) ACRVerifier {
+	return func(acr string) error {
+		if !utils.Contains(possibleValues, acr) {
+			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, acr)
+		}
+		return nil
+	}
+}
+
 func DecryptToken(tokenString string) (string, error) {
 	return tokenString, nil //TODO: impl
 }

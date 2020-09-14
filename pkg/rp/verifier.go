@@ -9,16 +9,6 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 )
 
-//deprecated: Use IDTokenVerifier or oidc.Verifier
-type Verifier interface {
-
-	//Verify checks the access_token and id_token and returns the `id token claims`
-	Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error)
-
-	//VerifyIDToken checks the id_token only and returns its `id token claims`
-	VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error)
-}
-
 type IDTokenVerifier interface {
 	oidc.Verifier
 	ClientID() string
@@ -27,63 +17,6 @@ type IDTokenVerifier interface {
 	Nonce(context.Context) string
 	ACR() oidc.ACRVerifier
 	MaxAge() time.Duration
-}
-
-type idTokenVerifier struct {
-	issuer            string
-	maxAgeIAT         time.Duration
-	offset            time.Duration
-	clientID          string
-	supportedSignAlgs []string
-	keySet            oidc.KeySet
-	acr               oidc.ACRVerifier
-	maxAge            time.Duration
-	nonce             func(ctx context.Context) string
-}
-
-func (i *idTokenVerifier) Issuer() string {
-	return i.issuer
-}
-
-func (i *idTokenVerifier) MaxAgeIAT() time.Duration {
-	return i.maxAgeIAT
-}
-
-func (i *idTokenVerifier) Offset() time.Duration {
-	return i.offset
-}
-
-func (i *idTokenVerifier) ClientID() string {
-	return i.clientID
-}
-
-func (i *idTokenVerifier) SupportedSignAlgs() []string {
-	return i.supportedSignAlgs
-}
-
-func (i *idTokenVerifier) KeySet() oidc.KeySet {
-	return i.keySet
-}
-
-func (i *idTokenVerifier) Nonce(ctx context.Context) string {
-	return i.nonce(ctx)
-}
-
-func (i *idTokenVerifier) ACR() oidc.ACRVerifier {
-	return i.acr
-}
-
-func (i *idTokenVerifier) MaxAge() time.Duration {
-	return i.maxAge
-}
-
-func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet) IDTokenVerifier {
-	return &idTokenVerifier{
-		issuer:   issuer,
-		clientID: clientID,
-		keySet:   keySet,
-		offset:   5 * time.Second,
-	}
 }
 
 //VerifyTokens implement the Token Response Validation as defined in OIDC specification
@@ -166,4 +99,73 @@ func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAl
 		return oidc.ErrAtHash
 	}
 	return nil
+}
+
+//NewIDTokenVerifier returns an implementation of `IDTokenVerifier`
+//for `VerifyTokens` and `VerifyIDToken`
+func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet) IDTokenVerifier {
+	return &idTokenVerifier{
+		issuer:   issuer,
+		clientID: clientID,
+		keySet:   keySet,
+		offset:   5 * time.Second,
+	}
+}
+
+type idTokenVerifier struct {
+	issuer            string
+	maxAgeIAT         time.Duration
+	offset            time.Duration
+	clientID          string
+	supportedSignAlgs []string
+	keySet            oidc.KeySet
+	acr               oidc.ACRVerifier
+	maxAge            time.Duration
+	nonce             func(ctx context.Context) string
+}
+
+func (i *idTokenVerifier) Issuer() string {
+	return i.issuer
+}
+
+func (i *idTokenVerifier) MaxAgeIAT() time.Duration {
+	return i.maxAgeIAT
+}
+
+func (i *idTokenVerifier) Offset() time.Duration {
+	return i.offset
+}
+
+func (i *idTokenVerifier) ClientID() string {
+	return i.clientID
+}
+
+func (i *idTokenVerifier) SupportedSignAlgs() []string {
+	return i.supportedSignAlgs
+}
+
+func (i *idTokenVerifier) KeySet() oidc.KeySet {
+	return i.keySet
+}
+
+func (i *idTokenVerifier) Nonce(ctx context.Context) string {
+	return i.nonce(ctx)
+}
+
+func (i *idTokenVerifier) ACR() oidc.ACRVerifier {
+	return i.acr
+}
+
+func (i *idTokenVerifier) MaxAge() time.Duration {
+	return i.maxAge
+}
+
+//deprecated: Use IDTokenVerifier (or oidc.Verifier)
+type Verifier interface {
+
+	//Verify checks the access_token and id_token and returns the `id token claims`
+	Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error)
+
+	//VerifyIDToken checks the id_token only and returns its `id token claims`
+	VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error)
 }
