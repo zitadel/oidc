@@ -56,7 +56,9 @@ func codeFlow(provider rp.RelayingParty, callbackPath string, port string) *oidc
 
 	getToken, setToken := getAndSetTokens()
 
-	state := uuid.New().String()
+	state := func() string {
+		return uuid.New().String()
+	}
 	http.Handle(loginPath, rp.AuthURLHandler(state, provider))
 
 	marshal := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
