@@ -10,7 +10,6 @@ import (
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
-	"github.com/caos/oidc/pkg/rp"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {
@@ -58,9 +57,9 @@ func ExpectSigner(a op.Authorizer, t *testing.T) {
 
 func ExpectVerifier(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
-	mockA.EXPECT().IDTokenVerifier().DoAndReturn(
-		func() rp.Verifier {
-			return &Verifier{}
+	mockA.EXPECT().IDTokenHintVerifier().DoAndReturn(
+		func() op.IDTokenHintVerifier {
+			return op.NewIDTokenHintVerifier("", nil)
 		})
 }
 
