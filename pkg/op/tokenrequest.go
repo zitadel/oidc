@@ -4,12 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
-
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -20,11 +16,7 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
-}
-
-type VerifyExchanger interface {
-	Exchanger
-	ClientJWTVerifier() oidc.Verifier
+	JWTProfileVerifier() JWTProfileVerifier
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
@@ -34,16 +26,16 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 			CodeExchange(w, r, exchanger)
 			return
 		case string(oidc.GrantTypeBearer):
-			ex, _ := exchanger.(VerifyExchanger)
-			JWTExchange(w, r, ex)
+			JWTProfile(w, r, exchanger)
 			return
-		case "excahnge":
+		case "exchange":
 			TokenExchange(w, r, exchanger)
 		case "":
 			RequestError(w, r, ErrInvalidRequest("grant_type missing"))
 			return
 		default:
-
+			RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
+			return
 		}
 	}
 }
@@ -144,41 +136,13 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 	return authReq, nil
 }
 
-type ClientJWTVerifier struct {
-	claims  *oidc.JWTTokenRequest
-	storage Storage
-	issuer  string
-}
-
-func (c ClientJWTVerifier) Storage() Storage {
-	return c.storage
-}
-
-func (c ClientJWTVerifier) Issuer() string {
-	return c.claims.Issuer
-}
-
-func (c ClientJWTVerifier) ClientID() string {
-	return c.issuer
-}
-
-func (c ClientJWTVerifier) MaxAgeIAT() time.Duration {
-	//TODO: define in conf/opts
-	return 1 * time.Hour
-}
-
-func (c ClientJWTVerifier) Offset() time.Duration {
-	//TODO: define in conf/opts
-	return time.Second
-}
-
-func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchanger) {
-	assertion, err := ParseJWTTokenRequest(r, exchanger.Decoder())
+func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	assertion, err := ParseJWTProfileRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
 	}
 
-	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger)
+	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger.JWTProfileVerifier())
 	if err != nil {
 		RequestError(w, r, err)
 		return
@@ -192,70 +156,7 @@ func JWTExchange(w http.ResponseWriter, r *http.Request, exchanger VerifyExchang
 	utils.MarshalJSON(w, resp)
 }
 
-type JWTAssertionVerifier interface {
-	Storage() Storage
-	oidc.Verifier
-}
-
-func VerifyJWTAssertion(ctx context.Context, assertion string, exchanger Exchanger) (*oidc.JWTTokenRequest, error) {
-	verifier := &ClientJWTVerifier{
-		storage: exchanger.Storage(),
-		issuer:  exchanger.Issuer(),
-		claims:  new(oidc.JWTTokenRequest),
-	}
-	payload, err := oidc.ParseToken(assertion, verifier.claims)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = oidc.CheckAudience(verifier.claims, verifier.issuer); err != nil {
-		return nil, err
-	}
-
-	if err = oidc.CheckExpiration(verifier.claims, verifier.Offset()); err != nil {
-		return nil, err
-	}
-
-	if err = oidc.CheckIssuedAt(verifier.claims, verifier.MaxAgeIAT(), verifier.Offset()); err != nil {
-		return nil, err
-	}
-
-	if verifier.claims.Issuer != verifier.claims.Subject {
-		//TODO: implement delegation (openid core / oauth rfc)
-	}
-	verifier.Storage().GetClientByClientID(ctx, verifier.claims.Subject)
-
-	keySet := &ClientAssertionKeySet{exchanger.Storage(), verifier.claims.Subject}
-
-	if err = oidc.CheckSignature(ctx, assertion, payload, verifier.claims, nil, keySet); err != nil {
-		return nil, err
-	}
-	return verifier.claims, nil
-}
-
-type ClientAssertionKeySet struct {
-	Storage
-	id string
-}
-
-func (c *ClientAssertionKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
-	keyID := ""
-	for _, sig := range jws.Signatures {
-		keyID = sig.Header.KeyID
-		break
-	}
-	keySet, err := c.Storage.GetKeyByID(ctx, keyID)
-	if err != nil {
-		return nil, errors.New("error fetching keys")
-	}
-	payload, err, ok := rp.CheckKey(keyID, keySet.Keys, jws)
-	if !ok {
-		return nil, errors.New("invalid kid")
-	}
-	return payload, err
-}
-
-func ParseJWTTokenRequest(r *http.Request, decoder utils.Decoder) (string, error) {
+func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (string, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return "", ErrInvalidRequest("error parsing form")
@@ -267,7 +168,6 @@ func ParseJWTTokenRequest(r *http.Request, decoder utils.Decoder) (string, error
 	if err != nil {
 		return "", ErrInvalidRequest("error decoding form")
 	}
-	//TODO: validations
 	return tokenReq.Token, nil
 }
 

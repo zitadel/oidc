@@ -13,7 +13,6 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -51,6 +50,7 @@ type OpenIDProvider interface {
 	Decoder() utils.Decoder
 	Encoder() utils.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
+	JWTProfileVerifier() JWTProfileVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Signer() Signer
@@ -72,9 +72,9 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
 		handlers.AllowedOriginValidator(allowAllOrigins),
 	))
-	router.HandleFunc(healthzEndpoint, Healthz)
-	router.HandleFunc(readinessEndpoint, Ready(o.Probes()))
-	router.HandleFunc(oidc.DiscoveryEndpoint, DiscoveryHandler(o, o.Signer()))
+	router.HandleFunc(healthzEndpoint, healthzHandler)
+	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
+	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
 	router.Handle(o.AuthorizationEndpoint().Relative()+"/{id}", intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
@@ -131,8 +131,6 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 	o.signer = NewDefaultSigner(ctx, storage, keyCh)
 	go EnsureKey(ctx, storage, keyCh, o.timer, o.retry)
 
-	o.idTokenHintVerifier = NewIDTokenHintVerifier(config.Issuer, o)
-
 	o.httpHandler = CreateRouter(o, o.interceptors...)
 
 	o.decoder = schema.NewDecoder()
@@ -151,6 +149,7 @@ type openidProvider struct {
 	storage             Storage
 	signer              Signer
 	idTokenHintVerifier IDTokenHintVerifier
+	jwtProfileVerifier  JWTProfileVerifier
 	crypto              Crypto
 	httpHandler         http.Handler
 	decoder             *schema.Decoder
@@ -205,7 +204,17 @@ func (o *openidProvider) Encoder() utils.Encoder {
 }
 
 func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
+	if o.idTokenHintVerifier == nil {
+		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), &openIDKeySet{o.Storage()})
+	}
 	return o.idTokenHintVerifier
+}
+
+func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
+	if o.jwtProfileVerifier == nil {
+		o.jwtProfileVerifier = NewJWTProfileVerifier(o.Storage(), o.Issuer())
+	}
+	return o.jwtProfileVerifier
 }
 
 func (o *openidProvider) Crypto() Crypto {
@@ -231,19 +240,23 @@ func (o *openidProvider) HttpHandler() http.Handler {
 	return o.httpHandler
 }
 
+type openIDKeySet struct {
+	Storage
+}
+
 //VerifySignature implements the oidc.KeySet interface
 //providing an implementation for the keys stored in the OP Storage interface
-func (o *openidProvider) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
+func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keyID := ""
 	for _, sig := range jws.Signatures {
 		keyID = sig.Header.KeyID
 		break
 	}
-	keySet, err := o.Storage().GetKeySet(ctx)
+	keySet, err := o.Storage.GetKeySet(ctx)
 	if err != nil {
 		return nil, errors.New("error fetching keys")
 	}
-	payload, err, ok := rp.CheckKey(keyID, keySet.Keys, jws)
+	payload, err, ok := oidc.CheckKey(keyID, jws, keySet.Keys...)
 	if !ok {
 		return nil, errors.New("invalid kid")
 	}

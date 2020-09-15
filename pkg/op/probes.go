@@ -10,11 +10,11 @@ import (
 
 type ProbesFn func(context.Context) error
 
-func Healthz(w http.ResponseWriter, r *http.Request) {
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	ok(w)
 }
 
-func Ready(probes []ProbesFn) func(w http.ResponseWriter, r *http.Request) {
+func readyHandler(probes []ProbesFn) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		Readiness(w, r, probes...)
 	}

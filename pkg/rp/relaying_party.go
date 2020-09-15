@@ -13,6 +13,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	idTokenKey = "id_token"
+	stateParam = "state"
+	pkceCode   = "pkce"
+)
+
 //RelayingParty declares the minimal interface for oidc clients
 type RelayingParty interface {
 	//OAuthConfig returns the oauth2 Config
@@ -27,53 +33,11 @@ type RelayingParty interface {
 	//Client return a standard http client where the token can be used
 	Client(ctx context.Context, token *oauth2.Token) *http.Client
 
-	/*
-		//AuthURL returns the authorization endpoint with a given state
-		AuthURL(state string, opts ...AuthURLOpt) string
-
-		//AuthURLHandler should implement the AuthURL func as http.HandlerFunc
-		//(redirecting to the auth endpoint)
-		AuthURLHandler(state string) http.HandlerFunc
-
-		//CodeExchange implements the OIDC Token Request (oauth2 Authorization Code Grant)
-		//returning an `Access Token` and `ID Token Claims`
-		CodeExchange(ctx context.Context, code string, opts ...CodeExchangeOpt) (*oidc.Tokens, error)
-
-		//CodeExchangeHandler extends the CodeExchange func,
-		//calling the provided callback func on success with additional returned `state`
-		CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc.Tokens, string)) http.HandlerFunc
-
-		//ClientCredentials implements the oauth2 Client Credentials Grant
-		//requesting an `Access Token` for the client itself, without user context
-		ClientCredentials(ctx context.Context, scopes ...string) (*oauth2.Token, error)
-
-		//Introspects calls the Introspect Endpoint
-		//for validating an (access) token
-		// Introspect(ctx context.Context, token string) (TokenIntrospectResponse, error)
-
-		//Userinfo implements the OIDC Userinfo call
-		//returning the info of the user for the requested scopes of an access token
-		Userinfo()
-	*/
 	HttpClient() *http.Client
 	IsOAuth2Only() bool
 	IDTokenVerifier() IDTokenVerifier
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 }
-
-//
-////PasswortGrantRP extends the `RelayingParty` interface with the oauth2 `Password Grant`
-////
-////This interface is separated from the standard `RelayingParty` interface as the `password grant`
-////is part of the oauth2 and therefore OIDC specification, but should only be used when there's no
-////other possibility, so IMHO never ever. Ever.
-//type PasswortGrantRP interface {
-//	RelayingParty
-//
-//	//PasswordGrant implements the oauth2 `Password Grant`,
-//	//requesting an access token with the users `username` and `password`
-//	PasswordGrant(context.Context, string, string) (*oauth2.Token, error)
-//}
 
 var (
 	DefaultErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
@@ -84,9 +48,8 @@ var (
 type relayingParty struct {
 	endpoints Endpoints
 
-	oauthConfig *oauth2.Config
-	config      *Configuration
-	pkce        bool
+	config *Configuration
+	pkce   bool
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
@@ -94,12 +57,12 @@ type relayingParty struct {
 	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
 
 	idTokenVerifier IDTokenVerifier
-	verifierOpts    []ConfFunc
+	verifierOpts    []VerifierOption
 	oauth2Only      bool
 }
 
 func (rp *relayingParty) OAuthConfig() *oauth2.Config {
-	return rp.oauthConfig
+	return rp.config.Config
 }
 
 func (rp *relayingParty) IsPKCE() bool {
@@ -119,11 +82,14 @@ func (rp *relayingParty) IsOAuth2Only() bool {
 }
 
 func (rp *relayingParty) IDTokenVerifier() IDTokenVerifier {
+	if rp.idTokenVerifier == nil {
+		rp.idTokenVerifier = NewIDTokenVerifier(rp.config.Issuer, rp.config.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
+	}
 	return rp.idTokenVerifier
 }
 
 func (rp *relayingParty) Client(ctx context.Context, token *oauth2.Token) *http.Client {
-	panic("implement me")
+	return rp.config.Config.Client(ctx, token)
 }
 
 func (rp *relayingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
@@ -147,15 +113,12 @@ func NewRelayingParty(config *Configuration, options ...Option) (RelayingParty, 
 		optFunc(rp)
 	}
 
-	rp.oauthConfig = config.Config
-	if config.Endpoint.AuthURL != "" && config.Endpoint.TokenURL != "" {
-		rp.oauthConfig = config.Config
-	} else {
+	if isOpenID && config.Endpoint.AuthURL == "" && config.Endpoint.TokenURL == "" {
 		endpoints, err := Discover(config.Issuer, rp.httpClient)
 		if err != nil {
 			return nil, err
 		}
-		rp.oauthConfig.Endpoint = endpoints.Endpoint
+		rp.config.Endpoint = endpoints.Endpoint
 		rp.endpoints = endpoints
 	}
 
@@ -168,6 +131,47 @@ func NewRelayingParty(config *Configuration, options ...Option) (RelayingParty, 
 	}
 
 	return rp, nil
+}
+
+func NewRelayingParty2(clientID, clientSecret, redirectURI string, options ...Option) (RelayingParty, error) {
+	rp := &relayingParty{
+		config: &Configuration{
+			Config: &oauth2.Config{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+				RedirectURL:  redirectURI,
+			},
+		},
+		httpClient: utils.DefaultHTTPClient,
+		oauth2Only: true,
+	}
+
+	for _, optFunc := range options {
+		optFunc(rp)
+	}
+
+	if !rp.oauth2Only && rp.config.Endpoint.AuthURL == "" && rp.config.Endpoint.TokenURL == "" {
+		endpoints, err := Discover(rp.config.Issuer, rp.httpClient)
+		if err != nil {
+			return nil, err
+		}
+		rp.config.Endpoint = endpoints.Endpoint
+		rp.endpoints = endpoints
+	}
+
+	if rp.errorHandler == nil {
+		rp.errorHandler = DefaultErrorHandler
+	}
+
+	return rp, nil
+}
+
+func WithOIDC(issuer string, scopes []string) Option {
+	return func(rp *relayingParty) {
+		rp.config.Issuer = issuer
+		rp.config.Scopes = scopes
+		rp.oauth2Only = false
+	}
 }
 
 //DefaultRPOpts is the type for providing dynamic options to the DefaultRP
@@ -197,7 +201,7 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
-func WithVerifierOpts(opts ...ConfFunc) Option {
+func WithVerifierOpts(opts ...VerifierOption) Option {
 	return func(rp *relayingParty) {
 		rp.verifierOpts = opts
 	}
@@ -418,14 +422,4 @@ func isOpenID(scopes []string) bool {
 		}
 	}
 	return false
-}
-
-//deprecated: use Configuration instead
-type Config struct {
-	ClientID     string
-	ClientSecret string
-	CallbackURL  string
-	Issuer       string
-	Scopes       []string
-	Endpoints    oauth2.Endpoint
 }

@@ -103,15 +103,67 @@ func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAl
 
 //NewIDTokenVerifier returns an implementation of `IDTokenVerifier`
 //for `VerifyTokens` and `VerifyIDToken`
-func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet) IDTokenVerifier {
-	return &idTokenVerifier{
+func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...VerifierOption) IDTokenVerifier {
+	v := &idTokenVerifier{
 		issuer:   issuer,
 		clientID: clientID,
 		keySet:   keySet,
-		offset:   5 * time.Second,
+		offset:   1 * time.Second,
 		nonce: func(_ context.Context) string {
 			return ""
 		},
+	}
+
+	for _, opts := range options {
+		opts(v)
+	}
+
+	return v
+}
+
+//VerifierOption is the type for providing dynamic options to the IDTokenVerifier
+type VerifierOption func(*idTokenVerifier)
+
+//WithIssuedAtOffset mitigates the risk of iat to be in the future
+//because of clock skews with the ability to add an offset to the current time
+func WithIssuedAtOffset(offset time.Duration) func(*idTokenVerifier) {
+	return func(v *idTokenVerifier) {
+		v.offset = offset
+	}
+}
+
+//WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
+func WithIssuedAtMaxAge(maxAge time.Duration) func(*idTokenVerifier) {
+	return func(v *idTokenVerifier) {
+		v.maxAge = maxAge
+	}
+}
+
+//WithNonce sets the function to check the nonce
+func WithNonce(nonce func(context.Context) string) VerifierOption {
+	return func(v *idTokenVerifier) {
+		v.nonce = nonce
+	}
+}
+
+//WithACRVerifier sets the verifier for the acr claim
+func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
+	return func(v *idTokenVerifier) {
+		v.acr = verifier
+	}
+}
+
+//WithAuthTimeMaxAge provides the ability to define the maximum duration between auth_time and now
+func WithAuthTimeMaxAge(maxAge time.Duration) VerifierOption {
+	return func(v *idTokenVerifier) {
+		v.maxAge = maxAge
+	}
+}
+
+//WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
+func WithSupportedSigningAlgorithms(algs ...string) VerifierOption {
+	return func(v *idTokenVerifier) {
+		v.supportedSignAlgs = algs
 	}
 }
 
