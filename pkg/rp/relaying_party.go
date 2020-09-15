@@ -155,6 +155,7 @@ func NewRelayingParty(config *Configuration, options ...Option) (RelayingParty, 
 			return nil, err
 		}
 		rp.oauthConfig.Endpoint = endpoints.Endpoint
+		rp.endpoints = endpoints
 	}
 
 	if rp.errorHandler == nil {

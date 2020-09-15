@@ -38,20 +38,12 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 	}
 }
 
-const (
-	ScopeOpenID  = "openid"
-	ScopeProfile = "profile"
-	ScopeEmail   = "email"
-	ScopePhone   = "phone"
-	ScopeAddress = "address"
-)
-
 var DefaultSupportedScopes = []string{
-	ScopeOpenID,
-	ScopeProfile,
-	ScopeEmail,
-	ScopePhone,
-	ScopeAddress,
+	oidc.ScopeOpenID,
+	oidc.ScopeProfile,
+	oidc.ScopeEmail,
+	oidc.ScopePhone,
+	oidc.ScopeAddress,
 }
 
 func Scopes(c Configuration) []string {

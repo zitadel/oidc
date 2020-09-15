@@ -17,7 +17,7 @@ type Authorizer interface {
 	Decoder() utils.Decoder
 	Encoder() utils.Encoder
 	Signer() Signer
-	IDTokenVerifier() IDTokenHintVerifier
+	IDTokenHintVerifier() IDTokenHintVerifier
 	Crypto() Crypto
 	Issuer() string
 }
@@ -28,12 +28,6 @@ type AuthorizeValidator interface {
 	Authorizer
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, IDTokenHintVerifier) (string, error)
 }
-
-//ValidationAuthorizer is an extension of Authorizer interface
-//implementing it's own validation mechanism for the auth request
-//
-//Deprecated: ValidationAuthorizer exists for historical compatibility. Use ValidationAuthorizer itself
-type ValidationAuthorizer AuthorizeValidator
 
 func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +53,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
-	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenVerifier())
+	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
@@ -204,14 +198,14 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	client, err := authorizer.Storage().GetClientByClientID(r.Context(), authReq.GetClientID())
 	if err != nil {
-
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
 	}
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
 		AuthResponseCode(w, r, authReq, authorizer)
 		return
 	}
 	AuthResponseToken(w, r, authReq, authorizer, client)
-	return
 }
 
 //AuthResponseCode creates the successful code authentication response

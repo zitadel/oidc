@@ -109,6 +109,9 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet) IDTokenVeri
 		clientID: clientID,
 		keySet:   keySet,
 		offset:   5 * time.Second,
+		nonce: func(_ context.Context) string {
+			return ""
+		},
 	}
 }
 

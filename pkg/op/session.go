@@ -11,7 +11,7 @@ import (
 type SessionEnder interface {
 	Decoder() utils.Decoder
 	Storage() Storage
-	IDTokenVerifier() IDTokenHintVerifier
+	IDTokenHintVerifier() IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
 }
 
@@ -62,7 +62,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	if req.IdTokenHint == "" {
 		return session, nil
 	}
-	claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenVerifier())
+	claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier())
 	if err != nil {
 		return nil, ErrInvalidRequest("id_token_hint invalid")
 	}

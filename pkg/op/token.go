@@ -102,7 +102,7 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 	exp := time.Now().UTC().Add(validity)
 	userinfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetScopes())
 	if err != nil {
-
+		return "", err
 	}
 	claims := &oidc.IDTokenClaims{
 		Issuer:                              issuer,
