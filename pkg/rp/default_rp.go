@@ -153,7 +153,11 @@ func (p *DefaultRP) AuthURL(state string, opts ...AuthURLOpt) string {
 //AuthURL is the `RelayingParty` interface implementation
 //extending the `AuthURL` method with a http redirect handler
 func (p *DefaultRP) AuthURLHandler(state string) http.HandlerFunc {
-	return AuthURLHandler(state, p)
+	return AuthURLHandler(
+		func() string {
+			return state
+		}, p,
+	)
 }
 
 //deprecated: Use CodeExchange func and provide a RelayingParty

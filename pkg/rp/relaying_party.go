@@ -230,9 +230,10 @@ func AuthURL(state string, rp RelayingParty, opts ...AuthURLOpt) string {
 
 //AuthURLHandler extends the `AuthURL` method with a http redirect handler
 //including handling setting cookie for secure `state` transfer
-func AuthURLHandler(state string, rp RelayingParty) http.HandlerFunc {
+func AuthURLHandler(stateFn func() string, rp RelayingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := make([]AuthURLOpt, 0)
+		state := stateFn()
 		if err := trySetStateCookie(w, state, rp); err != nil {
 			http.Error(w, "failed to create state cookie: "+err.Error(), http.StatusUnauthorized)
 			return
