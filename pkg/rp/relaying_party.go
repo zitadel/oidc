@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -271,17 +272,19 @@ func CodeExchange(ctx context.Context, code string, rp RelayingParty, opts ...Co
 	if err != nil {
 		return nil, err //TODO: our error
 	}
-	idTokenString, ok := token.Extra(idTokenKey).(string)
-	if !ok {
-		//TODO: implement
+
+	if rp.IsOAuth2Only() {
+		return &oidc.Tokens{Token: token}, nil
 	}
 
-	idToken := new(oidc.IDTokenClaims)
-	if !rp.IsOAuth2Only() {
-		idToken, err = VerifyTokens(ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
-		if err != nil {
-			return nil, err //TODO: err
-		}
+	idTokenString, ok := token.Extra(idTokenKey).(string)
+	if !ok {
+		return nil, errors.New("id_token missing")
+	}
+
+	idToken, err := VerifyTokens(ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
+	if err != nil {
+		return nil, err
 	}
 
 	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
