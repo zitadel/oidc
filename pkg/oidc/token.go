@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"strings"
 	"time"
 
@@ -60,14 +61,31 @@ type IDTokenClaims struct {
 }
 
 type JWTProfileAssertion struct {
-	PrivateKeyID string
-	PrivateKey   []byte
-	Scopes       []string
-	Issuer       string
-	Subject      string
-	Audience     []string
-	Expiration   time.Time
-	IssuedAt     time.Time
+	PrivateKeyID string    `json:"keyId"`
+	PrivateKey   []byte    `json:"key"`
+	Scopes       []string  `json:"-"`
+	Issuer       string    `json:"-"`
+	Subject      string    `json:"userId"`
+	Audience     []string  `json:"-"`
+	Expiration   time.Time `json:"-"`
+	IssuedAt     time.Time `json:"-"`
+}
+
+func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string) (*JWTProfileAssertion, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	keyData := new(struct {
+		KeyID  string `json:"keyId"`
+		Key    []byte `json:"key"`
+		UserID string `json:"userId"`
+	})
+	err = json.Unmarshal(data, keyData)
+	if err != nil {
+		return nil, err
+	}
+	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, keyData.Key), nil
 }
 
 func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte) *JWTProfileAssertion {
