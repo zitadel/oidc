@@ -89,6 +89,8 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
+
+	//TODO: add to config after updating Configuration interface for DiscoveryConfig
 	// ScopesSupported:                   oidc.SupportedScopes,
 	// ResponseTypesSupported:            responseTypes,
 	// GrantTypesSupported:               oidc.SupportedGrantTypes,

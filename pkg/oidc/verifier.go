@@ -53,22 +53,6 @@ type Verifier interface {
 	Offset() time.Duration
 }
 
-type verifierConfig struct {
-	issuer           string
-	clientID         string
-	nonce            string
-	ignoreAudience   bool
-	ignoreExpiration bool
-	//iat               *iatConfig
-	acr               ACRVerifier
-	maxAge            time.Duration
-	supportedSignAlgs []string
-
-	// httpClient *http.Client
-
-	now time.Time
-}
-
 //ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
 type ACRVerifier func(string) error
 
