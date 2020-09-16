@@ -59,6 +59,30 @@ type IDTokenClaims struct {
 	Signature jose.SignatureAlgorithm //TODO: ???
 }
 
+type JWTProfileAssertion struct {
+	PrivateKeyID string
+	PrivateKey   []byte
+	Scopes       []string
+	Issuer       string
+	Subject      string
+	Audience     []string
+	Expiration   time.Time
+	IssuedAt     time.Time
+}
+
+func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte) *JWTProfileAssertion {
+	return &JWTProfileAssertion{
+		PrivateKey:   key,
+		PrivateKeyID: keyID,
+		Issuer:       userID,
+		Scopes:       []string{ScopeOpenID},
+		Subject:      userID,
+		IssuedAt:     time.Now().UTC(),
+		Expiration:   time.Now().Add(1 * time.Hour).UTC(),
+		Audience:     audience,
+	}
+}
+
 type jsonToken struct {
 	Issuer                              string      `json:"iss,omitempty"`
 	Subject                             string      `json:"sub,omitempty"`
@@ -211,6 +235,34 @@ func (t *IDTokenClaims) GetAuthorizedParty() string {
 
 func (t *IDTokenClaims) SetSignature(alg jose.SignatureAlgorithm) {
 	t.Signature = alg
+}
+
+func (t *JWTProfileAssertion) MarshalJSON() ([]byte, error) {
+	j := jsonToken{
+		Issuer:     t.Issuer,
+		Subject:    t.Subject,
+		Audiences:  t.Audience,
+		Expiration: timeToJSON(t.Expiration),
+		IssuedAt:   timeToJSON(t.IssuedAt),
+		Scopes:     strings.Join(t.Scopes, " "),
+	}
+	return json.Marshal(j)
+}
+
+func (t *JWTProfileAssertion) UnmarshalJSON(b []byte) error {
+	var j jsonToken
+	if err := json.Unmarshal(b, &j); err != nil {
+		return err
+	}
+
+	t.Issuer = j.Issuer
+	t.Subject = j.Subject
+	t.Audience = audienceFromJSON(j.Audiences)
+	t.Expiration = time.Unix(j.Expiration, 0).UTC()
+	t.IssuedAt = time.Unix(j.IssuedAt, 0).UTC()
+	t.Scopes = strings.Split(j.Scopes, " ")
+
+	return nil
 }
 
 func (j *jsonToken) UnmarshalUserinfoProfile() UserinfoProfile {

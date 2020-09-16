@@ -105,7 +105,7 @@ func (i *Userinfo) UnmmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, i); err != nil {
 		return err
 	}
-	return json.Unmarshal(data, i.claims)
+	return json.Unmarshal(data, &i.claims)
 }
 
 type jsonUserinfo struct {

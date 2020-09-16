@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	idTokenKey = "id_token"
-	stateParam = "state"
-	pkceCode   = "pkce"
+	idTokenKey    = "id_token"
+	stateParam    = "state"
+	pkceCode      = "pkce"
+	jwtProfileKey = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 )
 
 //RelayingParty declares the minimal interface for oidc clients
@@ -339,6 +340,24 @@ func CallTokenEndpoint(request interface{}, rp RelayingParty) (newToken *oauth2.
 	if err != nil {
 		return nil, err
 	}
+	token := new(oauth2.Token)
+	if err := utils.HttpRequest(rp.HttpClient(), req, token); err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+func CallJWTProfileEndpoint(assertion string, rp RelayingParty) (*oauth2.Token, error) {
+	form := make(map[string][]string)
+	form["assertion"] = []string{assertion}
+	form["grant_type"] = []string{jwtProfileKey}
+	req, err := http.NewRequest("POST", rp.OAuthConfig().Endpoint.TokenURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 	token := new(oauth2.Token)
 	if err := utils.HttpRequest(rp.HttpClient(), req, token); err != nil {
 		return nil, err
