@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -30,17 +29,13 @@ func main() {
 
 	ctx := context.Background()
 
-	rpConfig := &rp.Configuration{
-		Issuer: issuer,
-		Config: &oauth2.Config{
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
-			RedirectURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
-			Scopes:       []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail},
-		},
-	}
+	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
+	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewRelayingParty(rpConfig, rp.WithCookieHandler(cookieHandler), rp.WithPKCE(cookieHandler), rp.WithVerifierOpts(rp.WithIssuedAtOffset(-3*time.Minute))) //,
+	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
+		rp.WithPKCE(cookieHandler),
+		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5*time.Second)),
+	)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}

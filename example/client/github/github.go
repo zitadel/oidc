@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caos/oidc/pkg/cli"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/google/go-github/v31/github"
+	"github.com/google/uuid"
+	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
+
+	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/oidc/pkg/rp/cli"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 var (
@@ -21,23 +25,32 @@ func main() {
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	port := os.Getenv("PORT")
 
-	rpConfig := &rp.Config{
+	rpConfig := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
+		RedirectURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
 		Scopes:       []string{"repo", "repo_deployment"},
-		Endpoints:    githubOAuth.Endpoint,
+		Endpoint:     githubOAuth.Endpoint,
 	}
-
-	oauth2Client := cli.CodeFlowForClient(rpConfig, key, callbackPath, port)
-
-	client := github.NewClient(oauth2Client)
 
 	ctx := context.Background()
-	_, _, err := client.Users.Get(ctx, "")
+	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
+	relayingParty, err := rp.NewRelayingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
-		fmt.Println("OAuth flow failed")
-	} else {
-		fmt.Println("OAuth flow success")
+		fmt.Printf("error creating relaying party: %v", err)
+		return
 	}
+	state := func() string {
+		return uuid.New().String()
+	}
+	token := cli.CodeFlow(relayingParty, callbackPath, port, state)
+
+	client := github.NewClient(relayingParty.Client(ctx, token.Token))
+
+	_, _, err = client.Users.Get(ctx, "")
+	if err != nil {
+		fmt.Printf("error %v", err)
+		return
+	}
+	fmt.Println("call succeeded")
 }
