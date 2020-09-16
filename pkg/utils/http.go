@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -78,4 +80,19 @@ func URLEncodeResponse(resp interface{}, encoder Encoder) (string, error) {
 	}
 	v := url.Values(values)
 	return v.Encode(), nil
+}
+
+func StartServer(ctx context.Context, port string) {
+	server := &http.Server{Addr: port}
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe(): %v", err)
+		}
+	}()
+
+	go func() {
+		<-ctx.Done()
+		err := server.Shutdown(ctx)
+		log.Fatalf("Shutdown(): %v", err)
+	}()
 }

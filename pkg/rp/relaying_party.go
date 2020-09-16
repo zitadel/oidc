@@ -40,30 +40,31 @@ type RelayingParty interface {
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 }
 
+type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
+
 var (
-	DefaultErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
+	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 	}
 )
 
 type relayingParty struct {
-	endpoints Endpoints
-
-	config *Configuration
-	pkce   bool
+	issuer      string
+	endpoints   Endpoints
+	oauthConfig *oauth2.Config
+	oauth2Only  bool
+	pkce        bool
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
-
-	errorHandler func(http.ResponseWriter, *http.Request, string, string, string)
+	errorHandler  func(http.ResponseWriter, *http.Request, string, string, string)
 
 	idTokenVerifier IDTokenVerifier
 	verifierOpts    []VerifierOption
-	oauth2Only      bool
 }
 
 func (rp *relayingParty) OAuthConfig() *oauth2.Config {
-	return rp.config.Config
+	return rp.oauthConfig
 }
 
 func (rp *relayingParty) IsPKCE() bool {
@@ -84,95 +85,67 @@ func (rp *relayingParty) IsOAuth2Only() bool {
 
 func (rp *relayingParty) IDTokenVerifier() IDTokenVerifier {
 	if rp.idTokenVerifier == nil {
-		rp.idTokenVerifier = NewIDTokenVerifier(rp.config.Issuer, rp.config.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
+		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
 	}
 	return rp.idTokenVerifier
 }
 
 func (rp *relayingParty) Client(ctx context.Context, token *oauth2.Token) *http.Client {
-	return rp.config.Config.Client(ctx, token)
+	return rp.oauthConfig.Client(ctx, token)
 }
 
 func (rp *relayingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
+	if rp.errorHandler == nil {
+		rp.errorHandler = DefaultErrorHandler
+	}
 	return rp.errorHandler
 }
 
-//NewRelayingParty creates a DelegationTokenExchangeRP with the given
-//Config and possible configOptions
-//it will run discovery on the provided issuer if AuthURL and TokenURL are not set
-//if no verifier is provided using the options the `DefaultVerifier` is set
-func NewRelayingParty(config *Configuration, options ...Option) (RelayingParty, error) {
-	isOpenID := isOpenID(config.Scopes)
-
+//NewRelayingPartyOAuth creates an (OAuth2) RelayingParty with the given
+//OAuth2 Config and possible configOptions
+//it will use the AuthURL and TokenURL set in config
+func NewRelayingPartyOAuth(config *oauth2.Config, options ...Option) (RelayingParty, error) {
 	rp := &relayingParty{
-		config:     config,
-		httpClient: utils.DefaultHTTPClient,
-		oauth2Only: !isOpenID,
+		oauthConfig: config,
+		httpClient:  utils.DefaultHTTPClient,
+		oauth2Only:  true,
 	}
 
 	for _, optFunc := range options {
 		optFunc(rp)
 	}
 
-	if isOpenID && config.Endpoint.AuthURL == "" && config.Endpoint.TokenURL == "" {
-		endpoints, err := Discover(config.Issuer, rp.httpClient)
-		if err != nil {
-			return nil, err
-		}
-		rp.config.Endpoint = endpoints.Endpoint
-		rp.endpoints = endpoints
-	}
-
-	if rp.errorHandler == nil {
-		rp.errorHandler = DefaultErrorHandler
-	}
-
-	if isOpenID && rp.idTokenVerifier == nil {
-		rp.idTokenVerifier = NewIDTokenVerifier(config.Issuer, config.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL))
-	}
-
 	return rp, nil
 }
 
-func NewRelayingParty2(clientID, clientSecret, redirectURI string, options ...Option) (RelayingParty, error) {
+//NewRelayingPartyOIDC creates an (OIDC) RelayingParty with the given
+//issuer, clientID, clientSecret, redirectURI, scopes and possible configOptions
+//it will run discovery on the provided issuer and use the found endpoints
+func NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, scopes []string, options ...Option) (RelayingParty, error) {
 	rp := &relayingParty{
-		config: &Configuration{
-			Config: &oauth2.Config{
-				ClientID:     clientID,
-				ClientSecret: clientSecret,
-				RedirectURL:  redirectURI,
-			},
+		issuer: issuer,
+		oauthConfig: &oauth2.Config{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			RedirectURL:  redirectURI,
+			Scopes:       scopes,
 		},
 		httpClient: utils.DefaultHTTPClient,
-		oauth2Only: true,
+		oauth2Only: false,
 	}
 
 	for _, optFunc := range options {
 		optFunc(rp)
 	}
 
-	if !rp.oauth2Only && rp.config.Endpoint.AuthURL == "" && rp.config.Endpoint.TokenURL == "" {
-		endpoints, err := Discover(rp.config.Issuer, rp.httpClient)
-		if err != nil {
-			return nil, err
-		}
-		rp.config.Endpoint = endpoints.Endpoint
-		rp.endpoints = endpoints
+	endpoints, err := Discover(rp.issuer, rp.httpClient)
+	if err != nil {
+		return nil, err
 	}
-
-	if rp.errorHandler == nil {
-		rp.errorHandler = DefaultErrorHandler
-	}
+	rp.oauthConfig.Endpoint = endpoints.Endpoint
+	rp.endpoints = endpoints
 
 	return rp, nil
-}
-
-func WithOIDC(issuer string, scopes []string) Option {
-	return func(rp *relayingParty) {
-		rp.config.Issuer = issuer
-		rp.config.Scopes = scopes
-		rp.oauth2Only = false
-	}
 }
 
 //DefaultRPOpts is the type for providing dynamic options to the DefaultRP
@@ -199,6 +172,12 @@ func WithPKCE(cookieHandler *utils.CookieHandler) Option {
 func WithHTTPClient(client *http.Client) Option {
 	return func(rp *relayingParty) {
 		rp.httpClient = client
+	}
+}
+
+func WithErrorHandler(errorHandler ErrorHandler) Option {
+	return func(rp *relayingParty) {
+		rp.errorHandler = errorHandler
 	}
 }
 
@@ -432,13 +411,4 @@ func WithCodeVerifier(codeVerifier string) CodeExchangeOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("code_verifier", codeVerifier)}
 	}
-}
-
-func isOpenID(scopes []string) bool {
-	for _, scope := range scopes {
-		if scope == oidc.ScopeOpenID {
-			return true
-		}
-	}
-	return false
 }
