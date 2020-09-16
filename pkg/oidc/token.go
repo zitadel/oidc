@@ -78,14 +78,14 @@ func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string) (*JWT
 	}
 	keyData := new(struct {
 		KeyID  string `json:"keyId"`
-		Key    []byte `json:"key"`
+		Key    string `json:"key"`
 		UserID string `json:"userId"`
 	})
 	err = json.Unmarshal(data, keyData)
 	if err != nil {
 		return nil, err
 	}
-	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, keyData.Key), nil
+	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)), nil
 }
 
 func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte) *JWTProfileAssertion {
