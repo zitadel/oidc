@@ -28,7 +28,7 @@ type Claims interface {
 }
 
 var (
-	ErrParse                   = errors.New("")
+	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
@@ -131,7 +131,7 @@ func CheckAuthorizedParty(claims Claims, clientID string) error {
 func CheckSignature(ctx context.Context, token string, payload []byte, claims Claims, supportedSigAlgs []string, set KeySet) error {
 	jws, err := jose.ParseSigned(token)
 	if err != nil {
-		return err
+		return ErrParse
 	}
 	if len(jws.Signatures) == 0 {
 		return ErrSignatureMissing
