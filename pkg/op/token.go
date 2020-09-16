@@ -15,7 +15,6 @@ type TokenCreator interface {
 }
 
 type TokenRequest interface {
-	GetClientID() string
 	GetSubject() string
 	GetAudience() []string
 	GetScopes() []string

@@ -32,18 +32,17 @@ type DelegationTokenExchangeRP interface {
 	DelegationTokenExchange(context.Context, string, ...tokenexchange.TokenExchangeOption) (*oauth2.Token, error)
 }
 
-//TokenExchange is the `TokenExchangeRP` interface implementation
-//handling the oauth2 token exchange (draft)
+//TokenExchange handles the oauth2 token exchange
 func TokenExchange(ctx context.Context, request *tokenexchange.TokenExchangeRequest, rp RelayingParty) (newToken *oauth2.Token, err error) {
 	return CallTokenEndpoint(request, rp)
 }
 
-//DelegationTokenExchange is the `TokenExchangeRP` interface implementation
-//handling the oauth2 token exchange for a delegation token (draft)
+//DelegationTokenExchange handles the oauth2 token exchange for a delegation token
 func DelegationTokenExchange(ctx context.Context, subjectToken string, rp RelayingParty, reqOpts ...tokenexchange.TokenExchangeOption) (newToken *oauth2.Token, err error) {
 	return TokenExchange(ctx, DelegationTokenRequest(subjectToken, reqOpts...), rp)
 }
 
+//JWTProfileExchange handles the oauth2 jwt profile exchange
 func JWTProfileExchange(ctx context.Context, assertion *oidc.JWTProfileAssertion, rp RelayingParty) (*oauth2.Token, error) {
 	token, err := generateJWTProfileToken(assertion)
 	if err != nil {

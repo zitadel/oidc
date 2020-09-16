@@ -212,7 +212,7 @@ func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
 
 func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
 	if o.jwtProfileVerifier == nil {
-		o.jwtProfileVerifier = NewJWTProfileVerifier(o.Storage(), o.Issuer())
+		o.jwtProfileVerifier = NewJWTProfileVerifier(o.Storage(), o.Issuer(), 1*time.Hour, time.Second)
 	}
 	return o.jwtProfileVerifier
 }

@@ -1,13 +1,12 @@
 package op
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
-	"golang.org/x/net/context"
-	"gopkg.in/square/go-jose.v2"
-
 	"github.com/caos/logging"
+	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
 )

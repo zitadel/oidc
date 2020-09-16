@@ -23,7 +23,7 @@ type TokenExchangeRequest struct {
 }
 
 type JWTProfileRequest struct {
-	assertion string `schema:"assertion"`
+	Assertion string `schema:"assertion"`
 }
 
 func NewTokenExchangeRequest(subjectToken, subjectTokenType string, opts ...TokenExchangeOption) *TokenExchangeRequest {

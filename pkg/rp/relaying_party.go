@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/oidc/grants"
 	"github.com/caos/oidc/pkg/utils"
@@ -31,12 +33,16 @@ type RelayingParty interface {
 	//CookieHandler returns a http cookie handler used for various state transfer cookies
 	CookieHandler() *utils.CookieHandler
 
-	//Client return a standard http client where the token can be used
-	Client(ctx context.Context, token *oauth2.Token) *http.Client
-
+	//HttpClient returns a http client used for calls to the openid provider, e.g. calling token endpoint
 	HttpClient() *http.Client
+
+	//IsOAuth2Only specifies whether relaying party handles only oauth2 or oidc calls
 	IsOAuth2Only() bool
+
+	//IDTokenVerifier returns the verifier interface used for oidc id_token verification
 	IDTokenVerifier() IDTokenVerifier
+
+	//ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 }
 
@@ -88,10 +94,6 @@ func (rp *relayingParty) IDTokenVerifier() IDTokenVerifier {
 		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
 	}
 	return rp.idTokenVerifier
-}
-
-func (rp *relayingParty) Client(ctx context.Context, token *oauth2.Token) *http.Client {
-	return rp.oauthConfig.Client(ctx, token)
 }
 
 func (rp *relayingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
@@ -234,18 +236,17 @@ func AuthURLHandler(stateFn func() string, rp RelayingParty) http.HandlerFunc {
 	}
 }
 
+//GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelayingParty) (string, error) {
-	var codeVerifier string
-	codeVerifier = "s"
+	codeVerifier := uuid.New().String()
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}
 	return oidc.NewSHACodeChallenge(codeVerifier), nil
 }
 
-//AuthURL is the `RelayingParty` interface implementation
-//handling the oauth2 code exchange, extracting and validating the id_token
-//returning it paresed together with the oauth2 tokens (access, refresh)
+//CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
+//returning it parsed together with the oauth2 tokens (access, refresh)
 func CodeExchange(ctx context.Context, code string, rp RelayingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens, err error) {
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
@@ -255,7 +256,7 @@ func CodeExchange(ctx context.Context, code string, rp RelayingParty, opts ...Co
 
 	token, err := rp.OAuthConfig().Exchange(ctx, code, codeOpts...)
 	if err != nil {
-		return nil, err //TODO: our error
+		return nil, err
 	}
 
 	if rp.IsOAuth2Only() {
@@ -275,8 +276,9 @@ func CodeExchange(ctx context.Context, code string, rp RelayingParty, opts ...Co
 	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
 }
 
-//AuthURL is the `RelayingParty` interface implementation
-//extending the `CodeExchange` method with callback function
+//CodeExchangeHandler extends the `CodeExchange` method with a http handler
+//including cookie handling for secure `state` transfer
+//and optional PKCE code verifier checking
 func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc.Tokens, string), rp RelayingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)
@@ -363,11 +365,6 @@ func tryReadStateCookie(w http.ResponseWriter, r *http.Request, rp RelayingParty
 	}
 	rp.CookieHandler().DeleteCookie(w, stateParam)
 	return state, nil
-}
-
-type Configuration struct {
-	Issuer string
-	*oauth2.Config
 }
 
 type OptionFunc func(RelayingParty)

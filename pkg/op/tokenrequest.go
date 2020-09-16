@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -161,14 +162,12 @@ func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (string, err
 	if err != nil {
 		return "", ErrInvalidRequest("error parsing form")
 	}
-	tokenReq := new(struct {
-		Token string `schema:"assertion"`
-	})
+	tokenReq := new(tokenexchange.JWTProfileRequest)
 	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
 		return "", ErrInvalidRequest("error decoding form")
 	}
-	return tokenReq.Token, nil
+	return tokenReq.Assertion, nil
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {

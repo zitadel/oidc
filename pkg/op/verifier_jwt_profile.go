@@ -16,14 +16,18 @@ type JWTProfileVerifier interface {
 }
 
 type jwtProfileVerifier struct {
-	storage Storage
-	issuer  string
+	storage   Storage
+	issuer    string
+	maxAgeIAT time.Duration
+	offset    time.Duration
 }
 
-func NewJWTProfileVerifier(storage Storage, issuer string) JWTProfileVerifier {
+func NewJWTProfileVerifier(storage Storage, issuer string, maxAgeIAT, offset time.Duration) JWTProfileVerifier {
 	return &jwtProfileVerifier{
-		storage: storage,
-		issuer:  issuer,
+		storage:   storage,
+		issuer:    issuer,
+		maxAgeIAT: maxAgeIAT,
+		offset:    offset,
 	}
 }
 
@@ -36,13 +40,11 @@ func (v *jwtProfileVerifier) Storage() Storage {
 }
 
 func (v *jwtProfileVerifier) MaxAgeIAT() time.Duration {
-	//TODO: define in conf/opts
-	return 1 * time.Hour
+	return v.maxAgeIAT
 }
 
 func (v *jwtProfileVerifier) Offset() time.Duration {
-	//TODO: define in conf/opts
-	return time.Second
+	return v.offset
 }
 
 func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
