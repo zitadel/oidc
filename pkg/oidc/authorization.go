@@ -1,10 +1,13 @@
 package oidc
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"golang.org/x/text/language"
+	"gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -64,6 +67,8 @@ const (
 
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
 	GrantTypeCode GrantType = "authorization_code"
+	//GrantTypeBearer define the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
+	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
 	//BearerToken defines the token_type `Bearer`, which is returned in a successful token response
 	BearerToken = "Bearer"
@@ -143,6 +148,72 @@ type AccessTokenResponse struct {
 	ExpiresIn    uint64 `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
 	IDToken      string `json:"id_token,omitempty" schema:"id_token,omitempty"`
 }
+
+type JWTTokenRequest struct {
+	Issuer    string      `json:"iss"`
+	Subject   string      `json:"sub"`
+	Scopes    Scopes      `json:"scope"`
+	Audience  interface{} `json:"aud"`
+	IssuedAt  Time        `json:"iat"`
+	ExpiresAt Time        `json:"exp"`
+}
+
+func (j *JWTTokenRequest) GetClientID() string {
+	return j.Subject
+}
+
+func (j *JWTTokenRequest) GetSubject() string {
+	return j.Subject
+}
+
+func (j *JWTTokenRequest) GetScopes() []string {
+	return j.Scopes
+}
+
+type Time time.Time
+
+func (t *Time) UnmarshalJSON(data []byte) error {
+	var i int64
+	if err := json.Unmarshal(data, &i); err != nil {
+		return err
+	}
+	*t = Time(time.Unix(i, 0).UTC())
+	return nil
+}
+
+func (j *JWTTokenRequest) GetIssuer() string {
+	return j.Issuer
+}
+
+func (j *JWTTokenRequest) GetAudience() []string {
+	return audienceFromJSON(j.Audience)
+}
+
+func (j *JWTTokenRequest) GetExpiration() time.Time {
+	return time.Time(j.ExpiresAt)
+}
+
+func (j *JWTTokenRequest) GetIssuedAt() time.Time {
+	return time.Time(j.IssuedAt)
+}
+
+func (j *JWTTokenRequest) GetNonce() string {
+	return ""
+}
+
+func (j *JWTTokenRequest) GetAuthenticationContextClassReference() string {
+	return ""
+}
+
+func (j *JWTTokenRequest) GetAuthTime() time.Time {
+	return time.Time{}
+}
+
+func (j *JWTTokenRequest) GetAuthorizedParty() string {
+	return ""
+}
+
+func (j *JWTTokenRequest) SetSignature(algorithm jose.SignatureAlgorithm) {}
 
 type TokenExchangeRequest struct {
 	subjectToken       string   `schema:"subject_token"`

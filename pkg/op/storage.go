@@ -16,7 +16,7 @@ type AuthStorage interface {
 	SaveAuthCode(context.Context, string, string) error
 	DeleteAuthRequest(context.Context, string) error
 
-	CreateToken(context.Context, AuthRequest) (string, time.Time, error)
+	CreateToken(context.Context, TokenRequest) (string, time.Time, error)
 
 	TerminateSession(context.Context, string, string) error
 
@@ -30,6 +30,7 @@ type OPStorage interface {
 	AuthorizeClientIDSecret(context.Context, string, string) error
 	GetUserinfoFromScopes(context.Context, string, []string) (*oidc.Userinfo, error)
 	GetUserinfoFromToken(context.Context, string, string) (*oidc.Userinfo, error)
+	GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
 }
 
 type Storage interface {

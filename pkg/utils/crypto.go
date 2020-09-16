@@ -19,7 +19,6 @@ func EncryptAES(data string, key string) (string, error) {
 }
 
 func EncryptBytesAES(plainText []byte, key string) ([]byte, error) {
-
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
@@ -50,7 +49,6 @@ func DecryptAES(data string, key string) (string, error) {
 }
 
 func DecryptBytesAES(cipherText []byte, key string) ([]byte, error) {
-
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err

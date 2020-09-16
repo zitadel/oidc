@@ -151,8 +151,8 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 	}
 	return a, nil
 }
-func (s *AuthStorage) CreateToken(_ context.Context, authReq op.AuthRequest) (string, time.Time, error) {
-	return authReq.GetID(), time.Now().UTC().Add(5 * time.Minute), nil
+func (s *AuthStorage) CreateToken(_ context.Context, authReq op.TokenRequest) (string, time.Time, error) {
+	return "id", time.Now().UTC().Add(5 * time.Minute), nil
 }
 func (s *AuthStorage) TerminateSession(_ context.Context, userID, clientID string) error {
 	return nil
@@ -174,6 +174,10 @@ func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) 
 		},
 	}, nil
 }
+func (s *AuthStorage) GetKeyByIDAndUserID(_ context.Context, _, _ string) (*jose.JSONWebKey, error) {
+	pubkey := s.key.Public()
+	return &jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"}, nil
+}
 
 func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Client, error) {
 	if id == "none" {
@@ -182,20 +186,24 @@ func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Clie
 	var appType op.ApplicationType
 	var authMethod op.AuthMethod
 	var accessTokenType op.AccessTokenType
+	var responseTypes []oidc.ResponseType
 	if id == "web" {
 		appType = op.ApplicationTypeWeb
 		authMethod = op.AuthMethodBasic
 		accessTokenType = op.AccessTokenTypeBearer
+		responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 	} else if id == "native" {
 		appType = op.ApplicationTypeNative
 		authMethod = op.AuthMethodNone
 		accessTokenType = op.AccessTokenTypeBearer
+		responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 	} else {
 		appType = op.ApplicationTypeUserAgent
 		authMethod = op.AuthMethodNone
 		accessTokenType = op.AccessTokenTypeJWT
+		responseTypes = []oidc.ResponseType{oidc.ResponseTypeIDToken, oidc.ResponseTypeIDTokenOnly}
 	}
-	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType, devMode: false}, nil
+	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType, responseTypes: responseTypes, devMode: false}, nil
 }
 
 func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ string) error {

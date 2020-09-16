@@ -7,6 +7,12 @@ import (
 	"github.com/caos/oidc/pkg/utils"
 )
 
+func discoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		Discover(w, CreateDiscoveryConfig(c, s))
+	}
+}
+
 func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
 	utils.MarshalJSON(w, config)
 }
@@ -32,20 +38,12 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 	}
 }
 
-const (
-	ScopeOpenID  = "openid"
-	ScopeProfile = "profile"
-	ScopeEmail   = "email"
-	ScopePhone   = "phone"
-	ScopeAddress = "address"
-)
-
 var DefaultSupportedScopes = []string{
-	ScopeOpenID,
-	ScopeProfile,
-	ScopeEmail,
-	ScopePhone,
-	ScopeAddress,
+	oidc.ScopeOpenID,
+	oidc.ScopeProfile,
+	oidc.ScopeEmail,
+	oidc.ScopePhone,
+	oidc.ScopeAddress,
 }
 
 func Scopes(c Configuration) []string {

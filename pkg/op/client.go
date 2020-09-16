@@ -15,6 +15,12 @@ const (
 	AccessTokenTypeJWT
 )
 
+type ApplicationType int
+
+type AuthMethod string
+
+type AccessTokenType int
+
 type Client interface {
 	GetID() string
 	RedirectURIs() []string
@@ -28,10 +34,6 @@ type Client interface {
 	DevMode() bool
 }
 
-func IsConfidentialType(c Client) bool {
-	return c.ApplicationType() == ApplicationTypeWeb
-}
-
 func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseType) bool {
 	for _, t := range types {
 		if t == responseType {
@@ -41,8 +43,6 @@ func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseT
 	return false
 }
 
-type ApplicationType int
-
-type AuthMethod string
-
-type AccessTokenType int
+func IsConfidentialType(c Client) bool {
+	return c.ApplicationType() == ApplicationTypeWeb
+}

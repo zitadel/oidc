@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -16,6 +17,28 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
+	JWTProfileVerifier() JWTProfileVerifier
+}
+
+func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.FormValue("grant_type") {
+		case string(oidc.GrantTypeCode):
+			CodeExchange(w, r, exchanger)
+			return
+		case string(oidc.GrantTypeBearer):
+			JWTProfile(w, r, exchanger)
+			return
+		case "exchange":
+			TokenExchange(w, r, exchanger)
+		case "":
+			RequestError(w, r, ErrInvalidRequest("grant_type missing"))
+			return
+		default:
+			RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
+			return
+		}
+	}
 }
 
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
@@ -112,6 +135,39 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 		return nil, ErrInvalidRequest("code_challenge invalid")
 	}
 	return authReq, nil
+}
+
+func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	assertion, err := ParseJWTProfileRequest(r, exchanger.Decoder())
+	if err != nil {
+		RequestError(w, r, err)
+	}
+
+	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger.JWTProfileVerifier())
+	if err != nil {
+		RequestError(w, r, err)
+		return
+	}
+
+	resp, err := CreateJWTTokenResponse(r.Context(), claims, exchanger)
+	if err != nil {
+		RequestError(w, r, err)
+		return
+	}
+	utils.MarshalJSON(w, resp)
+}
+
+func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (string, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return "", ErrInvalidRequest("error parsing form")
+	}
+	tokenReq := new(tokenexchange.JWTProfileRequest)
+	err = decoder.Decode(tokenReq, r.Form)
+	if err != nil {
+		return "", ErrInvalidRequest("error decoding form")
+	}
+	return tokenReq.Assertion, nil
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {

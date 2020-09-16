@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"strings"
 	"time"
 
@@ -57,6 +58,47 @@ type IDTokenClaims struct {
 	Userinfo
 
 	Signature jose.SignatureAlgorithm //TODO: ???
+}
+
+type JWTProfileAssertion struct {
+	PrivateKeyID string    `json:"keyId"`
+	PrivateKey   []byte    `json:"key"`
+	Scopes       []string  `json:"-"`
+	Issuer       string    `json:"-"`
+	Subject      string    `json:"userId"`
+	Audience     []string  `json:"-"`
+	Expiration   time.Time `json:"-"`
+	IssuedAt     time.Time `json:"-"`
+}
+
+func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string) (*JWTProfileAssertion, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	keyData := new(struct {
+		KeyID  string `json:"keyId"`
+		Key    string `json:"key"`
+		UserID string `json:"userId"`
+	})
+	err = json.Unmarshal(data, keyData)
+	if err != nil {
+		return nil, err
+	}
+	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)), nil
+}
+
+func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte) *JWTProfileAssertion {
+	return &JWTProfileAssertion{
+		PrivateKey:   key,
+		PrivateKeyID: keyID,
+		Issuer:       userID,
+		Scopes:       []string{ScopeOpenID},
+		Subject:      userID,
+		IssuedAt:     time.Now().UTC(),
+		Expiration:   time.Now().Add(1 * time.Hour).UTC(),
+		Audience:     audience,
+	}
 }
 
 type jsonToken struct {
@@ -174,6 +216,70 @@ func (t *IDTokenClaims) UnmarshalJSON(b []byte) error {
 	t.UserinfoEmail = i.UnmarshalUserinfoEmail()
 	t.UserinfoPhone = i.UnmarshalUserinfoPhone()
 	t.Address = i.UnmarshalUserinfoAddress()
+	return nil
+}
+
+func (t *IDTokenClaims) GetIssuer() string {
+	return t.Issuer
+}
+
+func (t *IDTokenClaims) GetAudience() []string {
+	return t.Audiences
+}
+
+func (t *IDTokenClaims) GetExpiration() time.Time {
+	return t.Expiration
+}
+
+func (t *IDTokenClaims) GetIssuedAt() time.Time {
+	return t.IssuedAt
+}
+
+func (t *IDTokenClaims) GetNonce() string {
+	return t.Nonce
+}
+
+func (t *IDTokenClaims) GetAuthenticationContextClassReference() string {
+	return t.AuthenticationContextClassReference
+}
+
+func (t *IDTokenClaims) GetAuthTime() time.Time {
+	return t.AuthTime
+}
+
+func (t *IDTokenClaims) GetAuthorizedParty() string {
+	return t.AuthorizedParty
+}
+
+func (t *IDTokenClaims) SetSignature(alg jose.SignatureAlgorithm) {
+	t.Signature = alg
+}
+
+func (t *JWTProfileAssertion) MarshalJSON() ([]byte, error) {
+	j := jsonToken{
+		Issuer:     t.Issuer,
+		Subject:    t.Subject,
+		Audiences:  t.Audience,
+		Expiration: timeToJSON(t.Expiration),
+		IssuedAt:   timeToJSON(t.IssuedAt),
+		Scopes:     strings.Join(t.Scopes, " "),
+	}
+	return json.Marshal(j)
+}
+
+func (t *JWTProfileAssertion) UnmarshalJSON(b []byte) error {
+	var j jsonToken
+	if err := json.Unmarshal(b, &j); err != nil {
+		return err
+	}
+
+	t.Issuer = j.Issuer
+	t.Subject = j.Subject
+	t.Audience = audienceFromJSON(j.Audiences)
+	t.Expiration = time.Unix(j.Expiration, 0).UTC()
+	t.IssuedAt = time.Unix(j.IssuedAt, 0).UTC()
+	t.Scopes = strings.Split(j.Scopes, " ")
+
 	return nil
 }
 

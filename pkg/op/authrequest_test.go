@@ -13,7 +13,6 @@ import (
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -145,7 +144,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
 		storage     op.Storage
-		verifier    rp.Verifier
+		verifier    op.IDTokenHintVerifier
 	}
 	tests := []struct {
 		name    string

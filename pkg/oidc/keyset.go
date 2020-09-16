@@ -20,3 +20,13 @@ type KeySet interface {
 	// use any HTTP client associated with the context through ClientContext.
 	VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error)
 }
+
+func CheckKey(keyID string, jws *jose.JSONWebSignature, keys ...jose.JSONWebKey) ([]byte, error, bool) {
+	for _, key := range keys {
+		if keyID == "" || key.KeyID == keyID {
+			payload, err := jws.Verify(&key)
+			return payload, err, true
+		}
+	}
+	return nil, nil, false
+}

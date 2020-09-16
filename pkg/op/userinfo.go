@@ -15,6 +15,12 @@ type UserinfoProvider interface {
 	Storage() Storage
 }
 
+func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		Userinfo(w, r, userinfoProvider)
+	}
+}
+
 func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoProvider) {
 	accessToken, err := getAccessToken(r, userinfoProvider.Decoder())
 	if err != nil {

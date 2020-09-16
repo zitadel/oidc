@@ -97,7 +97,7 @@ func (mr *MockStorageMockRecorder) CreateAuthRequest(arg0, arg1, arg2 interface{
 }
 
 // CreateToken mocks base method
-func (m *MockStorage) CreateToken(arg0 context.Context, arg1 op.AuthRequest) (string, time.Time, error) {
+func (m *MockStorage) CreateToken(arg0 context.Context, arg1 op.TokenRequest) (string, time.Time, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateToken", arg0, arg1)
 	ret0, _ := ret[0].(string)
@@ -139,6 +139,21 @@ func (m *MockStorage) GetClientByClientID(arg0 context.Context, arg1 string) (op
 func (mr *MockStorageMockRecorder) GetClientByClientID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientByClientID", reflect.TypeOf((*MockStorage)(nil).GetClientByClientID), arg0, arg1)
+}
+
+// GetKeyByIDAndUserID mocks base method
+func (m *MockStorage) GetKeyByIDAndUserID(arg0 context.Context, arg1, arg2 string) (*jose.JSONWebKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeyByIDAndUserID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*jose.JSONWebKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKeyByIDAndUserID indicates an expected call of GetKeyByIDAndUserID
+func (mr *MockStorageMockRecorder) GetKeyByIDAndUserID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyByIDAndUserID", reflect.TypeOf((*MockStorage)(nil).GetKeyByIDAndUserID), arg0, arg1, arg2)
 }
 
 // GetKeySet mocks base method

@@ -6,7 +6,6 @@ package mock
 
 import (
 	op "github.com/caos/oidc/pkg/op"
-	rp "github.com/caos/oidc/pkg/rp"
 	utils "github.com/caos/oidc/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -77,18 +76,18 @@ func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encoder", reflect.TypeOf((*MockAuthorizer)(nil).Encoder))
 }
 
-// IDTokenVerifier mocks base method
-func (m *MockAuthorizer) IDTokenVerifier() rp.Verifier {
+// IDTokenHintVerifier mocks base method
+func (m *MockAuthorizer) IDTokenHintVerifier() op.IDTokenHintVerifier {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IDTokenVerifier")
-	ret0, _ := ret[0].(rp.Verifier)
+	ret := m.ctrl.Call(m, "IDTokenHintVerifier")
+	ret0, _ := ret[0].(op.IDTokenHintVerifier)
 	return ret0
 }
 
-// IDTokenVerifier indicates an expected call of IDTokenVerifier
-func (mr *MockAuthorizerMockRecorder) IDTokenVerifier() *gomock.Call {
+// IDTokenHintVerifier indicates an expected call of IDTokenHintVerifier
+func (mr *MockAuthorizerMockRecorder) IDTokenHintVerifier() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenVerifier", reflect.TypeOf((*MockAuthorizer)(nil).IDTokenVerifier))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenHintVerifier", reflect.TypeOf((*MockAuthorizer)(nil).IDTokenHintVerifier))
 }
 
 // Issuer mocks base method

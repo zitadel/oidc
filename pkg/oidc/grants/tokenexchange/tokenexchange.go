@@ -22,6 +22,10 @@ type TokenExchangeRequest struct {
 	requestedTokenType string   `schema:"requested_token_type"`
 }
 
+type JWTProfileRequest struct {
+	Assertion string `schema:"assertion"`
+}
+
 func NewTokenExchangeRequest(subjectToken, subjectTokenType string, opts ...TokenExchangeOption) *TokenExchangeRequest {
 	t := &TokenExchangeRequest{
 		grantType:          TokenExchangeGrantType,

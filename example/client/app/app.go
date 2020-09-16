@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
-	"github.com/sirupsen/logrus"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -29,41 +29,30 @@ func main() {
 
 	ctx := context.Background()
 
-	rpConfig := &rp.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Issuer:       issuer,
-		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
-		Scopes:       []string{"openid", "profile", "email"},
-	}
+	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
+	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewDefaultRP(rpConfig, rp.WithCookieHandler(cookieHandler)) //rp.WithPKCE(cookieHandler)) //,
+	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
+		rp.WithPKCE(cookieHandler),
+		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5*time.Second)),
+	)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
 
-	// state := "foobar"
-	state := uuid.New().String()
+	//generate some state (representing the state of the user in your application,
+	//e.g. the page where he was before sending him to login
+	state := func() string {
+		return uuid.New().String()
+	}
 
-	http.Handle("/login", provider.AuthURLHandler(state))
-	// http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-	// 	http.Redirect(w, r, provider.AuthURL(state), http.StatusFound)
-	// })
+	//register the AuthURLHandler at your preferred path
+	//the AuthURLHandler creates the auth request and redirects the user to the auth server
+	//including state handling with secure cookie and the possibility to use PKCE
+	http.Handle("/login", rp.AuthURLHandler(state, provider))
 
-	// http.HandleFunc(callbackPath, func(w http.ResponseWriter, r *http.Request) {
-	// 	tokens, err := provider.CodeExchange(ctx, r.URL.Query().Get("code"))
-	// 	if err != nil {
-	// 		http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
-	// 		return
-	// 	}
-	// 	data, err := json.Marshal(tokens)
-	// 	if err != nil {
-	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	w.Write(data)
-	// })
-
+	//for demonstration purposes the returned tokens (access token, id_token an its parsed claims)
+	//are written as JSON objects onto response
 	marshal := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
 		_ = state
 		data, err := json.Marshal(tokens)
@@ -74,10 +63,13 @@ func main() {
 		w.Write(data)
 	}
 
-	http.Handle(callbackPath, provider.CodeExchangeHandler(marshal))
+	//register the CodeExchangeHandler at the callbackPath
+	//the CodeExchangeHandler handles the auth response, creates the token request and calls the callback function
+	//with the returned tokens from the token endpoint
+	http.Handle(callbackPath, rp.CodeExchangeHandler(marshal, provider))
 
 	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		tokens, err := provider.ClientCredentials(ctx, "scope")
+		tokens, err := rp.ClientCredentials(ctx, provider, "scope")
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
 			return
@@ -92,5 +84,5 @@ func main() {
 	})
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
 	logrus.Infof("listening on http://%s/", lis)
-	logrus.Fatal(http.ListenAndServe("127.0.0.1:5556", nil))
+	logrus.Fatal(http.ListenAndServe("127.0.0.1:"+port, nil))
 }
