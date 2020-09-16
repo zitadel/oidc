@@ -174,21 +174,9 @@ func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) 
 		},
 	}, nil
 }
-func (s *AuthStorage) GetKeyByID(_ context.Context, _ string) (*jose.JSONWebKeySet, error) {
+func (s *AuthStorage) GetKeyByIDAndUserID(_ context.Context, _, _ string) (*jose.JSONWebKey, error) {
 	pubkey := s.key.Public()
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
-		},
-	}, nil
-}
-func (s *AuthStorage) GetKeysByServiceAccount(_ context.Context, _ string) (*jose.JSONWebKeySet, error) {
-	pubkey := s.key.Public()
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"},
-		},
-	}, nil
+	return &jose.JSONWebKey{Key: pubkey, Use: "sig", Algorithm: "RS256", KeyID: "1"}, nil
 }
 
 func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Client, error) {
