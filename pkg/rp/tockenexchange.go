@@ -65,15 +65,15 @@ func generateJWTProfileToken(assertion *oidc.JWTProfileAssertion) (string, error
 		return "", err
 	}
 
-	jsonadsk, err := json.Marshal(assertion)
+	marshalledAssertion, err := json.Marshal(assertion)
 	if err != nil {
 		return "", err
 	}
-	signiert, err := signer.Sign(jsonadsk)
+	signedAssertion, err := signer.Sign(marshalledAssertion)
 	if err != nil {
 		return "", err
 	}
-	return signiert.CompactSerialize()
+	return signedAssertion.CompactSerialize()
 }
 
 func bytesToPrivateKey(priv []byte) (*rsa.PrivateKey, error) {
