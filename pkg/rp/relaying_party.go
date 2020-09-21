@@ -98,6 +98,15 @@ func WithCodeChallenge(codeChallenge string) AuthURLOpt {
 	}
 }
 
+//WithPrompt sets the `prompt` params in the auth request
+func WithPrompt(prompt string) AuthURLOpt {
+	return func() []oauth2.AuthCodeOption {
+		return []oauth2.AuthCodeOption{
+			oauth2.SetAuthURLParam("prompt", prompt),
+		}
+	}
+}
+
 type CodeExchangeOpt func() []oauth2.AuthCodeOption
 
 //WithCodeVerifier sets the `code_verifier` param in the token request
