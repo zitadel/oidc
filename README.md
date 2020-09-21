@@ -21,10 +21,10 @@ TBD
 
 ## Features
 
-|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    |
-|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|
-| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet |
-| Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet |
+|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile |
+|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|
+| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet | yes         |
+| Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         |
 
 ### Resources
 
@@ -34,6 +34,7 @@ For your convinience you can find the relevant standards linked below.
 - [Proof Key for Code Exchange by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
 - [OAuth 2.0 Token Exchange](https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-19)
 - [OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://tools.ietf.org/html/draft-ietf-oauth-mtls-17)
+- [JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants](https://tools.ietf.org/html/rfc7523)
 
 ## Supported Go Versions
 
