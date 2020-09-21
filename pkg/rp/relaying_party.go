@@ -99,10 +99,10 @@ func WithCodeChallenge(codeChallenge string) AuthURLOpt {
 }
 
 //WithPrompt sets the `prompt` params in the auth request
-func WithPrompt(prompt string) AuthURLOpt {
+func WithPrompt(prompt oidc.Prompt) AuthURLOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{
-			oauth2.SetAuthURLParam("prompt", prompt),
+			oauth2.SetAuthURLParam("prompt", string(prompt)),
 		}
 	}
 }
