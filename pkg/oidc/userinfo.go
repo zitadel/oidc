@@ -157,12 +157,17 @@ func (j *jsonUserinfo) setUserinfoAddress(i *UserinfoAddress) {
 	if i == nil {
 		return
 	}
-	j.JsonUserinfoAddress.Country = i.Country
-	j.JsonUserinfoAddress.Formatted = i.Formatted
-	j.JsonUserinfoAddress.Locality = i.Locality
-	j.JsonUserinfoAddress.PostalCode = i.PostalCode
-	j.JsonUserinfoAddress.Region = i.Region
-	j.JsonUserinfoAddress.StreetAddress = i.StreetAddress
+	if i.Country == "" && i.Formatted == "" && i.Locality == "" && i.PostalCode == "" && i.Region == "" && i.StreetAddress == "" {
+		return
+	}
+	j.JsonUserinfoAddress = &jsonUserinfoAddress{
+		Country:       i.Country,
+		Formatted:     i.Formatted,
+		Locality:      i.Locality,
+		PostalCode:    i.PostalCode,
+		Region:        i.Region,
+		StreetAddress: i.StreetAddress,
+	}
 }
 
 type UserInfoRequest struct {
