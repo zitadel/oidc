@@ -33,5 +33,5 @@ func NewMockVerifierExpectValid(t *testing.T) rp.Verifier {
 
 func ExpectVerifyValid(v rp.Verifier) {
 	mock := v.(*MockVerifier)
-	mock.EXPECT().VerifyIDToken(gomock.Any(), gomock.Any()).Return(&oidc.IDTokenClaims{Userinfo: oidc.Userinfo{Subject: "id"}}, nil)
+	mock.EXPECT().VerifyIDToken(gomock.Any(), gomock.Any()).Return(&oidc.IDTokenClaims{Userinfo: oidc.userinfo{Subject: "id"}}, nil)
 }

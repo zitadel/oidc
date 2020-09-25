@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -30,7 +32,7 @@ func main() {
 	ctx := context.Background()
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
-	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail}
+	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail, oidc.ScopeAddress, "hodor"}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
 	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
 		rp.WithPKCE(cookieHandler),
@@ -76,6 +78,62 @@ func main() {
 		}
 
 		data, err := json.Marshal(tokens)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(data)
+	})
+
+	http.HandleFunc("/jwt-profile", func(w http.ResponseWriter, r *http.Request) {
+		tpl := `
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="UTF-8">
+			<title>Login</title>
+		</head>
+		<body>
+			<form method="POST" action="/jwt-profile-assertion" enctype="multipart/form-data">
+				<label for="key">Select a key file:</label>
+				<input type="file" id="key" name="key">
+				<button type="submit">Upload</button>
+			</form>
+		</body>
+	</html>`
+		t, err := template.New("login").Parse(tpl)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = t.Execute(w, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	http.HandleFunc("/jwt-profile-assertion", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseMultipartForm(32 << 20)
+		file, handler, err := r.FormFile("key")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		key, err := ioutil.ReadAll(file)
+		fmt.Println(handler.Header)
+		assertion, err := oidc.NewJWTProfileAssertionFromFileData(key, []string{issuer})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		token, err := rp.JWTProfileExchange(ctx, assertion, provider)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data, err := json.Marshal(token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

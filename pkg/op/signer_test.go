@@ -38,13 +38,13 @@ import (
 // 	}
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {
-// 			got, err := op.NewDefaultSigner(tt.args.storage)
+// 			got, err := op.NewSigner(tt.args.storage)
 // 			if (err != nil) != tt.wantErr {
-// 				t.Errorf("NewDefaultSigner() error = %v, wantErr %v", err, tt.wantErr)
+// 				t.Errorf("NewSigner() error = %v, wantErr %v", err, tt.wantErr)
 // 				return
 // 			}
 // 			if !reflect.DeepEqual(got, tt.want) {
-// 				t.Errorf("NewDefaultSigner() = %v, want %v", got, tt.want)
+// 				t.Errorf("NewSigner() = %v, want %v", got, tt.want)
 // 			}
 // 		})
 // 	}

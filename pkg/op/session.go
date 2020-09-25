@@ -66,8 +66,8 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	if err != nil {
 		return nil, ErrInvalidRequest("id_token_hint invalid")
 	}
-	session.UserID = claims.Subject
-	session.Client, err = ender.Storage().GetClientByClientID(ctx, claims.AuthorizedParty)
+	session.UserID = claims.GetSubject()
+	session.Client, err = ender.Storage().GetClientByClientID(ctx, claims.GetAuthorizedParty())
 	if err != nil {
 		return nil, ErrServerError("")
 	}

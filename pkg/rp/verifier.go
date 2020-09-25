@@ -21,12 +21,12 @@ type IDTokenVerifier interface {
 
 //VerifyTokens implement the Token Response Validation as defined in OIDC specification
 //https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) {
+func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
 	idToken, err := VerifyIDToken(ctx, idTokenString, v)
 	if err != nil {
 		return nil, err
 	}
-	if err := VerifyAccessToken(accessToken, idToken.AccessTokenHash, idToken.Signature); err != nil {
+	if err := VerifyAccessToken(accessToken, idToken.GetAccessTokenHash(), idToken.GetSignatureAlgorithm()); err != nil {
 		return nil, err
 	}
 	return idToken, nil
@@ -34,8 +34,8 @@ func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTo
 
 //VerifyIDToken validates the id token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (*oidc.IDTokenClaims, error) {
-	claims := new(oidc.IDTokenClaims)
+func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
+	claims := oidc.EmptyIDTokenClaims()
 
 	decrypted, err := oidc.DecryptToken(token)
 	if err != nil {

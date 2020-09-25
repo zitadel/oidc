@@ -130,7 +130,7 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 	}
 
 	keyCh := make(chan jose.SigningKey)
-	o.signer = NewDefaultSigner(ctx, storage, keyCh)
+	o.signer = NewSigner(ctx, storage, keyCh)
 	go EnsureKey(ctx, storage, keyCh, o.timer, o.retry)
 
 	o.httpHandler = CreateRouter(o, o.interceptors...)

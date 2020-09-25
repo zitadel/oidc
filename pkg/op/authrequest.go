@@ -168,7 +168,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	if err != nil {
 		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
 	}
-	return claims.Subject, nil
+	return claims.GetSubject(), nil
 }
 
 //RedirectToLogin redirects the end user to the Login UI for authentication

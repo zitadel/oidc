@@ -50,7 +50,7 @@ func (mr *MockSignerMockRecorder) Health(arg0 interface{}) *gomock.Call {
 }
 
 // SignAccessToken mocks base method
-func (m *MockSigner) SignAccessToken(arg0 *oidc.AccessTokenClaims) (string, error) {
+func (m *MockSigner) SignAccessToken(arg0 *oidc.accessTokenClaims) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignAccessToken", arg0)
 	ret0, _ := ret[0].(string)

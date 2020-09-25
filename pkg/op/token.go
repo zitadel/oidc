@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
 )
 
 type TokenCreator interface {
@@ -82,51 +83,34 @@ func CreateBearerToken(id string, crypto Crypto) (string, error) {
 }
 
 func CreateJWT(issuer string, authReq TokenRequest, exp time.Time, id string, signer Signer) (string, error) {
-	now := time.Now().UTC()
-	nbf := now
-	claims := &oidc.AccessTokenClaims{
-		Issuer:     issuer,
-		Subject:    authReq.GetSubject(),
-		Audiences:  authReq.GetAudience(),
-		Expiration: exp,
-		IssuedAt:   now,
-		NotBefore:  nbf,
-		JWTID:      id,
-	}
-	return signer.SignAccessToken(claims)
+	claims := oidc.NewAccessTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, id)
+	return utils.Sign(claims, signer.Signer())
 }
 
 func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer) (string, error) {
-	var err error
 	exp := time.Now().UTC().Add(validity)
-	userinfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetScopes())
-	if err != nil {
-		return "", err
-	}
-	claims := &oidc.IDTokenClaims{
-		Issuer:                              issuer,
-		Audiences:                           authReq.GetAudience(),
-		Expiration:                          exp,
-		IssuedAt:                            time.Now().UTC(),
-		AuthTime:                            authReq.GetAuthTime(),
-		Nonce:                               authReq.GetNonce(),
-		AuthenticationContextClassReference: authReq.GetACR(),
-		AuthenticationMethodsReferences:     authReq.GetAMR(),
-		AuthorizedParty:                     authReq.GetClientID(),
-		Userinfo:                            *userinfo,
-	}
+	claims := oidc.NewIDTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, authReq.GetAuthTime(), authReq.GetNonce(), authReq.GetACR(), authReq.GetAMR(), authReq.GetClientID())
+
 	if accessToken != "" {
-		claims.AccessTokenHash, err = oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
+		atHash, err := oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
+		claims.SetAccessTokenHash(atHash)
+	} else {
+		userInfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetScopes())
+		if err != nil {
+			return "", err
+		}
+		claims.SetUserinfo(userInfo)
 	}
 	if code != "" {
-		claims.CodeHash, err = oidc.ClaimHash(code, signer.SignatureAlgorithm())
+		codeHash, err := oidc.ClaimHash(code, signer.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
+		claims.SetCodeHash(codeHash)
 	}
 
-	return signer.SignIDToken(claims)
+	return utils.Sign(claims, signer.Signer())
 }

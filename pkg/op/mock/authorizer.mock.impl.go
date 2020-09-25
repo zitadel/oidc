@@ -81,7 +81,7 @@ func (s *Sig) Health(ctx context.Context) error {
 func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
 	return "", nil
 }
-func (s *Sig) SignAccessToken(*oidc.AccessTokenClaims) (string, error) {
+func (s *Sig) SignAccessToken(*oidc.accessTokenClaims) (string, error) {
 	return "", nil
 }
 func (s *Sig) SignatureAlgorithm() jose.SignatureAlgorithm {

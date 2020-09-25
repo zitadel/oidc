@@ -210,24 +210,24 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (*oidc.Userinfo, error) {
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (*oidc.userinfo, error) {
 	return s.GetUserinfoFromScopes(ctx, "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (*oidc.Userinfo, error) {
-	return &oidc.Userinfo{
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (*oidc.userinfo, error) {
+	return &oidc.userinfo{
 		Subject: a.GetSubject(),
 		Address: &oidc.UserinfoAddress{
 			StreetAddress: "Hjkhkj 789\ndsf",
 		},
-		UserinfoEmail: oidc.UserinfoEmail{
+		userinfoEmail: oidc.userinfoEmail{
 			Email:         "test",
 			EmailVerified: true,
 		},
-		UserinfoPhone: oidc.UserinfoPhone{
+		userinfoPhone: oidc.userinfoPhone{
 			PhoneNumber:         "sadsa",
 			PhoneNumberVerified: true,
 		},
-		UserinfoProfile: oidc.UserinfoProfile{
+		userinfoProfile: oidc.userinfoProfile{
 			UpdatedAt: time.Now(),
 		},
 		// Claims: map[string]interface{}{

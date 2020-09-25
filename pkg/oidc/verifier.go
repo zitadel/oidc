@@ -24,7 +24,7 @@ type Claims interface {
 	GetAuthenticationContextClassReference() string
 	GetAuthTime() time.Time
 	GetAuthorizedParty() string
-	SetSignature(algorithm jose.SignatureAlgorithm)
+	SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm)
 }
 
 var (
@@ -140,7 +140,7 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 		return ErrSignatureInvalidPayload
 	}
 
-	claims.SetSignature(jose.SignatureAlgorithm(sig.Header.Algorithm))
+	claims.SetSignatureAlgorithm(jose.SignatureAlgorithm(sig.Header.Algorithm))
 
 	return nil
 }

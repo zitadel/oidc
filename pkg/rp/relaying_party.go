@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -329,10 +330,10 @@ func CallTokenEndpoint(request interface{}, rp RelayingParty) (newToken *oauth2.
 }
 
 func CallJWTProfileEndpoint(assertion string, rp RelayingParty) (*oauth2.Token, error) {
-	form := make(map[string][]string)
-	form["assertion"] = []string{assertion}
-	form["grant_type"] = []string{jwtProfileKey}
-	req, err := http.NewRequest("POST", rp.OAuthConfig().Endpoint.TokenURL, nil)
+	form := url.Values{}
+	form.Add("assertion", assertion)
+	form.Add("grant_type", jwtProfileKey)
+	req, err := http.NewRequest("POST", rp.OAuthConfig().Endpoint.TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}

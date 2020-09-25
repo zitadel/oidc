@@ -184,10 +184,10 @@ func (mr *MockStorageMockRecorder) GetSigningKey(arg0, arg1, arg2, arg3 interfac
 }
 
 // GetUserinfoFromScopes mocks base method
-func (m *MockStorage) GetUserinfoFromScopes(arg0 context.Context, arg1 string, arg2 []string) (*oidc.Userinfo, error) {
+func (m *MockStorage) GetUserinfoFromScopes(arg0 context.Context, arg1 string, arg2 []string) (*oidc.userinfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserinfoFromScopes", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*oidc.Userinfo)
+	ret0, _ := ret[0].(*oidc.userinfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -199,10 +199,10 @@ func (mr *MockStorageMockRecorder) GetUserinfoFromScopes(arg0, arg1, arg2 interf
 }
 
 // GetUserinfoFromToken mocks base method
-func (m *MockStorage) GetUserinfoFromToken(arg0 context.Context, arg1, arg2 string) (*oidc.Userinfo, error) {
+func (m *MockStorage) GetUserinfoFromToken(arg0 context.Context, arg1, arg2 string) (*oidc.userinfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserinfoFromToken", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*oidc.Userinfo)
+	ret0, _ := ret[0].(*oidc.userinfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
