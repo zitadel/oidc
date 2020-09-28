@@ -45,7 +45,7 @@ func main() {
 	}
 	token := cli.CodeFlow(relayingParty, callbackPath, port, state)
 
-	client := github.NewClient(relayingParty.Client(ctx, token.Token))
+	client := github.NewClient(relayingParty.OAuthConfig().Client(ctx, token.Token))
 
 	_, _, err = client.Users.Get(ctx, "")
 	if err != nil {

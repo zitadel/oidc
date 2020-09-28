@@ -28,7 +28,7 @@ func TestAudience_UnmarshalText(t *testing.T) {
 				[]byte(`{"aud": {"a": }}}`),
 			},
 			res{},
-			false,
+			true,
 		},
 		{
 			"single audience",
