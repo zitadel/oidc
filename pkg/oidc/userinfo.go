@@ -257,27 +257,27 @@ func (u *userinfo) AppendClaims(key string, value interface{}) {
 }
 
 func (u *userInfoAddress) GetFormatted() string {
-	panic("implement me")
+	return u.Formatted
 }
 
 func (u *userInfoAddress) GetStreetAddress() string {
-	panic("implement me")
+	return u.StreetAddress
 }
 
 func (u *userInfoAddress) GetLocality() string {
-	panic("implement me")
+	return u.Locality
 }
 
 func (u *userInfoAddress) GetRegion() string {
-	panic("implement me")
+	return u.Region
 }
 
 func (u *userInfoAddress) GetPostalCode() string {
-	panic("implement me")
+	return u.PostalCode
 }
 
 func (u *userInfoAddress) GetCountry() string {
-	panic("implement me")
+	return u.Country
 }
 
 type userInfoProfile struct {
@@ -338,7 +338,6 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 	if !i.Locale.IsRoot() {
 		a.Locale = i.Locale
 	}
-	fmt.Println(time.Time(i.UpdatedAt).String())
 	if !time.Time(i.UpdatedAt).IsZero() {
 		a.UpdatedAt = time.Time(i.UpdatedAt).Unix()
 	}
@@ -354,7 +353,7 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 
 	claims, err := json.Marshal(i.claims)
 	if err != nil {
-		return nil, fmt.Errorf("jws: invalid map of private claims %v", i.claims)
+		return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
 	}
 	return utils.ConcatenateJSON(b, claims)
 }
@@ -363,7 +362,6 @@ func (i *userinfo) UnmarshalJSON(data []byte) error {
 	type Alias userinfo
 	a := &struct {
 		*Alias
-		//Locale    interface{} `json:"locale,omitempty"`
 		UpdatedAt int64 `json:"update_at,omitempty"`
 	}{
 		Alias: (*Alias)(i),
@@ -371,9 +369,6 @@ func (i *userinfo) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
 	}
-	//if !i.Locale.IsRoot() {
-	//	a.Locale = i.Locale
-	//}
 
 	i.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
 
