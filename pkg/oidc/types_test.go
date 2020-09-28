@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
@@ -22,7 +23,15 @@ func TestAudience_UnmarshalText(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"unknown value",
+			"invalid value",
+			args{
+				[]byte(`{"aud": {"a": }}}`),
+			},
+			res{},
+			false,
+		},
+		{
+			"single audience",
 			args{
 				[]byte(`{"aud": "single audience"}`),
 			},
@@ -32,7 +41,7 @@ func TestAudience_UnmarshalText(t *testing.T) {
 			false,
 		},
 		{
-			"page",
+			"multiple audience",
 			args{
 				[]byte(`{"aud": ["multiple", "audience"]}`),
 			},
@@ -219,13 +228,12 @@ func TestScopes_UnmarshalText(t *testing.T) {
 		})
 	}
 }
-
-func TestTime_UnmarshalJSON(t *testing.T) {
+func TestScopes_MarshalText(t *testing.T) {
 	type args struct {
-		text []byte
+		scopes Scopes
 	}
 	type res struct {
-		scopes []string
+		scopes []byte
 	}
 	tests := []struct {
 		name    string
@@ -236,41 +244,53 @@ func TestTime_UnmarshalJSON(t *testing.T) {
 		{
 			"unknown value",
 			args{
-				[]byte("unknown"),
+				Scopes{"unknown"},
 			},
 			res{
-				[]string{"unknown"},
+				[]byte("unknown"),
+			},
+			false,
+		},
+		{
+			"struct",
+			args{
+				Scopes{`{"unknown":"value"}`},
+			},
+			res{
+				[]byte(`{"unknown":"value"}`),
 			},
 			false,
 		},
 		{
 			"openid",
 			args{
-				[]byte("openid"),
+				Scopes{"openid"},
 			},
 			res{
-				[]string{"openid"},
+				[]byte("openid"),
 			},
 			false,
 		},
 		{
 			"multiple scopes",
 			args{
-				[]byte("openid email custom:scope"),
+				Scopes{"openid", "email", "custom:scope"},
 			},
 			res{
-				[]string{"openid", "email", "custom:scope"},
+				[]byte("openid email custom:scope"),
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var scopes Scopes
-			if err := scopes.UnmarshalText(tt.args.text); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
+			text, err := tt.args.scopes.MarshalText()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MarshalText() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			assert.ElementsMatch(t, scopes, tt.res.scopes)
+			if !bytes.Equal(text, tt.res.scopes) {
+				t.Errorf("MarshalText() is = %q, want %q", text, tt.res.scopes)
+			}
 		})
 	}
 }

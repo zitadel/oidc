@@ -27,23 +27,31 @@ type Encoder interface {
 	Encode(src interface{}, dst map[string][]string) error
 }
 
-func FormRequest(endpoint string, request interface{}, clientID, clientSecret string, header bool) (*http.Request, error) {
-	form := make(map[string][]string)
+type FormAuthorization func(url.Values)
+type RequestAuthorization func(*http.Request)
+
+func AuthorizeBasic(user, password string) RequestAuthorization {
+	return func(req *http.Request) {
+		req.SetBasicAuth(user, password)
+	}
+}
+
+func FormRequest(endpoint string, request interface{}, authFn interface{}) (*http.Request, error) {
+	form := url.Values{}
 	encoder := schema.NewEncoder()
 	if err := encoder.Encode(request, form); err != nil {
 		return nil, err
 	}
-	if !header {
-		form["client_id"] = []string{clientID}
-		form["client_secret"] = []string{clientSecret}
+	if fn, ok := authFn.(FormAuthorization); ok {
+		fn(form)
 	}
-	body := strings.NewReader(url.Values(form).Encode())
+	body := strings.NewReader(form.Encode())
 	req, err := http.NewRequest("POST", endpoint, body)
 	if err != nil {
 		return nil, err
 	}
-	if header {
-		req.SetBasicAuth(clientID, clientSecret)
+	if fn, ok := authFn.(RequestAuthorization); ok {
+		fn(req)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return req, nil

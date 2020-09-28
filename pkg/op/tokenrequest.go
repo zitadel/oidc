@@ -138,18 +138,18 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 }
 
 func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	assertion, err := ParseJWTProfileRequest(r, exchanger.Decoder())
+	profileRequest, err := ParseJWTProfileRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
 	}
 
-	claims, err := VerifyJWTAssertion(r.Context(), assertion, exchanger.JWTProfileVerifier())
+	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest, exchanger.JWTProfileVerifier())
 	if err != nil {
 		RequestError(w, r, err)
 		return
 	}
 
-	resp, err := CreateJWTTokenResponse(r.Context(), claims, exchanger)
+	resp, err := CreateJWTTokenResponse(r.Context(), tokenRequest, exchanger)
 	if err != nil {
 		RequestError(w, r, err)
 		return
@@ -157,17 +157,17 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	utils.MarshalJSON(w, resp)
 }
 
-func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (string, error) {
+func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (*tokenexchange.JWTProfileRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return "", ErrInvalidRequest("error parsing form")
+		return nil, ErrInvalidRequest("error parsing form")
 	}
 	tokenReq := new(tokenexchange.JWTProfileRequest)
 	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
-		return "", ErrInvalidRequest("error decoding form")
+		return nil, ErrInvalidRequest("error decoding form")
 	}
-	return tokenReq.Assertion, nil
+	return tokenReq, nil
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {

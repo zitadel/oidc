@@ -1,5 +1,9 @@
 package tokenexchange
 
+import (
+	"github.com/caos/oidc/pkg/oidc"
+)
+
 const (
 	AccessTokenType     = "urn:ietf:params:oauth:token-type:access_token"
 	RefreshTokenType    = "urn:ietf:params:oauth:token-type:refresh_token"
@@ -23,7 +27,19 @@ type TokenExchangeRequest struct {
 }
 
 type JWTProfileRequest struct {
-	Assertion string `schema:"assertion"`
+	Assertion string         `schema:"assertion"`
+	Scope     oidc.Scopes    `schema:"scope"`
+	GrantType oidc.GrantType `schema:"grant_type"`
+}
+
+//ClientCredentialsGrantBasic creates an oauth2 `Client Credentials` Grant
+//sneding client_id and client_secret as basic auth header
+func NewJWTProfileRequest(assertion string, scopes ...string) *JWTProfileRequest {
+	return &JWTProfileRequest{
+		GrantType: oidc.GrantTypeBearer,
+		Assertion: assertion,
+		Scope:     scopes,
+	}
 }
 
 func NewTokenExchangeRequest(subjectToken, subjectTokenType string, opts ...TokenExchangeOption) *TokenExchangeRequest {

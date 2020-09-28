@@ -202,7 +202,6 @@ type AccessTokenResponse struct {
 type JWTProfileAssertion struct {
 	PrivateKeyID string   `json:"-"`
 	PrivateKey   []byte   `json:"-"`
-	Scopes       []string `json:"scopes"`
 	Issuer       string   `json:"issuer"`
 	Subject      string   `json:"sub"`
 	Audience     Audience `json:"aud"`
@@ -236,7 +235,6 @@ func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte)
 		PrivateKey:   key,
 		PrivateKeyID: keyID,
 		Issuer:       userID,
-		Scopes:       []string{ScopeOpenID},
 		Subject:      userID,
 		IssuedAt:     Time(time.Now().UTC()),
 		Expiration:   Time(time.Now().Add(1 * time.Hour).UTC()),
@@ -244,80 +242,6 @@ func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte)
 	}
 }
 
-//
-//type jsonToken struct {
-//	Issuer                              string      `json:"iss,omitempty"`
-//	Subject                             string      `json:"sub,omitempty"`
-//	Audiences                           interface{} `json:"aud,omitempty"`
-//	Expiration                          int64       `json:"exp,omitempty"`
-//	NotBefore                           int64       `json:"nbf,omitempty"`
-//	IssuedAt                            int64       `json:"iat,omitempty"`
-//	JWTID                               string      `json:"jti,omitempty"`
-//	AuthorizedParty                     string      `json:"azp,omitempty"`
-//	Nonce                               string      `json:"nonce,omitempty"`
-//	AuthTime                            int64       `json:"auth_time,omitempty"`
-//	AccessTokenHash                     string      `json:"at_hash,omitempty"`
-//	CodeHash                            string      `json:"c_hash,omitempty"`
-//	AuthenticationContextClassReference string      `json:"acr,omitempty"`
-//	AuthenticationMethodsReferences     []string    `json:"amr,omitempty"`
-//	SessionID                           string      `json:"sid,omitempty"`
-//	Actor                               interface{} `json:"act,omitempty"` //TODO: impl
-//	Scopes                              string      `json:"scope,omitempty"`
-//	ClientID                            string      `json:"client_id,omitempty"`
-//	AuthorizedActor                     interface{} `json:"may_act,omitempty"` //TODO: impl
-//	AccessTokenUseNumber                int         `json:"at_use_nbr,omitempty"`
-//	jsonUserinfo
-//}
-
-//
-//func (t *accessTokenClaims) MarshalJSON() ([]byte, error) {
-//	j := jsonToken{
-//		Issuer:                              t.Issuer,
-//		Subject:                             t.Subject,
-//		Audiences:                           t.Audiences,
-//		Expiration:                          timeToJSON(t.Expiration),
-//		NotBefore:                           timeToJSON(t.NotBefore),
-//		IssuedAt:                            timeToJSON(t.IssuedAt),
-//		JWTID:                               t.JWTID,
-//		AuthorizedParty:                     t.AuthorizedParty,
-//		Nonce:                               t.Nonce,
-//		AuthTime:                            timeToJSON(t.AuthTime),
-//		CodeHash:                            t.CodeHash,
-//		AuthenticationContextClassReference: t.AuthenticationContextClassReference,
-//		AuthenticationMethodsReferences:     t.AuthenticationMethodsReferences,
-//		SessionID:                           t.SessionID,
-//		Scopes:                              strings.Join(t.Scopes, " "),
-//		ClientID:                            t.ClientID,
-//		AccessTokenUseNumber:                t.AccessTokenUseNumber,
-//	}
-//	return json.Marshal(j)
-//}
-//
-//func (t *accessTokenClaims) UnmarshalJSON(b []byte) error {
-//	var j jsonToken
-//	if err := json.Unmarshal(b, &j); err != nil {
-//		return err
-//	}
-//	t.Issuer = j.Issuer
-//	t.Subject = j.Subject
-//	t.Audiences = audienceFromJSON(j.Audiences)
-//	t.Expiration = time.Unix(j.Expiration, 0).UTC()
-//	t.NotBefore = time.Unix(j.NotBefore, 0).UTC()
-//	t.IssuedAt = time.Unix(j.IssuedAt, 0).UTC()
-//	t.JWTID = j.JWTID
-//	t.AuthorizedParty = j.AuthorizedParty
-//	t.Nonce = j.Nonce
-//	t.AuthTime = time.Unix(j.AuthTime, 0).UTC()
-//	t.CodeHash = j.CodeHash
-//	t.AuthenticationContextClassReference = j.AuthenticationContextClassReference
-//	t.AuthenticationMethodsReferences = j.AuthenticationMethodsReferences
-//	t.SessionID = j.SessionID
-//	t.Scopes = strings.Split(j.Scopes, " ")
-//	t.ClientID = j.ClientID
-//	t.AccessTokenUseNumber = j.AccessTokenUseNumber
-//	return nil
-//}
-//
 func (t *idTokenClaims) MarshalJSON() ([]byte, error) {
 	type Alias idTokenClaims
 	a := &struct {
@@ -406,84 +330,6 @@ func (t *idTokenClaims) SetSignatureAlgorithm(alg jose.SignatureAlgorithm) {
 	t.signatureAlg = alg
 }
 
-//
-//func (t *JWTProfileAssertion) MarshalJSON() ([]byte, error) {
-//	j := jsonToken{
-//		Issuer:     t.Issuer,
-//		Subject:    t.Subject,
-//		Audiences:  t.Audience,
-//		Expiration: timeToJSON(t.Expiration),
-//		IssuedAt:   timeToJSON(t.IssuedAt),
-//		Scopes:     strings.Join(t.Scopes, " "),
-//	}
-//	return json.Marshal(j)
-//}
-
-//func (t *JWTProfileAssertion) UnmarshalJSON(b []byte) error {
-//	var j jsonToken
-//	if err := json.Unmarshal(b, &j); err != nil {
-//		return err
-//	}
-//
-//	t.Issuer = j.Issuer
-//	t.Subject = j.Subject
-//	t.Audience = audienceFromJSON(j.Audiences)
-//	t.Expiration = time.Unix(j.Expiration, 0).UTC()
-//	t.IssuedAt = time.Unix(j.IssuedAt, 0).UTC()
-//	t.Scopes = strings.Split(j.Scopes, " ")
-//
-//	return nil
-//}
-
-//
-//func (j *jsonToken) UnmarshalUserinfoProfile() userInfoProfile {
-//	locale, _ := language.Parse(j.Locale)
-//	return userInfoProfile{
-//		Name:              j.Name,
-//		GivenName:         j.GivenName,
-//		FamilyName:        j.FamilyName,
-//		MiddleName:        j.MiddleName,
-//		Nickname:          j.Nickname,
-//		Profile:           j.Profile,
-//		Picture:           j.Picture,
-//		Website:           j.Website,
-//		Gender:            Gender(j.Gender),
-//		Birthdate:         j.Birthdate,
-//		Zoneinfo:          j.Zoneinfo,
-//		Locale:            locale,
-//		UpdatedAt:         time.Unix(j.UpdatedAt, 0).UTC(),
-//		PreferredUsername: j.PreferredUsername,
-//	}
-//}
-//
-//func (j *jsonToken) UnmarshalUserinfoEmail() userInfoEmail {
-//	return userInfoEmail{
-//		Email:         j.Email,
-//		EmailVerified: j.EmailVerified,
-//	}
-//}
-//
-//func (j *jsonToken) UnmarshalUserinfoPhone() userInfoPhone {
-//	return userInfoPhone{
-//		PhoneNumber:         j.Phone,
-//		PhoneNumberVerified: j.PhoneVerified,
-//	}
-//}
-//
-//func (j *jsonToken) UnmarshalUserinfoAddress() *UserinfoAddress {
-//	if j.JsonUserinfoAddress == nil {
-//		return nil
-//	}
-//	return &UserinfoAddress{
-//		Country:       j.JsonUserinfoAddress.Country,
-//		Formatted:     j.JsonUserinfoAddress.Formatted,
-//		Locality:      j.JsonUserinfoAddress.Locality,
-//		PostalCode:    j.JsonUserinfoAddress.PostalCode,
-//		Region:        j.JsonUserinfoAddress.Region,
-//		StreetAddress: j.JsonUserinfoAddress.StreetAddress,
-//	}
-//}
-
 func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
 	hash, err := utils.GetHashAlgorithm(sigAlgorithm)
 	if err != nil {
@@ -491,27 +337,4 @@ func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, erro
 	}
 
 	return utils.HashString(hash, claim, true), nil
-}
-
-func timeToJSON(t time.Time) int64 {
-	if t.IsZero() {
-		return 0
-	}
-	return t.Unix()
-}
-
-func audienceFromJSON(i interface{}) []string {
-	switch aud := i.(type) {
-	case []string:
-		return aud
-	case []interface{}:
-		audience := make([]string, len(aud))
-		for i, a := range aud {
-			audience[i] = a.(string)
-		}
-		return audience
-	case string:
-		return []string{aud}
-	}
-	return nil
 }

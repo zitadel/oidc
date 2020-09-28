@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -313,38 +314,45 @@ func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc
 //ClientCredentials is the `RelayingParty` interface implementation
 //handling the oauth2 client credentials grant
 func ClientCredentials(ctx context.Context, rp RelayingParty, scopes ...string) (newToken *oauth2.Token, err error) {
-	return CallTokenEndpoint(grants.ClientCredentialsGrantBasic(scopes...), rp)
+	return CallTokenEndpointAuthorized(grants.ClientCredentialsGrantBasic(scopes...), rp)
+}
+
+func CallTokenEndpointAuthorized(request interface{}, rp RelayingParty) (newToken *oauth2.Token, err error) {
+	config := rp.OAuthConfig()
+	var fn interface{} = utils.AuthorizeBasic(config.ClientID, config.ClientSecret)
+	if config.Endpoint.AuthStyle == oauth2.AuthStyleInParams {
+		fn = func(form url.Values) {
+			form.Set("client_id", config.ClientID)
+			form.Set("client_secret", config.ClientSecret)
+		}
+	}
+	return callTokenEndpoint(request, fn, rp)
 }
 
 func CallTokenEndpoint(request interface{}, rp RelayingParty) (newToken *oauth2.Token, err error) {
-	config := rp.OAuthConfig()
-	req, err := utils.FormRequest(rp.OAuthConfig().Endpoint.TokenURL, request, config.ClientID, config.ClientSecret, config.Endpoint.AuthStyle != oauth2.AuthStyleInParams)
-	if err != nil {
-		return nil, err
-	}
-	token := new(oauth2.Token)
-	if err := utils.HttpRequest(rp.HttpClient(), req, token); err != nil {
-		return nil, err
-	}
-	return token, nil
+	return callTokenEndpoint(request, nil, rp)
 }
 
-func CallJWTProfileEndpoint(assertion string, rp RelayingParty) (*oauth2.Token, error) {
-	form := url.Values{}
-	form.Add("assertion", assertion)
-	form.Add("grant_type", jwtProfileKey)
-	req, err := http.NewRequest("POST", rp.OAuthConfig().Endpoint.TokenURL, strings.NewReader(form.Encode()))
+func callTokenEndpoint(request interface{}, authFn interface{}, rp RelayingParty) (newToken *oauth2.Token, err error) {
+	req, err := utils.FormRequest(rp.OAuthConfig().Endpoint.TokenURL, request, authFn)
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	token := new(oauth2.Token)
-	if err := utils.HttpRequest(rp.HttpClient(), req, token); err != nil {
+	var tokenRes struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := utils.HttpRequest(rp.HttpClient(), req, &tokenRes); err != nil {
 		return nil, err
 	}
-	return token, nil
+	return &oauth2.Token{
+		AccessToken:  tokenRes.AccessToken,
+		TokenType:    tokenRes.TokenType,
+		RefreshToken: tokenRes.RefreshToken,
+		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
+	}, nil
 }
 
 func trySetStateCookie(w http.ResponseWriter, state string, rp RelayingParty) error {

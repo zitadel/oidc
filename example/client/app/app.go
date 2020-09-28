@@ -131,7 +131,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			token, err := rp.JWTProfileExchange(ctx, assertion, provider)
+			token, err := rp.JWTProfileAssertionExchange(ctx, assertion, oidc.Scopes{oidc.ScopeOpenID, oidc.ScopeProfile}, provider)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

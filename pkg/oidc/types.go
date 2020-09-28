@@ -41,38 +41,6 @@ func (d *Display) UnmarshalText(text []byte) error {
 
 type Gender string
 
-type Locale language.Tag
-
-//{
-//	SetLocale(language.Tag)
-//	Get() language.Tag
-//}
-//
-//func NewLocale(tag language.Tag) Locale {
-//	if tag.IsRoot() {
-//		return nil
-//	}
-//	return &locale{Tag: tag}
-//}
-//
-//type locale struct {
-//	language.Tag
-//}
-//
-//func (l *locale) SetLocale(tag language.Tag) {
-//	l.Tag = tag
-//}
-//func (l *locale) Get() language.Tag {
-//	return l.Tag
-//}
-
-//func (l *locale) MarshalJSON() ([]byte, error) {
-//	if l != nil && !l.IsRoot() {
-//		return l.MarshalText()
-//	}
-//	return []byte("null"), nil
-//}
-
 type Locales []language.Tag
 
 func (l *Locales) UnmarshalText(text []byte) error {
@@ -92,9 +60,17 @@ type ResponseType string
 
 type Scopes []string
 
+func (s *Scopes) Encode() string {
+	return strings.Join(*s, " ")
+}
+
 func (s *Scopes) UnmarshalText(text []byte) error {
 	*s = strings.Split(string(text), " ")
 	return nil
+}
+
+func (s *Scopes) MarshalText() ([]byte, error) {
+	return []byte(s.Encode()), nil
 }
 
 type Time time.Time

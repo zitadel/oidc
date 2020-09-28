@@ -37,7 +37,7 @@ func (a *AccessTokenRequest) GrantType() GrantType {
 type JWTTokenRequest struct {
 	Issuer    string   `json:"iss"`
 	Subject   string   `json:"sub"`
-	Scopes    Scopes   `json:"scope"`
+	Scopes    Scopes   `json:"-"`
 	Audience  Audience `json:"aud"`
 	IssuedAt  Time     `json:"iat"`
 	ExpiresAt Time     `json:"exp"`
