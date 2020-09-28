@@ -210,31 +210,18 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (*oidc.userinfo, error) {
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (oidc.UserInfoSetter, error) {
 	return s.GetUserinfoFromScopes(ctx, "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (*oidc.userinfo, error) {
-	return &oidc.userinfo{
-		Subject: a.GetSubject(),
-		Address: &oidc.UserinfoAddress{
-			StreetAddress: "Hjkhkj 789\ndsf",
-		},
-		userinfoEmail: oidc.userinfoEmail{
-			Email:         "test",
-			EmailVerified: true,
-		},
-		userinfoPhone: oidc.userinfoPhone{
-			PhoneNumber:         "sadsa",
-			PhoneNumberVerified: true,
-		},
-		userinfoProfile: oidc.userinfoProfile{
-			UpdatedAt: time.Now(),
-		},
-		// Claims: map[string]interface{}{
-		// 	"test": "test",
-		// 	"hkjh": "",
-		// },
-	}, nil
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (oidc.UserInfoSetter, error) {
+	userinfo := oidc.NewUserInfo()
+	userinfo.SetSubject(a.GetSubject())
+	userinfo.SetAddress(oidc.NewUserInfoAddress("Test 789\nPostfach 2", "", "", "", "", ""))
+	userinfo.SetEmail("test", true)
+	userinfo.SetPhone("0791234567", true)
+	userinfo.SetName("Test")
+	userinfo.AppendClaims("private_claim", "test")
+	return userinfo, nil
 }
 
 type ConfClient struct {

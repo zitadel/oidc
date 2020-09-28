@@ -10,8 +10,6 @@ import (
 
 type Signer interface {
 	Health(ctx context.Context) error
-	//SignIDToken(claims *oidc.IDTokenClaims) (string, error)
-	//SignAccessToken(claims *oidc.AccessTokenClaims) (string, error)
 	Signer() jose.Signer
 	SignatureAlgorithm() jose.SignatureAlgorithm
 }
@@ -42,11 +40,6 @@ func (s *tokenSigner) Health(_ context.Context) error {
 func (s *tokenSigner) Signer() jose.Signer {
 	return s.signer
 }
-
-//
-//func (s *tokenSigner) Sign(payload []byte) (*jose.JSONWebSignature, error) {
-//	return s.signer.Sign(payload)
-//}
 
 func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.SigningKey) {
 	for {
