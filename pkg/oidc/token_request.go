@@ -43,51 +43,58 @@ type JWTTokenRequest struct {
 	ExpiresAt Time     `json:"exp"`
 }
 
-func (j *JWTTokenRequest) GetClientID() string {
-	return j.Subject
-}
-
-func (j *JWTTokenRequest) GetSubject() string {
-	return j.Subject
-}
-
-func (j *JWTTokenRequest) GetScopes() []string {
-	return j.Scopes
-}
-
+//GetSubject implements the Claims interface
 func (j *JWTTokenRequest) GetIssuer() string {
 	return j.Issuer
 }
 
+//GetAudience implements the Claims and TokenRequest interfaces
 func (j *JWTTokenRequest) GetAudience() []string {
 	return j.Audience
 }
 
+//GetExpiration implements the Claims interface
 func (j *JWTTokenRequest) GetExpiration() time.Time {
 	return time.Time(j.ExpiresAt)
 }
 
+//GetIssuedAt implements the Claims interface
 func (j *JWTTokenRequest) GetIssuedAt() time.Time {
 	return time.Time(j.IssuedAt)
 }
 
+//GetNonce implements the Claims interface
 func (j *JWTTokenRequest) GetNonce() string {
 	return ""
 }
 
+//GetAuthenticationContextClassReference implements the Claims interface
 func (j *JWTTokenRequest) GetAuthenticationContextClassReference() string {
 	return ""
 }
 
+//GetAuthTime implements the Claims interface
 func (j *JWTTokenRequest) GetAuthTime() time.Time {
 	return time.Time{}
 }
 
+//GetAuthorizedParty implements the Claims interface
 func (j *JWTTokenRequest) GetAuthorizedParty() string {
 	return ""
 }
 
-func (j *JWTTokenRequest) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {}
+//SetSignatureAlgorithm implements the Claims interface
+func (j *JWTTokenRequest) SetSignatureAlgorithm(_ jose.SignatureAlgorithm) {}
+
+//GetSubject implements the TokenRequest interface
+func (j *JWTTokenRequest) GetSubject() string {
+	return j.Subject
+}
+
+//GetSubject implements the TokenRequest interface
+func (j *JWTTokenRequest) GetScopes() []string {
+	return j.Scopes
+}
 
 type TokenExchangeRequest struct {
 	subjectToken       string   `schema:"subject_token"`

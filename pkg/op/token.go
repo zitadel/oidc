@@ -82,8 +82,8 @@ func CreateBearerToken(id string, crypto Crypto) (string, error) {
 	return crypto.Encrypt(id)
 }
 
-func CreateJWT(issuer string, authReq TokenRequest, exp time.Time, id string, signer Signer) (string, error) {
-	claims := oidc.NewAccessTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, id)
+func CreateJWT(issuer string, tokenRequest TokenRequest, exp time.Time, id string, signer Signer) (string, error) {
+	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id)
 	return utils.Sign(claims, signer.Signer())
 }
 
