@@ -97,8 +97,8 @@ func main() {
 		<body>
 			<form method="POST" action="/jwt-profile" enctype="multipart/form-data">
 				<label for="key">Select a key file:</label>
-				<input type="file" id="key" name="key">
-				<button type="submit">Upload</button>
+				<input type="file" accept=".json" id="key" name="key">
+				<button type="submit">Get Token</button>
 			</form>
 		</body>
 	</html>`
@@ -131,7 +131,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			token, err := rp.JWTProfileAssertionExchange(ctx, assertion, oidc.Scopes{oidc.ScopeOpenID, oidc.ScopeProfile}, provider)
+			token, err := rp.JWTProfileAssertionExchange(ctx, assertion, scopes, provider)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
