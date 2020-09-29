@@ -60,8 +60,8 @@ type ResponseType string
 
 type Scopes []string
 
-func (s *Scopes) Encode() string {
-	return strings.Join(*s, " ")
+func (s Scopes) Encode() string {
+	return strings.Join(s, " ")
 }
 
 func (s *Scopes) UnmarshalText(text []byte) error {

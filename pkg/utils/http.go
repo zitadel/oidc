@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/gorilla/schema"
 )
 
 var (
@@ -36,9 +34,8 @@ func AuthorizeBasic(user, password string) RequestAuthorization {
 	}
 }
 
-func FormRequest(endpoint string, request interface{}, authFn interface{}) (*http.Request, error) {
+func FormRequest(endpoint string, request interface{}, encoder Encoder, authFn interface{}) (*http.Request, error) {
 	form := url.Values{}
-	encoder := schema.NewEncoder()
 	if err := encoder.Encode(request, form); err != nil {
 		return nil, err
 	}

@@ -5,10 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/schema"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/oidc/grants"
@@ -22,6 +24,16 @@ const (
 	stateParam    = "state"
 	pkceCode      = "pkce"
 	jwtProfileKey = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+)
+
+var (
+	encoder = func() utils.Encoder {
+		e := schema.NewEncoder()
+		e.RegisterEncoder(oidc.Scopes{}, func(value reflect.Value) string {
+			return value.Interface().(oidc.Scopes).Encode()
+		})
+		return e
+	}()
 )
 
 //RelayingParty declares the minimal interface for oidc clients
@@ -334,7 +346,7 @@ func CallTokenEndpoint(request interface{}, rp RelayingParty) (newToken *oauth2.
 }
 
 func callTokenEndpoint(request interface{}, authFn interface{}, rp RelayingParty) (newToken *oauth2.Token, err error) {
-	req, err := utils.FormRequest(rp.OAuthConfig().Endpoint.TokenURL, request, authFn)
+	req, err := utils.FormRequest(rp.OAuthConfig().Endpoint.TokenURL, request, encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
