@@ -32,7 +32,7 @@ func main() {
 	ctx := context.Background()
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
-	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail, oidc.ScopeAddress, "hodor"}
+	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail, oidc.ScopeAddress}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
 	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
 		rp.WithPKCE(cookieHandler),
