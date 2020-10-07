@@ -49,6 +49,20 @@ func (mr *MockClientMockRecorder) AccessTokenType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenType", reflect.TypeOf((*MockClient)(nil).AccessTokenType))
 }
 
+// AllowedScopes mocks base method
+func (m *MockClient) AllowedScopes() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllowedScopes")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// AllowedScopes indicates an expected call of AllowedScopes
+func (mr *MockClientMockRecorder) AllowedScopes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowedScopes", reflect.TypeOf((*MockClient)(nil).AllowedScopes))
+}
+
 // ApplicationType mocks base method
 func (m *MockClient) ApplicationType() op.ApplicationType {
 	m.ctrl.T.Helper()

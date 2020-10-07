@@ -26,6 +26,7 @@ func NewClientExpectAny(t *testing.T, appType op.ApplicationType) op.Client {
 		func(id string) string {
 			return "login?id=" + id
 		})
+	m.EXPECT().AllowedScopes().AnyTimes().Return(nil)
 	return c
 }
 

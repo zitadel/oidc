@@ -91,7 +91,8 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 	if err != nil {
 		return "", ErrServerError(err.Error())
 	}
-	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
+	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
+	if err != nil {
 		return "", err
 	}
 	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
@@ -104,14 +105,33 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 }
 
 //ValidateAuthReqScopes validates the passed scopes
-func ValidateAuthReqScopes(scopes []string) error {
+func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
-		return ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
+		return nil, ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
 	}
-	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
+	openID := false
+	for i := len(scopes) - 1; i >= 0; i-- {
+		switch scopes[i] {
+		case oidc.ScopeOpenID:
+			openID = true
+		case oidc.ScopeProfile,
+			oidc.ScopeEmail,
+			oidc.ScopePhone,
+			oidc.ScopeAddress,
+			oidc.ScopeOfflineAccess:
+		default:
+			if !utils.Contains(client.AllowedScopes(), scopes[i]) {
+				scopes[i] = scopes[len(scopes)-1]
+				scopes[len(scopes)-1] = ""
+				scopes = scopes[:len(scopes)-1]
+			}
+		}
 	}
-	return nil
+	if !openID {
+		return nil, ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
+	}
+
+	return scopes, nil
 }
 
 //ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type

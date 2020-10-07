@@ -211,9 +211,9 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 }
 
 func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (oidc.UserInfoSetter, error) {
-	return s.GetUserinfoFromScopes(ctx, "", []string{})
+	return s.GetUserinfoFromScopes(ctx, "", "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (oidc.UserInfoSetter, error) {
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfoSetter, error) {
 	userinfo := oidc.NewUserInfo()
 	userinfo.SetSubject(a.GetSubject())
 	userinfo.SetAddress(oidc.NewUserInfoAddress("Test 789\nPostfach 2", "", "", "", "", ""))
@@ -275,4 +275,8 @@ func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
 
 func (c *ConfClient) DevMode() bool {
 	return c.devMode
+}
+
+func (c *ConfClient) AllowedScopes() []string {
+	return nil
 }

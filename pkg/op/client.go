@@ -32,6 +32,7 @@ type Client interface {
 	AccessTokenType() AccessTokenType
 	IDTokenLifetime() time.Duration
 	DevMode() bool
+	AllowedScopes() []string
 }
 
 func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseType) bool {
