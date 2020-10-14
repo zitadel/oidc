@@ -28,8 +28,9 @@ type AuthStorage interface {
 type OPStorage interface {
 	GetClientByClientID(context.Context, string) (Client, error)
 	AuthorizeClientIDSecret(context.Context, string, string) error
-	GetUserinfoFromScopes(context.Context, string, string, []string) (oidc.UserInfoSetter, error)
-	GetUserinfoFromToken(context.Context, string, string) (oidc.UserInfoSetter, error)
+	GetUserinfoFromScopes(context.Context, string, string, []string) (oidc.UserInfo, error)
+	GetUserinfoFromToken(context.Context, string, string) (oidc.UserInfo, error)
+	GetPrivateClaimsFromScopes(context.Context, string, string, []string) (map[string]interface{}, error)
 	GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
 }
 

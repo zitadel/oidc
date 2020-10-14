@@ -51,6 +51,7 @@ type OpenIDProvider interface {
 	Encoder() utils.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
 	JWTProfileVerifier() JWTProfileVerifier
+	AccessTokenVerifier() AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Signer() Signer
@@ -152,6 +153,8 @@ type openidProvider struct {
 	signer              Signer
 	idTokenHintVerifier IDTokenHintVerifier
 	jwtProfileVerifier  JWTProfileVerifier
+	accessTokenVerifier AccessTokenVerifier
+	keySet              *openIDKeySet
 	crypto              Crypto
 	httpHandler         http.Handler
 	decoder             *schema.Decoder
@@ -207,7 +210,7 @@ func (o *openidProvider) Encoder() utils.Encoder {
 
 func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
 	if o.idTokenHintVerifier == nil {
-		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), &openIDKeySet{o.Storage()})
+		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet())
 	}
 	return o.idTokenHintVerifier
 }
@@ -217,6 +220,20 @@ func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
 		o.jwtProfileVerifier = NewJWTProfileVerifier(o.Storage(), o.Issuer(), 1*time.Hour, time.Second)
 	}
 	return o.jwtProfileVerifier
+}
+
+func (o *openidProvider) AccessTokenVerifier() AccessTokenVerifier {
+	if o.accessTokenVerifier == nil {
+		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet())
+	}
+	return o.accessTokenVerifier
+}
+
+func (o *openidProvider) openIDKeySet() oidc.KeySet {
+	if o.keySet == nil {
+		o.keySet = &openIDKeySet{o.Storage()}
+	}
+	return o.keySet
 }
 
 func (o *openidProvider) Crypto() Crypto {

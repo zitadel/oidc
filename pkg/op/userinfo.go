@@ -13,6 +13,7 @@ type UserinfoProvider interface {
 	Decoder() utils.Decoder
 	Crypto() Crypto
 	Storage() Storage
+	AccessTokenVerifier() AccessTokenVerifier
 }
 
 func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter, *http.Request) {
@@ -27,10 +28,20 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
 	}
-	tokenID, err := userinfoProvider.Crypto().Decrypt(accessToken)
-	if err != nil {
-		http.Error(w, "access token missing", http.StatusUnauthorized)
-		return
+	var tokenID string
+	if strings.HasPrefix(accessToken, "eyJhbGci") { //TODO: improve
+		accessTokenClaims, err := VerifyAccessToken(r.Context(), accessToken, userinfoProvider.AccessTokenVerifier())
+		if err != nil {
+			http.Error(w, "access token invalid", http.StatusUnauthorized)
+			return
+		}
+		tokenID = accessTokenClaims.GetTokenID()
+	} else {
+		tokenID, err = userinfoProvider.Crypto().Decrypt(accessToken)
+		if err != nil {
+			http.Error(w, "access token invalid", http.StatusUnauthorized)
+			return
+		}
 	}
 	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID, r.Header.Get("origin"))
 	if err != nil {
