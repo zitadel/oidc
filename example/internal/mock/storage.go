@@ -210,31 +210,21 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (*oidc.Userinfo, error) {
-	return s.GetUserinfoFromScopes(ctx, "", []string{})
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (oidc.UserInfo, error) {
+	return s.GetUserinfoFromScopes(ctx, "", "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _ string, _ []string) (*oidc.Userinfo, error) {
-	return &oidc.Userinfo{
-		Subject: a.GetSubject(),
-		Address: &oidc.UserinfoAddress{
-			StreetAddress: "Hjkhkj 789\ndsf",
-		},
-		UserinfoEmail: oidc.UserinfoEmail{
-			Email:         "test",
-			EmailVerified: true,
-		},
-		UserinfoPhone: oidc.UserinfoPhone{
-			PhoneNumber:         "sadsa",
-			PhoneNumberVerified: true,
-		},
-		UserinfoProfile: oidc.UserinfoProfile{
-			UpdatedAt: time.Now(),
-		},
-		// Claims: map[string]interface{}{
-		// 	"test": "test",
-		// 	"hkjh": "",
-		// },
-	}, nil
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfo, error) {
+	userinfo := oidc.NewUserInfo()
+	userinfo.SetSubject(a.GetSubject())
+	userinfo.SetAddress(oidc.NewUserInfoAddress("Test 789\nPostfach 2", "", "", "", "", ""))
+	userinfo.SetEmail("test", true)
+	userinfo.SetPhone("0791234567", true)
+	userinfo.SetName("Test")
+	userinfo.AppendClaims("private_claim", "test")
+	return userinfo, nil
+}
+func (s *AuthStorage) GetPrivateClaimsFromScopes(_ context.Context, _, _ string, _ []string) (map[string]interface{}, error) {
+	return map[string]interface{}{"private_claim": "test"}, nil
 }
 
 type ConfClient struct {
@@ -288,4 +278,16 @@ func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
 
 func (c *ConfClient) DevMode() bool {
 	return c.devMode
+}
+
+func (c *ConfClient) AllowedScopes() []string {
+	return nil
+}
+
+func (c *ConfClient) AssertAdditionalIdTokenScopes() bool {
+	return false
+}
+
+func (c *ConfClient) AssertAdditionalAccessTokenScopes() bool {
+	return false
 }

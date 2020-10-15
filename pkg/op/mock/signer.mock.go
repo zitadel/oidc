@@ -6,7 +6,6 @@ package mock
 
 import (
 	context "context"
-	oidc "github.com/caos/oidc/pkg/oidc"
 	gomock "github.com/golang/mock/gomock"
 	jose "gopkg.in/square/go-jose.v2"
 	reflect "reflect"
@@ -49,36 +48,6 @@ func (mr *MockSignerMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockSigner)(nil).Health), arg0)
 }
 
-// SignAccessToken mocks base method
-func (m *MockSigner) SignAccessToken(arg0 *oidc.AccessTokenClaims) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SignAccessToken", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SignAccessToken indicates an expected call of SignAccessToken
-func (mr *MockSignerMockRecorder) SignAccessToken(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignAccessToken", reflect.TypeOf((*MockSigner)(nil).SignAccessToken), arg0)
-}
-
-// SignIDToken mocks base method
-func (m *MockSigner) SignIDToken(arg0 *oidc.IDTokenClaims) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SignIDToken", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SignIDToken indicates an expected call of SignIDToken
-func (mr *MockSignerMockRecorder) SignIDToken(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignIDToken", reflect.TypeOf((*MockSigner)(nil).SignIDToken), arg0)
-}
-
 // SignatureAlgorithm mocks base method
 func (m *MockSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
 	m.ctrl.T.Helper()
@@ -91,4 +60,18 @@ func (m *MockSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
 func (mr *MockSignerMockRecorder) SignatureAlgorithm() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignatureAlgorithm", reflect.TypeOf((*MockSigner)(nil).SignatureAlgorithm))
+}
+
+// Signer mocks base method
+func (m *MockSigner) Signer() jose.Signer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Signer")
+	ret0, _ := ret[0].(jose.Signer)
+	return ret0
+}
+
+// Signer indicates an expected call of Signer
+func (mr *MockSignerMockRecorder) Signer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signer", reflect.TypeOf((*MockSigner)(nil).Signer))
 }

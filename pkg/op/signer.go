@@ -2,19 +2,15 @@ package op
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/caos/logging"
 	"gopkg.in/square/go-jose.v2"
-
-	"github.com/caos/oidc/pkg/oidc"
 )
 
 type Signer interface {
 	Health(ctx context.Context) error
-	SignIDToken(claims *oidc.IDTokenClaims) (string, error)
-	SignAccessToken(claims *oidc.AccessTokenClaims) (string, error)
+	Signer() jose.Signer
 	SignatureAlgorithm() jose.SignatureAlgorithm
 }
 
@@ -24,7 +20,7 @@ type tokenSigner struct {
 	alg     jose.SignatureAlgorithm
 }
 
-func NewDefaultSigner(ctx context.Context, storage AuthStorage, keyCh <-chan jose.SigningKey) Signer {
+func NewSigner(ctx context.Context, storage AuthStorage, keyCh <-chan jose.SigningKey) Signer {
 	s := &tokenSigner{
 		storage: storage,
 	}
@@ -41,6 +37,10 @@ func (s *tokenSigner) Health(_ context.Context) error {
 	return nil
 }
 
+func (s *tokenSigner) Signer() jose.Signer {
+	return s.signer
+}
+
 func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.SigningKey) {
 	for {
 		select {
@@ -53,30 +53,6 @@ func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.S
 			logging.Log("OP-pf32aw").OnError(err).Error("error creating signer")
 		}
 	}
-}
-
-func (s *tokenSigner) SignIDToken(claims *oidc.IDTokenClaims) (string, error) {
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-	return s.Sign(payload)
-}
-
-func (s *tokenSigner) SignAccessToken(claims *oidc.AccessTokenClaims) (string, error) {
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-	return s.Sign(payload)
-}
-
-func (s *tokenSigner) Sign(payload []byte) (string, error) {
-	result, err := s.signer.Sign(payload)
-	if err != nil {
-		return "", err
-	}
-	return result.CompactSerialize()
 }
 
 func (s *tokenSigner) SignatureAlgorithm() jose.SignatureAlgorithm {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/schema"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -193,28 +194,63 @@ func TestValidateAuthRequest(t *testing.T) {
 
 func TestValidateAuthReqScopes(t *testing.T) {
 	type args struct {
+		client op.Client
+		scopes []string
+	}
+	type res struct {
+		err    bool
 		scopes []string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+		res  res
 	}{
 		{
-			"scopes missing fails", args{}, true,
+			"scopes missing fails",
+			args{},
+			res{
+				err: true,
+			},
 		},
 		{
-			"scope openid missing fails", args{[]string{"email"}}, true,
+			"scope openid missing fails",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{"email"},
+			},
+			res{
+				err: true,
+			},
 		},
 		{
-			"scope ok", args{[]string{"openid"}}, false,
+			"scope ok",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{"openid"},
+			},
+			res{
+				scopes: []string{"openid"},
+			},
+		},
+		{
+			"scope with drop ok",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{"openid", "email", "unknown"},
+			},
+			res{
+				scopes: []string{"openid", "email"},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthReqScopes(tt.args.scopes); (err != nil) != tt.wantErr {
-				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
+			scopes, err := op.ValidateAuthReqScopes(tt.args.client, tt.args.scopes)
+			if (err != nil) != tt.res.err {
+				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.res.err)
 			}
+			assert.ElementsMatch(t, scopes, tt.res.scopes)
 		})
 	}
 }

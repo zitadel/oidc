@@ -10,7 +10,9 @@ const (
 	ApplicationTypeWeb ApplicationType = iota
 	ApplicationTypeUserAgent
 	ApplicationTypeNative
+)
 
+const (
 	AccessTokenTypeBearer AccessTokenType = iota
 	AccessTokenTypeJWT
 )
@@ -32,6 +34,9 @@ type Client interface {
 	AccessTokenType() AccessTokenType
 	IDTokenLifetime() time.Duration
 	DevMode() bool
+	AllowedScopes() []string
+	AssertAdditionalIdTokenScopes() bool
+	AssertAdditionalAccessTokenScopes() bool
 }
 
 func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseType) bool {

@@ -91,7 +91,8 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 	if err != nil {
 		return "", ErrServerError(err.Error())
 	}
-	if err := ValidateAuthReqScopes(authReq.Scopes); err != nil {
+	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
+	if err != nil {
 		return "", err
 	}
 	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
@@ -104,14 +105,33 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 }
 
 //ValidateAuthReqScopes validates the passed scopes
-func ValidateAuthReqScopes(scopes []string) error {
+func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
-		return ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
+		return nil, ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
 	}
-	if !utils.Contains(scopes, oidc.ScopeOpenID) {
-		return ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
+	openID := false
+	for i := len(scopes) - 1; i >= 0; i-- {
+		scope := scopes[i]
+		if scope == oidc.ScopeOpenID {
+			openID = true
+			continue
+		}
+		if !(scope == oidc.ScopeProfile ||
+			scope == oidc.ScopeEmail ||
+			scope == oidc.ScopePhone ||
+			scope == oidc.ScopeAddress ||
+			scope == oidc.ScopeOfflineAccess) &&
+			!utils.Contains(client.AllowedScopes(), scope) {
+			scopes[i] = scopes[len(scopes)-1]
+			scopes[len(scopes)-1] = ""
+			scopes = scopes[:len(scopes)-1]
+		}
 	}
-	return nil
+	if !openID {
+		return nil, ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
+	}
+
+	return scopes, nil
 }
 
 //ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
@@ -168,7 +188,7 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	if err != nil {
 		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
 	}
-	return claims.Subject, nil
+	return claims.GetSubject(), nil
 }
 
 //RedirectToLogin redirects the end user to the Login UI for authentication

@@ -72,18 +72,18 @@ func (v *Verifier) VerifyIDToken(ctx context.Context, idToken string) (*oidc.IDT
 	return nil, nil
 }
 
-type Sig struct{}
+type Sig struct {
+	signer jose.Signer
+}
+
+func (s *Sig) Signer() jose.Signer {
+	return s.signer
+}
 
 func (s *Sig) Health(ctx context.Context) error {
 	return nil
 }
 
-func (s *Sig) SignIDToken(*oidc.IDTokenClaims) (string, error) {
-	return "", nil
-}
-func (s *Sig) SignAccessToken(*oidc.AccessTokenClaims) (string, error) {
-	return "", nil
-}
 func (s *Sig) SignatureAlgorithm() jose.SignatureAlgorithm {
 	return jose.HS256
 }
@@ -92,9 +92,3 @@ func ExpectStorage(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
 	mockA.EXPECT().Storage().AnyTimes().Return(NewMockStorageAny(t))
 }
-
-// func NewMockSignerAny(t *testing.T) op.Signer {
-// 	m := NewMockSigner(gomock.NewController(t))
-// 	m.EXPECT().Sign(gomock.Any()).AnyTimes().Return("", nil)
-// 	return m
-// }

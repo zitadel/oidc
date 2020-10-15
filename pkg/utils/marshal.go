@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -18,4 +20,16 @@ func MarshalJSON(w http.ResponseWriter, i interface{}) {
 	if err != nil {
 		logrus.Error("error writing response")
 	}
+}
+
+func ConcatenateJSON(first, second []byte) ([]byte, error) {
+	if !bytes.HasSuffix(first, []byte{'}'}) {
+		return nil, fmt.Errorf("jws: invalid JSON %s", first)
+	}
+	if !bytes.HasPrefix(second, []byte{'{'}) {
+		return nil, fmt.Errorf("jws: invalid JSON %s", second)
+	}
+	first[len(first)-1] = ','
+	first = append(first, second[1:]...)
+	return first, nil
 }

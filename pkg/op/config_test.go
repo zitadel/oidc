@@ -60,6 +60,8 @@ func TestValidateIssuer(t *testing.T) {
 			true,
 		},
 	}
+	//ensure env is not set
+	os.Unsetenv(OidcDevMode)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := ValidateIssuer(tt.args.issuer); (err != nil) != tt.wantErr {
@@ -84,7 +86,7 @@ func TestValidateIssuerDevLocalAllowed(t *testing.T) {
 			false,
 		},
 	}
-	os.Setenv("CAOS_OIDC_DEV", "")
+	os.Setenv(OidcDevMode, "true")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := ValidateIssuer(tt.args.issuer); (err != nil) != tt.wantErr {

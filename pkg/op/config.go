@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const OidcDevMode = "CAOS_OIDC_DEV"
+
 type Configuration interface {
 	Issuer() string
 	AuthorizationEndpoint() Endpoint
@@ -42,7 +44,7 @@ func ValidateIssuer(issuer string) error {
 }
 
 func devLocalAllowed(url *url.URL) bool {
-	_, b := os.LookupEnv("CAOS_OIDC_DEV")
+	_, b := os.LookupEnv(OidcDevMode)
 	if !b {
 		return b
 	}
