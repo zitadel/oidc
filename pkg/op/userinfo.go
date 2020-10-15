@@ -33,6 +33,10 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		return
 	}
 	splittedToken := strings.Split(tokenIDSubject, ":")
+	if len(splittedToken) != 2 {
+		http.Error(w, "access token invalid", http.StatusUnauthorized)
+		return
+	}
 	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), splittedToken[0], splittedToken[1], r.Header.Get("origin"))
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
