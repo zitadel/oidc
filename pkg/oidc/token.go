@@ -24,6 +24,7 @@ type Tokens struct {
 
 type AccessTokenClaims interface {
 	Claims
+	GetSubject() string
 	GetTokenID() string
 	SetPrivateClaims(map[string]interface{})
 }
@@ -126,6 +127,11 @@ func (a *accessTokenClaims) GetAuthorizedParty() string {
 //SetSignatureAlgorithm implements the Claims interface
 func (a *accessTokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 	a.signatureAlg = algorithm
+}
+
+//GetSubject implements the AccessTokenClaims interface
+func (a *accessTokenClaims) GetSubject() string {
+	return a.Subject
 }
 
 //GetTokenID implements the AccessTokenClaims interface

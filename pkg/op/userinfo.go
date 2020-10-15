@@ -1,6 +1,7 @@
 package op
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -28,17 +29,12 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
 	}
-	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
-	if err != nil {
-		accessTokenClaims, err := VerifyAccessToken(r.Context(), accessToken, userinfoProvider.AccessTokenVerifier())
-		if err != nil {
-			http.Error(w, "access token invalid", http.StatusUnauthorized)
-			return
-		}
-		tokenID = accessTokenClaims.GetTokenID()
+	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), userinfoProvider, accessToken)
+	if !ok {
+		http.Error(w, "access token invalid", http.StatusUnauthorized)
+		return
 	}
-	splittedToken := strings.Split(tokenIDSubject, ":")
-	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), splittedToken[0], splittedToken[1], r.Header.Get("origin"))
+	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID, subject, r.Header.Get("origin"))
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		utils.MarshalJSON(w, err)
@@ -66,4 +62,20 @@ func getAccessToken(r *http.Request, decoder utils.Decoder) (string, error) {
 		return "", errors.New("unable to parse request")
 	}
 	return req.AccessToken, nil
+}
+
+func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
+	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
+	if err == nil {
+		splittedToken := strings.Split(tokenIDSubject, ":")
+		if len(splittedToken) != 2 {
+			return "", "", false
+		}
+		return splittedToken[0], splittedToken[1], true
+	}
+	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
+	if err != nil {
+		return "", "", false
+	}
+	return accessTokenClaims.GetTokenID(), accessTokenClaims.GetSubject(), true
 }
