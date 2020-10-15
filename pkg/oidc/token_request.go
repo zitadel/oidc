@@ -43,7 +43,7 @@ type JWTTokenRequest struct {
 	ExpiresAt Time     `json:"exp"`
 }
 
-//GetSubject implements the Claims interface
+//GetIssuer implements the Claims interface
 func (j *JWTTokenRequest) GetIssuer() string {
 	return j.Issuer
 }
