@@ -67,11 +67,11 @@ func getAccessToken(r *http.Request, decoder utils.Decoder) (string, error) {
 func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err == nil {
-		splittedToken := strings.Split(tokenIDSubject, ":")
-		if len(splittedToken) != 2 {
+		splitToken := strings.Split(tokenIDSubject, ":")
+		if len(splitToken) != 2 {
 			return "", "", false
 		}
-		return splittedToken[0], splittedToken[1], true
+		return splitToken[0], splitToken[1], true
 	}
 	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
 	if err != nil {

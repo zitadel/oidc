@@ -210,10 +210,10 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (oidc.UserInfoSetter, error) {
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (oidc.UserInfo, error) {
 	return s.GetUserinfoFromScopes(ctx, "", "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfoSetter, error) {
+func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfo, error) {
 	userinfo := oidc.NewUserInfo()
 	userinfo.SetSubject(a.GetSubject())
 	userinfo.SetAddress(oidc.NewUserInfoAddress("Test 789\nPostfach 2", "", "", "", "", ""))
@@ -222,6 +222,9 @@ func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []
 	userinfo.SetName("Test")
 	userinfo.AppendClaims("private_claim", "test")
 	return userinfo, nil
+}
+func (s *AuthStorage) GetPrivateClaimsFromScopes(_ context.Context, _, _ string, _ []string) (map[string]interface{}, error) {
+	return map[string]interface{}{"private_claim": "test"}, nil
 }
 
 type ConfClient struct {
@@ -279,4 +282,12 @@ func (c *ConfClient) DevMode() bool {
 
 func (c *ConfClient) AllowedScopes() []string {
 	return nil
+}
+
+func (c *ConfClient) AssertAdditionalIdTokenScopes() bool {
+	return false
+}
+
+func (c *ConfClient) AssertAdditionalAccessTokenScopes() bool {
+	return false
 }

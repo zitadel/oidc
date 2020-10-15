@@ -74,7 +74,7 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 		token, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
 		return
 	}
-	token, err = CreateBearerToken(id, authReq.GetSubject(), creator.Crypto())
+	token, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
 	return
 }
 
