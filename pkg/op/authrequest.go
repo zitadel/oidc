@@ -111,20 +111,20 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	}
 	openID := false
 	for i := len(scopes) - 1; i >= 0; i-- {
-		switch scopes[i] {
-		case oidc.ScopeOpenID:
+		scope := scopes[i]
+		if scope == oidc.ScopeOpenID {
 			openID = true
-		case oidc.ScopeProfile,
-			oidc.ScopeEmail,
-			oidc.ScopePhone,
-			oidc.ScopeAddress,
-			oidc.ScopeOfflineAccess:
-		default:
-			if !utils.Contains(client.AllowedScopes(), scopes[i]) {
-				scopes[i] = scopes[len(scopes)-1]
-				scopes[len(scopes)-1] = ""
-				scopes = scopes[:len(scopes)-1]
-			}
+			continue
+		}
+		if !(scope == oidc.ScopeProfile ||
+			scope == oidc.ScopeEmail ||
+			scope == oidc.ScopePhone ||
+			scope == oidc.ScopeAddress ||
+			scope == oidc.ScopeOfflineAccess) &&
+			!utils.Contains(client.AllowedScopes(), scope) {
+			scopes[i] = scopes[len(scopes)-1]
+			scopes[len(scopes)-1] = ""
+			scopes = scopes[:len(scopes)-1]
 		}
 	}
 	if !openID {
