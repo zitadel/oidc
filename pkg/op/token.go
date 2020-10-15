@@ -74,12 +74,12 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 		token, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
 		return
 	}
-	token, err = CreateBearerToken(id, creator.Crypto())
+	token, err = CreateBearerToken(id, authReq.GetSubject(), creator.Crypto())
 	return
 }
 
-func CreateBearerToken(id string, crypto Crypto) (string, error) {
-	return crypto.Encrypt(id)
+func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
+	return crypto.Encrypt(tokenID + ":" + subject)
 }
 
 func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, signer Signer, client Client, storage Storage) (string, error) {

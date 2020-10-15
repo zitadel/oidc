@@ -210,7 +210,7 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _ string) (oidc.UserInfoSetter, error) {
+func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (oidc.UserInfoSetter, error) {
 	return s.GetUserinfoFromScopes(ctx, "", "", []string{})
 }
 func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfoSetter, error) {

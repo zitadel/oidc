@@ -28,7 +28,7 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
 	}
-	tokenID, err := userinfoProvider.Crypto().Decrypt(accessToken)
+	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err != nil {
 		accessTokenClaims, err := VerifyAccessToken(r.Context(), accessToken, userinfoProvider.AccessTokenVerifier())
 		if err != nil {
@@ -37,7 +37,8 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		}
 		tokenID = accessTokenClaims.GetTokenID()
 	}
-	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID, r.Header.Get("origin"))
+	splittedToken := strings.Split(tokenIDSubject, ":")
+	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), splittedToken[0], splittedToken[1], r.Header.Get("origin"))
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		utils.MarshalJSON(w, err)
