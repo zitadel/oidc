@@ -39,7 +39,7 @@ func EncryptBytesAES(plainText []byte, key string) ([]byte, error) {
 func DecryptAES(data string, key string) (string, error) {
 	text, err := base64.URLEncoding.DecodeString(data)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	decrypted, err := DecryptBytesAES(text, key)
 	if err != nil {
