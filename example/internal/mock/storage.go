@@ -157,14 +157,11 @@ func (s *AuthStorage) CreateToken(_ context.Context, authReq op.TokenRequest) (s
 func (s *AuthStorage) TerminateSession(_ context.Context, userID, clientID string) error {
 	return nil
 }
-func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey, _ chan<- error, _ <-chan time.Time) {
+func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey) {
 	keyCh <- jose.SigningKey{Algorithm: jose.RS256, Key: s.key}
 }
 func (s *AuthStorage) GetKey(_ context.Context) (*rsa.PrivateKey, error) {
 	return s.key, nil
-}
-func (s *AuthStorage) SaveNewKeyPair(ctx context.Context) error {
-	return nil
 }
 func (s *AuthStorage) GetKeySet(_ context.Context) (*jose.JSONWebKeySet, error) {
 	pubkey := s.key.Public()

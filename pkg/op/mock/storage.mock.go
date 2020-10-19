@@ -187,15 +187,15 @@ func (mr *MockStorageMockRecorder) GetPrivateClaimsFromScopes(arg0, arg1, arg2, 
 }
 
 // GetSigningKey mocks base method
-func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- jose.SigningKey, arg2 chan<- error, arg3 <-chan time.Time) {
+func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- jose.SigningKey) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "GetSigningKey", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "GetSigningKey", arg0, arg1)
 }
 
 // GetSigningKey indicates an expected call of GetSigningKey
-func (mr *MockStorageMockRecorder) GetSigningKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetSigningKey(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey), arg0, arg1)
 }
 
 // GetUserinfoFromScopes mocks base method
@@ -254,20 +254,6 @@ func (m *MockStorage) SaveAuthCode(arg0 context.Context, arg1, arg2 string) erro
 func (mr *MockStorageMockRecorder) SaveAuthCode(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAuthCode", reflect.TypeOf((*MockStorage)(nil).SaveAuthCode), arg0, arg1, arg2)
-}
-
-// SaveNewKeyPair mocks base method
-func (m *MockStorage) SaveNewKeyPair(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveNewKeyPair", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SaveNewKeyPair indicates an expected call of SaveNewKeyPair
-func (mr *MockStorageMockRecorder) SaveNewKeyPair(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveNewKeyPair", reflect.TypeOf((*MockStorage)(nil).SaveNewKeyPair), arg0)
 }
 
 // TerminateSession mocks base method
