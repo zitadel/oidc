@@ -39,10 +39,6 @@ type Storage interface {
 	Health(context.Context) error
 }
 
-type StorageNotFoundError interface {
-	IsNotFound()
-}
-
 type AuthRequest interface {
 	GetID() string
 	GetACR() string

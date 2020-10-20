@@ -38,12 +38,6 @@ func NewMockStorageAny(t *testing.T) op.Storage {
 	return m
 }
 
-func NewMockStorageSigningKeyError(t *testing.T) op.Storage {
-	m := NewStorage(t)
-	ExpectSigningKeyError(m)
-	return m
-}
-
 func NewMockStorageSigningKeyInvalid(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	ExpectSigningKeyInvalid(m)
@@ -89,19 +83,10 @@ func ExpectValidClientID(s op.Storage) {
 		})
 }
 
-func ExpectSigningKeyError(s op.Storage) {
-	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
-			errCh <- errors.New("error")
-		},
-	)
-}
-
 func ExpectSigningKeyInvalid(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
+	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, keyCh chan<- jose.SigningKey) {
 			keyCh <- jose.SigningKey{}
 		},
 	)
@@ -109,8 +94,8 @@ func ExpectSigningKeyInvalid(s op.Storage) {
 
 func ExpectSigningKey(s op.Storage) {
 	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, keyCh chan<- jose.SigningKey, errCh chan<- error, _ <-chan bool) {
+	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, keyCh chan<- jose.SigningKey) {
 			keyCh <- jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}
 		},
 	)
