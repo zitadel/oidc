@@ -10,6 +10,6 @@ updates:
     prefix: chore
     include: scope
 - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: weekly
+  directory: "/"
+  schedule:
+    interval: weekly
