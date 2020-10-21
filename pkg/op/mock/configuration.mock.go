@@ -89,6 +89,34 @@ func (mr *MockConfigurationMockRecorder) EndSessionEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSessionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).EndSessionEndpoint))
 }
 
+// GrantTypeJWTAuthorizationSupported mocks base method
+func (m *MockConfiguration) GrantTypeJWTAuthorizationSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypeJWTAuthorizationSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GrantTypeJWTAuthorizationSupported indicates an expected call of GrantTypeJWTAuthorizationSupported
+func (mr *MockConfigurationMockRecorder) GrantTypeJWTAuthorizationSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeJWTAuthorizationSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeJWTAuthorizationSupported))
+}
+
+// GrantTypeTokenExchangeSupported mocks base method
+func (m *MockConfiguration) GrantTypeTokenExchangeSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypeTokenExchangeSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GrantTypeTokenExchangeSupported indicates an expected call of GrantTypeTokenExchangeSupported
+func (mr *MockConfigurationMockRecorder) GrantTypeTokenExchangeSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeTokenExchangeSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeTokenExchangeSupported))
+}
+
 // Issuer mocks base method
 func (m *MockConfiguration) Issuer() string {
 	m.ctrl.T.Helper()
