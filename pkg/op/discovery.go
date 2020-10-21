@@ -52,22 +52,23 @@ func Scopes(c Configuration) []string {
 
 func ResponseTypes(c Configuration) []string {
 	return []string{
-		"code",
-		"id_token",
-		// "code token",
-		// "code id_token",
-		"id_token token",
-		// "code id_token token"
-	}
+		string(oidc.ResponseTypeCode),
+		string(oidc.ResponseTypeIDTokenOnly),
+		string(oidc.ResponseTypeIDToken),
+	} //TODO: ok for now, check later if dynamic needed
 }
 
 func GrantTypes(c Configuration) []string {
-	return []string{
-		"client_credentials",
-		"authorization_code",
-		// "password",
-		"urn:ietf:params:oauth:grant-type:token-exchange",
+	grantTypes := []string{
+		string(oidc.GrantTypeCode),
 	}
+	if c.GrantTypeTokenExchangeSupported() {
+		grantTypes = append(grantTypes, string(oidc.GrantTypeTokenExchange))
+	}
+	if c.GrantTypeJWTAuthorizationSupported() {
+		grantTypes = append(grantTypes, string(oidc.GrantTypeBearer))
+	}
+	return grantTypes
 }
 
 func SupportedClaims(c Configuration) []string {

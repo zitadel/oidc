@@ -50,7 +50,6 @@ type OpenIDProvider interface {
 	Decoder() utils.Decoder
 	Encoder() utils.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
-	JWTProfileVerifier() JWTProfileVerifier
 	AccessTokenVerifier() AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
@@ -90,15 +89,6 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
-
-	//TODO: add to config after updating Configuration interface for DiscoveryConfig
-	// ScopesSupported:                   oidc.SupportedScopes,
-	// ResponseTypesSupported:            responseTypes,
-	// GrantTypesSupported:               oidc.SupportedGrantTypes,
-	// ClaimsSupported:                   oidc.SupportedClaims,
-	// IdTokenSigningAlgValuesSupported:  []string{keys.SigningAlgorithm},
-	// SubjectTypesSupported:             []string{"public"},
-	// TokenEndpointAuthMethodsSupported:
 }
 
 type endpoints struct {
@@ -194,6 +184,14 @@ func (o *openidProvider) AuthMethodPostSupported() bool {
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
 	return o.config.CodeMethodS256
+}
+
+func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
+	return false
+}
+
+func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
+	return true
 }
 
 func (o *openidProvider) Storage() Storage {
