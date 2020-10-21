@@ -9,8 +9,12 @@ import (
 const (
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
 	GrantTypeCode GrantType = "authorization_code"
-	//GrantTypeBearer define the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
+
+	//GrantTypeBearer defines the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
 	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+
+	//GrantTypeTokenExchange defines the grant_type `urn:ietf:params:oauth:grant-type:token-exchange` used for the OAuth Token Exchange Grant
+	GrantTypeTokenExchange GrantType = "urn:ietf:params:oauth:grant-type:token-exchange"
 )
 
 type GrantType string

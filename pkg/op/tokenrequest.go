@@ -17,6 +17,12 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
+	GrantTypeTokenExchangeSupported() bool
+	GrantTypeJWTAuthorizationSupported() bool
+}
+
+type JWTAuthorizationGrantExchanger interface {
+	Exchanger
 	JWTProfileVerifier() JWTProfileVerifier
 }
 
@@ -27,17 +33,20 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 			CodeExchange(w, r, exchanger)
 			return
 		case string(oidc.GrantTypeBearer):
-			JWTProfile(w, r, exchanger)
-			return
-		case "exchange":
-			TokenExchange(w, r, exchanger)
+			if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
+				JWTProfile(w, r, ex)
+				return
+			}
+		case string(oidc.GrantTypeTokenExchange):
+			if exchanger.GrantTypeTokenExchangeSupported() {
+				TokenExchange(w, r, exchanger)
+				return
+			}
 		case "":
 			RequestError(w, r, ErrInvalidRequest("grant_type missing"))
 			return
-		default:
-			RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
-			return
 		}
+		RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
 	}
 }
 
@@ -137,7 +146,7 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 	return authReq, nil
 }
 
-func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizationGrantExchanger) {
 	profileRequest, err := ParseJWTProfileRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)

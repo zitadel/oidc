@@ -19,6 +19,8 @@ type Configuration interface {
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
+	GrantTypeTokenExchangeSupported() bool
+	GrantTypeJWTAuthorizationSupported() bool
 }
 
 func ValidateIssuer(issuer string) error {
