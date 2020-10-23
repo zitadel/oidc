@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
@@ -84,9 +85,14 @@ func ParseAccessTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.Acce
 	}
 	clientID, clientSecret, ok := r.BasicAuth()
 	if ok {
-		tokenReq.ClientID = clientID
-		tokenReq.ClientSecret = clientSecret
-
+		tokenReq.ClientID, err = url.QueryUnescape(clientID)
+		if err != nil {
+			return nil, ErrInvalidRequest("invalid basic auth header")
+		}
+		tokenReq.ClientSecret, err = url.QueryUnescape(clientSecret)
+		if err != nil {
+			return nil, ErrInvalidRequest("invalid basic auth header")
+		}
 	}
 	return tokenReq, nil
 }
@@ -115,7 +121,7 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 		return authReq, client, err
 	}
 	if client.AuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
-		return nil, nil, errors.New("basic not supported")
+		return nil, nil, errors.New("auth_method post not supported")
 	}
 	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	if err != nil {
