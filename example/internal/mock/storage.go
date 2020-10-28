@@ -291,3 +291,7 @@ func (c *ConfClient) AssertAdditionalIdTokenScopes() bool {
 func (c *ConfClient) AssertAdditionalAccessTokenScopes() bool {
 	return false
 }
+
+func (c *ConfClient) IsScopeAllowed(scope string) bool {
+	return false
+}

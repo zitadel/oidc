@@ -49,20 +49,6 @@ func (mr *MockClientMockRecorder) AccessTokenType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenType", reflect.TypeOf((*MockClient)(nil).AccessTokenType))
 }
 
-// AllowedScopes mocks base method
-func (m *MockClient) AllowedScopes() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllowedScopes")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// AllowedScopes indicates an expected call of AllowedScopes
-func (mr *MockClientMockRecorder) AllowedScopes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowedScopes", reflect.TypeOf((*MockClient)(nil).AllowedScopes))
-}
-
 // ApplicationType mocks base method
 func (m *MockClient) ApplicationType() op.ApplicationType {
 	m.ctrl.T.Helper()
@@ -159,6 +145,20 @@ func (m *MockClient) IDTokenLifetime() time.Duration {
 func (mr *MockClientMockRecorder) IDTokenLifetime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenLifetime", reflect.TypeOf((*MockClient)(nil).IDTokenLifetime))
+}
+
+// IsScopeAllowed mocks base method
+func (m *MockClient) IsScopeAllowed(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsScopeAllowed", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsScopeAllowed indicates an expected call of IsScopeAllowed
+func (mr *MockClientMockRecorder) IsScopeAllowed(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsScopeAllowed", reflect.TypeOf((*MockClient)(nil).IsScopeAllowed), arg0)
 }
 
 // LoginURL mocks base method
