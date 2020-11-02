@@ -171,6 +171,13 @@ func (c *ConfClient) DevMode() bool {
 func (c *ConfClient) AllowedScopes() []string {
 	return nil
 }
+
+//func (c *ConfClient) AssertAdditionalIdTokenScopes() bool {
+//	return false
+//}
+//func (c *ConfClient) AssertAdditionalAccessTokenScopes() bool {
+//	return false
+//}
 func (c *ConfClient) RestrictAdditionalIdTokenScopes() func(scopes []string) []string {
 	return func(scopes []string) []string {
 		return scopes

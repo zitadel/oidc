@@ -34,6 +34,8 @@ type Client interface {
 	AccessTokenType() AccessTokenType
 	IDTokenLifetime() time.Duration
 	DevMode() bool
+	//AssertAdditionalIdTokenScopes() bool
+	//AssertAdditionalAccessTokenScopes() bool
 	RestrictAdditionalIdTokenScopes() func(scopes []string) []string
 	RestrictAdditionalAccessTokenScopes() func(scopes []string) []string
 	IsScopeAllowed(scope string) bool
