@@ -31,7 +31,6 @@ func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client
 			return nil, err
 		}
 	}
-	//idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client.AssertAdditionalIdTokenScopes())
 	idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client.RestrictAdditionalIdTokenScopes())
 	if err != nil {
 		return nil, err
@@ -88,8 +87,6 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
 		privateClaims, err := storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
-		//if client != nil && client.AssertAdditionalAccessTokenScopes() {
-		//	privateClaims, err := storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(tokenRequest.GetScopes()))
 		if err != nil {
 			return "", err
 		}
@@ -98,7 +95,6 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	return utils.Sign(claims, signer.Signer())
 }
 
-//func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, additonalScopes bool) (string, error) {
 func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, restictAdditionalScopesFunc func([]string) []string) (string, error) {
 	exp := time.Now().UTC().Add(validity)
 	claims := oidc.NewIDTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, authReq.GetAuthTime(), authReq.GetNonce(), authReq.GetACR(), authReq.GetAMR(), authReq.GetClientID())
@@ -113,9 +109,6 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 		scopes = removeUserinfoScopes(scopes)
 	}
 	scopes = restictAdditionalScopesFunc(scopes)
-	//if !additonalScopes {
-	//	scopes = removeAdditionalScopes(scopes)
-	//}
 	if len(scopes) > 0 {
 		userInfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetClientID(), scopes)
 		if err != nil {
@@ -140,22 +133,6 @@ func removeUserinfoScopes(scopes []string) []string {
 			scopes[i] == oidc.ScopeEmail ||
 			scopes[i] == oidc.ScopeAddress ||
 			scopes[i] == oidc.ScopePhone {
-
-			scopes[i] = scopes[len(scopes)-1]
-			scopes[len(scopes)-1] = ""
-			scopes = scopes[:len(scopes)-1]
-		}
-	}
-	return scopes
-}
-
-func removeAdditionalScopes(scopes []string) []string {
-	for i := len(scopes) - 1; i >= 0; i-- {
-		if !(scopes[i] == oidc.ScopeOpenID ||
-			scopes[i] == oidc.ScopeProfile ||
-			scopes[i] == oidc.ScopeEmail ||
-			scopes[i] == oidc.ScopeAddress ||
-			scopes[i] == oidc.ScopePhone) {
 
 			scopes[i] = scopes[len(scopes)-1]
 			scopes[len(scopes)-1] = ""
