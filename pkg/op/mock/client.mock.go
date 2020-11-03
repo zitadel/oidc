@@ -49,20 +49,6 @@ func (mr *MockClientMockRecorder) AccessTokenType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccessTokenType", reflect.TypeOf((*MockClient)(nil).AccessTokenType))
 }
 
-// AllowedScopes mocks base method
-func (m *MockClient) AllowedScopes() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllowedScopes")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// AllowedScopes indicates an expected call of AllowedScopes
-func (mr *MockClientMockRecorder) AllowedScopes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowedScopes", reflect.TypeOf((*MockClient)(nil).AllowedScopes))
-}
-
 // ApplicationType mocks base method
 func (m *MockClient) ApplicationType() op.ApplicationType {
 	m.ctrl.T.Helper()
@@ -75,34 +61,6 @@ func (m *MockClient) ApplicationType() op.ApplicationType {
 func (mr *MockClientMockRecorder) ApplicationType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplicationType", reflect.TypeOf((*MockClient)(nil).ApplicationType))
-}
-
-// AssertAdditionalAccessTokenScopes mocks base method
-func (m *MockClient) AssertAdditionalAccessTokenScopes() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AssertAdditionalAccessTokenScopes")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// AssertAdditionalAccessTokenScopes indicates an expected call of AssertAdditionalAccessTokenScopes
-func (mr *MockClientMockRecorder) AssertAdditionalAccessTokenScopes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssertAdditionalAccessTokenScopes", reflect.TypeOf((*MockClient)(nil).AssertAdditionalAccessTokenScopes))
-}
-
-// AssertAdditionalIdTokenScopes mocks base method
-func (m *MockClient) AssertAdditionalIdTokenScopes() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AssertAdditionalIdTokenScopes")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// AssertAdditionalIdTokenScopes indicates an expected call of AssertAdditionalIdTokenScopes
-func (mr *MockClientMockRecorder) AssertAdditionalIdTokenScopes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssertAdditionalIdTokenScopes", reflect.TypeOf((*MockClient)(nil).AssertAdditionalIdTokenScopes))
 }
 
 // AuthMethod mocks base method
@@ -161,6 +119,20 @@ func (mr *MockClientMockRecorder) IDTokenLifetime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenLifetime", reflect.TypeOf((*MockClient)(nil).IDTokenLifetime))
 }
 
+// IsScopeAllowed mocks base method
+func (m *MockClient) IsScopeAllowed(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsScopeAllowed", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsScopeAllowed indicates an expected call of IsScopeAllowed
+func (mr *MockClientMockRecorder) IsScopeAllowed(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsScopeAllowed", reflect.TypeOf((*MockClient)(nil).IsScopeAllowed), arg0)
+}
+
 // LoginURL mocks base method
 func (m *MockClient) LoginURL(arg0 string) string {
 	m.ctrl.T.Helper()
@@ -215,4 +187,32 @@ func (m *MockClient) ResponseTypes() []oidc.ResponseType {
 func (mr *MockClientMockRecorder) ResponseTypes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResponseTypes", reflect.TypeOf((*MockClient)(nil).ResponseTypes))
+}
+
+// RestrictAdditionalAccessTokenScopes mocks base method
+func (m *MockClient) RestrictAdditionalAccessTokenScopes() func([]string) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestrictAdditionalAccessTokenScopes")
+	ret0, _ := ret[0].(func([]string) []string)
+	return ret0
+}
+
+// RestrictAdditionalAccessTokenScopes indicates an expected call of RestrictAdditionalAccessTokenScopes
+func (mr *MockClientMockRecorder) RestrictAdditionalAccessTokenScopes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestrictAdditionalAccessTokenScopes", reflect.TypeOf((*MockClient)(nil).RestrictAdditionalAccessTokenScopes))
+}
+
+// RestrictAdditionalIdTokenScopes mocks base method
+func (m *MockClient) RestrictAdditionalIdTokenScopes() func([]string) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestrictAdditionalIdTokenScopes")
+	ret0, _ := ret[0].(func([]string) []string)
+	return ret0
+}
+
+// RestrictAdditionalIdTokenScopes indicates an expected call of RestrictAdditionalIdTokenScopes
+func (mr *MockClientMockRecorder) RestrictAdditionalIdTokenScopes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestrictAdditionalIdTokenScopes", reflect.TypeOf((*MockClient)(nil).RestrictAdditionalIdTokenScopes))
 }
