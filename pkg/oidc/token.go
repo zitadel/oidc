@@ -201,6 +201,7 @@ func EmptyIDTokenClaims() IDTokenClaims {
 }
 
 func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string) IDTokenClaims {
+	audience = AppendClientIDToAudience(clientID, audience)
 	return &idTokenClaims{
 		Issuer:                              issuer,
 		Audience:                            audience,
@@ -440,4 +441,17 @@ func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, erro
 	}
 
 	return utils.HashString(hash, claim, true), nil
+}
+
+func AppendClientIDToAudience(clientID string, audience []string) []string {
+	exists := false
+	for _, aud := range audience {
+		if aud == clientID {
+			exists = true
+		}
+	}
+	if !exists {
+		audience = append(audience, clientID)
+	}
+	return audience
 }
