@@ -48,8 +48,11 @@ func EmptyAccessTokenClaims() AccessTokenClaims {
 	return new(accessTokenClaims)
 }
 
-func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id string) AccessTokenClaims {
+func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string) AccessTokenClaims {
 	now := time.Now().UTC()
+	if len(audience) == 0 {
+		audience = append(audience, clientID)
+	}
 	return &accessTokenClaims{
 		Issuer:     issuer,
 		Subject:    subject,
