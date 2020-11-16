@@ -48,8 +48,11 @@ func EmptyAccessTokenClaims() AccessTokenClaims {
 	return new(accessTokenClaims)
 }
 
-func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id string) AccessTokenClaims {
+func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string) AccessTokenClaims {
 	now := time.Now().UTC()
+	if len(audience) == 0 {
+		audience = append(audience, clientID)
+	}
 	return &accessTokenClaims{
 		Issuer:     issuer,
 		Subject:    subject,
@@ -201,6 +204,7 @@ func EmptyIDTokenClaims() IDTokenClaims {
 }
 
 func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string) IDTokenClaims {
+	audience = AppendClientIDToAudience(clientID, audience)
 	return &idTokenClaims{
 		Issuer:                              issuer,
 		Audience:                            audience,
@@ -440,4 +444,13 @@ func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, erro
 	}
 
 	return utils.HashString(hash, claim, true), nil
+}
+
+func AppendClientIDToAudience(clientID string, audience []string) []string {
+	for _, aud := range audience {
+		if aud == clientID {
+			return audience
+		}
+	}
+	return append(audience, clientID)
 }
