@@ -447,14 +447,10 @@ func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, erro
 }
 
 func AppendClientIDToAudience(clientID string, audience []string) []string {
-	exists := false
 	for _, aud := range audience {
 		if aud == clientID {
-			exists = true
+			return audience
 		}
 	}
-	if !exists {
-		audience = append(audience, clientID)
-	}
-	return audience
+	return append(audience, clientID)
 }
