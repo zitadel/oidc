@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,11 +29,11 @@ func main() {
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
+	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	ctx := context.Background()
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
-	scopes := []string{oidc.ScopeOpenID, oidc.ScopeProfile, oidc.ScopeEmail, oidc.ScopeAddress}
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
 	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
 		rp.WithPKCE(cookieHandler),
