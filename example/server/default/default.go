@@ -68,5 +68,5 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 func HandleCallback(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	client := r.FormValue("client")
-	http.Redirect(w, r, "/authorize/"+client, http.StatusFound)
+	http.Redirect(w, r, "/authorize?"+client, http.StatusFound)
 }
