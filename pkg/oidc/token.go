@@ -48,8 +48,8 @@ func EmptyAccessTokenClaims() AccessTokenClaims {
 	return new(accessTokenClaims)
 }
 
-func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string) AccessTokenClaims {
-	now := time.Now().UTC()
+func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string, skew time.Duration) AccessTokenClaims {
+	now := time.Now().UTC().Add(-skew)
 	if len(audience) == 0 {
 		audience = append(audience, clientID)
 	}
@@ -203,14 +203,14 @@ func EmptyIDTokenClaims() IDTokenClaims {
 	return new(idTokenClaims)
 }
 
-func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string) IDTokenClaims {
+func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string, skew time.Duration) IDTokenClaims {
 	audience = AppendClientIDToAudience(clientID, audience)
 	return &idTokenClaims{
 		Issuer:                              issuer,
 		Audience:                            audience,
 		Expiration:                          Time(expiration),
-		IssuedAt:                            Time(time.Now().UTC()),
-		AuthTime:                            Time(authTime),
+		IssuedAt:                            Time(time.Now().UTC().Add(-skew)),
+		AuthTime:                            Time(authTime.Add(-skew)),
 		Nonce:                               nonce,
 		AuthenticationContextClassReference: acr,
 		AuthenticationMethodsReferences:     amr,

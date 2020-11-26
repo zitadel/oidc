@@ -184,3 +184,11 @@ func (c *ConfClient) RestrictAdditionalAccessTokenScopes() func(scopes []string)
 func (c *ConfClient) IsScopeAllowed(scope string) bool {
 	return false
 }
+
+func (c *ConfClient) UserInfoInIDToken() bool {
+	return false
+}
+
+func (c *ConfClient) ClockSkew() time.Duration {
+	return 0
+}

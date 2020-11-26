@@ -37,6 +37,8 @@ type Client interface {
 	RestrictAdditionalIdTokenScopes() func(scopes []string) []string
 	RestrictAdditionalAccessTokenScopes() func(scopes []string) []string
 	IsScopeAllowed(scope string) bool
+	UserInfoInIDToken() bool
+	ClockSkew() time.Duration
 }
 
 func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseType) bool {
