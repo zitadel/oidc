@@ -105,7 +105,7 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 			return "", err
 		}
 		claims.SetAccessTokenHash(atHash)
-		if !client.UserInfoInIDToken() {
+		if !client.IDTokenUserinfoClaimsAssertion() {
 			scopes = removeUserinfoScopes(scopes)
 		}
 	}

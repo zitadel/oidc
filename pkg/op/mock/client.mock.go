@@ -133,6 +133,20 @@ func (mr *MockClientMockRecorder) IDTokenLifetime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenLifetime", reflect.TypeOf((*MockClient)(nil).IDTokenLifetime))
 }
 
+// IDTokenUserinfoClaimsAssertion mocks base method
+func (m *MockClient) IDTokenUserinfoClaimsAssertion() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTokenUserinfoClaimsAssertion")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IDTokenUserinfoClaimsAssertion indicates an expected call of IDTokenUserinfoClaimsAssertion
+func (mr *MockClientMockRecorder) IDTokenUserinfoClaimsAssertion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenUserinfoClaimsAssertion", reflect.TypeOf((*MockClient)(nil).IDTokenUserinfoClaimsAssertion))
+}
+
 // IsScopeAllowed mocks base method
 func (m *MockClient) IsScopeAllowed(arg0 string) bool {
 	m.ctrl.T.Helper()
@@ -229,18 +243,4 @@ func (m *MockClient) RestrictAdditionalIdTokenScopes() func([]string) []string {
 func (mr *MockClientMockRecorder) RestrictAdditionalIdTokenScopes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestrictAdditionalIdTokenScopes", reflect.TypeOf((*MockClient)(nil).RestrictAdditionalIdTokenScopes))
-}
-
-// UserInfoInIDToken mocks base method
-func (m *MockClient) UserInfoInIDToken() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UserInfoInIDToken")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// UserInfoInIDToken indicates an expected call of UserInfoInIDToken
-func (mr *MockClientMockRecorder) UserInfoInIDToken() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserInfoInIDToken", reflect.TypeOf((*MockClient)(nil).UserInfoInIDToken))
 }
