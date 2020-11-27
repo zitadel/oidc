@@ -77,6 +77,20 @@ func (mr *MockClientMockRecorder) AuthMethod() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethod", reflect.TypeOf((*MockClient)(nil).AuthMethod))
 }
 
+// ClockSkew mocks base method
+func (m *MockClient) ClockSkew() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClockSkew")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// ClockSkew indicates an expected call of ClockSkew
+func (mr *MockClientMockRecorder) ClockSkew() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClockSkew", reflect.TypeOf((*MockClient)(nil).ClockSkew))
+}
+
 // DevMode mocks base method
 func (m *MockClient) DevMode() bool {
 	m.ctrl.T.Helper()
@@ -117,6 +131,20 @@ func (m *MockClient) IDTokenLifetime() time.Duration {
 func (mr *MockClientMockRecorder) IDTokenLifetime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenLifetime", reflect.TypeOf((*MockClient)(nil).IDTokenLifetime))
+}
+
+// IDTokenUserinfoClaimsAssertion mocks base method
+func (m *MockClient) IDTokenUserinfoClaimsAssertion() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IDTokenUserinfoClaimsAssertion")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IDTokenUserinfoClaimsAssertion indicates an expected call of IDTokenUserinfoClaimsAssertion
+func (mr *MockClientMockRecorder) IDTokenUserinfoClaimsAssertion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenUserinfoClaimsAssertion", reflect.TypeOf((*MockClient)(nil).IDTokenUserinfoClaimsAssertion))
 }
 
 // IsScopeAllowed mocks base method
