@@ -156,9 +156,24 @@ func (c *ConfClient) DevMode() bool {
 func (c *ConfClient) AllowedScopes() []string {
 	return nil
 }
-func (c *ConfClient) AssertAdditionalIdTokenScopes() bool {
+func (c *ConfClient) RestrictAdditionalIdTokenScopes() func(scopes []string) []string {
+	return func(scopes []string) []string {
+		return scopes
+	}
+}
+func (c *ConfClient) RestrictAdditionalAccessTokenScopes() func(scopes []string) []string {
+	return func(scopes []string) []string {
+		return scopes
+	}
+}
+func (c *ConfClient) IsScopeAllowed(scope string) bool {
 	return false
 }
-func (c *ConfClient) AssertAdditionalAccessTokenScopes() bool {
+
+func (c *ConfClient) IDTokenUserinfoClaimsAssertion() bool {
 	return false
+}
+
+func (c *ConfClient) ClockSkew() time.Duration {
+	return 0
 }

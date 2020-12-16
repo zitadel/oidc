@@ -31,7 +31,7 @@ func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client
 			return nil, err
 		}
 	}
-	idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client.AssertAdditionalIdTokenScopes())
+	idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	if err != nil {
 		return "", 0, err
 	}
-	validity = exp.Sub(time.Now().UTC())
+	validity = exp.Add(client.ClockSkew()).Sub(time.Now().UTC())
 	if accessTokenType == AccessTokenTypeJWT {
 		token, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
 		return
@@ -83,9 +83,10 @@ func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
 }
 
 func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, signer Signer, client Client, storage Storage) (string, error) {
-	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id)
-	if client != nil && client.AssertAdditionalAccessTokenScopes() {
-		privateClaims, err := storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(tokenRequest.GetScopes()))
+	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
+	if client != nil {
+		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
+		privateClaims, err := storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
 		if err != nil {
 			return "", err
 		}
@@ -94,21 +95,19 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	return utils.Sign(claims, signer.Signer())
 }
 
-func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, additonalScopes bool) (string, error) {
-	exp := time.Now().UTC().Add(validity)
-	claims := oidc.NewIDTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, authReq.GetAuthTime(), authReq.GetNonce(), authReq.GetACR(), authReq.GetAMR(), authReq.GetClientID())
-	scopes := authReq.GetScopes()
-
+func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, client Client) (string, error) {
+	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
+	claims := oidc.NewIDTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, authReq.GetAuthTime(), authReq.GetNonce(), authReq.GetACR(), authReq.GetAMR(), authReq.GetClientID(), client.ClockSkew())
+	scopes := client.RestrictAdditionalIdTokenScopes()(authReq.GetScopes())
 	if accessToken != "" {
 		atHash, err := oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
 		claims.SetAccessTokenHash(atHash)
-		scopes = removeUserinfoScopes(scopes)
-	}
-	if !additonalScopes {
-		scopes = removeAdditionalScopes(scopes)
+		if !client.IDTokenUserinfoClaimsAssertion() {
+			scopes = removeUserinfoScopes(scopes)
+		}
 	}
 	if len(scopes) > 0 {
 		userInfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetClientID(), scopes)
@@ -134,22 +133,6 @@ func removeUserinfoScopes(scopes []string) []string {
 			scopes[i] == oidc.ScopeEmail ||
 			scopes[i] == oidc.ScopeAddress ||
 			scopes[i] == oidc.ScopePhone {
-
-			scopes[i] = scopes[len(scopes)-1]
-			scopes[len(scopes)-1] = ""
-			scopes = scopes[:len(scopes)-1]
-		}
-	}
-	return scopes
-}
-
-func removeAdditionalScopes(scopes []string) []string {
-	for i := len(scopes) - 1; i >= 0; i-- {
-		if !(scopes[i] == oidc.ScopeOpenID ||
-			scopes[i] == oidc.ScopeProfile ||
-			scopes[i] == oidc.ScopeEmail ||
-			scopes[i] == oidc.ScopeAddress ||
-			scopes[i] == oidc.ScopePhone) {
 
 			scopes[i] = scopes[len(scopes)-1]
 			scopes[len(scopes)-1] = ""

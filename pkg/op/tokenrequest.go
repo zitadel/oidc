@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
@@ -17,6 +18,12 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
+	GrantTypeTokenExchangeSupported() bool
+	GrantTypeJWTAuthorizationSupported() bool
+}
+
+type JWTAuthorizationGrantExchanger interface {
+	Exchanger
 	JWTProfileVerifier() JWTProfileVerifier
 }
 
@@ -27,17 +34,20 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 			CodeExchange(w, r, exchanger)
 			return
 		case string(oidc.GrantTypeBearer):
-			JWTProfile(w, r, exchanger)
-			return
-		case "exchange":
-			TokenExchange(w, r, exchanger)
+			if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
+				JWTProfile(w, r, ex)
+				return
+			}
+		case string(oidc.GrantTypeTokenExchange):
+			if exchanger.GrantTypeTokenExchangeSupported() {
+				TokenExchange(w, r, exchanger)
+				return
+			}
 		case "":
 			RequestError(w, r, ErrInvalidRequest("grant_type missing"))
 			return
-		default:
-			RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
-			return
 		}
+		RequestError(w, r, ErrInvalidRequest("grant_type not supported"))
 	}
 }
 
@@ -75,9 +85,14 @@ func ParseAccessTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.Acce
 	}
 	clientID, clientSecret, ok := r.BasicAuth()
 	if ok {
-		tokenReq.ClientID = clientID
-		tokenReq.ClientSecret = clientSecret
-
+		tokenReq.ClientID, err = url.QueryUnescape(clientID)
+		if err != nil {
+			return nil, ErrInvalidRequest("invalid basic auth header")
+		}
+		tokenReq.ClientSecret, err = url.QueryUnescape(clientSecret)
+		if err != nil {
+			return nil, ErrInvalidRequest("invalid basic auth header")
+		}
 	}
 	return tokenReq, nil
 }
@@ -106,7 +121,7 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 		return authReq, client, err
 	}
 	if client.AuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
-		return nil, nil, errors.New("basic not supported")
+		return nil, nil, errors.New("auth_method post not supported")
 	}
 	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	if err != nil {
@@ -137,7 +152,7 @@ func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenReque
 	return authReq, nil
 }
 
-func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizationGrantExchanger) {
 	profileRequest, err := ParseJWTProfileRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)

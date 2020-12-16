@@ -49,7 +49,6 @@ type OpenIDProvider interface {
 	Decoder() utils.Decoder
 	Encoder() utils.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
-	JWTProfileVerifier() JWTProfileVerifier
 	AccessTokenVerifier() AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
@@ -76,7 +75,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
-	router.Handle(o.AuthorizationEndpoint().Relative()+"/{id}", intercept(authorizeCallbackHandler(o)))
+	router.NewRoute().Path(o.AuthorizationEndpoint().Relative()+"/callback").Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
@@ -89,15 +88,6 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
-
-	//TODO: add to config after updating Configuration interface for DiscoveryConfig
-	// ScopesSupported:                   oidc.SupportedScopes,
-	// ResponseTypesSupported:            responseTypes,
-	// GrantTypesSupported:               oidc.SupportedGrantTypes,
-	// ClaimsSupported:                   oidc.SupportedClaims,
-	// IdTokenSigningAlgValuesSupported:  []string{keys.SigningAlgorithm},
-	// SubjectTypesSupported:             []string{"public"},
-	// TokenEndpointAuthMethodsSupported:
 }
 
 type endpoints struct {
@@ -193,6 +183,14 @@ func (o *openidProvider) AuthMethodPostSupported() bool {
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
 	return o.config.CodeMethodS256
+}
+
+func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
+	return false
+}
+
+func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
+	return true
 }
 
 func (o *openidProvider) Storage() Storage {

@@ -121,7 +121,7 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 			scope == oidc.ScopePhone ||
 			scope == oidc.ScopeAddress ||
 			scope == oidc.ScopeOfflineAccess) &&
-			!utils.Contains(client.AllowedScopes(), scope) {
+			!client.IsScopeAllowed(scope) {
 			scopes[i] = scopes[len(scopes)-1]
 			scopes[len(scopes)-1] = ""
 			scopes = scopes[:len(scopes)-1]
