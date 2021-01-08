@@ -21,7 +21,7 @@ const (
 	readinessEndpoint            = "/ready"
 	defaultAuthorizationEndpoint = "authorize"
 	defaulTokenEndpoint          = "oauth/token"
-	defaultIntrospectEndpoint    = "introspect"
+	defaultIntrospectEndpoint    = "oauth/introspect"
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
@@ -78,6 +78,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
 	router.NewRoute().Path(o.AuthorizationEndpoint().Relative()+"/callback").Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
+	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o))
@@ -164,6 +165,10 @@ func (o *openidProvider) AuthorizationEndpoint() Endpoint {
 
 func (o *openidProvider) TokenEndpoint() Endpoint {
 	return o.endpoints.Token
+}
+
+func (o *openidProvider) IntrospectionEndpoint() Endpoint {
+	return o.endpoints.Introspection
 }
 
 func (o *openidProvider) UserinfoEndpoint() Endpoint {
@@ -328,6 +333,16 @@ func WithCustomTokenEndpoint(endpoint Endpoint) Option {
 			return err
 		}
 		o.endpoints.Token = endpoint
+		return nil
+	}
+}
+
+func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
+	return func(o *openidProvider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.Introspection = endpoint
 		return nil
 	}
 }

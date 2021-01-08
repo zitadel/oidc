@@ -13,6 +13,7 @@ type Configuration interface {
 	Issuer() string
 	AuthorizationEndpoint() Endpoint
 	TokenEndpoint() Endpoint
+	IntrospectionEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
