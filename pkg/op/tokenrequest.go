@@ -18,6 +18,7 @@ type Exchanger interface {
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
+	AuthMethodPrivateKeyJWTSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 }
@@ -112,18 +113,30 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 }
 
 func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {
+	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
+		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
+		if !ok || !exchanger.AuthMethodPrivateKeyJWTSupported() {
+			return nil, nil, errors.New("auth_method private_key_jwt not supported")
+		}
+		return AuthorizePrivateJWTKey(ctx, tokenReq, jwtExchanger)
+	}
 	client, err := exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
 	if err != nil {
 		return nil, nil, err
 	}
-	if client.AuthMethod() == AuthMethodNone {
+	if client.AuthMethod() == oidc.AuthMethodNone {
 		authReq, err := AuthorizeCodeChallenge(ctx, tokenReq, exchanger)
 		return authReq, client, err
 	}
-	if client.AuthMethod() == AuthMethodPost && !exchanger.AuthMethodPostSupported() {
+	if client.AuthMethod() == oidc.AuthMethodPost && !exchanger.AuthMethodPostSupported() {
 		return nil, nil, errors.New("auth_method post not supported")
 	}
-	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
+	authReq, err := AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, tokenReq.Code, exchanger.Storage())
+	return authReq, client, err
+}
+
+func AuthorizePrivateJWTKey(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger JWTAuthorizationGrantExchanger) (AuthRequest, Client, error) {
+	jwtReq, err := VerifyJWTAssertion(ctx, tokenReq.ClientAssertion, exchanger.JWTProfileVerifier())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,11 +144,26 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 	if err != nil {
 		return nil, nil, ErrInvalidRequest("invalid code")
 	}
+	client, err := exchanger.Storage().GetClientByClientID(ctx, jwtReq.Issuer)
+	if err != nil {
+		return nil, nil, err
+	}
+	if client.AuthMethod() != oidc.AuthMethodPrivateKeyJWT {
+		return nil, nil, ErrInvalidRequest("invalid_client")
+	}
 	return authReq, client, nil
 }
 
-func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string, storage OPStorage) error {
-	return storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
+func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret, code string, storage Storage) (AuthRequest, error) {
+	err := storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
+	if err != nil {
+		return nil, err
+	}
+	authReq, err := storage.AuthRequestByCode(ctx, code)
+	if err != nil {
+		return nil, ErrInvalidRequest("invalid code")
+	}
+	return authReq, nil
 }
 
 func AuthorizeCodeChallenge(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, error) {
@@ -158,11 +186,14 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 		RequestError(w, r, err)
 	}
 
-	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest, exchanger.JWTProfileVerifier())
+	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest.Assertion, exchanger.JWTProfileVerifier())
 	if err != nil {
 		RequestError(w, r, err)
 		return
 	}
+
+	//TODO: filter scopes
+	tokenRequest.Scopes = profileRequest.Scope
 
 	resp, err := CreateJWTTokenResponse(r.Context(), tokenRequest, exchanger)
 	if err != nil {

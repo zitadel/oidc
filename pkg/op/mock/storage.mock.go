@@ -270,6 +270,34 @@ func (mr *MockStorageMockRecorder) SaveNewKeyPair(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveNewKeyPair", reflect.TypeOf((*MockStorage)(nil).SaveNewKeyPair), arg0)
 }
 
+// SetUserinfoFromScopes mocks base method
+func (m *MockStorage) SetUserinfoFromScopes(arg0 context.Context, arg1 oidc.UserInfoSetter, arg2, arg3 string, arg4 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetUserinfoFromScopes", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetUserinfoFromScopes indicates an expected call of SetUserinfoFromScopes
+func (mr *MockStorageMockRecorder) SetUserinfoFromScopes(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserinfoFromScopes", reflect.TypeOf((*MockStorage)(nil).SetUserinfoFromScopes), arg0, arg1, arg2, arg3, arg4)
+}
+
+// SetUserinfoFromToken mocks base method
+func (m *MockStorage) SetUserinfoFromToken(arg0 context.Context, arg1 oidc.UserInfoSetter, arg2, arg3, arg4 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetUserinfoFromToken", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetUserinfoFromToken indicates an expected call of SetUserinfoFromToken
+func (mr *MockStorageMockRecorder) SetUserinfoFromToken(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserinfoFromToken", reflect.TypeOf((*MockStorage)(nil).SetUserinfoFromToken), arg0, arg1, arg2, arg3, arg4)
+}
+
 // TerminateSession mocks base method
 func (m *MockStorage) TerminateSession(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()

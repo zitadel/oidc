@@ -108,12 +108,16 @@ func SubjectTypes(c Configuration) []string {
 	return []string{"public"} //TODO: config
 }
 
-func AuthMethods(c Configuration) []string {
-	authMethods := []string{
-		string(AuthMethodBasic),
+func AuthMethods(c Configuration) []oidc.AuthMethod {
+	authMethods := []oidc.AuthMethod{
+		oidc.AuthMethodNone,
+		oidc.AuthMethodBasic,
 	}
 	if c.AuthMethodPostSupported() {
-		authMethods = append(authMethods, string(AuthMethodPost))
+		authMethods = append(authMethods, oidc.AuthMethodPost)
+	}
+	if c.AuthMethodPrivateKeyJWTSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
 	}
 	return authMethods
 }

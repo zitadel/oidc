@@ -8,7 +8,6 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
 )
 
 type JWTProfileVerifier interface {
@@ -48,9 +47,9 @@ func (v *jwtProfileVerifier) Offset() time.Duration {
 	return v.offset
 }
 
-func VerifyJWTAssertion(ctx context.Context, profileRequest *tokenexchange.JWTProfileRequest, v JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
+func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
 	request := new(oidc.JWTTokenRequest)
-	payload, err := oidc.ParseToken(profileRequest.Assertion, request)
+	payload, err := oidc.ParseToken(assertion, request)
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +72,9 @@ func VerifyJWTAssertion(ctx context.Context, profileRequest *tokenexchange.JWTPr
 
 	keySet := &jwtProfileKeySet{v.Storage(), request.Subject}
 
-	if err = oidc.CheckSignature(ctx, profileRequest.Assertion, payload, request, nil, keySet); err != nil {
+	if err = oidc.CheckSignature(ctx, assertion, payload, request, nil, keySet); err != nil {
 		return nil, err
 	}
-	request.Scopes = profileRequest.Scope
 	return request, nil
 }
 

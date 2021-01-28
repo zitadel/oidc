@@ -26,9 +26,10 @@ const (
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 
-	AuthMethodBasic AuthMethod = "client_secret_basic"
-	AuthMethodPost  AuthMethod = "client_secret_post"
-	AuthMethodNone  AuthMethod = "none"
+	AuthMethodBasic         AuthMethod = "client_secret_basic"
+	AuthMethodPost          AuthMethod = "client_secret_post"
+	AuthMethodNone          AuthMethod = "none"
+	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
 
 	CodeMethodS256 = "S256"
 )
@@ -90,6 +91,7 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
+	AuthMethodPrivateKeyJWT  bool
 }
 
 type endpoints struct {
@@ -189,6 +191,10 @@ func (o *openidProvider) AuthMethodPostSupported() bool {
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
 	return o.config.CodeMethodS256
+}
+
+func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
+	return o.config.AuthMethodPrivateKeyJWT
 }
 
 func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {

@@ -64,10 +64,10 @@ func (mr *MockClientMockRecorder) ApplicationType() *gomock.Call {
 }
 
 // AuthMethod mocks base method
-func (m *MockClient) AuthMethod() op.AuthMethod {
+func (m *MockClient) AuthMethod() oidc.AuthMethod {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthMethod")
-	ret0, _ := ret[0].(op.AuthMethod)
+	ret0, _ := ret[0].(oidc.AuthMethod)
 	return ret0
 }
 

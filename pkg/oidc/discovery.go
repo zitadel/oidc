@@ -5,21 +5,30 @@ const (
 )
 
 type DiscoveryConfiguration struct {
-	Issuer                            string   `json:"issuer,omitempty"`
-	AuthorizationEndpoint             string   `json:"authorization_endpoint,omitempty"`
-	TokenEndpoint                     string   `json:"token_endpoint,omitempty"`
-	IntrospectionEndpoint             string   `json:"introspection_endpoint,omitempty"`
-	UserinfoEndpoint                  string   `json:"userinfo_endpoint,omitempty"`
-	EndSessionEndpoint                string   `json:"end_session_endpoint,omitempty"`
-	CheckSessionIframe                string   `json:"check_session_iframe,omitempty"`
-	JwksURI                           string   `json:"jwks_uri,omitempty"`
-	ScopesSupported                   []string `json:"scopes_supported,omitempty"`
-	ResponseTypesSupported            []string `json:"response_types_supported,omitempty"`
-	ResponseModesSupported            []string `json:"response_modes_supported,omitempty"`
-	GrantTypesSupported               []string `json:"grant_types_supported,omitempty"`
-	SubjectTypesSupported             []string `json:"subject_types_supported,omitempty"`
-	IDTokenSigningAlgValuesSupported  []string `json:"id_token_signing_alg_values_supported,omitempty"`
-	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported,omitempty"`
-	CodeChallengeMethodsSupported     []string `json:"code_challenge_methods_supported,omitempty"`
-	ClaimsSupported                   []string `json:"claims_supported,omitempty"`
+	Issuer                            string       `json:"issuer,omitempty"`
+	AuthorizationEndpoint             string       `json:"authorization_endpoint,omitempty"`
+	TokenEndpoint                     string       `json:"token_endpoint,omitempty"`
+	IntrospectionEndpoint             string       `json:"introspection_endpoint,omitempty"`
+	UserinfoEndpoint                  string       `json:"userinfo_endpoint,omitempty"`
+	EndSessionEndpoint                string       `json:"end_session_endpoint,omitempty"`
+	CheckSessionIframe                string       `json:"check_session_iframe,omitempty"`
+	JwksURI                           string       `json:"jwks_uri,omitempty"`
+	ScopesSupported                   []string     `json:"scopes_supported,omitempty"`
+	ResponseTypesSupported            []string     `json:"response_types_supported,omitempty"`
+	ResponseModesSupported            []string     `json:"response_modes_supported,omitempty"`
+	GrantTypesSupported               []string     `json:"grant_types_supported,omitempty"`
+	SubjectTypesSupported             []string     `json:"subject_types_supported,omitempty"`
+	IDTokenSigningAlgValuesSupported  []string     `json:"id_token_signing_alg_values_supported,omitempty"`
+	TokenEndpointAuthMethodsSupported []AuthMethod `json:"token_endpoint_auth_methods_supported,omitempty"`
+	CodeChallengeMethodsSupported     []string     `json:"code_challenge_methods_supported,omitempty"`
+	ClaimsSupported                   []string     `json:"claims_supported,omitempty"`
 }
+
+type AuthMethod string
+
+const (
+	AuthMethodBasic         AuthMethod = "client_secret_basic"
+	AuthMethodPost          AuthMethod = "client_secret_post"
+	AuthMethodNone          AuthMethod = "none"
+	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
+)

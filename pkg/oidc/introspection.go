@@ -207,9 +207,9 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 	type Alias introspectionResponse
 	a := &struct {
 		*Alias
-		Locale            interface{} `json:"locale,omitempty"`
-		UpdatedAt         int64       `json:"updated_at,omitempty"`
-		PreferredUsername string      `json:"username,omitempty"`
+		Locale    interface{} `json:"locale,omitempty"`
+		UpdatedAt int64       `json:"updated_at,omitempty"`
+		Username  string      `json:"username,omitempty"`
 	}{
 		Alias: (*Alias)(i),
 	}
@@ -219,8 +219,7 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 	if !time.Time(i.UpdatedAt).IsZero() {
 		a.UpdatedAt = time.Time(i.UpdatedAt).Unix()
 	}
-	a.PreferredUsername = i.PreferredUsername
-	i.PreferredUsername = ""
+	a.Username = i.PreferredUsername
 
 	b, err := json.Marshal(a)
 	if err != nil {
