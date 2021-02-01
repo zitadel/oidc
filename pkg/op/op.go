@@ -17,27 +17,27 @@ import (
 )
 
 const (
-	healthzEndpoint              = "/healthz"
+	healthEndpoint               = "/healthz"
 	readinessEndpoint            = "/ready"
 	defaultAuthorizationEndpoint = "authorize"
-	defaulTokenEndpoint          = "oauth/token"
+	defaultTokenEndpoint         = "oauth/token"
 	defaultIntrospectEndpoint    = "oauth/introspect"
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 
-	AuthMethodBasic         AuthMethod = "client_secret_basic"
-	AuthMethodPost          AuthMethod = "client_secret_post"
-	AuthMethodNone          AuthMethod = "none"
-	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
+	//AuthMethodBasic         AuthMethod = "client_secret_basic"
+	//AuthMethodPost          AuthMethod = "client_secret_post"
+	//AuthMethodNone          AuthMethod = "none"
+	//AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
 
-	CodeMethodS256 = "S256"
+	//CodeMethodS256 = "S256"
 )
 
 var (
 	DefaultEndpoints = &endpoints{
 		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
-		Token:         NewEndpoint(defaulTokenEndpoint),
+		Token:         NewEndpoint(defaultTokenEndpoint),
 		Introspection: NewEndpoint(defaultIntrospectEndpoint),
 		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
 		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
@@ -73,7 +73,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
 		handlers.AllowedOriginValidator(allowAllOrigins),
 	))
-	router.HandleFunc(healthzEndpoint, healthzHandler)
+	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))

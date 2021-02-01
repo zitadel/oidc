@@ -50,23 +50,6 @@ type StorageNotFoundError interface {
 	IsNotFound()
 }
 
-type AuthRequest interface {
-	GetID() string
-	GetACR() string
-	GetAMR() []string
-	GetAudience() []string
-	GetAuthTime() time.Time
-	GetClientID() string
-	GetCodeChallenge() *oidc.CodeChallenge
-	GetNonce() string
-	GetRedirectURI() string
-	GetResponseType() oidc.ResponseType
-	GetScopes() []string
-	GetState() string
-	GetSubject() string
-	Done() bool
-}
-
 type EndSessionRequest struct {
 	UserID      string
 	Client      Client

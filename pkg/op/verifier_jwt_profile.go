@@ -70,7 +70,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerif
 		//TODO: implement delegation (openid core / oauth rfc)
 	}
 
-	keySet := &jwtProfileKeySet{v.Storage(), request.Subject}
+	keySet := &jwtProfileKeySet{v.Storage(), request.Issuer}
 
 	if err = oidc.CheckSignature(ctx, assertion, payload, request, nil, keySet); err != nil {
 		return nil, err

@@ -53,6 +53,9 @@ type RelayingParty interface {
 	//IsOAuth2Only specifies whether relaying party handles only oauth2 or oidc calls
 	IsOAuth2Only() bool
 
+	ClientKey() []byte
+	ClientKeyID() string
+
 	//IDTokenVerifier returns the verifier interface used for oidc id_token verification
 	IDTokenVerifier() IDTokenVerifier
 
@@ -74,11 +77,13 @@ type relayingParty struct {
 	oauthConfig *oauth2.Config
 	oauth2Only  bool
 	pkce        bool
+	clientKey   []byte
+	clientKeyID string
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
-	errorHandler  func(http.ResponseWriter, *http.Request, string, string, string)
 
+	errorHandler    func(http.ResponseWriter, *http.Request, string, string, string)
 	idTokenVerifier IDTokenVerifier
 	verifierOpts    []VerifierOption
 }
@@ -101,6 +106,14 @@ func (rp *relayingParty) HttpClient() *http.Client {
 
 func (rp *relayingParty) IsOAuth2Only() bool {
 	return rp.oauth2Only
+}
+
+func (rp *relayingParty) ClientKey() []byte {
+	return rp.clientKey
+}
+
+func (rp *relayingParty) ClientKeyID() string {
+	return rp.clientKeyID
 }
 
 func (rp *relayingParty) IDTokenVerifier() IDTokenVerifier {
@@ -314,6 +327,14 @@ func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc
 			}
 			codeOpts = append(codeOpts, WithCodeVerifier(codeVerifier))
 		}
+		//if len(rp.ClientKey()) > 0 {
+		//	assertion, err := oidc.NewJWTProfileAssertionStringFromFileData(rp.ClientKey(), []string{rp.OAuthConfig().Endpoint.TokenURL})
+		//	if err != nil {
+		//		http.Error(w, "failed to build assertion: "+err.Error(), http.StatusUnauthorized)
+		//		return
+		//	}
+		//	codeOpts = append(codeOpts, WithClientAssertionJWT(assertion))
+		//}
 		tokens, err := CodeExchange(r.Context(), params.Get("code"), rp, codeOpts...)
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
@@ -437,5 +458,15 @@ type CodeExchangeOpt func() []oauth2.AuthCodeOption
 func WithCodeVerifier(codeVerifier string) CodeExchangeOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("code_verifier", codeVerifier)}
+	}
+}
+
+//WithClientAssertionJWT sets the `client_assertion` param in the token request
+func WithClientAssertionJWT(clientAssertion string) CodeExchangeOpt {
+	return func() []oauth2.AuthCodeOption {
+		return []oauth2.AuthCodeOption{
+			oauth2.SetAuthURLParam("client_assertion", clientAssertion),
+			oauth2.SetAuthURLParam("client_assertion_type", oidc.ClientAssertionTypeJWTAssertion),
+		}
 	}
 }

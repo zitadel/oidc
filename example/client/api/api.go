@@ -1,90 +1,102 @@
 package main
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"log"
-// 	"net/http"
-// 	"os"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 
-// 	"github.com/caos/oidc/pkg/oidc"
-// 	"github.com/caos/oidc/pkg/oidc/rp"
-// 	"github.com/caos/utils/logging"
-// )
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 
-// const (
-// 	publicURL            string = "/public"
-// 	protectedURL         string = "/protected"
-// 	protectedExchangeURL string = "/protected/exchange"
-// )
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/rp"
+)
+
+const (
+	publicURL         string = "/public"
+	protectedURL      string = "/protected"
+	protectedClaimURL string = "/protected/{claim}/{value}"
+)
 
 func main() {
-	// 	clientID := os.Getenv("CLIENT_ID")
-	// 	clientSecret := os.Getenv("CLIENT_SECRET")
-	// 	issuer := os.Getenv("ISSUER")
-	// 	port := os.Getenv("PORT")
+	keyPath := os.Getenv("KEY")
+	port := os.Getenv("PORT")
 
-	// 	// ctx := context.Background()
+	provider, err := rp.NewResourceServerFromKeyFile(keyPath)
+	if err != nil {
+		logrus.Fatalf("error creating provider %s", err.Error())
+	}
 
-	// 	providerConfig := &oidc.ProviderConfig{
-	// 		ClientID:     clientID,
-	// 		ClientSecret: clientSecret,
-	// 		Issuer:       issuer,
-	// 	}
-	// 	provider, err := rp.NewDefaultProvider(providerConfig)
-	// 	logging.Log("APP-nx6PeF").OnError(err).Panic("error creating provider")
+	router := mux.NewRouter()
 
-	// 	http.HandleFunc(publicURL, func(w http.ResponseWriter, r *http.Request) {
-	// 		w.Write([]byte("OK"))
-	// 	})
+	//public url accessible without any authorization
+	//will print `OK` and current timestamp
+	router.HandleFunc(publicURL, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK " + time.Now().String()))
+	})
 
-	// 	http.HandleFunc(protectedURL, func(w http.ResponseWriter, r *http.Request) {
-	// 		ok, token := checkToken(w, r)
-	// 		if !ok {
-	// 			return
-	// 		}
-	// 		resp, err := provider.Introspect(r.Context(), token)
-	// 		if err != nil {
-	// 			http.Error(w, err.Error(), http.StatusForbidden)
-	// 			return
-	// 		}
-	// 		data, err := json.Marshal(resp)
-	// 		if err != nil {
-	// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 			return
-	// 		}
-	// 		w.Write(data)
-	// 	})
+	//protected url which needs an active token
+	//will print the result of the introspection endpoint on success
+	router.HandleFunc(protectedURL, func(w http.ResponseWriter, r *http.Request) {
+		ok, token := checkToken(w, r)
+		if !ok {
+			return
+		}
+		resp, err := rp.Introspect(r.Context(), provider, token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(data)
+	})
 
-	// 	http.HandleFunc(protectedExchangeURL, func(w http.ResponseWriter, r *http.Request) {
-	// 		ok, token := checkToken(w, r)
-	// 		if !ok {
-	// 			return
-	// 		}
-	// 		tokens, err := provider.DelegationTokenExchange(r.Context(), token, oidc.WithResource([]string{"Test"}))
-	// 		if err != nil {
-	// 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
-	// 			return
-	// 		}
+	//protected url which needs an active token and checks if the response of the introspect endpoint
+	//contains a requested claim with the required (string) value
+	//e.g. /protected/username/livio@caos.ch
+	router.HandleFunc(protectedClaimURL, func(w http.ResponseWriter, r *http.Request) {
+		ok, token := checkToken(w, r)
+		if !ok {
+			return
+		}
+		resp, err := rp.Introspect(r.Context(), provider, token)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		params := mux.Vars(r)
+		requestedClaim := params["claim"]
+		requestedValue := params["value"]
+		value, ok := resp.GetClaim(requestedClaim).(string)
+		if !ok || value == "" || value != requestedValue {
+			http.Error(w, "claim does not match", http.StatusForbidden)
+			return
+		}
+		w.Write([]byte("authorized with value " + value))
+	})
 
-	// 		data, err := json.Marshal(tokens)
-	// 		if err != nil {
-	// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 			return
-	// 		}
-	// 		w.Write(data)
-	// 	})
+	lis := fmt.Sprintf("127.0.0.1:%s", port)
+	log.Printf("listening on http://%s/", lis)
+	log.Fatal(http.ListenAndServe(lis, router))
+}
 
-	// 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	// 	log.Printf("listening on http://%s/", lis)
-	// 	log.Fatal(http.ListenAndServe(lis, nil))
-	// }
-
-	// func checkToken(w http.ResponseWriter, r *http.Request) (bool, string) {
-	// 	token := r.Header.Get("authorization")
-	// 	if token == "" {
-	// 		http.Error(w, "Auth header missing", http.StatusUnauthorized)
-	// 		return false, ""
-	// 	}
-	// 	return true, token
+func checkToken(w http.ResponseWriter, r *http.Request) (bool, string) {
+	auth := r.Header.Get("authorization")
+	if auth == "" {
+		http.Error(w, "auth header missing", http.StatusUnauthorized)
+		return false, ""
+	}
+	if !strings.HasPrefix(auth, oidc.PrefixBearer) {
+		http.Error(w, "invalid header", http.StatusUnauthorized)
+		return false, ""
+	}
+	return true, strings.TrimPrefix(auth, oidc.PrefixBearer)
 }

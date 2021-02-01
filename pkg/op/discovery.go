@@ -122,10 +122,10 @@ func AuthMethods(c Configuration) []oidc.AuthMethod {
 	return authMethods
 }
 
-func CodeChallengeMethods(c Configuration) []string {
-	codeMethods := make([]string, 0, 1)
+func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
+	codeMethods := make([]oidc.CodeChallengeMethod, 0, 1)
 	if c.CodeMethodS256Supported() {
-		codeMethods = append(codeMethods, CodeMethodS256)
+		codeMethods = append(codeMethods, oidc.CodeChallengeMethodS256)
 	}
 	return codeMethods
 }

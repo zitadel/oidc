@@ -251,5 +251,9 @@ func (i *introspectionResponse) UnmarshalJSON(data []byte) error {
 
 	i.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
 
+	if err := json.Unmarshal(data, &i.claims); err != nil {
+		return err
+	}
+
 	return nil
 }

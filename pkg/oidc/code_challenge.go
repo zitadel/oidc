@@ -24,7 +24,7 @@ func NewSHACodeChallenge(code string) string {
 
 func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {
 	if c == nil {
-		return false //TODO: ?
+		return false
 	}
 	if c.Method == CodeChallengeMethodS256 {
 		codeVerifier = NewSHACodeChallenge(codeVerifier)

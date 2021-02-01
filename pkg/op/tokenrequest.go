@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/oidc/grants/tokenexchange"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -203,12 +202,12 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 	utils.MarshalJSON(w, resp)
 }
 
-func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (*tokenexchange.JWTProfileRequest, error) {
+func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (*oidc.JWTProfileGrantRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, ErrInvalidRequest("error parsing form")
 	}
-	tokenReq := new(tokenexchange.JWTProfileRequest)
+	tokenReq := new(oidc.JWTProfileGrantRequest)
 	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
 		return nil, ErrInvalidRequest("error decoding form")

@@ -43,8 +43,8 @@ func DelegationTokenExchange(ctx context.Context, subjectToken string, rp Relayi
 }
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange
-func JWTProfileExchange(ctx context.Context, jwtProfileRequest *tokenexchange.JWTProfileRequest, rp RelayingParty) (*oauth2.Token, error) {
-	return CallTokenEndpoint(jwtProfileRequest, rp)
+func JWTProfileExchange(ctx context.Context, jwtProfileGrantRequest *oidc.JWTProfileGrantRequest, rp RelayingParty) (*oauth2.Token, error) {
+	return CallTokenEndpoint(jwtProfileGrantRequest, rp)
 }
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange
@@ -53,7 +53,7 @@ func JWTProfileAssertionExchange(ctx context.Context, assertion *oidc.JWTProfile
 	if err != nil {
 		return nil, err
 	}
-	return JWTProfileExchange(ctx, tokenexchange.NewJWTProfileRequest(token, scopes...), rp)
+	return JWTProfileExchange(ctx, oidc.NewJWTProfileGrantRequest(token, scopes...), rp)
 }
 
 func generateJWTProfileToken(assertion *oidc.JWTProfileAssertion) (string, error) {

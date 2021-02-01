@@ -1,7 +1,10 @@
 package oidc
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"io/ioutil"
 	"time"
 
@@ -14,6 +17,8 @@ import (
 const (
 	//BearerToken defines the token_type `Bearer`, which is returned in a successful token response
 	BearerToken = "Bearer"
+
+	PrefixBearer = BearerToken + " "
 )
 
 type Tokens struct {
@@ -397,7 +402,7 @@ type AccessTokenResponse struct {
 type JWTProfileAssertion struct {
 	PrivateKeyID string   `json:"-"`
 	PrivateKey   []byte   `json:"-"`
-	Issuer       string   `json:"issuer"`
+	Issuer       string   `json:"iss"`
 	Subject      string   `json:"sub"`
 	Audience     Audience `json:"aud"`
 	Expiration   Time     `json:"exp"`
@@ -410,6 +415,19 @@ func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string) (*JWT
 		return nil, err
 	}
 	return NewJWTProfileAssertionFromFileData(data, audience)
+}
+
+func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string) (string, error) {
+	keyData := new(struct {
+		KeyID  string `json:"keyId"`
+		Key    string `json:"key"`
+		UserID string `json:"userId"`
+	})
+	err := json.Unmarshal(data, keyData)
+	if err != nil {
+		return "", err
+	}
+	return generateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)))
 }
 
 func NewJWTProfileAssertionFromFileData(data []byte, audience []string) (*JWTProfileAssertion, error) {
@@ -453,4 +471,47 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 		}
 	}
 	return append(audience, clientID)
+}
+
+func generateJWTProfileToken(assertion *JWTProfileAssertion) (string, error) {
+	privateKey, err := bytesToPrivateKey(assertion.PrivateKey)
+	if err != nil {
+		return "", err
+	}
+	key := jose.SigningKey{
+		Algorithm: jose.RS256,
+		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.PrivateKeyID},
+	}
+	signer, err := jose.NewSigner(key, &jose.SignerOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	marshalledAssertion, err := json.Marshal(assertion)
+	if err != nil {
+		return "", err
+	}
+	signedAssertion, err := signer.Sign(marshalledAssertion)
+	if err != nil {
+		return "", err
+	}
+	return signedAssertion.CompactSerialize()
+}
+
+func bytesToPrivateKey(priv []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(priv)
+	enc := x509.IsEncryptedPEMBlock(block)
+	b := block.Bytes
+	var err error
+	if enc {
+		b, err = x509.DecryptPEMBlock(block, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+	key, err := x509.ParsePKCS1PrivateKey(b)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }
