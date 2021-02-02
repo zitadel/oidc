@@ -11,13 +11,16 @@ const (
 )
 
 type keyFile struct {
-	Type     string `json:"type"` // serviceaccount or application
-	KeyID    string `json:"keyId"`
-	Key      string `json:"key"`
-	Issuer   string `json:"issuer"`
+	Type   string `json:"type"` // serviceaccount or application
+	KeyID  string `json:"keyId"`
+	Key    string `json:"key"`
+	Issuer string `json:"issuer"`
+
+	//serviceaccount
+	UserID string `json:"userId"`
+
+	//application
 	ClientID string `json:"clientId"`
-	//TokenURL  string `json:"token_uri"`
-	//ProjectID string `json:"project_id"`
 }
 
 func ConfigFromKeyFile(path string) (*keyFile, error) {

@@ -192,7 +192,7 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 	}
 
 	//TODO: filter scopes
-	tokenRequest.Scopes = profileRequest.Scope
+	tokenRequest.Scopes = ValidateJWTProfileScopes(tokenRequest., profileRequest.Scope)
 
 	resp, err := CreateJWTTokenResponse(r.Context(), tokenRequest, exchanger)
 	if err != nil {
@@ -213,6 +213,24 @@ func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (*oidc.JWTPr
 		return nil, ErrInvalidRequest("error decoding form")
 	}
 	return tokenReq, nil
+}
+
+func ValidateJWTProfileScopes(client Client, scopes []string) []string {
+	for i := len(scopes) - 1; i >= 0; i-- {
+		scope := scopes[i]
+		if !(scope == oidc.ScopeOpenID ||
+			scope == oidc.ScopeProfile ||
+			scope == oidc.ScopeEmail ||
+			scope == oidc.ScopePhone ||
+			scope == oidc.ScopeAddress ||
+			scope == oidc.ScopeOfflineAccess) && //TODO: allowed
+			!client.IsScopeAllowed(scope) {
+			scopes[i] = scopes[len(scopes)-1]
+			scopes[len(scopes)-1] = ""
+			scopes = scopes[:len(scopes)-1]
+		}
+	}
+	return scopes
 }
 
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
