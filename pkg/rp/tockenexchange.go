@@ -49,14 +49,14 @@ func JWTProfileExchange(ctx context.Context, jwtProfileRequest *tokenexchange.JW
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange
 func JWTProfileAssertionExchange(ctx context.Context, assertion *oidc.JWTProfileAssertion, scopes oidc.Scopes, rp RelayingParty) (*oauth2.Token, error) {
-	token, err := generateJWTProfileToken(assertion)
+	token, err := GenerateJWTProfileToken(assertion)
 	if err != nil {
 		return nil, err
 	}
 	return JWTProfileExchange(ctx, tokenexchange.NewJWTProfileRequest(token, scopes...), rp)
 }
 
-func generateJWTProfileToken(assertion *oidc.JWTProfileAssertion) (string, error) {
+func GenerateJWTProfileToken(assertion *oidc.JWTProfileAssertion) (string, error) {
 	privateKey, err := bytesToPrivateKey(assertion.PrivateKey)
 	if err != nil {
 		return "", err
