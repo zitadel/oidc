@@ -3,6 +3,7 @@ package op
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
@@ -22,20 +23,24 @@ func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *
 }
 
 func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspector) {
-	//validate authorization
-
+	callerToken := r.Header.Get("authorization")
 	response := oidc.NewIntrospectionResponse()
-	token, err := ParseTokenInrospectionRequest(r, introspector.Decoder())
-	if err != nil {
-		utils.MarshalJSON(w, response)
-		return
-	}
-	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), introspector, token)
+	callerToken, callerSubject, ok := getTokenIDAndSubject(r.Context(), introspector, strings.TrimPrefix(callerToken, oidc.PrefixBearer))
 	if !ok {
 		utils.MarshalJSON(w, response)
 		return
 	}
-	err = introspector.Storage().SetUserinfoFromToken(r.Context(), response, tokenID, subject, r.Header.Get("origin"))
+	introspectionToken, err := ParseTokenInrospectionRequest(r, introspector.Decoder())
+	if err != nil {
+		utils.MarshalJSON(w, response)
+		return
+	}
+	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), introspector, introspectionToken)
+	if !ok {
+		utils.MarshalJSON(w, response)
+		return
+	}
+	err = introspector.Storage().SetIntrospectionFromToken(r.Context(), response, tokenID, subject, callerToken, callerSubject)
 	if err != nil {
 		utils.MarshalJSON(w, response)
 		return

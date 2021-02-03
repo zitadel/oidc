@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"golang.org/x/text/language"
-
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type IntrospectionRequest struct {
@@ -230,11 +228,16 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 		return b, nil
 	}
 
-	claims, err := json.Marshal(i.claims)
+	err = json.Unmarshal(b, &i.claims)
 	if err != nil {
 		return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
 	}
-	return utils.ConcatenateJSON(b, claims)
+
+	return json.Marshal(i.claims)
+	//if err != nil {
+	//	return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
+	//}
+	//return utils.ConcatenateJSON(b, claims)
 }
 
 func (i *introspectionResponse) UnmarshalJSON(data []byte) error {
