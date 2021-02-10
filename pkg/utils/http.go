@@ -42,6 +42,9 @@ func FormRequest(endpoint string, request interface{}, encoder Encoder, authFn i
 	if fn, ok := authFn.(FormAuthorization); ok {
 		fn(form)
 	}
+	if fn, ok := authFn.(func(url.Values)); ok {
+		fn(form)
+	}
 	body := strings.NewReader(form.Encode())
 	req, err := http.NewRequest("POST", endpoint, body)
 	if err != nil {

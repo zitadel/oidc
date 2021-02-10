@@ -3,7 +3,6 @@ package op
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
@@ -16,6 +15,11 @@ type Introspector interface {
 	AccessTokenVerifier() AccessTokenVerifier
 }
 
+type IntrospectorJWTProfile interface {
+	Introspector
+	JWTProfileVerifier() JWTProfileVerifier
+}
+
 func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		Introspect(w, r, introspector)
@@ -23,24 +27,18 @@ func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *
 }
 
 func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspector) {
-	callerToken := r.Header.Get("authorization")
 	response := oidc.NewIntrospectionResponse()
-	callerToken, callerSubject, ok := getTokenIDAndSubject(r.Context(), introspector, strings.TrimPrefix(callerToken, oidc.PrefixBearer))
-	if !ok {
-		utils.MarshalJSON(w, response)
-		return
-	}
-	introspectionToken, err := ParseTokenInrospectionRequest(r, introspector.Decoder())
+	token, clientID, err := ParseTokenIntrospectionRequest(r, introspector)
 	if err != nil {
-		utils.MarshalJSON(w, response)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), introspector, introspectionToken)
+	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), introspector, token)
 	if !ok {
 		utils.MarshalJSON(w, response)
 		return
 	}
-	err = introspector.Storage().SetIntrospectionFromToken(r.Context(), response, tokenID, subject, callerToken, callerSubject)
+	err = introspector.Storage().SetIntrospectionFromToken(r.Context(), response, tokenID, subject, clientID)
 	if err != nil {
 		utils.MarshalJSON(w, response)
 		return
@@ -49,15 +47,31 @@ func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspecto
 	utils.MarshalJSON(w, response)
 }
 
-func ParseTokenInrospectionRequest(r *http.Request, decoder utils.Decoder) (string, error) {
-	err := r.ParseForm()
+func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) (token, clientID string, err error) {
+	err = r.ParseForm()
 	if err != nil {
-		return "", errors.New("unable to parse request")
+		return "", "", errors.New("unable to parse request")
 	}
-	req := new(oidc.IntrospectionRequest)
-	err = decoder.Decode(req, r.Form)
+	req := new(struct {
+		oidc.IntrospectionRequest
+		oidc.ClientAssertionParams
+	})
+	err = introspector.Decoder().Decode(req, r.Form)
 	if err != nil {
-		return "", errors.New("unable to parse request")
+		return "", "", errors.New("unable to parse request")
 	}
-	return req.Token, nil
+	if introspectorJWTProfile, ok := introspector.(IntrospectorJWTProfile); ok && req.ClientAssertion != "" {
+		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, introspectorJWTProfile.JWTProfileVerifier())
+		if err == nil {
+			return req.Token, profile.Issuer, nil
+		}
+	}
+	clientID, clientSecret, ok := r.BasicAuth()
+	if ok {
+		if err := introspector.Storage().AuthorizeClientIDSecret(r.Context(), clientID, clientSecret); err != nil {
+			return "", "", err
+		}
+		return req.Token, clientID, nil
+	}
+	return "", "", errors.New("invalid authorization")
 }

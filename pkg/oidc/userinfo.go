@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"golang.org/x/text/language"
-
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type UserInfo interface {
@@ -351,11 +349,17 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 		return b, nil
 	}
 
-	claims, err := json.Marshal(i.claims)
+	err = json.Unmarshal(b, &i.claims)
 	if err != nil {
 		return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
 	}
-	return utils.ConcatenateJSON(b, claims)
+
+	return json.Marshal(i.claims)
+	//claims, err := json.Marshal(i.claims)
+	//if err != nil {
+	//	return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
+	//}
+	//return utils.ConcatenateJSON(b, claims)
 }
 
 func (i *userinfo) UnmarshalJSON(data []byte) error {
@@ -371,6 +375,10 @@ func (i *userinfo) UnmarshalJSON(data []byte) error {
 	}
 
 	i.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
+
+	if err := json.Unmarshal(data, &i.claims); err != nil {
+		return err
+	}
 
 	return nil
 }

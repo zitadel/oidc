@@ -427,7 +427,7 @@ func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string) (s
 	if err != nil {
 		return "", err
 	}
-	return generateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)))
+	return GenerateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)))
 }
 
 func NewJWTProfileAssertionFromFileData(data []byte, audience []string) (*JWTProfileAssertion, error) {
@@ -473,7 +473,7 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 	return append(audience, clientID)
 }
 
-func generateJWTProfileToken(assertion *JWTProfileAssertion) (string, error) {
+func GenerateJWTProfileToken(assertion *JWTProfileAssertion) (string, error) {
 	privateKey, err := bytesToPrivateKey(assertion.PrivateKey)
 	if err != nil {
 		return "", err

@@ -12,10 +12,17 @@ type IntrospectionRequest struct {
 	Token string `schema:"token"`
 }
 
+type ClientAssertionParams struct {
+	ClientAssertion     string `schema:"client_assertion"`
+	ClientAssertionType string `schema:"client_assertion_type"`
+}
+
 type IntrospectionResponse interface {
 	UserInfoSetter
 	SetActive(bool)
 	IsActive() bool
+	SetScopes(scopes Scope)
+	SetClientID(id string)
 }
 
 func NewIntrospectionResponse() IntrospectionResponse {
@@ -23,19 +30,30 @@ func NewIntrospectionResponse() IntrospectionResponse {
 }
 
 type introspectionResponse struct {
-	Active  bool   `json:"active"`
-	Subject string `json:"sub,omitempty"`
+	Active   bool   `json:"active"`
+	Scope    Scope  `json:"scope,omitempty"`
+	ClientID string `json:"client_id,omitempty"`
+	Subject  string `json:"sub,omitempty"`
 	userInfoProfile
 	userInfoEmail
 	userInfoPhone
-	Address UserInfoAddress `json:"address,omitempty"`
 
-	claims map[string]interface{}
+	Address UserInfoAddress `json:"address,omitempty"`
+	claims  map[string]interface{}
 }
 
 func (u *introspectionResponse) IsActive() bool {
 	return u.Active
 }
+
+func (u *introspectionResponse) SetScopes(scope Scope) {
+	u.Scope = scope
+}
+
+func (u *introspectionResponse) SetClientID(id string) {
+	u.ClientID = id
+}
+
 func (u *introspectionResponse) GetSubject() string {
 	return u.Subject
 }

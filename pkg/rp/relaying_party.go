@@ -216,6 +216,14 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 	}
 }
 
+func WithClientKey(path string) Option {
+	return func(rp *relayingParty) {
+		config, _ := ConfigFromKeyFile(path)
+		rp.clientKey = []byte(config.Key)
+		rp.clientKeyID = config.KeyID
+	}
+}
+
 //Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
 func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
@@ -327,14 +335,14 @@ func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc
 			}
 			codeOpts = append(codeOpts, WithCodeVerifier(codeVerifier))
 		}
-		//if len(rp.ClientKey()) > 0 {
-		//	assertion, err := oidc.NewJWTProfileAssertionStringFromFileData(rp.ClientKey(), []string{rp.OAuthConfig().Endpoint.TokenURL})
-		//	if err != nil {
-		//		http.Error(w, "failed to build assertion: "+err.Error(), http.StatusUnauthorized)
-		//		return
-		//	}
-		//	codeOpts = append(codeOpts, WithClientAssertionJWT(assertion))
-		//}
+		if len(rp.ClientKey()) > 0 {
+			assertion, err := oidc.GenerateJWTProfileToken(oidc.NewJWTProfileAssertion(rp.OAuthConfig().ClientID, rp.ClientKeyID(), []string{"http://localhost:50002/oauth/v2"}, rp.ClientKey()))
+			if err != nil {
+				http.Error(w, "failed to build assertion: "+err.Error(), http.StatusUnauthorized)
+				return
+			}
+			codeOpts = append(codeOpts, WithClientAssertionJWT(assertion))
+		}
 		tokens, err := CodeExchange(r.Context(), params.Get("code"), rp, codeOpts...)
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)

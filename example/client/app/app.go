@@ -27,6 +27,7 @@ var (
 func main() {
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
+	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
@@ -35,10 +36,19 @@ func main() {
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes,
-		rp.WithPKCE(cookieHandler),
-		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5*time.Second)),
-	)
+
+	options := []rp.Option{
+		rp.WithCookieHandler(cookieHandler),
+		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
+	}
+	if clientSecret == "" {
+		options = append(options, rp.WithPKCE(cookieHandler))
+	}
+	if keyPath != "" {
+		options = append(options, rp.WithClientKey(keyPath))
+	}
+
+	provider, err := rp.NewRelayingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes, options...)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}

@@ -24,7 +24,7 @@ func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter
 }
 
 func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoProvider) {
-	accessToken, err := getAccessToken(r, userinfoProvider.Decoder())
+	accessToken, err := ParseUserinfoRequest(r, userinfoProvider.Decoder())
 	if err != nil {
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
@@ -43,16 +43,12 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 	utils.MarshalJSON(w, info)
 }
 
-func getAccessToken(r *http.Request, decoder utils.Decoder) (string, error) {
-	authHeader := r.Header.Get("authorization")
-	if authHeader != "" {
-		parts := strings.Split(authHeader, "Bearer ")
-		if len(parts) != 2 {
-			return "", errors.New("invalid auth header")
-		}
-		return parts[1], nil
+func ParseUserinfoRequest(r *http.Request, decoder utils.Decoder) (string, error) {
+	accessToken, err := getAccessToken(r)
+	if err == nil {
+		return accessToken, nil
 	}
-	err := r.ParseForm()
+	err = r.ParseForm()
 	if err != nil {
 		return "", errors.New("unable to parse request")
 	}
@@ -62,6 +58,18 @@ func getAccessToken(r *http.Request, decoder utils.Decoder) (string, error) {
 		return "", errors.New("unable to parse request")
 	}
 	return req.AccessToken, nil
+}
+
+func getAccessToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("authorization")
+	if authHeader == "" {
+		return "", errors.New("no auth header")
+	}
+	parts := strings.Split(authHeader, "Bearer ")
+	if len(parts) != 2 {
+		return "", errors.New("invalid auth header")
+	}
+	return parts[1], nil
 }
 
 func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {

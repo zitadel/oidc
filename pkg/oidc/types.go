@@ -59,6 +59,7 @@ type Prompt string
 type ResponseType string
 
 type Scopes []string
+type Scope []string //TODO: hurst?
 
 func (s Scopes) Encode() string {
 	return strings.Join(s, " ")
@@ -71,6 +72,19 @@ func (s *Scopes) UnmarshalText(text []byte) error {
 
 func (s *Scopes) MarshalText() ([]byte, error) {
 	return []byte(s.Encode()), nil
+}
+
+func (s *Scope) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Scopes(*s).Encode())
+}
+
+func (s *Scope) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	*s = Scope(strings.Split(str, " "))
+	return nil
 }
 
 type Time time.Time
