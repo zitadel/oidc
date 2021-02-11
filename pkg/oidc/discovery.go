@@ -42,6 +42,7 @@ type DiscoveryConfiguration struct {
 	DisplayValuesSupported                             []Display             `json:"display_values_supported,omitempty"`
 	ClaimTypesSupported                                []string              `json:"claim_types_supported,omitempty"`
 	ClaimsSupported                                    []string              `json:"claims_supported,omitempty"`
+	ClaimsParameterSupported                           bool                  `json:"claims_parameter_supported,omitempty"`
 	CodeChallengeMethodsSupported                      []CodeChallengeMethod `json:"code_challenge_methods_supported,omitempty"`
 	ServiceDocumentation                               string                `json:"service_documentation,omitempty"`
 	ClaimsLocalesSupported                             []language.Tag        `json:"claims_locales_supported,omitempty"`

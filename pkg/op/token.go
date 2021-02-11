@@ -114,7 +114,8 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 		}
 	}
 	if len(scopes) > 0 {
-		userInfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetClientID(), scopes)
+		userInfo := oidc.NewUserInfo()
+		err := storage.SetUserinfoFromScopes(ctx, userInfo, authReq.GetSubject(), authReq.GetClientID(), scopes)
 		if err != nil {
 			return "", err
 		}

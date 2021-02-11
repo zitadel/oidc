@@ -1,4 +1,4 @@
-package rp
+package client
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ type keyFile struct {
 	Type   string `json:"type"` // serviceaccount or application
 	KeyID  string `json:"keyId"`
 	Key    string `json:"key"`
-	Issuer string `json:"issuer"`
+	Issuer string `json:"issuer"` //not yet in file
 
 	//serviceaccount
 	UserID string `json:"userId"`
@@ -28,6 +28,10 @@ func ConfigFromKeyFile(path string) (*keyFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ConfigFromKeyFileData(data)
+}
+
+func ConfigFromKeyFileData(data []byte) (*keyFile, error) {
 	var f keyFile
 	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, err

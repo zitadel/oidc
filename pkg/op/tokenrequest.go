@@ -123,6 +123,9 @@ func AuthorizeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exc
 	if err != nil {
 		return nil, nil, err
 	}
+	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
+		return nil, nil, errors.New("invalid_grant")
+	}
 	if client.AuthMethod() == oidc.AuthMethodNone {
 		authReq, err := AuthorizeCodeChallenge(ctx, tokenReq, exchanger)
 		return authReq, client, err

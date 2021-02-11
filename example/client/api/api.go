@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
+	"github.com/caos/oidc/pkg/client/rs"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 )
 
 const (
@@ -25,8 +25,9 @@ const (
 func main() {
 	keyPath := os.Getenv("KEY")
 	port := os.Getenv("PORT")
+	issuer := os.Getenv("ISSUER")
 
-	provider, err := rp.NewResourceServerFromKeyFile(keyPath)
+	provider, err := rs.NewResourceServerFromKeyFile(issuer, keyPath)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
@@ -46,7 +47,7 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rp.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect(r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
@@ -67,7 +68,7 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rp.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect(r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return

@@ -34,7 +34,8 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token invalid", http.StatusUnauthorized)
 		return
 	}
-	info, err := userinfoProvider.Storage().GetUserinfoFromToken(r.Context(), tokenID, subject, r.Header.Get("origin"))
+	info := oidc.NewUserInfo()
+	err = userinfoProvider.Storage().SetUserinfoFromToken(r.Context(), info, tokenID, subject, r.Header.Get("origin"))
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		utils.MarshalJSON(w, err)
