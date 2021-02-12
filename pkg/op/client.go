@@ -28,7 +28,7 @@ type Client interface {
 	RedirectURIs() []string
 	PostLogoutRedirectURIs() []string
 	ApplicationType() ApplicationType
-	AuthMethod() AuthMethod
+	AuthMethod() oidc.AuthMethod
 	ResponseTypes() []oidc.ResponseType
 	LoginURL(string) string
 	AccessTokenType() AccessTokenType

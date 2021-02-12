@@ -16,26 +16,20 @@ import (
 )
 
 const (
-	healthzEndpoint              = "/healthz"
+	healthEndpoint               = "/healthz"
 	readinessEndpoint            = "/ready"
 	defaultAuthorizationEndpoint = "authorize"
-	defaulTokenEndpoint          = "oauth/token"
-	defaultIntrospectEndpoint    = "introspect"
+	defaultTokenEndpoint         = "oauth/token"
+	defaultIntrospectEndpoint    = "oauth/introspect"
 	defaultUserinfoEndpoint      = "userinfo"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
-
-	AuthMethodBasic AuthMethod = "client_secret_basic"
-	AuthMethodPost  AuthMethod = "client_secret_post"
-	AuthMethodNone  AuthMethod = "none"
-
-	CodeMethodS256 = "S256"
 )
 
 var (
 	DefaultEndpoints = &endpoints{
 		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
-		Token:         NewEndpoint(defaulTokenEndpoint),
+		Token:         NewEndpoint(defaultTokenEndpoint),
 		Introspection: NewEndpoint(defaultIntrospectEndpoint),
 		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
 		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
@@ -71,12 +65,13 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
 		handlers.AllowedOriginValidator(allowAllOrigins),
 	))
-	router.HandleFunc(healthzEndpoint, healthzHandler)
+	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
 	router.NewRoute().Path(o.AuthorizationEndpoint().Relative()+"/callback").Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
+	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o))
@@ -88,6 +83,7 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
+	AuthMethodPrivateKeyJWT  bool
 }
 
 type endpoints struct {
@@ -165,6 +161,10 @@ func (o *openidProvider) TokenEndpoint() Endpoint {
 	return o.endpoints.Token
 }
 
+func (o *openidProvider) IntrospectionEndpoint() Endpoint {
+	return o.endpoints.Introspection
+}
+
 func (o *openidProvider) UserinfoEndpoint() Endpoint {
 	return o.endpoints.Userinfo
 }
@@ -183,6 +183,10 @@ func (o *openidProvider) AuthMethodPostSupported() bool {
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
 	return o.config.CodeMethodS256
+}
+
+func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
+	return o.config.AuthMethodPrivateKeyJWT
 }
 
 func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
@@ -297,6 +301,16 @@ func WithCustomTokenEndpoint(endpoint Endpoint) Option {
 			return err
 		}
 		o.endpoints.Token = endpoint
+		return nil
+	}
+}
+
+func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
+	return func(o *openidProvider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.Introspection = endpoint
 		return nil
 	}
 }

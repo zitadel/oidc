@@ -3,6 +3,8 @@ package op
 import (
 	"net/http"
 
+	"golang.org/x/text/language"
+
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
@@ -19,22 +21,23 @@ func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
 
 func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfiguration {
 	return &oidc.DiscoveryConfiguration{
-		Issuer:                c.Issuer(),
-		AuthorizationEndpoint: c.AuthorizationEndpoint().Absolute(c.Issuer()),
-		TokenEndpoint:         c.TokenEndpoint().Absolute(c.Issuer()),
-		// IntrospectionEndpoint: c.Intro().Absolute(c.Issuer()),
-		UserinfoEndpoint:   c.UserinfoEndpoint().Absolute(c.Issuer()),
-		EndSessionEndpoint: c.EndSessionEndpoint().Absolute(c.Issuer()),
-		// CheckSessionIframe: c.TokenEndpoint().Absolute(c.Issuer())(c.CheckSessionIframe),
-		JwksURI:                           c.KeysEndpoint().Absolute(c.Issuer()),
-		ScopesSupported:                   Scopes(c),
-		ResponseTypesSupported:            ResponseTypes(c),
-		GrantTypesSupported:               GrantTypes(c),
-		ClaimsSupported:                   SupportedClaims(c),
-		IDTokenSigningAlgValuesSupported:  SigAlgorithms(s),
-		SubjectTypesSupported:             SubjectTypes(c),
-		TokenEndpointAuthMethodsSupported: AuthMethods(c),
-		CodeChallengeMethodsSupported:     CodeChallengeMethods(c),
+		Issuer:                                    c.Issuer(),
+		AuthorizationEndpoint:                     c.AuthorizationEndpoint().Absolute(c.Issuer()),
+		TokenEndpoint:                             c.TokenEndpoint().Absolute(c.Issuer()),
+		IntrospectionEndpoint:                     c.IntrospectionEndpoint().Absolute(c.Issuer()),
+		UserinfoEndpoint:                          c.UserinfoEndpoint().Absolute(c.Issuer()),
+		EndSessionEndpoint:                        c.EndSessionEndpoint().Absolute(c.Issuer()),
+		JwksURI:                                   c.KeysEndpoint().Absolute(c.Issuer()),
+		ScopesSupported:                           Scopes(c),
+		ResponseTypesSupported:                    ResponseTypes(c),
+		GrantTypesSupported:                       GrantTypes(c),
+		SubjectTypesSupported:                     SubjectTypes(c),
+		IDTokenSigningAlgValuesSupported:          SigAlgorithms(s),
+		TokenEndpointAuthMethodsSupported:         AuthMethodsTokenEndpoint(c),
+		IntrospectionEndpointAuthMethodsSupported: AuthMethodsIntrospectionEndpoint(c),
+		ClaimsSupported:                           SupportedClaims(c),
+		CodeChallengeMethodsSupported:             CodeChallengeMethods(c),
+		UILocalesSupported:                        UILocales(c),
 	}
 }
 
@@ -58,15 +61,16 @@ func ResponseTypes(c Configuration) []string {
 	} //TODO: ok for now, check later if dynamic needed
 }
 
-func GrantTypes(c Configuration) []string {
-	grantTypes := []string{
-		string(oidc.GrantTypeCode),
+func GrantTypes(c Configuration) []oidc.GrantType {
+	grantTypes := []oidc.GrantType{
+		oidc.GrantTypeCode,
+		oidc.GrantTypeImplicit,
 	}
 	if c.GrantTypeTokenExchangeSupported() {
-		grantTypes = append(grantTypes, string(oidc.GrantTypeTokenExchange))
+		grantTypes = append(grantTypes, oidc.GrantTypeTokenExchange)
 	}
 	if c.GrantTypeJWTAuthorizationSupported() {
-		grantTypes = append(grantTypes, string(oidc.GrantTypeBearer))
+		grantTypes = append(grantTypes, oidc.GrantTypeBearer)
 	}
 	return grantTypes
 }
@@ -108,20 +112,41 @@ func SubjectTypes(c Configuration) []string {
 	return []string{"public"} //TODO: config
 }
 
-func AuthMethods(c Configuration) []string {
-	authMethods := []string{
-		string(AuthMethodBasic),
+func AuthMethodsTokenEndpoint(c Configuration) []oidc.AuthMethod {
+	authMethods := []oidc.AuthMethod{
+		oidc.AuthMethodNone,
+		oidc.AuthMethodBasic,
 	}
 	if c.AuthMethodPostSupported() {
-		authMethods = append(authMethods, string(AuthMethodPost))
+		authMethods = append(authMethods, oidc.AuthMethodPost)
+	}
+	if c.AuthMethodPrivateKeyJWTSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
 	}
 	return authMethods
 }
 
-func CodeChallengeMethods(c Configuration) []string {
-	codeMethods := make([]string, 0, 1)
+func AuthMethodsIntrospectionEndpoint(c Configuration) []oidc.AuthMethod {
+	authMethods := []oidc.AuthMethod{
+		oidc.AuthMethodBasic,
+	}
+	if c.AuthMethodPrivateKeyJWTSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
+	}
+	return authMethods
+}
+
+func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
+	codeMethods := make([]oidc.CodeChallengeMethod, 0, 1)
 	if c.CodeMethodS256Supported() {
-		codeMethods = append(codeMethods, CodeMethodS256)
+		codeMethods = append(codeMethods, oidc.CodeChallengeMethodS256)
 	}
 	return codeMethods
+}
+
+func UILocales(c Configuration) []language.Tag {
+	return []language.Tag{
+		language.English,
+		language.German,
+	}
 }

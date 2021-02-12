@@ -1,0 +1,90 @@
+package client
+
+import (
+	"net/http"
+	"reflect"
+	"strings"
+	"time"
+
+	"github.com/gorilla/schema"
+	"golang.org/x/oauth2"
+	"gopkg.in/square/go-jose.v2"
+
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
+)
+
+var (
+	Encoder = func() utils.Encoder {
+		e := schema.NewEncoder()
+		e.RegisterEncoder(oidc.Scopes{}, func(value reflect.Value) string {
+			return value.Interface().(oidc.Scopes).Encode()
+		})
+		return e
+	}()
+)
+
+//Discover calls the discovery endpoint of the provided issuer and returns its configuration
+func Discover(issuer string, httpClient *http.Client) (*oidc.DiscoveryConfiguration, error) {
+	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
+	req, err := http.NewRequest("GET", wellKnown, nil)
+	if err != nil {
+		return nil, err
+	}
+	discoveryConfig := new(oidc.DiscoveryConfiguration)
+	err = utils.HttpRequest(httpClient, req, &discoveryConfig)
+	if err != nil {
+		return nil, err
+	}
+	return discoveryConfig, nil
+}
+
+type tokenEndpointCaller interface {
+	TokenEndpoint() string
+	HttpClient() *http.Client
+}
+
+func CallTokenEndpoint(request interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+	return callTokenEndpoint(request, nil, caller)
+}
+
+func callTokenEndpoint(request interface{}, authFn interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+	req, err := utils.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return nil, err
+	}
+	tokenRes := new(oidc.AccessTokenResponse)
+	if err := utils.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
+		return nil, err
+	}
+	return &oauth2.Token{
+		AccessToken:  tokenRes.AccessToken,
+		TokenType:    tokenRes.TokenType,
+		RefreshToken: tokenRes.RefreshToken,
+		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
+	}, nil
+}
+
+func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
+	privateKey, err := utils.BytesToPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	signingKey := jose.SigningKey{
+		Algorithm: jose.RS256,
+		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: keyID},
+	}
+	return jose.NewSigner(signingKey, &jose.SignerOptions{})
+}
+
+func SignedJWTProfileAssertion(clientID string, audience []string, expiration time.Duration, signer jose.Signer) (string, error) {
+	iat := time.Now()
+	exp := iat.Add(expiration)
+	return utils.Sign(&oidc.JWTTokenRequest{
+		Issuer:    clientID,
+		Subject:   clientID,
+		Audience:  audience,
+		ExpiresAt: oidc.Time(exp),
+		IssuedAt:  oidc.Time(iat),
+	}, signer)
+}

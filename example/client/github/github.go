@@ -10,8 +10,8 @@ import (
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
 
-	"github.com/caos/oidc/pkg/rp"
-	"github.com/caos/oidc/pkg/rp/cli"
+	"github.com/caos/oidc/pkg/client/rp"
+	"github.com/caos/oidc/pkg/client/rp/cli"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -35,7 +35,7 @@ func main() {
 
 	ctx := context.Background()
 	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
-	relayingParty, err := rp.NewRelayingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
+	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		fmt.Printf("error creating relaying party: %v", err)
 		return
@@ -43,9 +43,9 @@ func main() {
 	state := func() string {
 		return uuid.New().String()
 	}
-	token := cli.CodeFlow(relayingParty, callbackPath, port, state)
+	token := cli.CodeFlow(relyingParty, callbackPath, port, state)
 
-	client := github.NewClient(relayingParty.OAuthConfig().Client(ctx, token.Token))
+	client := github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
 
 	_, _, err = client.Users.Get(ctx, "")
 	if err != nil {

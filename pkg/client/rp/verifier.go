@@ -214,13 +214,3 @@ func (i *idTokenVerifier) ACR() oidc.ACRVerifier {
 func (i *idTokenVerifier) MaxAge() time.Duration {
 	return i.maxAge
 }
-
-//deprecated: Use IDTokenVerifier (or oidc.Verifier)
-type Verifier interface {
-
-	//Verify checks the access_token and id_token and returns the `id token claims`
-	Verify(ctx context.Context, accessToken, idTokenString string) (*oidc.IDTokenClaims, error)
-
-	//VerifyIDToken checks the id_token only and returns its `id token claims`
-	VerifyIDToken(ctx context.Context, idTokenString string) (*oidc.IDTokenClaims, error)
-}

@@ -69,7 +69,11 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	if err != nil {
 		return "", 0, err
 	}
-	validity = exp.Add(client.ClockSkew()).Sub(time.Now().UTC())
+	var clockSkew time.Duration
+	if client != nil {
+		clockSkew = client.ClockSkew()
+	}
+	validity = exp.Add(clockSkew).Sub(time.Now().UTC())
 	if accessTokenType == AccessTokenTypeJWT {
 		token, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
 		return
@@ -110,7 +114,8 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 		}
 	}
 	if len(scopes) > 0 {
-		userInfo, err := storage.GetUserinfoFromScopes(ctx, authReq.GetSubject(), authReq.GetClientID(), scopes)
+		userInfo := oidc.NewUserInfo()
+		err := storage.SetUserinfoFromScopes(ctx, userInfo, authReq.GetSubject(), authReq.GetClientID(), scopes)
 		if err != nil {
 			return "", err
 		}

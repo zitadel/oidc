@@ -59,23 +59,23 @@ func ExpectValidClientID(s op.Storage) {
 	mockS.EXPECT().GetClientByClientID(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, id string) (op.Client, error) {
 			var appType op.ApplicationType
-			var authMethod op.AuthMethod
+			var authMethod oidc.AuthMethod
 			var accessTokenType op.AccessTokenType
 			var responseTypes []oidc.ResponseType
 			switch id {
 			case "web_client":
 				appType = op.ApplicationTypeWeb
-				authMethod = op.AuthMethodBasic
+				authMethod = oidc.AuthMethodBasic
 				accessTokenType = op.AccessTokenTypeBearer
 				responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 			case "native_client":
 				appType = op.ApplicationTypeNative
-				authMethod = op.AuthMethodNone
+				authMethod = oidc.AuthMethodNone
 				accessTokenType = op.AccessTokenTypeBearer
 				responseTypes = []oidc.ResponseType{oidc.ResponseTypeCode}
 			case "useragent_client":
 				appType = op.ApplicationTypeUserAgent
-				authMethod = op.AuthMethodBasic
+				authMethod = oidc.AuthMethodBasic
 				accessTokenType = op.AccessTokenTypeJWT
 				responseTypes = []oidc.ResponseType{oidc.ResponseTypeIDToken}
 			}
@@ -104,7 +104,7 @@ func ExpectSigningKey(s op.Storage) {
 type ConfClient struct {
 	id              string
 	appType         op.ApplicationType
-	authMethod      op.AuthMethod
+	authMethod      oidc.AuthMethod
 	accessTokenType op.AccessTokenType
 	responseTypes   []oidc.ResponseType
 	devMode         bool
@@ -130,7 +130,7 @@ func (c *ConfClient) ApplicationType() op.ApplicationType {
 	return c.appType
 }
 
-func (c *ConfClient) AuthMethod() op.AuthMethod {
+func (c *ConfClient) AuthMethod() oidc.AuthMethod {
 	return c.authMethod
 }
 
