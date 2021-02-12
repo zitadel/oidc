@@ -210,21 +210,32 @@ func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ st
 	return nil
 }
 
-func (s *AuthStorage) GetUserinfoFromToken(ctx context.Context, _, _, _ string) (oidc.UserInfo, error) {
-	return s.GetUserinfoFromScopes(ctx, "", "", []string{})
+func (s *AuthStorage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, _, _, _ string) error {
+	return s.SetUserinfoFromScopes(ctx, userinfo, "", "", []string{})
 }
-func (s *AuthStorage) GetUserinfoFromScopes(_ context.Context, _, _ string, _ []string) (oidc.UserInfo, error) {
-	userinfo := oidc.NewUserInfo()
+func (s *AuthStorage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, _, _ string, _ []string) error {
 	userinfo.SetSubject(a.GetSubject())
 	userinfo.SetAddress(oidc.NewUserInfoAddress("Test 789\nPostfach 2", "", "", "", "", ""))
 	userinfo.SetEmail("test", true)
 	userinfo.SetPhone("0791234567", true)
 	userinfo.SetName("Test")
 	userinfo.AppendClaims("private_claim", "test")
-	return userinfo, nil
+	return nil
 }
 func (s *AuthStorage) GetPrivateClaimsFromScopes(_ context.Context, _, _ string, _ []string) (map[string]interface{}, error) {
 	return map[string]interface{}{"private_claim": "test"}, nil
+}
+
+func (s *AuthStorage) SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+	if err := s.SetUserinfoFromScopes(ctx, userinfo, "", "", []string{}); err != nil {
+		return err
+	}
+	userinfo.SetClientID(a.ClientID)
+	return nil
+}
+
+func (s *AuthStorage) ValidateJWTProfileScopes(ctx context.Context, userID string, scope oidc.Scopes) (oidc.Scopes, error) {
+	return scope, nil
 }
 
 type ConfClient struct {

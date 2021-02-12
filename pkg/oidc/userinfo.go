@@ -355,11 +355,6 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(i.claims)
-	//claims, err := json.Marshal(i.claims)
-	//if err != nil {
-	//	return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
-	//}
-	//return utils.ConcatenateJSON(b, claims)
 }
 
 func (i *userinfo) UnmarshalJSON(data []byte) error {

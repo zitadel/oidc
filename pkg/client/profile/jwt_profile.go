@@ -23,7 +23,15 @@ type jwtProfileTokenSource struct {
 	tokenEndpoint string
 }
 
-func NewJWTProfileTokenSourceFromKeyFile(issuer string, data []byte, scopes []string, options ...func(source *jwtProfileTokenSource)) (oauth2.TokenSource, error) {
+func NewJWTProfileTokenSourceFromKeyFile(issuer, keyPath string, scopes []string, options ...func(source *jwtProfileTokenSource)) (oauth2.TokenSource, error) {
+	keyData, err := client.ConfigFromKeyFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+	return NewJWTProfileTokenSource(issuer, keyData.UserID, keyData.KeyID, []byte(keyData.Key), scopes, options...)
+}
+
+func NewJWTProfileTokenSourceFromKeyFileData(issuer string, data []byte, scopes []string, options ...func(source *jwtProfileTokenSource)) (oauth2.TokenSource, error) {
 	keyData, err := client.ConfigFromKeyFileData(data)
 	if err != nil {
 		return nil, err

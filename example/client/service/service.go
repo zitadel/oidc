@@ -21,24 +21,18 @@ var (
 )
 
 func main() {
-	//keyPath := os.Getenv("KEY_PATH")
+	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
-	//testURL := os.Getenv("TEST_URL")
 
-	//if keyPath != "" {
-	//	ts, err := rp.NewJWTProfileTokenSourceFromFile(issuer, keyPath, scopes)
-	//	if err != nil {
-	//		logrus.Fatalf("error creating token source %s", err.Error())
-	//	}
-	//	//client = oauth2.NewClient(context.Background(), ts)
-	//	resp, err := callExampleEndpoint(client, testURL)
-	//	if err != nil {
-	//		logrus.Fatalf("error response from test url: %s", err.Error())
-	//	}
-	//	fmt.Println(resp)
-	//}
+	if keyPath != "" {
+		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(issuer, keyPath, scopes)
+		if err != nil {
+			logrus.Fatalf("error creating token source %s", err.Error())
+		}
+		client = oauth2.NewClient(context.Background(), ts)
+	}
 
 	http.HandleFunc("/jwt-profile", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
@@ -84,7 +78,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(issuer, key, scopes)
+			ts, err := profile.NewJWTProfileTokenSourceFromKeyFileData(issuer, key, scopes)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -95,16 +89,6 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			//assertion, err := oidc.NewJWTProfileAssertionFromFileData(key, []string{issuer})
-			//if err != nil {
-			//	http.Error(w, err.Error(), http.StatusInternalServerError)
-			//	return
-			//}
-			//token, err := rp.JWTProfileAssertionExchange(ctx, assertion, scopes, provider)
-			//if err != nil {
-			//	http.Error(w, err.Error(), http.StatusInternalServerError)
-			//	return
-			//}
 			data, err := json.Marshal(token)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

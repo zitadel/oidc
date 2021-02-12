@@ -21,7 +21,7 @@ type IntrospectionResponse interface {
 	UserInfoSetter
 	SetActive(bool)
 	IsActive() bool
-	SetScopes(scopes Scope)
+	SetScopes(scopes Scopes)
 	SetClientID(id string)
 }
 
@@ -31,7 +31,7 @@ func NewIntrospectionResponse() IntrospectionResponse {
 
 type introspectionResponse struct {
 	Active   bool   `json:"active"`
-	Scope    Scope  `json:"scope,omitempty"`
+	Scope    Scopes `json:"scope,omitempty"`
 	ClientID string `json:"client_id,omitempty"`
 	Subject  string `json:"sub,omitempty"`
 	userInfoProfile
@@ -46,7 +46,7 @@ func (u *introspectionResponse) IsActive() bool {
 	return u.Active
 }
 
-func (u *introspectionResponse) SetScopes(scope Scope) {
+func (u *introspectionResponse) SetScopes(scope Scopes) {
 	u.Scope = scope
 }
 
@@ -252,10 +252,6 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(i.claims)
-	//if err != nil {
-	//	return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
-	//}
-	//return utils.ConcatenateJSON(b, claims)
 }
 
 func (i *introspectionResponse) UnmarshalJSON(data []byte) error {
