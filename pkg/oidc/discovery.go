@@ -19,7 +19,7 @@ type DiscoveryConfiguration struct {
 	CheckSessionIframe                                 string                `json:"check_session_iframe,omitempty"`
 	JwksURI                                            string                `json:"jwks_uri,omitempty"`
 	ScopesSupported                                    []string              `json:"scopes_supported,omitempty"`
-	ResponseTypesSupported                             []string              `json:"response_types_supported"`
+	ResponseTypesSupported                             []string              `json:"response_types_supported,omitempty"`
 	ResponseModesSupported                             []string              `json:"response_modes_supported,omitempty"`
 	GrantTypesSupported                                []GrantType           `json:"grant_types_supported,omitempty"`
 	ACRValuesSupported                                 []string              `json:"acr_values_supported,omitempty"`
