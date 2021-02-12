@@ -226,11 +226,11 @@ func (s *AuthStorage) GetPrivateClaimsFromScopes(_ context.Context, _, _ string,
 	return map[string]interface{}{"private_claim": "test"}, nil
 }
 
-func (s *AuthStorage) SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
-	if err := s.SetUserinfoFromScopes(ctx, userinfo, "", "", []string{}); err != nil {
+func (s *AuthStorage) SetIntrospectionFromToken(ctx context.Context, introspect oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+	if err := s.SetUserinfoFromScopes(ctx, introspect, "", "", []string{}); err != nil {
 		return err
 	}
-	userinfo.SetClientID(a.ClientID)
+	introspect.SetClientID(a.ClientID)
 	return nil
 }
 
