@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/oidc/pkg/utils"
 )
 
@@ -13,7 +13,7 @@ const (
 	loginPath = "/login"
 )
 
-func CodeFlow(relayingParty rp.RelayingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens {
+func CodeFlow(relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -24,8 +24,8 @@ func CodeFlow(relayingParty rp.RelayingParty, callbackPath, port string, statePr
 		msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"
 		w.Write([]byte(msg))
 	}
-	http.Handle(loginPath, rp.AuthURLHandler(stateProvider, relayingParty))
-	http.Handle(callbackPath, rp.CodeExchangeHandler(callback, relayingParty))
+	http.Handle(loginPath, rp.AuthURLHandler(stateProvider, relyingParty))
+	http.Handle(callbackPath, rp.CodeExchangeHandler(callback, relyingParty))
 
 	utils.StartServer(ctx, port)
 

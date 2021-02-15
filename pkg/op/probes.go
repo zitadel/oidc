@@ -10,7 +10,7 @@ import (
 
 type ProbesFn func(context.Context) error
 
-func healthzHandler(w http.ResponseWriter, r *http.Request) {
+func healthHandler(w http.ResponseWriter, r *http.Request) {
 	ok(w)
 }
 

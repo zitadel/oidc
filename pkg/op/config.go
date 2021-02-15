@@ -13,12 +13,14 @@ type Configuration interface {
 	Issuer() string
 	AuthorizationEndpoint() Endpoint
 	TokenEndpoint() Endpoint
+	IntrospectionEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
+	AuthMethodPrivateKeyJWTSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 }

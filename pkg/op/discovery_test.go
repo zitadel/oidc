@@ -37,7 +37,7 @@ func TestDiscover(t *testing.T) {
 			op.Discover(tt.args.w, tt.args.config)
 			rec := tt.args.w.(*httptest.ResponseRecorder)
 			require.Equal(t, http.StatusOK, rec.Code)
-			require.Equal(t, `{"issuer":"https://issuer.com"}`, rec.Body.String())
+			require.Equal(t, `{"issuer":"https://issuer.com","request_uri_parameter_supported":false}`, rec.Body.String())
 		})
 	}
 }
@@ -199,36 +199,49 @@ func Test_SubjectTypes(t *testing.T) {
 	}
 }
 
-func Test_AuthMethods(t *testing.T) {
-	m := mock.NewMockConfiguration(gomock.NewController(t))
+func Test_AuthMethodsTokenEndpoint(t *testing.T) {
 	type args struct {
 		c op.Configuration
 	}
 	tests := []struct {
 		name string
 		args args
-		want []string
+		want []oidc.AuthMethod
 	}{
 		{
-			"imlicit basic",
+			"none and basic",
 			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
 				m.EXPECT().AuthMethodPostSupported().Return(false)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
 				return m
 			}()},
-			[]string{string(op.AuthMethodBasic)},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic},
 		},
 		{
-			"basic and post",
+			"none, basic and post",
 			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
 				m.EXPECT().AuthMethodPostSupported().Return(true)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
 				return m
 			}()},
-			[]string{string(op.AuthMethodBasic), string(op.AuthMethodPost)},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic, oidc.AuthMethodPost},
+		},
+		{
+			"none, basic, post and private_key_jwt",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPostSupported().Return(true)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(true)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic, oidc.AuthMethodPost, oidc.AuthMethodPrivateKeyJWT},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.AuthMethods(tt.args.c); !reflect.DeepEqual(got, tt.want) {
+			if got := op.AuthMethodsTokenEndpoint(tt.args.c); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authMethods() = %v, want %v", got, tt.want)
 			}
 		})

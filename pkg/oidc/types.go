@@ -73,6 +73,19 @@ func (s *Scopes) MarshalText() ([]byte, error) {
 	return []byte(s.Encode()), nil
 }
 
+func (s *Scopes) MarshalJSON() ([]byte, error) {
+	return json.Marshal((*s).Encode())
+}
+
+func (s *Scopes) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	*s = strings.Split(str, " ")
+	return nil
+}
+
 type Time time.Time
 
 func (t *Time) UnmarshalJSON(data []byte) error {

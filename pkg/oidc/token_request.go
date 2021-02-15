@@ -15,6 +15,10 @@ const (
 
 	//GrantTypeTokenExchange defines the grant_type `urn:ietf:params:oauth:grant-type:token-exchange` used for the OAuth Token Exchange Grant
 	GrantTypeTokenExchange GrantType = "urn:ietf:params:oauth:grant-type:token-exchange"
+
+	//ClientAssertionTypeJWTAssertion defines the client_assertion_type `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
+	//used for the OAuth JWT Profile Client Authentication
+	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 )
 
 type GrantType string
@@ -27,11 +31,13 @@ type TokenRequest interface {
 type TokenRequestType GrantType
 
 type AccessTokenRequest struct {
-	Code         string `schema:"code"`
-	RedirectURI  string `schema:"redirect_uri"`
-	ClientID     string `schema:"client_id"`
-	ClientSecret string `schema:"client_secret"`
-	CodeVerifier string `schema:"code_verifier"`
+	Code                string `schema:"code"`
+	RedirectURI         string `schema:"redirect_uri"`
+	ClientID            string `schema:"client_id"`
+	ClientSecret        string `schema:"client_secret"`
+	CodeVerifier        string `schema:"code_verifier"`
+	ClientAssertion     string `schema:"client_assertion"`
+	ClientAssertionType string `schema:"client_assertion_type"`
 }
 
 func (a *AccessTokenRequest) GrantType() GrantType {

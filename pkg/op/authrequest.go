@@ -5,12 +5,30 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
+
+type AuthRequest interface {
+	GetID() string
+	GetACR() string
+	GetAMR() []string
+	GetAudience() []string
+	GetAuthTime() time.Time
+	GetClientID() string
+	GetCodeChallenge() *oidc.CodeChallenge
+	GetNonce() string
+	GetRedirectURI() string
+	GetResponseType() oidc.ResponseType
+	GetScopes() []string
+	GetState() string
+	GetSubject() string
+	Done() bool
+}
 
 type Authorizer interface {
 	Storage() Storage

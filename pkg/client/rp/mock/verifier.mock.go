@@ -5,10 +5,12 @@
 package mock
 
 import (
-	context "context"
-	oidc "github.com/caos/oidc/pkg/oidc"
-	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
+	"context"
+	"reflect"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/caos/oidc/pkg/oidc"
 )
 
 // MockVerifier is a mock of Verifier interface

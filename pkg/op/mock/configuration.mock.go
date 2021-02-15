@@ -47,6 +47,20 @@ func (mr *MockConfigurationMockRecorder) AuthMethodPostSupported() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethodPostSupported", reflect.TypeOf((*MockConfiguration)(nil).AuthMethodPostSupported))
 }
 
+// AuthMethodPrivateKeyJWTSupported mocks base method
+func (m *MockConfiguration) AuthMethodPrivateKeyJWTSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthMethodPrivateKeyJWTSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AuthMethodPrivateKeyJWTSupported indicates an expected call of AuthMethodPrivateKeyJWTSupported
+func (mr *MockConfigurationMockRecorder) AuthMethodPrivateKeyJWTSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethodPrivateKeyJWTSupported", reflect.TypeOf((*MockConfiguration)(nil).AuthMethodPrivateKeyJWTSupported))
+}
+
 // AuthorizationEndpoint mocks base method
 func (m *MockConfiguration) AuthorizationEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
@@ -115,6 +129,20 @@ func (m *MockConfiguration) GrantTypeTokenExchangeSupported() bool {
 func (mr *MockConfigurationMockRecorder) GrantTypeTokenExchangeSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeTokenExchangeSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeTokenExchangeSupported))
+}
+
+// IntrospectionEndpoint mocks base method
+func (m *MockConfiguration) IntrospectionEndpoint() op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IntrospectionEndpoint")
+	ret0, _ := ret[0].(op.Endpoint)
+	return ret0
+}
+
+// IntrospectionEndpoint indicates an expected call of IntrospectionEndpoint
+func (mr *MockConfigurationMockRecorder) IntrospectionEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IntrospectionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).IntrospectionEndpoint))
 }
 
 // Issuer mocks base method
