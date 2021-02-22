@@ -226,56 +226,6 @@ func (mr *MockStorageMockRecorder) SaveAuthCode(arg0, arg1, arg2 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAuthCode", reflect.TypeOf((*MockStorage)(nil).SaveAuthCode), arg0, arg1, arg2)
 }
 
-// SaveNewKeyPair mocks base method
-func (m *MockStorage) SaveNewKeyPair(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveNewKeyPair", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetIntrospectionFromToken mocks base method
-func (m *MockStorage) SetIntrospectionFromToken(arg0 context.Context, arg1 oidc.IntrospectionResponse, arg2, arg3, arg4 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetIntrospectionFromToken", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetIntrospectionFromToken indicates an expected call of SetIntrospectionFromToken
-func (mr *MockStorageMockRecorder) SetIntrospectionFromToken(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIntrospectionFromToken", reflect.TypeOf((*MockStorage)(nil).SetIntrospectionFromToken), arg0, arg1, arg2, arg3, arg4)
-}
-
-// SetUserinfoFromScopes mocks base method
-func (m *MockStorage) SetUserinfoFromScopes(arg0 context.Context, arg1 oidc.UserInfoSetter, arg2, arg3 string, arg4 []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetUserinfoFromScopes", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetUserinfoFromScopes indicates an expected call of SetUserinfoFromScopes
-func (mr *MockStorageMockRecorder) SetUserinfoFromScopes(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserinfoFromScopes", reflect.TypeOf((*MockStorage)(nil).SetUserinfoFromScopes), arg0, arg1, arg2, arg3, arg4)
-}
-
-// SetUserinfoFromToken mocks base method
-func (m *MockStorage) SetUserinfoFromToken(arg0 context.Context, arg1 oidc.UserInfoSetter, arg2, arg3, arg4 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetUserinfoFromToken", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetUserinfoFromToken indicates an expected call of SetUserinfoFromToken
-func (mr *MockStorageMockRecorder) SetUserinfoFromToken(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserinfoFromToken", reflect.TypeOf((*MockStorage)(nil).SetUserinfoFromToken), arg0, arg1, arg2, arg3, arg4)
-}
-
 // SetIntrospectionFromToken mocks base method
 func (m *MockStorage) SetIntrospectionFromToken(arg0 context.Context, arg1 oidc.IntrospectionResponse, arg2, arg3, arg4 string) error {
 	m.ctrl.T.Helper()
