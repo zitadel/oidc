@@ -20,9 +20,8 @@ type AuthStorage interface {
 
 	TerminateSession(context.Context, string, string) error
 
-	GetSigningKey(context.Context, chan<- jose.SigningKey, chan<- error, <-chan time.Time)
+	GetSigningKey(context.Context, chan<- jose.SigningKey)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
-	SaveNewKeyPair(context.Context) error
 }
 
 type OPStorage interface {

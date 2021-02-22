@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/caos/logging"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -118,7 +117,7 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 
 	keyCh := make(chan jose.SigningKey)
 	o.signer = NewSigner(ctx, storage, keyCh)
-	go EnsureKey(ctx, storage, keyCh, o.timer, o.retry)
+	go storage.GetSigningKey(ctx, keyCh)
 
 	o.httpHandler = CreateRouter(o, o.interceptors...)
 
@@ -284,36 +283,6 @@ func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	return payload, err
 }
 
-func EnsureKey(ctx context.Context, storage Storage, keyCh chan<- jose.SigningKey, timer <-chan time.Time, retry func(int) (bool, int)) {
-	count := 0
-	timer = time.After(0)
-	errCh := make(chan error)
-	go storage.GetSigningKey(ctx, keyCh, errCh, timer)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case err := <-errCh:
-			if err == nil {
-				continue
-			}
-			_, ok := err.(StorageNotFoundError)
-			if ok {
-				err := storage.SaveNewKeyPair(ctx)
-				if err == nil {
-					continue
-				}
-			}
-			ok, count = retry(count)
-			if ok {
-				timer = time.After(0)
-				continue
-			}
-			logging.Log("OP-n6ynVE").WithError(err).Panic("error in key signer")
-		}
-	}
-}
-
 type Option func(o *openidProvider) error
 
 func WithCustomAuthEndpoint(endpoint Endpoint) Option {
@@ -390,27 +359,6 @@ func WithCustomEndpoints(auth, token, userInfo, endSession, keys Endpoint) Optio
 func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
 	return func(o *openidProvider) error {
 		o.interceptors = append(o.interceptors, interceptors...)
-		return nil
-	}
-}
-
-func WithRetry(max int, sleep time.Duration) Option {
-	return func(o *openidProvider) error {
-		o.retry = func(count int) (bool, int) {
-			count++
-			if count == max {
-				return false, count
-			}
-			time.Sleep(sleep)
-			return true, count
-		}
-		return nil
-	}
-}
-
-func WithTimer(timer <-chan time.Time) Option {
-	return func(o *openidProvider) error {
-		o.timer = timer
 		return nil
 	}
 }

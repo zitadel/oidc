@@ -34,6 +34,9 @@ func (s *tokenSigner) Health(_ context.Context) error {
 	if s.signer == nil {
 		return errors.New("no signer")
 	}
+	if string(s.alg) == "" {
+		return errors.New("no signing algorithm")
+	}
 	return nil
 }
 
