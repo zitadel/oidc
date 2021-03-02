@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -91,7 +92,7 @@ func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWe
 	}
 	key, err := k.Storage.GetKeyByIDAndUserID(ctx, keyID, k.userID)
 	if err != nil {
-		return nil, errors.New("error fetching keys")
+		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
 	payload, err, ok := oidc.CheckKey(keyID, jws, *key)
 	if !ok {
