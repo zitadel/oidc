@@ -51,9 +51,18 @@ func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.S
 			return
 		case key := <-keyCh:
 			s.alg = key.Algorithm
+			if key.Algorithm == "" || key.Key == nil {
+				s.signer = nil
+				logging.Log("OP-DAvt4").Warn("signer has no key")
+				continue
+			}
 			var err error
 			s.signer, err = jose.NewSigner(key, &jose.SignerOptions{})
-			logging.Log("OP-pf32aw").OnError(err).Error("error creating signer")
+			if err != nil {
+				logging.Log("OP-pf32aw").WithError(err).Error("error creating signer")
+				continue
+			}
+			logging.Log("OP-agRf2").Info("signer exchanged signing key")
 		}
 	}
 }
