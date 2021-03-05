@@ -37,11 +37,11 @@ func (r *resourceServer) AuthFn() (interface{}, error) {
 	return r.authFn()
 }
 
-func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, option Option) (ResourceServer, error) {
+func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, option ...Option) (ResourceServer, error) {
 	authorizer := func() (interface{}, error) {
 		return utils.AuthorizeBasic(clientID, clientSecret), nil
 	}
-	return newResourceServer(issuer, authorizer, option)
+	return newResourceServer(issuer, authorizer, option...)
 }
 func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, options ...Option) (ResourceServer, error) {
 	signer, err := client.NewSignerFromPrivateKeyByte(key, keyID)

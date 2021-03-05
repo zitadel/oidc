@@ -30,7 +30,7 @@ type RequestAuthorization func(*http.Request)
 
 func AuthorizeBasic(user, password string) RequestAuthorization {
 	return func(req *http.Request) {
-		req.SetBasicAuth(user, password)
+		req.SetBasicAuth(url.QueryEscape(user), url.QueryEscape(password))
 	}
 }
 

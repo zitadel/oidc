@@ -3,6 +3,7 @@ package op
 import (
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
@@ -68,6 +69,14 @@ func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) 
 	}
 	clientID, clientSecret, ok := r.BasicAuth()
 	if ok {
+		clientID, err = url.QueryUnescape(clientID)
+		if err != nil {
+			return "", "", errors.New("invalid basic auth header")
+		}
+		clientSecret, err = url.QueryUnescape(clientSecret)
+		if err != nil {
+			return "", "", errors.New("invalid basic auth header")
+		}
 		if err := introspector.Storage().AuthorizeClientIDSecret(r.Context(), clientID, clientSecret); err != nil {
 			return "", "", err
 		}
