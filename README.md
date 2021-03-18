@@ -43,6 +43,7 @@ For your convinience you can find the relevant standards linked below.
 | <1.13   | :x:                |
 | 1.14    | :white_check_mark: |
 | 1.15    | :white_check_mark: |
+| 1.16    | :white_check_mark: |
 
 ## Why another library
 
