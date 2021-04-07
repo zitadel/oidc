@@ -101,7 +101,7 @@ func StartServer(ctx context.Context, port string) {
 		defer cancelShutdown()
 		err := server.Shutdown(ctxShutdown)
 		if err != nil {
-			log.Fatalf("Shutdown(): %w", err)
+			log.Fatalf("Shutdown(): %v", err)
 		}
 	}()
 }
