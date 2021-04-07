@@ -13,13 +13,14 @@ const (
 	loginPath = "/login"
 )
 
-func CodeFlow(relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func CodeFlow(ctx context.Context, relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens {
+	codeflowCtx, codeflowCancel := context.WithCancel(ctx)
+	defer codeflowCancel()
 
-	var token *oidc.Tokens
+	tokenChan := make(chan *oidc.Tokens, 1)
+
 	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
-		token = tokens
+		tokenChan <- tokens
 		msg := "<p><strong>Success!</strong></p>"
 		msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"
 		w.Write([]byte(msg))
@@ -27,9 +28,9 @@ func CodeFlow(relyingParty rp.RelyingParty, callbackPath, port string, stateProv
 	http.Handle(loginPath, rp.AuthURLHandler(stateProvider, relyingParty))
 	http.Handle(callbackPath, rp.CodeExchangeHandler(callback, relyingParty))
 
-	utils.StartServer(ctx, port)
+	utils.StartServer(codeflowCtx, ":"+port)
 
 	utils.OpenBrowser("http://localhost:" + port + loginPath)
 
-	return token
+	return <-tokenChan
 }
