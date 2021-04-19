@@ -15,7 +15,7 @@ func EncryptAES(data string, key string) (string, error) {
 		return "", err
 	}
 
-	return base64.URLEncoding.EncodeToString(encrypted), nil
+	return base64.RawURLEncoding.EncodeToString(encrypted), nil
 }
 
 func EncryptBytesAES(plainText []byte, key string) ([]byte, error) {
@@ -37,7 +37,7 @@ func EncryptBytesAES(plainText []byte, key string) ([]byte, error) {
 }
 
 func DecryptAES(data string, key string) (string, error) {
-	text, err := base64.URLEncoding.DecodeString(data)
+	text, err := base64.RawURLEncoding.DecodeString(data)
 	if err != nil {
 		return "", err
 	}
