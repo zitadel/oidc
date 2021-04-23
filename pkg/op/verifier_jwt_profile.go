@@ -69,6 +69,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerif
 
 	if request.Issuer != request.Subject {
 		//TODO: implement delegation (openid core / oauth rfc)
+		return nil, errors.New("delegation not yet implemented, issuer and sub must be identical")
 	}
 
 	keySet := &jwtProfileKeySet{v.Storage(), request.Issuer}
