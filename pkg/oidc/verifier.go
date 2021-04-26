@@ -17,6 +17,7 @@ import (
 
 type Claims interface {
 	GetIssuer() string
+	GetSubject() string
 	GetAudience() []string
 	GetExpiration() time.Time
 	GetIssuedAt() time.Time
@@ -30,6 +31,7 @@ type Claims interface {
 var (
 	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
+	ErrSubjectMissing          = errors.New("subject missing")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
 	ErrAzpInvalid              = errors.New("authorized party is not valid")
@@ -38,6 +40,7 @@ var (
 	ErrSignatureUnsupportedAlg = errors.New("signature algorithm not supported")
 	ErrSignatureInvalidPayload = errors.New("signature does not match Payload")
 	ErrExpired                 = errors.New("token has expired")
+	ErrIatMissing              = errors.New("issuedAt of token is missing")
 	ErrIatInFuture             = errors.New("issuedAt of token is in the future")
 	ErrIatToOld                = errors.New("issuedAt of token is to old")
 	ErrNonceInvalid            = errors.New("nonce does not match")
@@ -82,6 +85,13 @@ func ParseToken(tokenString string, claims interface{}) ([]byte, error) {
 	}
 	err = json.Unmarshal(payload, claims)
 	return payload, err
+}
+
+func CheckSubject(claims Claims) error {
+	if claims.GetSubject() == "" {
+		return ErrSubjectMissing
+	}
+	return nil
 }
 
 func CheckIssuer(claims Claims, issuer string) error {
@@ -155,6 +165,9 @@ func CheckExpiration(claims Claims, offset time.Duration) error {
 
 func CheckIssuedAt(claims Claims, maxAgeIAT, offset time.Duration) error {
 	issuedAt := claims.GetIssuedAt().Round(time.Second)
+	if issuedAt.IsZero() {
+		return ErrIatMissing
+	}
 	nowWithOffset := time.Now().UTC().Add(offset).Round(time.Second)
 	if issuedAt.After(nowWithOffset) {
 		return fmt.Errorf("%w: (iat: %v, now with offset: %v)", ErrIatInFuture, issuedAt, nowWithOffset)
@@ -170,9 +183,6 @@ func CheckIssuedAt(claims Claims, maxAgeIAT, offset time.Duration) error {
 }
 
 func CheckNonce(claims Claims, nonce string) error {
-	if nonce == "" {
-		return nil
-	}
 	if claims.GetNonce() != nonce {
 		return fmt.Errorf("%w: expected %q but was %q", ErrNonceInvalid, nonce, claims.GetNonce())
 	}

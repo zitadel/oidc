@@ -36,6 +36,9 @@ func Discover(issuer string, httpClient *http.Client) (*oidc.DiscoveryConfigurat
 	if err != nil {
 		return nil, err
 	}
+	if discoveryConfig.Issuer != issuer {
+		return nil, oidc.ErrIssuerInvalid
+	}
 	return discoveryConfig, nil
 }
 

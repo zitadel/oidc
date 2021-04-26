@@ -24,6 +24,9 @@ func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 }
 
 func HashString(hash hash.Hash, s string, firstHalf bool) string {
+	if hash == nil {
+		return s
+	}
 	//nolint:errcheck
 	hash.Write([]byte(s))
 	size := hash.Size()

@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -21,6 +22,7 @@ func NewRemoteKeySet(client *http.Client, jwksURL string) oidc.KeySet {
 type remoteKeySet struct {
 	jwksURL    string
 	httpClient *http.Client
+	defaultAlg string
 
 	// guard all other fields
 	mu sync.Mutex
@@ -66,29 +68,27 @@ func (i *inflight) result() ([]jose.JSONWebKey, error) {
 }
 
 func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
-	// We don't support JWTs signed with multiple signatures.
-	keyID := ""
-	for _, sig := range jws.Signatures {
-		keyID = sig.Header.KeyID
-		break
+	keyID, alg := oidc.GetKeyIDAndAlg(jws)
+	if alg == "" {
+		alg = r.defaultAlg
 	}
-
 	keys := r.keysFromCache()
-	payload, err, ok := oidc.CheckKey(keyID, jws, keys...)
-	if ok {
+	key, ok := oidc.FindKey(keyID, oidc.KeyUseSignature, alg, keys...)
+	if ok && keyID != "" {
+		payload, err := jws.Verify(&key)
 		return payload, err
 	}
 
-	keys, err = r.keysFromRemote(ctx)
+	keys, err := r.keysFromRemote(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fetching keys %v", err)
 	}
-
-	payload, err, ok = oidc.CheckKey(keyID, jws, keys...)
-	if !ok {
-		return nil, errors.New("invalid kid")
+	key, ok = oidc.FindKey(keyID, oidc.KeyUseSignature, alg, keys...)
+	if ok {
+		payload, err := jws.Verify(&key)
+		return payload, err
 	}
-	return payload, err
+	return nil, errors.New("invalid key")
 }
 
 func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
@@ -147,10 +147,34 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 		return nil, fmt.Errorf("oidc: can't create request: %v", err)
 	}
 
-	keySet := new(jose.JSONWebKeySet)
+	keySet := new(jsonWebKeySet)
 	if err = utils.HttpRequest(r.httpClient, req, keySet); err != nil {
 		return nil, fmt.Errorf("oidc: failed to get keys: %v", err)
 	}
-
 	return keySet.Keys, nil
+}
+
+//jsonWebKeySet is an alias for jose.JSONWebKeySet which ignores unknown key types (kty)
+type jsonWebKeySet jose.JSONWebKeySet
+
+//UnmarshalJSON overrides the default jose.JSONWebKeySet method to ignore any error
+//which might occur because of unknown key types (kty)
+func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
+	var raw rawJSONWebKeySet
+	err = json.Unmarshal(data, &raw)
+	if err != nil {
+		return err
+	}
+	for _, key := range raw.Keys {
+		webKey := new(jose.JSONWebKey)
+		err = webKey.UnmarshalJSON(key)
+		if err == nil {
+			k.Keys = append(k.Keys, *webKey)
+		}
+	}
+	return nil
+}
+
+type rawJSONWebKeySet struct {
+	Keys []json.RawMessage `json:"keys"`
 }

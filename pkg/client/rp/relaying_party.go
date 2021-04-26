@@ -22,6 +22,10 @@ const (
 	pkceCode   = "pkce"
 )
 
+var (
+	ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
+)
+
 //RelyingParty declares the minimal interface for oidc clients
 type RelyingParty interface {
 	//OAuthConfig returns the oauth2 Config
@@ -245,6 +249,9 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	if err != nil {
 		return Endpoints{}, err
 	}
+	if discoveryConfig.Issuer != issuer {
+		return Endpoints{}, oidc.ErrIssuerInvalid
+	}
 	return GetEndpoints(discoveryConfig), nil
 }
 
@@ -323,7 +330,7 @@ func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...Cod
 //CodeExchangeHandler extends the `CodeExchange` method with a http handler
 //including cookie handling for secure `state` transfer
 //and optional PKCE code verifier checking
-func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc.Tokens, string), rp RelyingParty) http.HandlerFunc {
+func CodeExchangeHandler(callback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string), rp RelyingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)
 		if err != nil {
@@ -361,16 +368,33 @@ func CodeExchangeHandler(callback func(http.ResponseWriter, *http.Request, *oidc
 	}
 }
 
+//UserinfoCallback wraps the callback function of the CodeExchangeHandler
+//and calls the userinfo endpoint with the access token
+//on success it will pass the userinfo into its callback function as well
+func UserinfoCallback(provider RelyingParty, f func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, info oidc.UserInfo, state string)) func(http.ResponseWriter, *http.Request, *oidc.Tokens, string) {
+	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
+		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), provider)
+		if err != nil {
+			http.Error(w, "userinfo failed: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+		f(w, r, tokens, info, state)
+	}
+}
+
 //Userinfo will call the OIDC Userinfo Endpoint with the provided token
-func Userinfo(token string, rp RelyingParty) (oidc.UserInfo, error) {
+func Userinfo(token, tokenType, subject string, rp RelyingParty) (oidc.UserInfo, error) {
 	req, err := http.NewRequest("GET", rp.UserinfoEndpoint(), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("authorization", token)
+	req.Header.Set("authorization", tokenType+" "+token)
 	userinfo := oidc.NewUserInfo()
 	if err := utils.HttpRequest(rp.HttpClient(), req, &userinfo); err != nil {
 		return nil, err
+	}
+	if userinfo.GetSubject() != subject {
+		return nil, ErrUserInfoSubNotMatching
 	}
 	return userinfo, nil
 }
