@@ -274,28 +274,112 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			true,
 		},
 		{
-			"unregistered fails",
+			"unregistered https fails",
 			args{"https://unregistered.com/callback",
 				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
-			"code flow registered http not confidential fails",
-			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
+			"unregistered http fails",
+			args{"http://unregistered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
-			"code flow registered http confidential ok",
+			"code flow registered https web ok",
+			args{"https://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow registered https native ok",
+			args{"https://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow registered https user agent ok",
+			args{"https://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow registered http confidential (web) ok",
 			args{"http://registered.com/callback",
 				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode},
 			false,
 		},
 		{
-			"code flow registered custom not native fails",
+			"code flow registered http not confidential (user agent) fails",
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow registered http not confidential (native) fails",
+			args{"http://registered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow registered http localhost native ok",
+			args{"http://localhost:4200/callback",
+				mock.NewClientWithConfig(t, []string{"http://localhost/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow registered http loopback v4 native ok",
+			args{"http://127.0.0.1:4200/callback",
+				mock.NewClientWithConfig(t, []string{"http://127.0.0.1/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow registered http localhost native ok",
+			args{"http://[::1]:4200/callback",
+				mock.NewClientWithConfig(t, []string{"http://[::1]/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			false,
+		},
+		{
+			"code flow unregistered http native fails",
+			args{"http://unregistered.com/callback",
+				mock.NewClientWithConfig(t, []string{"http://locahost/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow unregistered custom native fails",
+			args{"unregistered://callback",
+				mock.NewClientWithConfig(t, []string{"registered://callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow unregistered loopback native fails",
+			args{"http://[::1]:4200/unregistered",
+				mock.NewClientWithConfig(t, []string{"http://[::1]:4200/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow registered custom not native (web) fails",
+			args{"custom://callback",
+				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeWeb, nil, false),
+				oidc.ResponseTypeCode},
+			true,
+		},
+		{
+			"code flow registered custom not native (user agent) fails",
 			args{"custom://callback",
 				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeCode},
@@ -311,7 +395,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 		{
 			"code flow dev mode http ok",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, true),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, true),
 				oidc.ResponseTypeCode},
 			false,
 		},
@@ -355,12 +439,12 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			args{"custom://callback",
 				mock.NewClientWithConfig(t, []string{"custom://callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeIDToken},
-			true,
+			false,
 		},
 		{
 			"implicit flow dev mode http ok",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, true),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, true),
 				oidc.ResponseTypeIDToken},
 			false,
 		},
@@ -478,6 +562,55 @@ func TestAuthResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
+		})
+	}
+}
+
+func Test_LoopbackOrLocalhost(t *testing.T) {
+	type args struct {
+		url string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			"v4 no port ok",
+			args{url: "http://127.0.0.1/test"},
+			true,
+		},
+		{
+			"v6 no port ok",
+			args{url: "http://[::1]/test"},
+			true,
+		},
+		{
+			"locahost no port ok",
+			args{url: "http://localhost/test"},
+			true,
+		},
+		{
+			"v4 with port ok",
+			args{url: "http://127.0.0.1:4200/test"},
+			true,
+		},
+		{
+			"v6 with port ok",
+			args{url: "http://[::1]:4200/test"},
+			true,
+		},
+		{
+			"localhost with port ok",
+			args{url: "http://localhost:4200/test"},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, got := op.LoopbackOrLocalhost(tt.args.url); got != tt.want {
+				t.Errorf("loopbackOrLocalhost() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
