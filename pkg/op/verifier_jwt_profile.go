@@ -23,6 +23,7 @@ type jwtProfileVerifier struct {
 	offset    time.Duration
 }
 
+//NewJWTProfileVerifier creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
 func NewJWTProfileVerifier(storage Storage, issuer string, maxAgeIAT, offset time.Duration) JWTProfileVerifier {
 	return &jwtProfileVerifier{
 		storage:   storage,
@@ -48,6 +49,9 @@ func (v *jwtProfileVerifier) Offset() time.Duration {
 	return v.offset
 }
 
+//VerifyJWTAssertion verifies the assertion string from JWT Profile (authorization grant and client authentication)
+//
+//checks audience, exp, iat, signature and that issuer and sub are the same
 func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
 	request := new(oidc.JWTTokenRequest)
 	payload, err := oidc.ParseToken(assertion, request)
@@ -85,6 +89,7 @@ type jwtProfileKeySet struct {
 	userID string
 }
 
+//VerifySignature implements oidc.KeySet by getting the public key from Storage implementation
 func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
 	keyID := ""
 	for _, sig := range jws.Signatures {

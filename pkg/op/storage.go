@@ -17,6 +17,8 @@ type AuthStorage interface {
 	DeleteAuthRequest(context.Context, string) error
 
 	CreateToken(context.Context, TokenRequest) (string, time.Time, error)
+	CreateTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error)
+	RefreshTokenRequestByRefreshToken(context.Context, string) (RefreshTokenRequest, error)
 
 	TerminateSession(context.Context, string, string) error
 

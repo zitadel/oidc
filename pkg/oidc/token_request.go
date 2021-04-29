@@ -10,6 +10,9 @@ const (
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
 	GrantTypeCode GrantType = "authorization_code"
 
+	//GrantTypeCode defines the grant_type `refresh_token` used for the Token Request in the Refresh Token Flow
+	GrantTypeRefreshToken GrantType = "refresh_token"
+
 	//GrantTypeBearer defines the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
 	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
@@ -42,6 +45,39 @@ type AccessTokenRequest struct {
 
 func (a *AccessTokenRequest) GrantType() GrantType {
 	return GrantTypeCode
+}
+
+//SetClientID implements op.AuthenticatedTokenRequest
+func (a *AccessTokenRequest) SetClientID(clientID string) {
+	a.ClientID = clientID
+}
+
+//SetClientSecret implements op.AuthenticatedTokenRequest
+func (a *AccessTokenRequest) SetClientSecret(clientSecret string) {
+	a.ClientSecret = clientSecret
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken        string `schema:"refresh_token"`
+	Scopes              Scopes `schema:"scope"`
+	ClientID            string `schema:"client_id"`
+	ClientSecret        string `schema:"client_secret"`
+	ClientAssertion     string `schema:"client_assertion"`
+	ClientAssertionType string `schema:"client_assertion_type"`
+}
+
+func (a *RefreshTokenRequest) GrantType() GrantType {
+	return GrantTypeRefreshToken
+}
+
+//SetClientID implements op.AuthenticatedTokenRequest
+func (a *RefreshTokenRequest) SetClientID(clientID string) {
+	a.ClientID = clientID
+}
+
+//SetClientSecret implements op.AuthenticatedTokenRequest
+func (a *RefreshTokenRequest) SetClientSecret(clientSecret string) {
+	a.ClientSecret = clientSecret
 }
 
 type JWTTokenRequest struct {

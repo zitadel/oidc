@@ -154,6 +154,12 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 func (s *AuthStorage) CreateToken(_ context.Context, authReq op.TokenRequest) (string, time.Time, error) {
 	return "id", time.Now().UTC().Add(5 * time.Minute), nil
 }
+func (s *AuthStorage) AuthRequestByRefreshToken(_ context.Context, token string) (op.AuthRequest, error) {
+	if token != c {
+		return nil, errors.New("invalid token")
+	}
+	return a, nil
+}
 func (s *AuthStorage) TerminateSession(_ context.Context, userID, clientID string) error {
 	return nil
 }
