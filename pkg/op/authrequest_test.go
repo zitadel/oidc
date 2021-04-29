@@ -316,16 +316,16 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			false,
 		},
 		{
-			"code flow registered http not confidential (user agent) fails",
+			"code flow registered http not confidential (native) fails",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
 		{
-			"code flow registered http not confidential (native) fails",
+			"code flow registered http not confidential (user agent) fails",
 			args{"http://registered.com/callback",
-				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeNative, nil, false),
+				mock.NewClientWithConfig(t, []string{"http://registered.com/callback"}, op.ApplicationTypeUserAgent, nil, false),
 				oidc.ResponseTypeCode},
 			true,
 		},
@@ -344,7 +344,7 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			false,
 		},
 		{
-			"code flow registered http localhost native ok",
+			"code flow registered http loopback v6 native ok",
 			args{"http://[::1]:4200/callback",
 				mock.NewClientWithConfig(t, []string{"http://[::1]/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeCode},
@@ -419,6 +419,13 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeIDToken},
 			false,
+		},
+		{
+			"implicit flow registered http localhost web fails",
+			args{"http://localhost:9999/callback",
+				mock.NewClientWithConfig(t, []string{"http://localhost:9999/callback"}, op.ApplicationTypeWeb, nil, false),
+				oidc.ResponseTypeIDToken},
+			true,
 		},
 		{
 			"implicit flow registered http localhost user agent fails",
@@ -581,8 +588,13 @@ func Test_LoopbackOrLocalhost(t *testing.T) {
 			true,
 		},
 		{
-			"v6 no port ok",
+			"v6 short no port ok",
 			args{url: "http://[::1]/test"},
+			true,
+		},
+		{
+			"v6 long no port ok",
+			args{url: "http://[0:0:0:0:0:0:0:1]/test"},
 			true,
 		},
 		{
@@ -596,8 +608,13 @@ func Test_LoopbackOrLocalhost(t *testing.T) {
 			true,
 		},
 		{
-			"v6 with port ok",
+			"v6 short with port ok",
 			args{url: "http://[::1]:4200/test"},
+			true,
+		},
+		{
+			"v6 long with port ok",
+			args{url: "http://[0:0:0:0:0:0:0:1]:4200/test"},
 			true,
 		},
 		{
@@ -608,7 +625,7 @@ func Test_LoopbackOrLocalhost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, got := op.LoopbackOrLocalhost(tt.args.url); got != tt.want {
+			if _, got := op.HTTPLoopbackOrLocalhost(tt.args.url); got != tt.want {
 				t.Errorf("loopbackOrLocalhost() = %v, want %v", got, tt.want)
 			}
 		})

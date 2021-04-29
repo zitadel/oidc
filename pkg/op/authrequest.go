@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -184,7 +185,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 
 //ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
 func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
-	parsedURL, isLoopback := LoopbackOrLocalhost(uri)
+	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
 	if utils.Contains(client.RedirectURIs(), uri) {
 		if isLoopback || isCustomSchema {
@@ -196,7 +197,7 @@ func validateAuthReqRedirectURINative(client Client, uri string, responseType oi
 		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
 	}
 	for _, uri := range client.RedirectURIs() {
-		redirectURI, ok := LoopbackOrLocalhost(uri)
+		redirectURI, ok := HTTPLoopbackOrLocalhost(uri)
 		if ok && equalURI(parsedURL, redirectURI) {
 			return nil
 		}
@@ -208,16 +209,16 @@ func equalURI(url1, url2 *url.URL) bool {
 	return url1.Path == url2.Path && url1.RawQuery == url2.RawQuery
 }
 
-func LoopbackOrLocalhost(rawurl string) (*url.URL, bool) {
+func HTTPLoopbackOrLocalhost(rawurl string) (*url.URL, bool) {
 	parsedURL, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, false
 	}
+	if parsedURL.Scheme != "http" {
+		return nil, false
+	}
 	hostName := parsedURL.Hostname()
-	return parsedURL, parsedURL.Scheme == "http" &&
-		hostName == "localhost" ||
-		hostName == "127.0.0.1" ||
-		hostName == "::1"
+	return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 }
 
 //ValidateAuthReqResponseType validates the passed response_type to the registered response types
