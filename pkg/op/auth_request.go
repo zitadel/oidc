@@ -3,7 +3,9 @@ package op
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -157,32 +159,66 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 	if uri == "" {
 		return ErrInvalidRequestRedirectURI("The redirect_uri is missing in the request. Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
+	if strings.HasPrefix(uri, "https://") {
+		if !utils.Contains(client.RedirectURIs(), uri) {
+			return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+		}
+		return nil
+	}
+	if client.ApplicationType() == ApplicationTypeNative {
+		return validateAuthReqRedirectURINative(client, uri, responseType)
+	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
 		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
 	}
-	if client.DevMode() {
-		return nil
-	}
-	if strings.HasPrefix(uri, "https://") {
-		return nil
-	}
-	if responseType == oidc.ResponseTypeCode {
-		if strings.HasPrefix(uri, "http://") && IsConfidentialType(client) {
+	if strings.HasPrefix(uri, "http://") {
+		if client.DevMode() {
 			return nil
 		}
-		if !strings.HasPrefix(uri, "http://") && client.ApplicationType() == ApplicationTypeNative {
+		if responseType == oidc.ResponseTypeCode && IsConfidentialType(client) {
 			return nil
 		}
 		return ErrInvalidRequest("This client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
-	} else {
-		if client.ApplicationType() != ApplicationTypeNative {
-			return ErrInvalidRequestRedirectURI("Http is only allowed for native applications. Please change your redirect uri try again. If you have any questions, you may contact the administrator of the application.")
+	}
+	return ErrInvalidRequest("This client's redirect_uri is using a custom schema and is not allowed. If you have any questions, you may contact the administrator of the application.")
+}
+
+//ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
+func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
+	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
+	isCustomSchema := !strings.HasPrefix(uri, "http://")
+	if utils.Contains(client.RedirectURIs(), uri) {
+		if isLoopback || isCustomSchema {
+			return nil
 		}
-		if !(strings.HasPrefix(uri, "http://localhost:") || strings.HasPrefix(uri, "http://localhost/")) {
-			return ErrInvalidRequestRedirectURI("Http is only allowed for localhost uri. Please change your redirect uri try again. If you have any questions, you may contact the administrator of the application at:")
+		return ErrInvalidRequest("This client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
+	}
+	if !isLoopback {
+		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+	}
+	for _, uri := range client.RedirectURIs() {
+		redirectURI, ok := HTTPLoopbackOrLocalhost(uri)
+		if ok && equalURI(parsedURL, redirectURI) {
+			return nil
 		}
 	}
-	return nil
+	return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+}
+
+func equalURI(url1, url2 *url.URL) bool {
+	return url1.Path == url2.Path && url1.RawQuery == url2.RawQuery
+}
+
+func HTTPLoopbackOrLocalhost(rawurl string) (*url.URL, bool) {
+	parsedURL, err := url.Parse(rawurl)
+	if err != nil {
+		return nil, false
+	}
+	if parsedURL.Scheme != "http" {
+		return nil, false
+	}
+	hostName := parsedURL.Hostname()
+	return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 }
 
 //ValidateAuthReqResponseType validates the passed response_type to the registered response types
