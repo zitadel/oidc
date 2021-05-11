@@ -54,7 +54,7 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 		return nil, nil, ErrInvalidRequest("invalid auth code")
 	}
 	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
-		return nil, nil, ErrInvalidRequest("redirect_uri does no correspond")
+		return nil, nil, ErrInvalidRequest("redirect_uri does not correspond")
 	}
 	return authReq, client, nil
 }
