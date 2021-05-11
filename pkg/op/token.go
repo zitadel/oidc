@@ -55,9 +55,9 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 
 func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string) (id, newRefreshToken string, exp time.Time, err error) {
 	if needsRefreshToken(tokenRequest) {
-		return storage.CreateTokens(ctx, tokenRequest, refreshToken)
+		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}
-	id, exp, err = storage.CreateToken(ctx, tokenRequest)
+	id, exp, err = storage.CreateAccessToken(ctx, tokenRequest)
 	return
 }
 

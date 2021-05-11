@@ -95,6 +95,8 @@ func (a *AuthRequest) GetScopes() []string {
 	}
 }
 
+func (a *AuthRequest) SetCurrentScopes(scopes oidc.Scopes) {}
+
 func (a *AuthRequest) GetState() string {
 	return ""
 }
@@ -151,15 +153,19 @@ func (s *AuthStorage) AuthRequestByID(_ context.Context, id string) (op.AuthRequ
 	}
 	return a, nil
 }
-func (s *AuthStorage) CreateToken(_ context.Context, authReq op.TokenRequest) (string, time.Time, error) {
+func (s *AuthStorage) CreateAccessToken(ctx context.Context, request op.TokenRequest) (string, time.Time, error) {
 	return "id", time.Now().UTC().Add(5 * time.Minute), nil
 }
-func (s *AuthStorage) AuthRequestByRefreshToken(_ context.Context, token string) (op.AuthRequest, error) {
-	if token != c {
+func (s *AuthStorage) CreateAccessAndRefreshTokens(ctx context.Context, request op.TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
+	return "id", "refreshToken", time.Now().UTC().Add(5 * time.Minute), nil
+}
+func (s *AuthStorage) TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (op.RefreshTokenRequest, error) {
+	if refreshToken != c {
 		return nil, errors.New("invalid token")
 	}
 	return a, nil
 }
+
 func (s *AuthStorage) TerminateSession(_ context.Context, userID, clientID string) error {
 	return nil
 }

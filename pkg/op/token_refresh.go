@@ -122,7 +122,7 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 //RefreshTokenRequestByRefreshToken returns the RefreshTokenRequest (data representing the original auth request)
 //corresponding to the refresh_token from Storage or an error
 func RefreshTokenRequestByRefreshToken(ctx context.Context, storage Storage, refreshToken string) (RefreshTokenRequest, error) {
-	request, err := storage.RefreshTokenRequestByRefreshToken(ctx, refreshToken)
+	request, err := storage.TokenRequestByRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid refreshToken")
 	}

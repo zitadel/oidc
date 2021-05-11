@@ -55,7 +55,7 @@ func ParseJWTProfileGrantRequest(r *http.Request, decoder utils.Decoder) (*oidc.
 
 //CreateJWTTokenResponse creates
 func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
-	id, exp, err := creator.Storage().CreateToken(ctx, tokenRequest)
+	id, exp, err := creator.Storage().CreateAccessToken(ctx, tokenRequest)
 	if err != nil {
 		return nil, err
 	}

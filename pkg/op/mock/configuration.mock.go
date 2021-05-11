@@ -5,35 +5,36 @@
 package mock
 
 import (
+	reflect "reflect"
+
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockConfiguration is a mock of Configuration interface
+// MockConfiguration is a mock of Configuration interface.
 type MockConfiguration struct {
 	ctrl     *gomock.Controller
 	recorder *MockConfigurationMockRecorder
 }
 
-// MockConfigurationMockRecorder is the mock recorder for MockConfiguration
+// MockConfigurationMockRecorder is the mock recorder for MockConfiguration.
 type MockConfigurationMockRecorder struct {
 	mock *MockConfiguration
 }
 
-// NewMockConfiguration creates a new mock instance
+// NewMockConfiguration creates a new mock instance.
 func NewMockConfiguration(ctrl *gomock.Controller) *MockConfiguration {
 	mock := &MockConfiguration{ctrl: ctrl}
 	mock.recorder = &MockConfigurationMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockConfiguration) EXPECT() *MockConfigurationMockRecorder {
 	return m.recorder
 }
 
-// AuthMethodPostSupported mocks base method
+// AuthMethodPostSupported mocks base method.
 func (m *MockConfiguration) AuthMethodPostSupported() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthMethodPostSupported")
@@ -41,13 +42,13 @@ func (m *MockConfiguration) AuthMethodPostSupported() bool {
 	return ret0
 }
 
-// AuthMethodPostSupported indicates an expected call of AuthMethodPostSupported
+// AuthMethodPostSupported indicates an expected call of AuthMethodPostSupported.
 func (mr *MockConfigurationMockRecorder) AuthMethodPostSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethodPostSupported", reflect.TypeOf((*MockConfiguration)(nil).AuthMethodPostSupported))
 }
 
-// AuthMethodPrivateKeyJWTSupported mocks base method
+// AuthMethodPrivateKeyJWTSupported mocks base method.
 func (m *MockConfiguration) AuthMethodPrivateKeyJWTSupported() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthMethodPrivateKeyJWTSupported")
@@ -55,13 +56,13 @@ func (m *MockConfiguration) AuthMethodPrivateKeyJWTSupported() bool {
 	return ret0
 }
 
-// AuthMethodPrivateKeyJWTSupported indicates an expected call of AuthMethodPrivateKeyJWTSupported
+// AuthMethodPrivateKeyJWTSupported indicates an expected call of AuthMethodPrivateKeyJWTSupported.
 func (mr *MockConfigurationMockRecorder) AuthMethodPrivateKeyJWTSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthMethodPrivateKeyJWTSupported", reflect.TypeOf((*MockConfiguration)(nil).AuthMethodPrivateKeyJWTSupported))
 }
 
-// AuthorizationEndpoint mocks base method
+// AuthorizationEndpoint mocks base method.
 func (m *MockConfiguration) AuthorizationEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AuthorizationEndpoint")
@@ -69,13 +70,13 @@ func (m *MockConfiguration) AuthorizationEndpoint() op.Endpoint {
 	return ret0
 }
 
-// AuthorizationEndpoint indicates an expected call of AuthorizationEndpoint
+// AuthorizationEndpoint indicates an expected call of AuthorizationEndpoint.
 func (mr *MockConfigurationMockRecorder) AuthorizationEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).AuthorizationEndpoint))
 }
 
-// CodeMethodS256Supported mocks base method
+// CodeMethodS256Supported mocks base method.
 func (m *MockConfiguration) CodeMethodS256Supported() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CodeMethodS256Supported")
@@ -83,13 +84,13 @@ func (m *MockConfiguration) CodeMethodS256Supported() bool {
 	return ret0
 }
 
-// CodeMethodS256Supported indicates an expected call of CodeMethodS256Supported
+// CodeMethodS256Supported indicates an expected call of CodeMethodS256Supported.
 func (mr *MockConfigurationMockRecorder) CodeMethodS256Supported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeMethodS256Supported", reflect.TypeOf((*MockConfiguration)(nil).CodeMethodS256Supported))
 }
 
-// EndSessionEndpoint mocks base method
+// EndSessionEndpoint mocks base method.
 func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndSessionEndpoint")
@@ -97,13 +98,13 @@ func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 	return ret0
 }
 
-// EndSessionEndpoint indicates an expected call of EndSessionEndpoint
+// EndSessionEndpoint indicates an expected call of EndSessionEndpoint.
 func (mr *MockConfigurationMockRecorder) EndSessionEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSessionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).EndSessionEndpoint))
 }
 
-// GrantTypeJWTAuthorizationSupported mocks base method
+// GrantTypeJWTAuthorizationSupported mocks base method.
 func (m *MockConfiguration) GrantTypeJWTAuthorizationSupported() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GrantTypeJWTAuthorizationSupported")
@@ -111,13 +112,13 @@ func (m *MockConfiguration) GrantTypeJWTAuthorizationSupported() bool {
 	return ret0
 }
 
-// GrantTypeJWTAuthorizationSupported indicates an expected call of GrantTypeJWTAuthorizationSupported
+// GrantTypeJWTAuthorizationSupported indicates an expected call of GrantTypeJWTAuthorizationSupported.
 func (mr *MockConfigurationMockRecorder) GrantTypeJWTAuthorizationSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeJWTAuthorizationSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeJWTAuthorizationSupported))
 }
 
-// GrantTypeTokenExchangeSupported mocks base method
+// GrantTypeTokenExchangeSupported mocks base method.
 func (m *MockConfiguration) GrantTypeTokenExchangeSupported() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GrantTypeTokenExchangeSupported")
@@ -125,13 +126,13 @@ func (m *MockConfiguration) GrantTypeTokenExchangeSupported() bool {
 	return ret0
 }
 
-// GrantTypeTokenExchangeSupported indicates an expected call of GrantTypeTokenExchangeSupported
+// GrantTypeTokenExchangeSupported indicates an expected call of GrantTypeTokenExchangeSupported.
 func (mr *MockConfigurationMockRecorder) GrantTypeTokenExchangeSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeTokenExchangeSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeTokenExchangeSupported))
 }
 
-// IntrospectionEndpoint mocks base method
+// IntrospectionEndpoint mocks base method.
 func (m *MockConfiguration) IntrospectionEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IntrospectionEndpoint")
@@ -139,13 +140,13 @@ func (m *MockConfiguration) IntrospectionEndpoint() op.Endpoint {
 	return ret0
 }
 
-// IntrospectionEndpoint indicates an expected call of IntrospectionEndpoint
+// IntrospectionEndpoint indicates an expected call of IntrospectionEndpoint.
 func (mr *MockConfigurationMockRecorder) IntrospectionEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IntrospectionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).IntrospectionEndpoint))
 }
 
-// Issuer mocks base method
+// Issuer mocks base method.
 func (m *MockConfiguration) Issuer() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Issuer")
@@ -153,13 +154,13 @@ func (m *MockConfiguration) Issuer() string {
 	return ret0
 }
 
-// Issuer indicates an expected call of Issuer
+// Issuer indicates an expected call of Issuer.
 func (mr *MockConfigurationMockRecorder) Issuer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Issuer", reflect.TypeOf((*MockConfiguration)(nil).Issuer))
 }
 
-// KeysEndpoint mocks base method
+// KeysEndpoint mocks base method.
 func (m *MockConfiguration) KeysEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KeysEndpoint")
@@ -167,13 +168,13 @@ func (m *MockConfiguration) KeysEndpoint() op.Endpoint {
 	return ret0
 }
 
-// KeysEndpoint indicates an expected call of KeysEndpoint
+// KeysEndpoint indicates an expected call of KeysEndpoint.
 func (mr *MockConfigurationMockRecorder) KeysEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeysEndpoint", reflect.TypeOf((*MockConfiguration)(nil).KeysEndpoint))
 }
 
-// TokenEndpoint mocks base method
+// TokenEndpoint mocks base method.
 func (m *MockConfiguration) TokenEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TokenEndpoint")
@@ -181,13 +182,13 @@ func (m *MockConfiguration) TokenEndpoint() op.Endpoint {
 	return ret0
 }
 
-// TokenEndpoint indicates an expected call of TokenEndpoint
+// TokenEndpoint indicates an expected call of TokenEndpoint.
 func (mr *MockConfigurationMockRecorder) TokenEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenEndpoint", reflect.TypeOf((*MockConfiguration)(nil).TokenEndpoint))
 }
 
-// UserinfoEndpoint mocks base method
+// UserinfoEndpoint mocks base method.
 func (m *MockConfiguration) UserinfoEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UserinfoEndpoint")
@@ -195,7 +196,7 @@ func (m *MockConfiguration) UserinfoEndpoint() op.Endpoint {
 	return ret0
 }
 
-// UserinfoEndpoint indicates an expected call of UserinfoEndpoint
+// UserinfoEndpoint indicates an expected call of UserinfoEndpoint.
 func (mr *MockConfigurationMockRecorder) UserinfoEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserinfoEndpoint", reflect.TypeOf((*MockConfiguration)(nil).UserinfoEndpoint))
