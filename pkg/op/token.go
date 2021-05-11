@@ -21,12 +21,12 @@ type TokenRequest interface {
 	GetScopes() []string
 }
 
-func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code string) (*oidc.AccessTokenResponse, error) {
-	var accessToken, refreshToken string
+func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
+	var accessToken, newRefreshToken string
 	var validity time.Duration
 	if createAccessToken {
 		var err error
-		accessToken, refreshToken, validity, err = CreateAccessToken(ctx, request, client.AccessTokenType(), creator, client)
+		accessToken, newRefreshToken, validity, err = CreateAccessToken(ctx, request, client.AccessTokenType(), creator, client, refreshToken)
 		if err != nil {
 			return nil, err
 		}
@@ -47,18 +47,18 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 	return &oidc.AccessTokenResponse{
 		AccessToken:  accessToken,
 		IDToken:      idToken,
-		RefreshToken: refreshToken,
+		RefreshToken: newRefreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    exp,
 	}, nil
 }
 
-func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage) (id, refreshToken string, exp time.Time, err error) {
+func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string) (id, newRefreshToken string, exp time.Time, err error) {
 	if needsRefreshToken(tokenRequest) {
-		id, exp, err = storage.CreateToken(ctx, tokenRequest)
-		return
+		return storage.CreateTokens(ctx, tokenRequest, refreshToken)
 	}
-	return storage.CreateTokens(ctx, tokenRequest, "hodor")
+	id, exp, err = storage.CreateToken(ctx, tokenRequest)
+	return
 }
 
 func needsRefreshToken(tokenRequest TokenRequest) bool {
@@ -72,8 +72,8 @@ func needsRefreshToken(tokenRequest TokenRequest) bool {
 	}
 }
 
-func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client) (accessToken, refreshToken string, validity time.Duration, err error) {
-	id, refreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage())
+func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
+	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken)
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -108,8 +108,7 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 }
 
 type IDTokenRequest interface {
-	//GetACR() string
-	//GetAMR() []string
+	GetAMR() []string
 	GetAudience() []string
 	GetAuthTime() time.Time
 	GetClientID() string
@@ -120,13 +119,11 @@ type IDTokenRequest interface {
 func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, client Client) (string, error) {
 	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
 	var acr, nonce string
-	var amr []string
 	if authRequest, ok := request.(AuthRequest); ok {
 		acr = authRequest.GetACR()
-		amr = authRequest.GetAMR()
 		nonce = authRequest.GetNonce()
 	}
-	claims := oidc.NewIDTokenClaims(issuer, request.GetSubject(), request.GetAudience(), exp, request.GetAuthTime(), nonce, acr, amr, request.GetClientID(), client.ClockSkew())
+	claims := oidc.NewIDTokenClaims(issuer, request.GetSubject(), request.GetAudience(), exp, request.GetAuthTime(), nonce, acr, request.GetAMR(), request.GetClientID(), client.ClockSkew())
 	scopes := client.RestrictAdditionalIdTokenScopes()(request.GetScopes())
 	if accessToken != "" {
 		atHash, err := oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())

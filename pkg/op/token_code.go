@@ -25,7 +25,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err)
 		return
 	}
-	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code)
+	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code, "")
 	if err != nil {
 		RequestError(w, r, err)
 		return

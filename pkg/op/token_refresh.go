@@ -11,15 +11,13 @@ import (
 )
 
 type RefreshTokenRequest interface {
-	//GetID() string
-	//GetACR() string
-	//GetAMR() []string
+	GetAMR() []string
 	GetAudience() []string
 	GetAuthTime() time.Time
 	GetClientID() string
 	GetScopes() []string
 	GetSubject() string
-	//GetRefreshToken() string
+	SetCurrentScopes(scopes oidc.Scopes)
 }
 
 //RefreshTokenExchange handles the OAuth 2.0 refresh_token grant, including
@@ -29,12 +27,12 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 	if err != nil {
 		RequestError(w, r, err)
 	}
-	authReq, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
+	validatedRequest, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
 		RequestError(w, r, err)
 		return
 	}
-	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, "")
+	resp, err := CreateTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
 	if err != nil {
 		RequestError(w, r, err)
 		return
@@ -58,14 +56,33 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 	if tokenReq.RefreshToken == "" {
 		return nil, nil, ErrInvalidRequest("code missing")
 	}
-	authReq, client, err := AuthorizeRefreshClient(ctx, tokenReq, exchanger)
+	request, client, err := AuthorizeRefreshClient(ctx, tokenReq, exchanger)
 	if err != nil {
 		return nil, nil, err
 	}
-	if client.GetID() != authReq.GetClientID() {
+	if client.GetID() != request.GetClientID() {
 		return nil, nil, ErrInvalidRequest("invalid auth code")
 	}
-	return authReq, client, nil
+	if err = ValidateRefreshTokenScopes(tokenReq.Scopes, request); err != nil {
+		return nil, nil, err
+	}
+	return request, client, nil
+}
+
+//ValidateRefreshTokenScopes validates that requested scope is a subset of the original auth request scope
+//it will set the requested scopes as current scopes onto RefreshTokenRequest
+//if empty the original scopes will be used
+func ValidateRefreshTokenScopes(requestedScopes oidc.Scopes, authRequest RefreshTokenRequest) error {
+	if len(requestedScopes) == 0 {
+		return nil
+	}
+	for _, scope := range requestedScopes {
+		if !utils.Contains(authRequest.GetScopes(), scope) {
+			return errors.New("invalid_scope")
+		}
+	}
+	authRequest.SetCurrentScopes(requestedScopes)
+	return nil
 }
 
 //AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
@@ -105,9 +122,9 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 //RefreshTokenRequestByRefreshToken returns the RefreshTokenRequest (data representing the original auth request)
 //corresponding to the refresh_token from Storage or an error
 func RefreshTokenRequestByRefreshToken(ctx context.Context, storage Storage, refreshToken string) (RefreshTokenRequest, error) {
-	authReq, err := storage.RefreshTokenRequestByRefreshToken(ctx, refreshToken)
+	request, err := storage.RefreshTokenRequestByRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, ErrInvalidRequest("invalid refreshToken")
 	}
-	return authReq, nil
+	return request, nil
 }
