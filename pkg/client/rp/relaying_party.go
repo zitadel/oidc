@@ -165,7 +165,6 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			return nil, err
 		}
 	}
-
 	endpoints, err := Discover(rp.issuer, rp.httpClient)
 	if err != nil {
 		return nil, err

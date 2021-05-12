@@ -91,7 +91,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req.GetID(), client, w, r)
 }
 
-//ParseAuthorizeRequest parsed the http request into a AuthRequest
+//ParseAuthorizeRequest parsed the http request into a oidc.AuthRequest
 func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
@@ -299,7 +299,7 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 //AuthResponseToken creates the successful token(s) authentication response
 func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
 	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
-	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "")
+	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "", "")
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
@@ -325,6 +325,7 @@ func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Sto
 	return code, nil
 }
 
+//BuildAuthRequestCode builds the string representation of the auth code
 func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 	return crypto.Encrypt(authReq.GetID())
 }

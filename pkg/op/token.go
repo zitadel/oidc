@@ -21,53 +21,61 @@ type TokenRequest interface {
 	GetScopes() []string
 }
 
-func CreateTokenResponse(ctx context.Context, authReq AuthRequest, client Client, creator TokenCreator, createAccessToken bool, code string) (*oidc.AccessTokenResponse, error) {
-	var accessToken string
+func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
+	var accessToken, newRefreshToken string
 	var validity time.Duration
 	if createAccessToken {
 		var err error
-		accessToken, validity, err = CreateAccessToken(ctx, authReq, client.AccessTokenType(), creator, client)
+		accessToken, newRefreshToken, validity, err = CreateAccessToken(ctx, request, client.AccessTokenType(), creator, client, refreshToken)
 		if err != nil {
 			return nil, err
 		}
 	}
-	idToken, err := CreateIDToken(ctx, creator.Issuer(), authReq, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client)
+	idToken, err := CreateIDToken(ctx, creator.Issuer(), request, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client)
 	if err != nil {
 		return nil, err
 	}
 
-	err = creator.Storage().DeleteAuthRequest(ctx, authReq.GetID())
-	if err != nil {
-		return nil, err
-	}
-
-	exp := uint64(validity.Seconds())
-	return &oidc.AccessTokenResponse{
-		AccessToken: accessToken,
-		IDToken:     idToken,
-		TokenType:   oidc.BearerToken,
-		ExpiresIn:   exp,
-	}, nil
-}
-
-func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
-	accessToken, validity, err := CreateAccessToken(ctx, tokenRequest, AccessTokenTypeBearer, creator, nil)
-	if err != nil {
-		return nil, err
+	if authRequest, ok := request.(AuthRequest); ok {
+		err = creator.Storage().DeleteAuthRequest(ctx, authRequest.GetID())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	exp := uint64(validity.Seconds())
 	return &oidc.AccessTokenResponse{
-		AccessToken: accessToken,
-		TokenType:   oidc.BearerToken,
-		ExpiresIn:   exp,
+		AccessToken:  accessToken,
+		IDToken:      idToken,
+		RefreshToken: newRefreshToken,
+		TokenType:    oidc.BearerToken,
+		ExpiresIn:    exp,
 	}, nil
 }
 
-func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client) (token string, validity time.Duration, err error) {
-	id, exp, err := creator.Storage().CreateToken(ctx, tokenRequest)
+func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string) (id, newRefreshToken string, exp time.Time, err error) {
+	if needsRefreshToken(tokenRequest) {
+		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
+	}
+	id, exp, err = storage.CreateAccessToken(ctx, tokenRequest)
+	return
+}
+
+func needsRefreshToken(tokenRequest TokenRequest) bool {
+	switch req := tokenRequest.(type) {
+	case AuthRequest:
+		return utils.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode
+	case RefreshTokenRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
+	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken)
 	if err != nil {
-		return "", 0, err
+		return "", "", 0, err
 	}
 	var clockSkew time.Duration
 	if client != nil {
@@ -75,10 +83,10 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	}
 	validity = exp.Add(clockSkew).Sub(time.Now().UTC())
 	if accessTokenType == AccessTokenTypeJWT {
-		token, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
+		accessToken, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
 		return
 	}
-	token, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
+	accessToken, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
 	return
 }
 
@@ -99,10 +107,24 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	return utils.Sign(claims, signer.Signer())
 }
 
-func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, client Client) (string, error) {
+type IDTokenRequest interface {
+	GetAMR() []string
+	GetAudience() []string
+	GetAuthTime() time.Time
+	GetClientID() string
+	GetScopes() []string
+	GetSubject() string
+}
+
+func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, client Client) (string, error) {
 	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
-	claims := oidc.NewIDTokenClaims(issuer, authReq.GetSubject(), authReq.GetAudience(), exp, authReq.GetAuthTime(), authReq.GetNonce(), authReq.GetACR(), authReq.GetAMR(), authReq.GetClientID(), client.ClockSkew())
-	scopes := client.RestrictAdditionalIdTokenScopes()(authReq.GetScopes())
+	var acr, nonce string
+	if authRequest, ok := request.(AuthRequest); ok {
+		acr = authRequest.GetACR()
+		nonce = authRequest.GetNonce()
+	}
+	claims := oidc.NewIDTokenClaims(issuer, request.GetSubject(), request.GetAudience(), exp, request.GetAuthTime(), nonce, acr, request.GetAMR(), request.GetClientID(), client.ClockSkew())
+	scopes := client.RestrictAdditionalIdTokenScopes()(request.GetScopes())
 	if accessToken != "" {
 		atHash, err := oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
 		if err != nil {
@@ -115,7 +137,7 @@ func CreateIDToken(ctx context.Context, issuer string, authReq AuthRequest, vali
 	}
 	if len(scopes) > 0 {
 		userInfo := oidc.NewUserInfo()
-		err := storage.SetUserinfoFromScopes(ctx, userInfo, authReq.GetSubject(), authReq.GetClientID(), scopes)
+		err := storage.SetUserinfoFromScopes(ctx, userInfo, request.GetSubject(), request.GetClientID(), scopes)
 		if err != nil {
 			return "", err
 		}

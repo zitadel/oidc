@@ -5,36 +5,37 @@
 package mock
 
 import (
+	reflect "reflect"
+
 	op "github.com/caos/oidc/pkg/op"
 	utils "github.com/caos/oidc/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockAuthorizer is a mock of Authorizer interface
+// MockAuthorizer is a mock of Authorizer interface.
 type MockAuthorizer struct {
 	ctrl     *gomock.Controller
 	recorder *MockAuthorizerMockRecorder
 }
 
-// MockAuthorizerMockRecorder is the mock recorder for MockAuthorizer
+// MockAuthorizerMockRecorder is the mock recorder for MockAuthorizer.
 type MockAuthorizerMockRecorder struct {
 	mock *MockAuthorizer
 }
 
-// NewMockAuthorizer creates a new mock instance
+// NewMockAuthorizer creates a new mock instance.
 func NewMockAuthorizer(ctrl *gomock.Controller) *MockAuthorizer {
 	mock := &MockAuthorizer{ctrl: ctrl}
 	mock.recorder = &MockAuthorizerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAuthorizer) EXPECT() *MockAuthorizerMockRecorder {
 	return m.recorder
 }
 
-// Crypto mocks base method
+// Crypto mocks base method.
 func (m *MockAuthorizer) Crypto() op.Crypto {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Crypto")
@@ -42,13 +43,13 @@ func (m *MockAuthorizer) Crypto() op.Crypto {
 	return ret0
 }
 
-// Crypto indicates an expected call of Crypto
+// Crypto indicates an expected call of Crypto.
 func (mr *MockAuthorizerMockRecorder) Crypto() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Crypto", reflect.TypeOf((*MockAuthorizer)(nil).Crypto))
 }
 
-// Decoder mocks base method
+// Decoder mocks base method.
 func (m *MockAuthorizer) Decoder() utils.Decoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Decoder")
@@ -56,13 +57,13 @@ func (m *MockAuthorizer) Decoder() utils.Decoder {
 	return ret0
 }
 
-// Decoder indicates an expected call of Decoder
+// Decoder indicates an expected call of Decoder.
 func (mr *MockAuthorizerMockRecorder) Decoder() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Decoder", reflect.TypeOf((*MockAuthorizer)(nil).Decoder))
 }
 
-// Encoder mocks base method
+// Encoder mocks base method.
 func (m *MockAuthorizer) Encoder() utils.Encoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Encoder")
@@ -70,13 +71,13 @@ func (m *MockAuthorizer) Encoder() utils.Encoder {
 	return ret0
 }
 
-// Encoder indicates an expected call of Encoder
+// Encoder indicates an expected call of Encoder.
 func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encoder", reflect.TypeOf((*MockAuthorizer)(nil).Encoder))
 }
 
-// IDTokenHintVerifier mocks base method
+// IDTokenHintVerifier mocks base method.
 func (m *MockAuthorizer) IDTokenHintVerifier() op.IDTokenHintVerifier {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IDTokenHintVerifier")
@@ -84,13 +85,13 @@ func (m *MockAuthorizer) IDTokenHintVerifier() op.IDTokenHintVerifier {
 	return ret0
 }
 
-// IDTokenHintVerifier indicates an expected call of IDTokenHintVerifier
+// IDTokenHintVerifier indicates an expected call of IDTokenHintVerifier.
 func (mr *MockAuthorizerMockRecorder) IDTokenHintVerifier() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenHintVerifier", reflect.TypeOf((*MockAuthorizer)(nil).IDTokenHintVerifier))
 }
 
-// Issuer mocks base method
+// Issuer mocks base method.
 func (m *MockAuthorizer) Issuer() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Issuer")
@@ -98,13 +99,13 @@ func (m *MockAuthorizer) Issuer() string {
 	return ret0
 }
 
-// Issuer indicates an expected call of Issuer
+// Issuer indicates an expected call of Issuer.
 func (mr *MockAuthorizerMockRecorder) Issuer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Issuer", reflect.TypeOf((*MockAuthorizer)(nil).Issuer))
 }
 
-// Signer mocks base method
+// Signer mocks base method.
 func (m *MockAuthorizer) Signer() op.Signer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Signer")
@@ -112,13 +113,13 @@ func (m *MockAuthorizer) Signer() op.Signer {
 	return ret0
 }
 
-// Signer indicates an expected call of Signer
+// Signer indicates an expected call of Signer.
 func (mr *MockAuthorizerMockRecorder) Signer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signer", reflect.TypeOf((*MockAuthorizer)(nil).Signer))
 }
 
-// Storage mocks base method
+// Storage mocks base method.
 func (m *MockAuthorizer) Storage() op.Storage {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Storage")
@@ -126,7 +127,7 @@ func (m *MockAuthorizer) Storage() op.Storage {
 	return ret0
 }
 
-// Storage indicates an expected call of Storage
+// Storage indicates an expected call of Storage.
 func (mr *MockAuthorizerMockRecorder) Storage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockAuthorizer)(nil).Storage))
