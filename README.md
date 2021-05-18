@@ -21,10 +21,10 @@ TBD
 
 ## Features
 
-|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile |
-|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|
-| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet | yes         |
-| Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         |
+|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
+|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
+| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet | yes         | yes           |
+| Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
 
