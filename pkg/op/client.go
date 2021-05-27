@@ -30,6 +30,7 @@ type Client interface {
 	ApplicationType() ApplicationType
 	AuthMethod() oidc.AuthMethod
 	ResponseTypes() []oidc.ResponseType
+	GrantTypes() []oidc.GrantType
 	LoginURL(string) string
 	AccessTokenType() AccessTokenType
 	IDTokenLifetime() time.Duration

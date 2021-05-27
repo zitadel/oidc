@@ -17,6 +17,7 @@ type Exchanger interface {
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
+	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 }
@@ -28,8 +29,10 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 			CodeExchange(w, r, exchanger)
 			return
 		case string(oidc.GrantTypeRefreshToken):
-			RefreshTokenExchange(w, r, exchanger)
-			return
+			if exchanger.GrantTypeRefreshTokenSupported() {
+				RefreshTokenExchange(w, r, exchanger)
+				return
+			}
 		case string(oidc.GrantTypeBearer):
 			if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
 				JWTProfile(w, r, ex)
@@ -118,4 +121,17 @@ func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchang
 		return nil, ErrInvalidRequest("invalid_client")
 	}
 	return client, nil
+}
+
+//ValidateGrantType ensures that the requested grant_type is allowed by the Client
+func ValidateGrantType(client Client, grantType oidc.GrantType) bool {
+	if client == nil {
+		return false
+	}
+	for _, grant := range client.GrantTypes() {
+		if grantType == grant {
+			return true
+		}
+	}
+	return false
 }

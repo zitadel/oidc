@@ -21,6 +21,7 @@ type Configuration interface {
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
+	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 }

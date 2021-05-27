@@ -118,6 +118,20 @@ func (mr *MockConfigurationMockRecorder) GrantTypeJWTAuthorizationSupported() *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeJWTAuthorizationSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeJWTAuthorizationSupported))
 }
 
+// GrantTypeRefreshTokenSupported mocks base method.
+func (m *MockConfiguration) GrantTypeRefreshTokenSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypeRefreshTokenSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GrantTypeRefreshTokenSupported indicates an expected call of GrantTypeRefreshTokenSupported.
+func (mr *MockConfigurationMockRecorder) GrantTypeRefreshTokenSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeRefreshTokenSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeRefreshTokenSupported))
+}
+
 // GrantTypeTokenExchangeSupported mocks base method.
 func (m *MockConfiguration) GrantTypeTokenExchangeSupported() bool {
 	m.ctrl.T.Helper()

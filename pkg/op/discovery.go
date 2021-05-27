@@ -66,6 +66,9 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 		oidc.GrantTypeCode,
 		oidc.GrantTypeImplicit,
 	}
+	if c.GrantTypeRefreshTokenSupported() {
+		grantTypes = append(grantTypes, oidc.GrantTypeRefreshToken)
+	}
 	if c.GrantTypeTokenExchangeSupported() {
 		grantTypes = append(grantTypes, oidc.GrantTypeTokenExchange)
 	}
