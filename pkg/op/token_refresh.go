@@ -69,7 +69,7 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 	return request, client, nil
 }
 
-//ValidateRefreshTokenScopes validates that requested scope is a subset of the original auth request scope
+//ValidateRefreshTokenScopes validates that the requested scope is a subset of the original auth request scope
 //it will set the requested scopes as current scopes onto RefreshTokenRequest
 //if empty the original scopes will be used
 func ValidateRefreshTokenScopes(requestedScopes oidc.Scopes, authRequest RefreshTokenRequest) error {
@@ -97,12 +97,18 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 		if err != nil {
 			return nil, nil, err
 		}
+		if !ValidateGrantType(client, oidc.GrantTypeRefreshToken) {
+			return nil, nil, ErrInvalidRequest("invalid_grant")
+		}
 		request, err = RefreshTokenRequestByRefreshToken(ctx, exchanger.Storage(), tokenReq.RefreshToken)
 		return request, client, err
 	}
 	client, err = exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
 	if err != nil {
 		return nil, nil, err
+	}
+	if !ValidateGrantType(client, oidc.GrantTypeRefreshToken) {
+		return nil, nil, ErrInvalidRequest("invalid_grant")
 	}
 	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
 		return nil, nil, errors.New("invalid_grant")
