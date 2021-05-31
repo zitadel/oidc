@@ -120,6 +120,20 @@ func (mr *MockClientMockRecorder) GetID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetID", reflect.TypeOf((*MockClient)(nil).GetID))
 }
 
+// GrantTypes mocks base method.
+func (m *MockClient) GrantTypes() []oidc.GrantType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypes")
+	ret0, _ := ret[0].([]oidc.GrantType)
+	return ret0
+}
+
+// GrantTypes indicates an expected call of GrantTypes.
+func (mr *MockClientMockRecorder) GrantTypes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypes", reflect.TypeOf((*MockClient)(nil).GrantTypes))
+}
+
 // IDTokenLifetime mocks base method.
 func (m *MockClient) IDTokenLifetime() time.Duration {
 	m.ctrl.T.Helper()

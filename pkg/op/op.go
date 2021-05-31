@@ -84,6 +84,7 @@ type Config struct {
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
 	AuthMethodPrivateKeyJWT  bool
+	GrantTypeRefreshToken    bool
 }
 
 type endpoints struct {
@@ -187,6 +188,10 @@ func (o *openidProvider) CodeMethodS256Supported() bool {
 
 func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
 	return o.config.AuthMethodPrivateKeyJWT
+}
+
+func (o *openidProvider) GrantTypeRefreshTokenSupported() bool {
+	return o.config.GrantTypeRefreshToken
 }
 
 func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {

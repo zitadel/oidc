@@ -53,18 +53,18 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 	}, nil
 }
 
-func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string) (id, newRefreshToken string, exp time.Time, err error) {
-	if needsRefreshToken(tokenRequest) {
+func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client Client) (id, newRefreshToken string, exp time.Time, err error) {
+	if needsRefreshToken(tokenRequest, client) {
 		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}
 	id, exp, err = storage.CreateAccessToken(ctx, tokenRequest)
 	return
 }
 
-func needsRefreshToken(tokenRequest TokenRequest) bool {
+func needsRefreshToken(tokenRequest TokenRequest, client Client) bool {
 	switch req := tokenRequest.(type) {
 	case AuthRequest:
-		return utils.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode
+		return utils.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
 	case RefreshTokenRequest:
 		return true
 	default:
@@ -73,7 +73,7 @@ func needsRefreshToken(tokenRequest TokenRequest) bool {
 }
 
 func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
-	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken)
+	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
 	if err != nil {
 		return "", "", 0, err
 	}

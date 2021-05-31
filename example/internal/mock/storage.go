@@ -251,6 +251,7 @@ type ConfClient struct {
 	applicationType op.ApplicationType
 	authMethod      oidc.AuthMethod
 	responseTypes   []oidc.ResponseType
+	grantTypes      []oidc.GrantType
 	ID              string
 	accessTokenType op.AccessTokenType
 	devMode         bool
@@ -294,6 +295,9 @@ func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 }
 func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
 	return c.responseTypes
+}
+func (c *ConfClient) GrantTypes() []oidc.GrantType {
+	return c.grantTypes
 }
 
 func (c *ConfClient) DevMode() bool {
