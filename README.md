@@ -7,17 +7,17 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/oidc)](https://goreportcard.com/report/github.com/caos/oidc)
 [![codecov](https://codecov.io/gh/caos/oidc/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/oidc)
 
-> This project is in alpha state. It can AND will continue breaking until version 1.0.0 is released
+> This project is in beta state. It can AND will continue breaking until version 1.0.0 is released
 
 ## What Is It
 
-This project is a easy to use client and server implementation for the `OIDC` (Open ID Connect) standard written for `Go`. 
+This project is a easy to use client and server implementation for the `OIDC` (Open ID Connect) standard written for `Go`.
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
 
 ## How To Use It
 
-TBD
+Check the `/example` folder where example code for different scenarios is located.
 
 ## Features
 
@@ -28,7 +28,7 @@ TBD
 
 ### Resources
 
-For your convinience you can find the relevant standards linked below.
+For your convenience you can find the relevant standards linked below.
 
 - [OpenID Connect Core 1.0 incorporating errata set 1](https://openid.net/specs/openid-connect-core-1_0.html)
 - [Proof Key for Code Exchange by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
@@ -47,7 +47,22 @@ For your convinience you can find the relevant standards linked below.
 
 ## Why another library
 
-As of 2020 there are not a lot of `OIDC` librarys in `Go` which can handle server and client implementations. CAOS is strongly commited to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
+As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. CAOS is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
+
+### Goals
+
+- [Certify this library as RP](https://openid.net/certification/#RPs)
+- [Certify this library as OP](https://openid.net/certification/#OPs)
+
+### Other Go OpenID Connect library's
+
+[https://github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
+
+The `go-oidc` does only support `RP` and is not feasible to use as `OP` that's why we could not rely on `go-oidc`
+
+[https://github.com/ory/fosite](https://github.com/ory/fosite)
+
+We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely in the golang provided package. Nonetheless this is a great project.
 
 ## License
 
