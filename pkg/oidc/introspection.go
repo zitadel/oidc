@@ -21,7 +21,7 @@ type IntrospectionResponse interface {
 	UserInfoSetter
 	SetActive(bool)
 	IsActive() bool
-	SetScopes(scopes Scopes)
+	SetScopes(scopes []string)
 	SetClientID(id string)
 }
 
@@ -30,10 +30,10 @@ func NewIntrospectionResponse() IntrospectionResponse {
 }
 
 type introspectionResponse struct {
-	Active   bool   `json:"active"`
-	Scope    Scopes `json:"scope,omitempty"`
-	ClientID string `json:"client_id,omitempty"`
-	Subject  string `json:"sub,omitempty"`
+	Active   bool                `json:"active"`
+	Scope    SpaceDelimitedArray `json:"scope,omitempty"`
+	ClientID string              `json:"client_id,omitempty"`
+	Subject  string              `json:"sub,omitempty"`
 	userInfoProfile
 	userInfoEmail
 	userInfoPhone
@@ -46,7 +46,7 @@ func (u *introspectionResponse) IsActive() bool {
 	return u.Active
 }
 
-func (u *introspectionResponse) SetScopes(scope Scopes) {
+func (u *introspectionResponse) SetScopes(scope []string) {
 	u.Scope = scope
 }
 

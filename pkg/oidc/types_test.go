@@ -220,7 +220,7 @@ func TestScopes_UnmarshalText(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var scopes Scopes
+			var scopes SpaceDelimitedArray
 			if err := scopes.UnmarshalText(tt.args.text); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -230,7 +230,7 @@ func TestScopes_UnmarshalText(t *testing.T) {
 }
 func TestScopes_MarshalText(t *testing.T) {
 	type args struct {
-		scopes Scopes
+		scopes SpaceDelimitedArray
 	}
 	type res struct {
 		scopes []byte
@@ -244,7 +244,7 @@ func TestScopes_MarshalText(t *testing.T) {
 		{
 			"unknown value",
 			args{
-				Scopes{"unknown"},
+				SpaceDelimitedArray{"unknown"},
 			},
 			res{
 				[]byte("unknown"),
@@ -254,7 +254,7 @@ func TestScopes_MarshalText(t *testing.T) {
 		{
 			"struct",
 			args{
-				Scopes{`{"unknown":"value"}`},
+				SpaceDelimitedArray{`{"unknown":"value"}`},
 			},
 			res{
 				[]byte(`{"unknown":"value"}`),
@@ -264,7 +264,7 @@ func TestScopes_MarshalText(t *testing.T) {
 		{
 			"openid",
 			args{
-				Scopes{"openid"},
+				SpaceDelimitedArray{"openid"},
 			},
 			res{
 				[]byte("openid"),
@@ -274,7 +274,7 @@ func TestScopes_MarshalText(t *testing.T) {
 		{
 			"multiple scopes",
 			args{
-				Scopes{"openid", "email", "custom:scope"},
+				SpaceDelimitedArray{"openid", "email", "custom:scope"},
 			},
 			res{
 				[]byte("openid email custom:scope"),

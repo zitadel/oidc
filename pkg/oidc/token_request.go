@@ -58,12 +58,12 @@ func (a *AccessTokenRequest) SetClientSecret(clientSecret string) {
 }
 
 type RefreshTokenRequest struct {
-	RefreshToken        string `schema:"refresh_token"`
-	Scopes              Scopes `schema:"scope"`
-	ClientID            string `schema:"client_id"`
-	ClientSecret        string `schema:"client_secret"`
-	ClientAssertion     string `schema:"client_assertion"`
-	ClientAssertionType string `schema:"client_assertion_type"`
+	RefreshToken        string              `schema:"refresh_token"`
+	Scopes              SpaceDelimitedArray `schema:"scope"`
+	ClientID            string              `schema:"client_id"`
+	ClientSecret        string              `schema:"client_secret"`
+	ClientAssertion     string              `schema:"client_assertion"`
+	ClientAssertionType string              `schema:"client_assertion_type"`
 }
 
 func (a *RefreshTokenRequest) GrantType() GrantType {
@@ -81,12 +81,12 @@ func (a *RefreshTokenRequest) SetClientSecret(clientSecret string) {
 }
 
 type JWTTokenRequest struct {
-	Issuer    string   `json:"iss"`
-	Subject   string   `json:"sub"`
-	Scopes    Scopes   `json:"-"`
-	Audience  Audience `json:"aud"`
-	IssuedAt  Time     `json:"iat"`
-	ExpiresAt Time     `json:"exp"`
+	Issuer    string              `json:"iss"`
+	Subject   string              `json:"sub"`
+	Scopes    SpaceDelimitedArray `json:"-"`
+	Audience  Audience            `json:"aud"`
+	IssuedAt  Time                `json:"iat"`
+	ExpiresAt Time                `json:"exp"`
 }
 
 //GetIssuer implements the Claims interface
@@ -143,12 +143,12 @@ func (j *JWTTokenRequest) GetScopes() []string {
 }
 
 type TokenExchangeRequest struct {
-	subjectToken       string   `schema:"subject_token"`
-	subjectTokenType   string   `schema:"subject_token_type"`
-	actorToken         string   `schema:"actor_token"`
-	actorTokenType     string   `schema:"actor_token_type"`
-	resource           []string `schema:"resource"`
-	audience           Audience `schema:"audience"`
-	Scope              Scopes   `schema:"scope"`
-	requestedTokenType string   `schema:"requested_token_type"`
+	subjectToken       string              `schema:"subject_token"`
+	subjectTokenType   string              `schema:"subject_token_type"`
+	actorToken         string              `schema:"actor_token"`
+	actorTokenType     string              `schema:"actor_token_type"`
+	resource           []string            `schema:"resource"`
+	audience           Audience            `schema:"audience"`
+	Scope              SpaceDelimitedArray `schema:"scope"`
+	requestedTokenType string              `schema:"requested_token_type"`
 }

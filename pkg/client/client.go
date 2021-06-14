@@ -17,8 +17,8 @@ import (
 var (
 	Encoder = func() utils.Encoder {
 		e := schema.NewEncoder()
-		e.RegisterEncoder(oidc.Scopes{}, func(value reflect.Value) string {
-			return value.Interface().(oidc.Scopes).Encode()
+		e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
+			return value.Interface().(oidc.SpaceDelimitedArray).Encode()
 		})
 		return e
 	}()

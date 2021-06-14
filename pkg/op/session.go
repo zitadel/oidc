@@ -83,13 +83,3 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	}
 	return nil, ErrInvalidRequest("post_logout_redirect_uri invalid")
 }
-
-func NeedsExistingSession(authRequest *oidc.AuthRequest) bool {
-	if authRequest == nil {
-		return true
-	}
-	if authRequest.Prompt == oidc.PromptNone {
-		return true
-	}
-	return false
-}

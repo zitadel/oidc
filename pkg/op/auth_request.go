@@ -106,7 +106,11 @@ func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRe
 }
 
 //ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
-func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (string, error) {
+func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (sub string, err error) {
+	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
+	if err != nil {
+		return "", err
+	}
 	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
 	if err != nil {
 		return "", ErrServerError(err.Error())
@@ -122,6 +126,19 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 		return "", err
 	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
+}
+
+//ValidateAuthReqPrompt validates the passed prompt values and sets max_age to 0 if prompt login is present
+func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) {
+	for _, prompt := range prompts {
+		if prompt == oidc.PromptNone && len(prompts) > 1 {
+			return nil, ErrInvalidRequest("The prompt parameter `none` must only be used as a single value")
+		}
+		if prompt == oidc.PromptLogin {
+			maxAge = oidc.NewMaxAge(0)
+		}
+	}
+	return maxAge, nil
 }
 
 //ValidateAuthReqScopes validates the passed scopes

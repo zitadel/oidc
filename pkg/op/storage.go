@@ -34,7 +34,7 @@ type OPStorage interface {
 	SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error
 	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]interface{}, error)
 	GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
-	ValidateJWTProfileScopes(ctx context.Context, userID string, scope oidc.Scopes) (oidc.Scopes, error)
+	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
 }
 
 type Storage interface {

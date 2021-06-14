@@ -140,10 +140,10 @@ func (c *ConfClient) GetID() string {
 }
 
 func (c *ConfClient) AccessTokenLifetime() time.Duration {
-	return time.Duration(5 * time.Minute)
+	return 5 * time.Minute
 }
 func (c *ConfClient) IDTokenLifetime() time.Duration {
-	return time.Duration(5 * time.Minute)
+	return 5 * time.Minute
 }
 func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 	return c.accessTokenType
