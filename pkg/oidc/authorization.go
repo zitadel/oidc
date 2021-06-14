@@ -72,7 +72,7 @@ type AuthRequest struct {
 	Nonce       string              `schema:"nonce"`
 	Display     Display             `schema:"display"`
 	Prompt      SpaceDelimitedArray `schema:"prompt"`
-	MaxAge      *uint               `schema:"max_age,omitempty"`
+	MaxAge      *uint               `schema:"max_age"`
 	UILocales   Locales             `schema:"ui_locales"`
 	IDTokenHint string              `schema:"id_token_hint"`
 	LoginHint   string              `schema:"login_hint"`
