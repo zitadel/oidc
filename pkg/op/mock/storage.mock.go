@@ -316,10 +316,10 @@ func (mr *MockStorageMockRecorder) TokenRequestByRefreshToken(arg0, arg1 interfa
 }
 
 // ValidateJWTProfileScopes mocks base method.
-func (m *MockStorage) ValidateJWTProfileScopes(arg0 context.Context, arg1 string, arg2 oidc.Scopes) (oidc.Scopes, error) {
+func (m *MockStorage) ValidateJWTProfileScopes(arg0 context.Context, arg1 string, arg2 []string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateJWTProfileScopes", arg0, arg1, arg2)
-	ret0, _ := ret[0].(oidc.Scopes)
+	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -95,7 +95,7 @@ func (a *AuthRequest) GetScopes() []string {
 	}
 }
 
-func (a *AuthRequest) SetCurrentScopes(scopes oidc.Scopes) {}
+func (a *AuthRequest) SetCurrentScopes(scopes []string) {}
 
 func (a *AuthRequest) GetState() string {
 	return ""
@@ -243,7 +243,7 @@ func (s *AuthStorage) SetIntrospectionFromToken(ctx context.Context, introspect 
 	return nil
 }
 
-func (s *AuthStorage) ValidateJWTProfileScopes(ctx context.Context, userID string, scope oidc.Scopes) (oidc.Scopes, error) {
+func (s *AuthStorage) ValidateJWTProfileScopes(ctx context.Context, userID string, scope []string) ([]string, error) {
 	return scope, nil
 }
 

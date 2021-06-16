@@ -17,7 +17,7 @@ type RefreshTokenRequest interface {
 	GetClientID() string
 	GetScopes() []string
 	GetSubject() string
-	SetCurrentScopes(scopes oidc.Scopes)
+	SetCurrentScopes(scopes []string)
 }
 
 //RefreshTokenExchange handles the OAuth 2.0 refresh_token grant, including
@@ -72,7 +72,7 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 //ValidateRefreshTokenScopes validates that the requested scope is a subset of the original auth request scope
 //it will set the requested scopes as current scopes onto RefreshTokenRequest
 //if empty the original scopes will be used
-func ValidateRefreshTokenScopes(requestedScopes oidc.Scopes, authRequest RefreshTokenRequest) error {
+func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTokenRequest) error {
 	if len(requestedScopes) == 0 {
 		return nil
 	}

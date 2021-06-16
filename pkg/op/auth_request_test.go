@@ -123,7 +123,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 				}(),
 			},
 			res{
-				&oidc.AuthRequest{Scopes: oidc.Scopes{"openid"}},
+				&oidc.AuthRequest{Scopes: oidc.SpaceDelimitedArray{"openid"}},
 				false,
 			},
 		},

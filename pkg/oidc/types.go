@@ -54,30 +54,36 @@ func (l *Locales) UnmarshalText(text []byte) error {
 	return nil
 }
 
-type Prompt string
+type MaxAge *uint
+
+func NewMaxAge(i uint) MaxAge {
+	return &i
+}
+
+type SpaceDelimitedArray []string
+
+type Prompt SpaceDelimitedArray
 
 type ResponseType string
 
-type Scopes []string
-
-func (s Scopes) Encode() string {
+func (s SpaceDelimitedArray) Encode() string {
 	return strings.Join(s, " ")
 }
 
-func (s *Scopes) UnmarshalText(text []byte) error {
+func (s *SpaceDelimitedArray) UnmarshalText(text []byte) error {
 	*s = strings.Split(string(text), " ")
 	return nil
 }
 
-func (s *Scopes) MarshalText() ([]byte, error) {
+func (s SpaceDelimitedArray) MarshalText() ([]byte, error) {
 	return []byte(s.Encode()), nil
 }
 
-func (s *Scopes) MarshalJSON() ([]byte, error) {
-	return json.Marshal((*s).Encode())
+func (s SpaceDelimitedArray) MarshalJSON() ([]byte, error) {
+	return json.Marshal((s).Encode())
 }
 
-func (s *Scopes) UnmarshalJSON(data []byte) error {
+func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err

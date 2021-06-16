@@ -1,9 +1,9 @@
 package oidc
 
 type JWTProfileGrantRequest struct {
-	Assertion string    `schema:"assertion"`
-	Scope     Scopes    `schema:"scope"`
-	GrantType GrantType `schema:"grant_type"`
+	Assertion string              `schema:"assertion"`
+	Scope     SpaceDelimitedArray `schema:"scope"`
+	GrantType GrantType           `schema:"grant_type"`
 }
 
 //NewJWTProfileGrantRequest creates an oauth2 `JSON Web Token (JWT) Profile` Grant

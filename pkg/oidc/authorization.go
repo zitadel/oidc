@@ -44,39 +44,39 @@ const (
 
 	//PromptNone (`none`) disallows the Authorization Server to display any authentication or consent user interface pages.
 	//An error (login_required, interaction_required, ...) will be returned if the user is not already authenticated or consent is needed
-	PromptNone Prompt = "none"
+	PromptNone = "none"
 
 	//PromptLogin (`login`) directs the Authorization Server to prompt the End-User for reauthentication.
-	PromptLogin Prompt = "login"
+	PromptLogin = "login"
 
 	//PromptConsent (`consent`) directs the Authorization Server to prompt the End-User for consent (of sharing information).
-	PromptConsent Prompt = "consent"
+	PromptConsent = "consent"
 
 	//PromptSelectAccount (`select_account `) directs the Authorization Server to prompt the End-User to select a user account (to enable multi user / session switching)
-	PromptSelectAccount Prompt = "select_account"
+	PromptSelectAccount = "select_account"
 )
 
 //AuthRequest according to:
 //https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {
 	ID           string
-	Scopes       Scopes       `schema:"scope"`
-	ResponseType ResponseType `schema:"response_type"`
-	ClientID     string       `schema:"client_id"`
-	RedirectURI  string       `schema:"redirect_uri"` //TODO: type
+	Scopes       SpaceDelimitedArray `schema:"scope"`
+	ResponseType ResponseType        `schema:"response_type"`
+	ClientID     string              `schema:"client_id"`
+	RedirectURI  string              `schema:"redirect_uri"` //TODO: type
 
 	State string `schema:"state"`
 
 	// ResponseMode TODO: ?
 
-	Nonce       string   `schema:"nonce"`
-	Display     Display  `schema:"display"`
-	Prompt      Prompt   `schema:"prompt"`
-	MaxAge      uint32   `schema:"max_age"`
-	UILocales   Locales  `schema:"ui_locales"`
-	IDTokenHint string   `schema:"id_token_hint"`
-	LoginHint   string   `schema:"login_hint"`
-	ACRValues   []string `schema:"acr_values"`
+	Nonce       string              `schema:"nonce"`
+	Display     Display             `schema:"display"`
+	Prompt      SpaceDelimitedArray `schema:"prompt"`
+	MaxAge      *uint               `schema:"max_age"`
+	UILocales   Locales             `schema:"ui_locales"`
+	IDTokenHint string              `schema:"id_token_hint"`
+	LoginHint   string              `schema:"login_hint"`
+	ACRValues   []string            `schema:"acr_values"`
 
 	CodeChallenge       string              `schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `schema:"code_challenge_method"`
