@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"time"
 
@@ -399,7 +400,19 @@ type AccessTokenResponse struct {
 	IDToken      string `json:"id_token,omitempty" schema:"id_token,omitempty"`
 }
 
-type JWTProfileAssertion struct {
+type JWTProfileAssertionClaims interface {
+	GetKeyID() string
+	GetPrivateKey() []byte
+	GetIssuer() string
+	GetSubject() string
+	GetAudience() []string
+	GetExpiration() time.Time
+	GetIssuedAt() time.Time
+	SetCustomClaim(key string, value interface{})
+	GetCustomClaim(key string) interface{}
+}
+
+type jwtProfileAssertion struct {
 	PrivateKeyID string   `json:"-"`
 	PrivateKey   []byte   `json:"-"`
 	Issuer       string   `json:"iss"`
@@ -407,17 +420,98 @@ type JWTProfileAssertion struct {
 	Audience     Audience `json:"aud"`
 	Expiration   Time     `json:"exp"`
 	IssuedAt     Time     `json:"iat"`
+
+	customClaims map[string]interface{}
 }
 
-func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string) (*JWTProfileAssertion, error) {
+func (j *jwtProfileAssertion) MarshalJSON() ([]byte, error) {
+	type Alias jwtProfileAssertion
+	a := (*Alias)(j)
+	a.Subject = "109050709344825901"
+
+	b, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(j.customClaims) == 0 {
+		return b, nil
+	}
+
+	err = json.Unmarshal(b, &j.customClaims)
+	if err != nil {
+		return nil, fmt.Errorf("jws: invalid map of custom claims %v", j.customClaims)
+	}
+
+	return json.Marshal(j.customClaims)
+}
+
+func (j *jwtProfileAssertion) UnmarshalJSON(data []byte) error {
+	type Alias jwtProfileAssertion
+	a := (*Alias)(j)
+	a.Subject = "109050709344825901"
+
+	err := json.Unmarshal(data, a)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &j.customClaims)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (j *jwtProfileAssertion) GetKeyID() string {
+	return j.PrivateKeyID
+}
+
+func (j *jwtProfileAssertion) GetPrivateKey() []byte {
+	return j.PrivateKey
+}
+
+func (j *jwtProfileAssertion) SetCustomClaim(key string, value interface{}) {
+	if j.customClaims == nil {
+		j.customClaims = make(map[string]interface{})
+	}
+	j.customClaims[key] = value
+}
+
+func (j *jwtProfileAssertion) GetCustomClaim(key string) interface{} {
+	return j.customClaims[key]
+}
+
+func (j *jwtProfileAssertion) GetIssuer() string {
+	return j.Issuer
+}
+
+func (j *jwtProfileAssertion) GetSubject() string {
+	return j.Subject
+}
+
+func (j *jwtProfileAssertion) GetAudience() []string {
+	return j.Audience
+}
+
+func (j *jwtProfileAssertion) GetExpiration() time.Time {
+	return time.Time(j.Expiration)
+}
+
+func (j *jwtProfileAssertion) GetIssuedAt() time.Time {
+	return time.Time(j.IssuedAt)
+}
+
+func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string, opts ...AssertionOption) (JWTProfileAssertionClaims, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return NewJWTProfileAssertionFromFileData(data, audience)
+	return NewJWTProfileAssertionFromFileData(data, audience, opts...)
 }
 
-func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string) (string, error) {
+func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string, opts ...AssertionOption) (string, error) {
 	keyData := new(struct {
 		KeyID  string `json:"keyId"`
 		Key    string `json:"key"`
@@ -427,10 +521,16 @@ func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string) (s
 	if err != nil {
 		return "", err
 	}
-	return GenerateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)))
+	return GenerateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key), opts...))
 }
 
-func NewJWTProfileAssertionFromFileData(data []byte, audience []string) (*JWTProfileAssertion, error) {
+func CustomClaim(key string, value interface{}) func(*jwtProfileAssertion) {
+	return func(j *jwtProfileAssertion) {
+		j.customClaims[key] = value
+	}
+}
+
+func NewJWTProfileAssertionFromFileData(data []byte, audience []string, opts ...AssertionOption) (JWTProfileAssertionClaims, error) {
 	keyData := new(struct {
 		KeyID  string `json:"keyId"`
 		Key    string `json:"key"`
@@ -440,11 +540,13 @@ func NewJWTProfileAssertionFromFileData(data []byte, audience []string) (*JWTPro
 	if err != nil {
 		return nil, err
 	}
-	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key)), nil
+	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key), opts...), nil
 }
 
-func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte) *JWTProfileAssertion {
-	return &JWTProfileAssertion{
+type AssertionOption func(*jwtProfileAssertion)
+
+func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte, opts ...AssertionOption) JWTProfileAssertionClaims {
+	j := &jwtProfileAssertion{
 		PrivateKey:   key,
 		PrivateKeyID: keyID,
 		Issuer:       userID,
@@ -452,7 +554,14 @@ func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte)
 		IssuedAt:     Time(time.Now().UTC()),
 		Expiration:   Time(time.Now().Add(1 * time.Hour).UTC()),
 		Audience:     audience,
+		customClaims: make(map[string]interface{}),
 	}
+
+	for _, opt := range opts {
+		opt(j)
+	}
+
+	return j
 }
 
 func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
@@ -473,14 +582,14 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 	return append(audience, clientID)
 }
 
-func GenerateJWTProfileToken(assertion *JWTProfileAssertion) (string, error) {
-	privateKey, err := bytesToPrivateKey(assertion.PrivateKey)
+func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error) {
+	privateKey, err := bytesToPrivateKey(assertion.GetPrivateKey())
 	if err != nil {
 		return "", err
 	}
 	key := jose.SigningKey{
 		Algorithm: jose.RS256,
-		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.PrivateKeyID},
+		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.GetKeyID()},
 	}
 	signer, err := jose.NewSigner(key, &jose.SignerOptions{})
 	if err != nil {

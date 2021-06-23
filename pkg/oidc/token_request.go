@@ -1,6 +1,8 @@
 package oidc
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -87,6 +89,50 @@ type JWTTokenRequest struct {
 	Audience  Audience            `json:"aud"`
 	IssuedAt  Time                `json:"iat"`
 	ExpiresAt Time                `json:"exp"`
+
+	private map[string]interface{}
+}
+
+func (j *JWTTokenRequest) MarshalJSON() ([]byte, error) {
+	type Alias JWTTokenRequest
+	a := (*Alias)(j)
+
+	b, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(j.private) == 0 {
+		return b, nil
+	}
+
+	err = json.Unmarshal(b, &j.private)
+	if err != nil {
+		return nil, fmt.Errorf("jws: invalid map of custom claims %v", j.private)
+	}
+
+	return json.Marshal(j.private)
+}
+
+func (j *JWTTokenRequest) UnmarshalJSON(data []byte) error {
+	type Alias JWTTokenRequest
+	a := (*Alias)(j)
+
+	err := json.Unmarshal(data, a)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, &j.private)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (j *JWTTokenRequest) GetCustomClaim(key string) interface{} {
+	return j.private[key]
 }
 
 //GetIssuer implements the Claims interface
