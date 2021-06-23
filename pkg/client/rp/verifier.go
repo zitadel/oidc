@@ -46,7 +46,11 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.I
 		return nil, err
 	}
 
-	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
+	if err := oidc.CheckSubject(claims); err != nil {
+		return nil, err
+	}
+
+	if err = oidc.CheckIssuer(claims, v.Issuer()); err != nil {
 		return nil, err
 	}
 

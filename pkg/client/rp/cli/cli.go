@@ -19,7 +19,7 @@ func CodeFlow(ctx context.Context, relyingParty rp.RelyingParty, callbackPath, p
 
 	tokenChan := make(chan *oidc.Tokens, 1)
 
-	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string) {
+	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty) {
 		tokenChan <- tokens
 		msg := "<p><strong>Success!</strong></p>"
 		msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"
