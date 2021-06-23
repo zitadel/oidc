@@ -272,20 +272,16 @@ type openIDKeySet struct {
 //VerifySignature implements the oidc.KeySet interface
 //providing an implementation for the keys stored in the OP Storage interface
 func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
-	keyID := ""
-	for _, sig := range jws.Signatures {
-		keyID = sig.Header.KeyID
-		break
-	}
 	keySet, err := o.Storage.GetKeySet(ctx)
 	if err != nil {
 		return nil, errors.New("error fetching keys")
 	}
-	payload, err, ok := oidc.CheckKey(keyID, jws, keySet.Keys...)
+	keyID, alg := oidc.GetKeyIDAndAlg(jws)
+	key, ok := oidc.FindKey(keyID, oidc.KeyUseSignature, alg, keySet.Keys...)
 	if !ok {
 		return nil, errors.New("invalid kid")
 	}
-	return payload, err
+	return jws.Verify(key)
 }
 
 type Option func(o *openidProvider) error
