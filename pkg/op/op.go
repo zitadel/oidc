@@ -74,7 +74,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
-	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o))
+	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
 }
 
@@ -281,7 +281,7 @@ func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	if !ok {
 		return nil, errors.New("invalid kid")
 	}
-	return jws.Verify(key)
+	return jws.Verify(&key)
 }
 
 type Option func(o *openidProvider) error

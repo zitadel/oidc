@@ -122,13 +122,10 @@ type jwtProfileKeySet struct {
 
 //VerifySignature implements oidc.KeySet by getting the public key from Storage implementation
 func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
-	keyID, alg := oidc.GetKeyIDAndAlg(jws)
+	keyID, _ := oidc.GetKeyIDAndAlg(jws)
 	key, err := k.storage.GetKeyByIDAndUserID(ctx, keyID, k.userID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
-	if key.Algorithm != alg {
-
-	}
-	return jws.Verify(&key)
+	return jws.Verify(key)
 }
