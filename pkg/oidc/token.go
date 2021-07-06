@@ -427,7 +427,6 @@ type jwtProfileAssertion struct {
 func (j *jwtProfileAssertion) MarshalJSON() ([]byte, error) {
 	type Alias jwtProfileAssertion
 	a := (*Alias)(j)
-	a.Subject = "109050709344825901"
 
 	b, err := json.Marshal(a)
 	if err != nil {
@@ -449,7 +448,6 @@ func (j *jwtProfileAssertion) MarshalJSON() ([]byte, error) {
 func (j *jwtProfileAssertion) UnmarshalJSON(data []byte) error {
 	type Alias jwtProfileAssertion
 	a := (*Alias)(j)
-	a.Subject = "109050709344825901"
 
 	err := json.Unmarshal(data, a)
 	if err != nil {
@@ -480,6 +478,9 @@ func (j *jwtProfileAssertion) SetCustomClaim(key string, value interface{}) {
 }
 
 func (j *jwtProfileAssertion) GetCustomClaim(key string) interface{} {
+	if j.customClaims == nil {
+		return nil
+	}
 	return j.customClaims[key]
 }
 
@@ -524,7 +525,13 @@ func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string, op
 	return GenerateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key), opts...))
 }
 
-func CustomClaim(key string, value interface{}) func(*jwtProfileAssertion) {
+func JWTProfileDelegatedSubject(sub string) func(*jwtProfileAssertion) {
+	return func(j *jwtProfileAssertion) {
+		j.Subject = sub
+	}
+}
+
+func JWTProfileCustomClaim(key string, value interface{}) func(*jwtProfileAssertion) {
 	return func(j *jwtProfileAssertion) {
 		j.customClaims[key] = value
 	}
