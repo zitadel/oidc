@@ -13,23 +13,40 @@ import (
 
 type JWTProfileVerifier interface {
 	oidc.Verifier
-	Storage() Storage
+	Storage() jwtProfileKeyStorage
+	CheckSubject(request *oidc.JWTTokenRequest) error
 }
 
 type jwtProfileVerifier struct {
-	storage   Storage
-	issuer    string
-	maxAgeIAT time.Duration
-	offset    time.Duration
+	storage      jwtProfileKeyStorage
+	subjectCheck func(request *oidc.JWTTokenRequest) error
+	issuer       string
+	maxAgeIAT    time.Duration
+	offset       time.Duration
 }
 
 //NewJWTProfileVerifier creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
-func NewJWTProfileVerifier(storage Storage, issuer string, maxAgeIAT, offset time.Duration) JWTProfileVerifier {
-	return &jwtProfileVerifier{
-		storage:   storage,
-		issuer:    issuer,
-		maxAgeIAT: maxAgeIAT,
-		offset:    offset,
+func NewJWTProfileVerifier(storage jwtProfileKeyStorage, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) JWTProfileVerifier {
+	j := &jwtProfileVerifier{
+		storage:      storage,
+		subjectCheck: SubjectIsIssuer,
+		issuer:       issuer,
+		maxAgeIAT:    maxAgeIAT,
+		offset:       offset,
+	}
+
+	for _, opt := range opts {
+		opt(j)
+	}
+
+	return j
+}
+
+type JWTProfileVerifierOption func(*jwtProfileVerifier)
+
+func SubjectCheck(check func(request *oidc.JWTTokenRequest) error) JWTProfileVerifierOption {
+	return func(verifier *jwtProfileVerifier) {
+		verifier.subjectCheck = check
 	}
 }
 
@@ -37,7 +54,7 @@ func (v *jwtProfileVerifier) Issuer() string {
 	return v.issuer
 }
 
-func (v *jwtProfileVerifier) Storage() Storage {
+func (v *jwtProfileVerifier) Storage() jwtProfileKeyStorage {
 	return v.storage
 }
 
@@ -47,6 +64,10 @@ func (v *jwtProfileVerifier) MaxAgeIAT() time.Duration {
 
 func (v *jwtProfileVerifier) Offset() time.Duration {
 	return v.offset
+}
+
+func (v *jwtProfileVerifier) CheckSubject(request *oidc.JWTTokenRequest) error {
+	return v.subjectCheck(request)
 }
 
 //VerifyJWTAssertion verifies the assertion string from JWT Profile (authorization grant and client authentication)
@@ -71,9 +92,8 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerif
 		return nil, err
 	}
 
-	if request.Issuer != request.Subject {
-		//TODO: implement delegation (openid core / oauth rfc)
-		return nil, errors.New("delegation not yet implemented, issuer and sub must be identical")
+	if err = v.CheckSubject(request); err != nil {
+		return nil, err
 	}
 
 	keySet := &jwtProfileKeySet{v.Storage(), request.Issuer}
@@ -84,20 +104,28 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerif
 	return request, nil
 }
 
+type jwtProfileKeyStorage interface {
+	GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
+}
+
+func SubjectIsIssuer(request *oidc.JWTTokenRequest) error {
+	if request.Issuer != request.Subject {
+		return errors.New("delegation not allowed, issuer and sub must be identical")
+	}
+	return nil
+}
+
 type jwtProfileKeySet struct {
-	Storage
-	userID string
+	storage jwtProfileKeyStorage
+	userID  string
 }
 
 //VerifySignature implements oidc.KeySet by getting the public key from Storage implementation
 func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
-	keyID, alg := oidc.GetKeyIDAndAlg(jws)
-	key, err := k.Storage.GetKeyByIDAndUserID(ctx, keyID, k.userID)
+	keyID, _ := oidc.GetKeyIDAndAlg(jws)
+	key, err := k.storage.GetKeyByIDAndUserID(ctx, keyID, k.userID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
-	if key.Algorithm != alg {
-
-	}
-	return jws.Verify(&key)
+	return jws.Verify(key)
 }
