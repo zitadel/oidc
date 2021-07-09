@@ -9,6 +9,7 @@ import (
 
 	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
+	language "golang.org/x/text/language"
 )
 
 // MockConfiguration is a mock of Configuration interface.
@@ -186,6 +187,20 @@ func (m *MockConfiguration) KeysEndpoint() op.Endpoint {
 func (mr *MockConfigurationMockRecorder) KeysEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeysEndpoint", reflect.TypeOf((*MockConfiguration)(nil).KeysEndpoint))
+}
+
+// SupportedUILocales mocks base method.
+func (m *MockConfiguration) SupportedUILocales() []language.Tag {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportedUILocales")
+	ret0, _ := ret[0].([]language.Tag)
+	return ret0
+}
+
+// SupportedUILocales indicates an expected call of SupportedUILocales.
+func (mr *MockConfigurationMockRecorder) SupportedUILocales() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportedUILocales", reflect.TypeOf((*MockConfiguration)(nil).SupportedUILocales))
 }
 
 // TokenEndpoint mocks base method.

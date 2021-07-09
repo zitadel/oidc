@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"golang.org/x/text/language"
 )
 
 const OidcDevMode = "CAOS_OIDC_DEV"
@@ -24,6 +26,8 @@ type Configuration interface {
 	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
+
+	SupportedUILocales() []language.Tag
 }
 
 func ValidateIssuer(issuer string) error {
