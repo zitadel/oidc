@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -85,6 +86,7 @@ type Config struct {
 	CodeMethodS256           bool
 	AuthMethodPrivateKeyJWT  bool
 	GrantTypeRefreshToken    bool
+	SupportedUILocales       []language.Tag
 }
 
 type endpoints struct {
@@ -200,6 +202,10 @@ func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
 
 func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
 	return true
+}
+
+func (o *openidProvider) SupportedUILocales() []language.Tag {
+	return o.config.SupportedUILocales
 }
 
 func (o *openidProvider) Storage() Storage {

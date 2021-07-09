@@ -3,8 +3,6 @@ package op
 import (
 	"net/http"
 
-	"golang.org/x/text/language"
-
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
@@ -37,7 +35,7 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		IntrospectionEndpointAuthMethodsSupported: AuthMethodsIntrospectionEndpoint(c),
 		ClaimsSupported:                           SupportedClaims(c),
 		CodeChallengeMethodsSupported:             CodeChallengeMethods(c),
-		UILocalesSupported:                        UILocales(c),
+		UILocalesSupported:                        c.SupportedUILocales(),
 	}
 }
 
@@ -145,11 +143,4 @@ func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
 		codeMethods = append(codeMethods, oidc.CodeChallengeMethodS256)
 	}
 	return codeMethods
-}
-
-func UILocales(c Configuration) []language.Tag {
-	return []language.Tag{
-		language.English,
-		language.German,
-	}
 }
