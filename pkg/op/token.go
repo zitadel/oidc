@@ -155,15 +155,16 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 }
 
 func removeUserinfoScopes(scopes []string) []string {
-	for i := len(scopes) - 1; i >= 0; i-- {
-		if scopes[i] == oidc.ScopeProfile ||
-			scopes[i] == oidc.ScopeEmail ||
-			scopes[i] == oidc.ScopeAddress ||
-			scopes[i] == oidc.ScopePhone {
-
-			scopes[i] = scopes[len(scopes)-1]
-			scopes[len(scopes)-1] = ""
-			scopes = scopes[:len(scopes)-1]
+	newScopeList := make([]string, 0, len(scopes))
+	for _, scope := range scopes {
+		switch scope {
+		case oidc.ScopeProfile,
+			oidc.ScopeEmail,
+			oidc.ScopeAddress,
+			oidc.ScopePhone:
+			continue
+		default:
+			newScopeList = append(newScopeList, scope)
 		}
 	}
 	return scopes
