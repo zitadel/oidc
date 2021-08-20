@@ -1,10 +1,7 @@
 package oidc
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -590,7 +587,7 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 }
 
 func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error) {
-	privateKey, err := bytesToPrivateKey(assertion.GetPrivateKey())
+	privateKey, err := utils.BytesToPrivateKey(assertion.GetPrivateKey())
 	if err != nil {
 		return "", err
 	}
@@ -612,22 +609,4 @@ func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error
 		return "", err
 	}
 	return signedAssertion.CompactSerialize()
-}
-
-func bytesToPrivateKey(priv []byte) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(priv)
-	enc := x509.IsEncryptedPEMBlock(block)
-	b := block.Bytes
-	var err error
-	if enc {
-		b, err = x509.DecryptPEMBlock(block, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-	key, err := x509.ParsePKCS1PrivateKey(b)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }
