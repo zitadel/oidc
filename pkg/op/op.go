@@ -148,7 +148,6 @@ type openidProvider struct {
 	decoder             *schema.Decoder
 	encoder             *schema.Encoder
 	interceptors        []HttpInterceptor
-	retry               func(int) (bool, int)
 	timer               <-chan time.Time
 }
 
