@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"net/url"
 
 	"golang.org/x/oauth2"
@@ -11,7 +10,7 @@ import (
 )
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange
-func JWTProfileExchange(ctx context.Context, jwtProfileGrantRequest *oidc.JWTProfileGrantRequest, caller tokenEndpointCaller) (*oauth2.Token, error) {
+func JWTProfileExchange(jwtProfileGrantRequest *oidc.JWTProfileGrantRequest, caller tokenEndpointCaller) (*oauth2.Token, error) {
 	return CallTokenEndpoint(jwtProfileGrantRequest, caller)
 }
 
