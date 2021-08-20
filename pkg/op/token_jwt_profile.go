@@ -43,12 +43,12 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 func ParseJWTProfileGrantRequest(r *http.Request, decoder utils.Decoder) (*oidc.JWTProfileGrantRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return nil, ErrInvalidRequest("error parsing form")
+		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
 	}
 	tokenReq := new(oidc.JWTProfileGrantRequest)
 	err = decoder.Decode(tokenReq, r.Form)
 	if err != nil {
-		return nil, ErrInvalidRequest("error decoding form")
+		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 	return tokenReq, nil
 }

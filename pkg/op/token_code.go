@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -17,7 +16,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err)
 	}
 	if tokenReq.Code == "" {
-		RequestError(w, r, ErrInvalidRequest("code missing"))
+		RequestError(w, r, oidc.ErrInvalidGrant()) //TODO: ErrInvalidRequest("code missing")?
 		return
 	}
 	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
@@ -51,13 +50,13 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 		return nil, nil, err
 	}
 	if client.GetID() != authReq.GetClientID() {
-		return nil, nil, ErrInvalidRequest("invalid auth code")
+		return nil, nil, oidc.ErrInvalidGrant()
 	}
 	if !ValidateGrantType(client, oidc.GrantTypeCode) {
-		return nil, nil, ErrInvalidRequest("invalid_grant")
+		return nil, nil, oidc.ErrUnauthorizedClient()
 	}
 	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
-		return nil, nil, ErrInvalidRequest("redirect_uri does not correspond")
+		return nil, nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
 	}
 	return authReq, client, nil
 }
@@ -68,7 +67,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
 		if !ok || !exchanger.AuthMethodPrivateKeyJWTSupported() {
-			return nil, nil, errors.New("auth_method private_key_jwt not supported")
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
 		}
 		client, err = AuthorizePrivateJWTKey(ctx, tokenReq.ClientAssertion, jwtExchanger)
 		if err != nil {
@@ -79,10 +78,10 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	}
 	client, err = exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, oidc.ErrInvalidClient().WithParent(err)
 	}
 	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
-		return nil, nil, errors.New("invalid_grant")
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("private_key_jwt not allowed for this client")
 	}
 	if client.AuthMethod() == oidc.AuthMethodNone {
 		request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
@@ -93,9 +92,12 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 		return request, client, err
 	}
 	if client.AuthMethod() == oidc.AuthMethodPost && !exchanger.AuthMethodPostSupported() {
-		return nil, nil, errors.New("auth_method post not supported")
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("auth_method post not supported")
 	}
 	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
+	if err != nil {
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("invalid client_id / client_secret").WithParent(err)
+	}
 	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
 	return request, client, err
 }
@@ -104,7 +106,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 func AuthRequestByCode(ctx context.Context, storage Storage, code string) (AuthRequest, error) {
 	authReq, err := storage.AuthRequestByCode(ctx, code)
 	if err != nil {
-		return nil, ErrInvalidRequest("invalid code")
+		return nil, oidc.ErrInvalidGrant().WithDescription("invalid code").WithParent(err)
 	}
 	return authReq, nil
 }

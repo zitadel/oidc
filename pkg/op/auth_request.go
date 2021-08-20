@@ -43,7 +43,7 @@ type Authorizer interface {
 }
 
 //AuthorizeValidator is an extension of Authorizer interface
-//implementing it's own validation mechanism for the auth request
+//implementing its own validation mechanism for the auth request
 type AuthorizeValidator interface {
 	Authorizer
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, IDTokenHintVerifier) (string, error)
@@ -80,12 +80,12 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq, userID)
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer.Encoder())
 		return
 	}
 	client, err := authorizer.Storage().GetClientByClientID(r.Context(), req.GetClientID())
 	if err != nil {
-		AuthRequestError(w, r, req, err, authorizer.Encoder())
+		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer.Encoder())
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
@@ -95,12 +95,12 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return nil, ErrInvalidRequest("cannot parse form")
+		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
 	}
 	authReq := new(oidc.AuthRequest)
 	err = decoder.Decode(authReq, r.Form)
 	if err != nil {
-		return nil, ErrInvalidRequest(fmt.Sprintf("cannot parse auth request: %v", err))
+		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse auth request").WithParent(err)
 	}
 	return authReq, nil
 }
@@ -113,7 +113,7 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 	}
 	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
 	if err != nil {
-		return "", ErrServerError(err.Error())
+		return "", oidc.DefaultToServerError(err, "unable to retrieve client by id")
 	}
 	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
 	if err != nil {
@@ -132,7 +132,7 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) {
 	for _, prompt := range prompts {
 		if prompt == oidc.PromptNone && len(prompts) > 1 {
-			return nil, ErrInvalidRequest("The prompt parameter `none` must only be used as a single value")
+			return nil, oidc.ErrInvalidRequest().WithDescription("The prompt parameter `none` must only be used as a single value")
 		}
 		if prompt == oidc.PromptLogin {
 			maxAge = oidc.NewMaxAge(0)
@@ -144,7 +144,9 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 //ValidateAuthReqScopes validates the passed scopes
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
-		return nil, ErrInvalidRequest("The scope of your request is missing. Please ensure some scopes are requested. If you have any questions, you may contact the administrator of the application.")
+		return nil, oidc.ErrInvalidRequest().
+			WithDescription("The scope of your request is missing. Please ensure some scopes are requested. " +
+				"If you have any questions, you may contact the administrator of the application.")
 	}
 	openID := false
 	for i := len(scopes) - 1; i >= 0; i-- {
@@ -165,7 +167,9 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 		}
 	}
 	if !openID {
-		return nil, ErrInvalidRequest("The scope openid is missing in your request. Please ensure the scope openid is added to the request. If you have any questions, you may contact the administrator of the application.")
+		return nil, oidc.ErrInvalidScope().WithDescription("The scope openid is missing in your request. " +
+			"Please ensure the scope openid is added to the request. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 
 	return scopes, nil
@@ -174,11 +178,14 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 //ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
 func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
 	if uri == "" {
-		return ErrInvalidRequestRedirectURI("The redirect_uri is missing in the request. Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
+			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
 		if !utils.Contains(client.RedirectURIs(), uri) {
-			return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+			return oidc.ErrInvalidRequestRedirectURI().
+				WithDescription("The requested redirect_uri is missing in the client configuration. " +
+					"If you have any questions, you may contact the administrator of the application.")
 		}
 		return nil
 	}
@@ -186,7 +193,8 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		return validateAuthReqRedirectURINative(client, uri, responseType)
 	}
 	if !utils.Contains(client.RedirectURIs(), uri) {
-		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "http://") {
 		if client.DevMode() {
@@ -195,9 +203,11 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		if responseType == oidc.ResponseTypeCode && IsConfidentialType(client) {
 			return nil
 		}
-		return ErrInvalidRequest("This client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is http and is not allowed. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
-	return ErrInvalidRequest("This client's redirect_uri is using a custom schema and is not allowed. If you have any questions, you may contact the administrator of the application.")
+	return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is using a custom schema and is not allowed. " +
+		"If you have any questions, you may contact the administrator of the application.")
 }
 
 //ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
@@ -208,10 +218,12 @@ func validateAuthReqRedirectURINative(client Client, uri string, responseType oi
 		if isLoopback || isCustomSchema {
 			return nil
 		}
-		return ErrInvalidRequest("This client's redirect_uri is http and is not allowed. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is http and is not allowed. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	if !isLoopback {
-		return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	for _, uri := range client.RedirectURIs() {
 		redirectURI, ok := HTTPLoopbackOrLocalhost(uri)
@@ -219,7 +231,8 @@ func validateAuthReqRedirectURINative(client Client, uri string, responseType oi
 			return nil
 		}
 	}
-	return ErrInvalidRequestRedirectURI("The requested redirect_uri is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+	return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration." +
+		" If you have any questions, you may contact the administrator of the application.")
 }
 
 func equalURI(url1, url2 *url.URL) bool {
@@ -241,10 +254,12 @@ func HTTPLoopbackOrLocalhost(rawurl string) (*url.URL, bool) {
 //ValidateAuthReqResponseType validates the passed response_type to the registered response types
 func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) error {
 	if responseType == "" {
-		return ErrInvalidRequest("The response type is missing in your request. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrInvalidRequest().WithDescription("The response type is missing in your request. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	if !ContainsResponseType(client.ResponseTypes(), responseType) {
-		return ErrInvalidRequest("The requested response type is missing in the client configuration. If you have any questions, you may contact the administrator of the application.")
+		return oidc.ErrUnauthorizedClient().WithDescription("The requested response type is missing in the client configuration. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
 }
@@ -257,7 +272,8 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	}
 	claims, err := VerifyIDTokenHint(ctx, idTokenHint, verifier)
 	if err != nil {
-		return "", ErrInvalidRequest("The id_token_hint is invalid. If you have any questions, you may contact the administrator of the application.")
+		return "", oidc.ErrLoginRequired().WithDescription("The id_token_hint is invalid. " +
+			"If you have any questions, you may contact the administrator of the application.")
 	}
 	return claims.GetSubject(), nil
 }
@@ -279,7 +295,9 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 		return
 	}
 	if !authReq.Done() {
-		AuthRequestError(w, r, authReq, ErrInteractionRequired("Unfortunately, the user may is not logged in and/or additional interaction is required."), authorizer.Encoder())
+		AuthRequestError(w, r, authReq,
+			oidc.ErrInteractionRequired().WithDescription("Unfortunately, the user may be not logged in and/or additional interaction is required."),
+			authorizer.Encoder())
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)

@@ -38,7 +38,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	}
 	err = ender.Storage().TerminateSession(r.Context(), session.UserID, clientID)
 	if err != nil {
-		RequestError(w, r, ErrServerError("error terminating session"))
+		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"))
 		return
 	}
 	http.Redirect(w, r, session.RedirectURI, http.StatusFound)
@@ -47,12 +47,12 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 func ParseEndSessionRequest(r *http.Request, decoder utils.Decoder) (*oidc.EndSessionRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return nil, ErrInvalidRequest("error parsing form")
+		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
 	}
 	req := new(oidc.EndSessionRequest)
 	err = decoder.Decode(req, r.Form)
 	if err != nil {
-		return nil, ErrInvalidRequest("error decoding form")
+		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 	return req, nil
 }
@@ -64,12 +64,12 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	}
 	claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier())
 	if err != nil {
-		return nil, ErrInvalidRequest("id_token_hint invalid")
+		return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
 	}
 	session.UserID = claims.GetSubject()
 	session.Client, err = ender.Storage().GetClientByClientID(ctx, claims.GetAuthorizedParty())
 	if err != nil {
-		return nil, ErrServerError("")
+		return nil, oidc.DefaultToServerError(err, "")
 	}
 	if req.PostLogoutRedirectURI == "" {
 		session.RedirectURI = ender.DefaultLogoutRedirectURI()
@@ -81,5 +81,5 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 			return session, nil
 		}
 	}
-	return nil, ErrInvalidRequest("post_logout_redirect_uri invalid")
+	return nil, oidc.ErrInvalidRequest().WithDescription("post_logout_redirect_uri invalid")
 }

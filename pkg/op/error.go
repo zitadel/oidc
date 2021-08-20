@@ -1,49 +1,11 @@
 package op
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
 )
-
-const (
-	InvalidRequest      errorType = "invalid_request"
-	InvalidRequestURI   errorType = "invalid_request_uri"
-	InteractionRequired errorType = "interaction_required"
-	ServerError         errorType = "server_error"
-)
-
-var (
-	ErrInvalidRequest = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   InvalidRequest,
-			Description: description,
-		}
-	}
-	ErrInvalidRequestRedirectURI = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:        InvalidRequestURI,
-			Description:      description,
-			redirectDisabled: true,
-		}
-	}
-	ErrInteractionRequired = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   InteractionRequired,
-			Description: description,
-		}
-	}
-	ErrServerError = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   ServerError,
-			Description: description,
-		}
-	}
-)
-
-type errorType string
 
 type ErrAuthRequest interface {
 	GetRedirectURI() string
@@ -56,14 +18,9 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	e, ok := err.(*OAuthError)
-	if !ok {
-		e = new(OAuthError)
-		e.ErrorType = ServerError
-		e.Description = err.Error()
-	}
+	e := oidc.DefaultToServerError(err, err.Error()) //TODO: desc?
 	e.State = authReq.GetState()
-	if authReq.GetRedirectURI() == "" || e.redirectDisabled {
+	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
@@ -83,23 +40,10 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 }
 
 func RequestError(w http.ResponseWriter, r *http.Request, err error) {
-	e, ok := err.(*OAuthError)
-	if !ok {
-		e = new(OAuthError)
-		e.ErrorType = ServerError
-		e.Description = err.Error()
+	e := oidc.DefaultToServerError(err, err.Error()) //TODO: desc?
+	status := http.StatusBadRequest
+	if e.ErrorType == oidc.InvalidClient {
+		status = 401
 	}
-	w.WriteHeader(http.StatusBadRequest)
-	utils.MarshalJSON(w, e)
-}
-
-type OAuthError struct {
-	ErrorType        errorType `json:"error" schema:"error"`
-	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
-	State            string    `json:"state,omitempty" schema:"state,omitempty"`
-	redirectDisabled bool      `json:"-" schema:"-"`
-}
-
-func (e *OAuthError) Error() string {
-	return fmt.Sprintf("%s: %s", e.ErrorType, e.Description)
+	utils.MarshalJSONWithStatus(w, e, status)
 }

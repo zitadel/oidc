@@ -1,6 +1,8 @@
 package op_test
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -141,6 +143,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 	}
 }
 
+//TODO: extend cases
 func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
@@ -150,7 +153,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr bool
+		wantErr error
 	}{
 		//TODO:
 		// {
@@ -159,38 +162,44 @@ func TestValidateAuthRequest(t *testing.T) {
 		{
 			"scope missing fails",
 			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"scope openid missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidScope(),
 		},
 		{
 			"response_type missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"client_id missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"redirect_uri missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := op.ValidateAuthRequest(nil, tt.args.authRequest, tt.args.storage, tt.args.verifier)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
+			_, err := op.ValidateAuthRequest(context.TODO(), tt.args.authRequest, tt.args.storage, tt.args.verifier)
+			if tt.wantErr == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.wantErr)
 			}
 		})
 	}
 }
+
+//TODO: implement
+func TestValidateAuthReqPrompt(t *testing.T) {}
 
 func TestValidateAuthReqScopes(t *testing.T) {
 	type args struct {
@@ -465,115 +474,8 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 }
 
-func TestValidateAuthReqResponseType(t *testing.T) {
-	type args struct {
-		responseType oidc.ResponseType
-		client       op.Client
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			"empty response type",
-			args{"",
-				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
-			true,
-		},
-		{
-			"response type missing in client config",
-			args{oidc.ResponseTypeIDToken,
-				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
-			true,
-		},
-		{
-			"valid response type",
-			args{oidc.ResponseTypeCode,
-				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := op.ValidateAuthReqResponseType(tt.args.client, tt.args.responseType); (err != nil) != tt.wantErr {
-				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestRedirectToLogin(t *testing.T) {
-	type args struct {
-		authReqID string
-		client    op.Client
-		w         http.ResponseWriter
-		r         *http.Request
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			"redirect ok",
-			args{
-				"id",
-				mock.NewClientExpectAny(t, op.ApplicationTypeNative),
-				httptest.NewRecorder(),
-				httptest.NewRequest("GET", "/authorize", nil),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.RedirectToLogin(tt.args.authReqID, tt.args.client, tt.args.w, tt.args.r)
-			rec := tt.args.w.(*httptest.ResponseRecorder)
-			require.Equal(t, http.StatusFound, rec.Code)
-			require.Equal(t, "/login?id=id", rec.Header().Get("location"))
-		})
-	}
-}
-
-func TestAuthorizeCallback(t *testing.T) {
-	type args struct {
-		w          http.ResponseWriter
-		r          *http.Request
-		authorizer op.Authorizer
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.AuthorizeCallback(tt.args.w, tt.args.r, tt.args.authorizer)
-		})
-	}
-}
-
-func TestAuthResponse(t *testing.T) {
-	type args struct {
-		authReq    op.AuthRequest
-		authorizer op.Authorizer
-		w          http.ResponseWriter
-		r          *http.Request
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
-		})
-	}
-}
-
-func Test_LoopbackOrLocalhost(t *testing.T) {
+//TODO: test not parsable url
+func TestLoopbackOrLocalhost(t *testing.T) {
 	type args struct {
 		url string
 	}
@@ -631,3 +533,128 @@ func Test_LoopbackOrLocalhost(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAuthReqResponseType(t *testing.T) {
+	type args struct {
+		responseType oidc.ResponseType
+		client       op.Client
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"empty response type",
+			args{"",
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			true,
+		},
+		{
+			"response type missing in client config",
+			args{oidc.ResponseTypeIDToken,
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			true,
+		},
+		{
+			"valid response type",
+			args{oidc.ResponseTypeCode,
+				mock.NewClientWithConfig(t, nil, op.ApplicationTypeNative, []oidc.ResponseType{oidc.ResponseTypeCode}, true)},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op.ValidateAuthReqResponseType(tt.args.client, tt.args.responseType); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+//TODO: implement
+func TestValidateAuthReqIDTokenHint(t *testing.T) {}
+
+func TestRedirectToLogin(t *testing.T) {
+	type args struct {
+		authReqID string
+		client    op.Client
+		w         http.ResponseWriter
+		r         *http.Request
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"redirect ok",
+			args{
+				"id",
+				mock.NewClientExpectAny(t, op.ApplicationTypeNative),
+				httptest.NewRecorder(),
+				httptest.NewRequest("GET", "/authorize", nil),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op.RedirectToLogin(tt.args.authReqID, tt.args.client, tt.args.w, tt.args.r)
+			rec := tt.args.w.(*httptest.ResponseRecorder)
+			require.Equal(t, http.StatusFound, rec.Code)
+			require.Equal(t, "/login?id=id", rec.Header().Get("location"))
+		})
+	}
+}
+
+//TODO: implement
+func TestAuthorizeCallback(t *testing.T) {
+	type args struct {
+		w          http.ResponseWriter
+		r          *http.Request
+		authorizer op.Authorizer
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op.AuthorizeCallback(tt.args.w, tt.args.r, tt.args.authorizer)
+		})
+	}
+}
+
+//TODO: implement
+func TestAuthResponse(t *testing.T) {
+	type args struct {
+		authReq    op.AuthRequest
+		authorizer op.Authorizer
+		w          http.ResponseWriter
+		r          *http.Request
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
+		})
+	}
+}
+
+//TODO: implement
+func TestAuthResponseCode(t *testing.T) {}
+
+//TODO: implement
+func TestAuthResponseToken(t *testing.T) {}
+
+//TODO: implement
+func TestCreateAuthRequestCode(t *testing.T) {}
+
+//TODO: implement
+func TestBuildAuthRequestCode(t *testing.T) {}
