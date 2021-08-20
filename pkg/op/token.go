@@ -167,5 +167,5 @@ func removeUserinfoScopes(scopes []string) []string {
 			newScopeList = append(newScopeList, scope)
 		}
 	}
-	return scopes
+	return newScopeList
 }
