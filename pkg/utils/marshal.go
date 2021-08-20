@@ -5,20 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/sirupsen/logrus"
 )
 
 func MarshalJSON(w http.ResponseWriter, i interface{}) {
-	b, err := json.Marshal(i)
+	MarshalJSONWithStatus(w, i, http.StatusOK)
+}
+
+func MarshalJSONWithStatus(w http.ResponseWriter, i interface{}, status int) {
+	w.Header().Set("content-type", "application/json")
+	w.WriteHeader(status)
+	err := json.NewEncoder(w).Encode(i)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("content-type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		logrus.Error("error writing response")
 	}
 }
 
