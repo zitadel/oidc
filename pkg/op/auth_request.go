@@ -203,10 +203,10 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		if responseType == oidc.ResponseTypeCode && IsConfidentialType(client) {
 			return nil
 		}
-		return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is http and is not allowed. " +
+		return oidc.ErrInvalidRequestRedirectURI().WithDescription("This client's redirect_uri is http and is not allowed. " +
 			"If you have any questions, you may contact the administrator of the application.")
 	}
-	return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is using a custom schema and is not allowed. " +
+	return oidc.ErrInvalidRequestRedirectURI().WithDescription("This client's redirect_uri is using a custom schema and is not allowed. " +
 		"If you have any questions, you may contact the administrator of the application.")
 }
 
@@ -218,7 +218,7 @@ func validateAuthReqRedirectURINative(client Client, uri string, responseType oi
 		if isLoopback || isCustomSchema {
 			return nil
 		}
-		return oidc.ErrInvalidRequest().WithDescription("This client's redirect_uri is http and is not allowed. " +
+		return oidc.ErrInvalidRequestRedirectURI().WithDescription("This client's redirect_uri is http and is not allowed. " +
 			"If you have any questions, you may contact the administrator of the application.")
 	}
 	if !isLoopback {
