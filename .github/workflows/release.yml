@@ -1,5 +1,12 @@
 name: Release
-on: push
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-18.04
@@ -21,6 +28,7 @@ jobs:
   release:
     runs-on: ubuntu-18.04
     needs: [test]
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
