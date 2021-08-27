@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -57,9 +56,5 @@ func devLocalAllowed(url *url.URL) bool {
 	if !b {
 		return b
 	}
-	return url.Scheme == "http" &&
-		url.Host == "localhost" ||
-		url.Host == "127.0.0.1" ||
-		url.Host == "::1" ||
-		strings.HasPrefix(url.Host, "localhost:")
+	return url.Scheme == "http"
 }
