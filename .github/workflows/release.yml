@@ -1,11 +1,18 @@
 name: Release
-on: push
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        go: ['1.14', '1.15', '1.16']
+        go: ['1.14', '1.15', '1.16', '1.17']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v2
@@ -21,6 +28,7 @@ jobs:
   release:
     runs-on: ubuntu-18.04
     needs: [test]
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
