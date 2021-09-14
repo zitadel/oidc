@@ -64,14 +64,14 @@ type RelyingParty interface {
 }
 
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
-type PKCECodeGenerator func() string
+type PKCECodeGenerator func() (string, error)
 
 var (
 	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 	}
-	DefaultPKCECodeGenerator PKCECodeGenerator = func() string {
-		return base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	DefaultPKCECodeGenerator PKCECodeGenerator = func() (string, error) {
+		return base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String())), nil
 	}
 )
 
@@ -311,7 +311,10 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 
 //GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier := rp.PKCECodeGenerator()()
+	codeVerifier, err := rp.PKCECodeGenerator()()
+	if err != nil {
+		return "", err
+	}
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}
