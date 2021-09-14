@@ -121,11 +121,18 @@ func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, 
 	if payload != nil {
 		return payload, nil
 	}
-	if key.KeyID != keyID || (key.KeyID == "" && keyID == "" && !r.skipRemoteCheck) {
+	if !r.exactMatch(key.KeyID, keyID) {
 		//no exact key match, try getting better match with remote keys
 		return nil, nil
 	}
 	return nil, fmt.Errorf("signature verification failed: %w", err)
+}
+
+func (r *remoteKeySet) exactMatch(jwkID, jwsID string) bool {
+	if jwkID == "" && jwsID == "" && r.skipRemoteCheck {
+		return true
+	}
+	return jwkID == jwsID
 }
 
 func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
