@@ -88,26 +88,31 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	if alg == "" {
 		alg = r.defaultAlg
 	}
-	keys := r.keysFromCache()
-	if len(keys) == 0 {
-		return r.verifySignatureRemote(ctx, jws, keyID, alg)
-	}
-	payload, err := r.verifySignatureCached(jws, keys, keyID, alg)
+	payload, err := r.verifySignatureCached(jws, keyID, alg)
 	if payload != nil {
 		return payload, nil
 	}
 	if err != nil && keyID != "" || r.skipRemoteCheck {
-		return nil, fmt.Errorf("invalid signature: %w", err)
+		return nil, err
 	}
 	return r.verifySignatureRemote(ctx, jws, keyID, alg)
 }
 
-func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keys []jose.JSONWebKey, keyID, alg string) ([]byte, error) {
+func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
+	keys := r.keysFromCache()
+	if len(keys) == 0 {
+		return nil, nil
+	}
 	key, err := oidc.FindMatchingKey(keyID, oidc.KeyUseSignature, alg, keys...)
 	if err != nil {
-		return nil, err
+		//ignore error here, try with remote keys
+		return nil, nil //nolint:nilerr
 	}
-	return jws.Verify(&key)
+	payload, err := jws.Verify(&key)
+	if err != nil {
+		return nil, fmt.Errorf("signature verification failed: %w", err)
+	}
+	return payload, nil
 }
 
 func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
@@ -119,7 +124,11 @@ func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSON
 	if err != nil {
 		return nil, fmt.Errorf("unable to validate signature: %w", err)
 	}
-	return jws.Verify(&key)
+	payload, err := jws.Verify(&key)
+	if err != nil {
+		return nil, fmt.Errorf("signature verification failed: %w", err)
+	}
+	return payload, nil
 }
 
 func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
