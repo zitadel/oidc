@@ -102,9 +102,9 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 //
 //if there is only one possible, it tries to verify the signature and will return the payload if successful
 //
-//it only returns an error if signature validation fails and if either:
-// - both (JWT and JWK) kid match
-// - or both are empty and skipRemoteCheck is set to true
+//it only returns an error if signature validation fails and keys exactMatch which is if either:
+// - both kid are empty and skipRemoteCheck is set to true
+// - or both (JWT and JWK) kid are equal
 //
 //otherwise it will return no error (so remote keys will be loaded)
 func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
