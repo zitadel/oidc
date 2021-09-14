@@ -5,12 +5,18 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"errors"
 
 	"gopkg.in/square/go-jose.v2"
 )
 
 const (
 	KeyUseSignature = "sig"
+)
+
+var (
+	ErrKeyMultiple = errors.New("multiple possible keys match")
+	ErrKeyNone     = errors.New("no possible keys matches")
 )
 
 //KeySet represents a set of JSON Web Keys
@@ -39,20 +45,38 @@ func GetKeyIDAndAlg(jws *jose.JSONWebSignature) (string, string) {
 //will return the key immediately if matches exact (id, usage, type)
 //
 //will return false none or multiple match
+//
+//deprecated: use FindMatchingKey which will return an error (more specific) instead of just a bool
+//moved implementation already to FindMatchingKey
 func FindKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (jose.JSONWebKey, bool) {
+	key, err := FindMatchingKey(keyID, use, expectedAlg, keys...)
+	return key, err == nil
+}
+
+//FindMatchingKey searches the given JSON Web Keys for the requested key ID, usage and key type
+//
+//will return the key immediately if matches exact (id, usage, type)
+//
+//will return a specific error if none (ErrKeyNone) or multiple (ErrKeyMultiple) match
+func FindMatchingKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (key jose.JSONWebKey, err error) {
 	var validKeys []jose.JSONWebKey
-	for _, key := range keys {
-		if key.KeyID == keyID && key.Use == use && algToKeyType(key.Key, expectedAlg) {
-			if keyID != "" {
-				return key, true
+	for _, k := range keys {
+		if k.Use == use && algToKeyType(k.Key, expectedAlg) {
+			if k.KeyID == keyID && keyID != "" {
+				return k, nil
 			}
-			validKeys = append(validKeys, key)
+			if k.KeyID == "" || keyID == "" {
+				validKeys = append(validKeys, k)
+			}
 		}
 	}
 	if len(validKeys) == 1 {
-		return validKeys[0], true
+		return validKeys[0], nil
 	}
-	return jose.JSONWebKey{}, false
+	if len(validKeys) > 1 {
+		return key, ErrKeyMultiple
+	}
+	return key, ErrKeyNone
 }
 
 func algToKeyType(key interface{}, alg string) bool {
