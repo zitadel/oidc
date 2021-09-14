@@ -38,6 +38,9 @@ type RelyingParty interface {
 	//IsPKCE returns if authorization is done using `Authorization Code Flow with Proof Key for Code Exchange (PKCE)`
 	IsPKCE() bool
 
+	//PKCECodeGenerator controls how PKCE challenge codes are generated
+	PKCECodeGenerator() PKCECodeGenerator
+
 	//CookieHandler returns a http cookie handler used for various state transfer cookies
 	CookieHandler() *utils.CookieHandler
 
@@ -61,19 +64,24 @@ type RelyingParty interface {
 }
 
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
+type PKCECodeGenerator func() string
 
 var (
 	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 	}
+	DefaultPKCECodeGenerator PKCECodeGenerator = func() string {
+		return base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	}
 )
 
 type relyingParty struct {
-	issuer      string
-	endpoints   Endpoints
-	oauthConfig *oauth2.Config
-	oauth2Only  bool
-	pkce        bool
+	issuer            string
+	endpoints         Endpoints
+	oauthConfig       *oauth2.Config
+	oauth2Only        bool
+	pkce              bool
+	pkceCodeGenerator PKCECodeGenerator
 
 	httpClient    *http.Client
 	cookieHandler *utils.CookieHandler
@@ -94,6 +102,10 @@ func (rp *relyingParty) Issuer() string {
 
 func (rp *relyingParty) IsPKCE() bool {
 	return rp.pkce
+}
+
+func (rp *relyingParty) PKCECodeGenerator() PKCECodeGenerator {
+	return rp.pkceCodeGenerator
 }
 
 func (rp *relyingParty) CookieHandler() *utils.CookieHandler {
@@ -195,9 +207,19 @@ func WithCookieHandler(cookieHandler *utils.CookieHandler) Option {
 //it also sets a `CookieHandler` for securing the various redirects
 //and exchanging the code challenge
 func WithPKCE(cookieHandler *utils.CookieHandler) Option {
+	return WithCallerDefinedPKCE(cookieHandler, DefaultPKCECodeGenerator)
+}
+
+//WithCallerDefinedPKCE works much the same as WithPKCE, but allows the caller
+//to specify how PKCE challenge codes should be generated. Some OIDC providers
+//place additional requirements on challenge codes - this allows the caller
+//to meet them if possible. Note that a challenge code should be at least 36 characters
+//in length and securely generated.
+func WithCallerDefinedPKCE(cookieHandler *utils.CookieHandler, codeGenerator PKCECodeGenerator) Option {
 	return func(rp *relyingParty) error {
 		rp.pkce = true
 		rp.cookieHandler = cookieHandler
+		rp.pkceCodeGenerator = codeGenerator
 		return nil
 	}
 }
@@ -289,7 +311,7 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 
 //GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	codeVerifier := rp.PKCECodeGenerator()()
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}
