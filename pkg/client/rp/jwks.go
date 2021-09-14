@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/caos/oidc/pkg/utils"
-
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -129,8 +128,8 @@ func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, 
 }
 
 func (r *remoteKeySet) exactMatch(jwkID, jwsID string) bool {
-	if jwkID == "" && jwsID == "" && r.skipRemoteCheck {
-		return true
+	if jwkID == "" && jwsID == "" {
+		return r.skipRemoteCheck
 	}
 	return jwkID == jwsID
 }
