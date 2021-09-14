@@ -39,6 +39,7 @@ var (
 	ErrSignatureMultiple       = errors.New("id_token contains multiple signatures")
 	ErrSignatureUnsupportedAlg = errors.New("signature algorithm not supported")
 	ErrSignatureInvalidPayload = errors.New("signature does not match Payload")
+	ErrSignatureInvalid        = errors.New("invalid signature")
 	ErrExpired                 = errors.New("token has expired")
 	ErrIatMissing              = errors.New("issuedAt of token is missing")
 	ErrIatInFuture             = errors.New("issuedAt of token is in the future")
@@ -143,7 +144,7 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 
 	signedPayload, err := set.VerifySignature(ctx, jws)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w (%v)", ErrSignatureInvalid, err)
 	}
 
 	if !bytes.Equal(signedPayload, payload) {
