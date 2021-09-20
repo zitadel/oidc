@@ -38,9 +38,6 @@ type RelyingParty interface {
 	//IsPKCE returns if authorization is done using `Authorization Code Flow with Proof Key for Code Exchange (PKCE)`
 	IsPKCE() bool
 
-	//PKCECodeGenerator controls how PKCE challenge codes are generated
-	PKCECodeGenerator() PKCECodeGenerator
-
 	//CookieHandler returns a http cookie handler used for various state transfer cookies
 	CookieHandler() *utils.CookieHandler
 
@@ -70,10 +67,18 @@ var (
 	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 	}
-	DefaultPKCECodeGenerator PKCECodeGenerator = func() (string, error) {
-		return base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String())), nil
-	}
 )
+
+func DefaultPKCECodeGenerator() (string, error) {
+	return base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String() + uuid.New().String())), nil
+}
+
+// extends the RelyingParty interface to allow custom PKCE Code generation
+type RelyingPartyWithCustomPKCE interface {
+	RelyingParty
+	//PKCECodeGenerator controls how PKCE challenge codes are generated
+	PKCECodeGenerator() PKCECodeGenerator
+}
 
 type relyingParty struct {
 	issuer            string
@@ -311,7 +316,11 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 
 //GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier, err := rp.PKCECodeGenerator()()
+	codeGenerator := DefaultPKCECodeGenerator
+	if rpc, ok := rp.(RelyingPartyWithCustomPKCE); ok {
+		codeGenerator = rpc.PKCECodeGenerator()
+	}
+	codeVerifier, err := codeGenerator()
 	if err != nil {
 		return "", err
 	}
