@@ -16,7 +16,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err)
 	}
 	if tokenReq.Code == "" {
-		RequestError(w, r, oidc.ErrInvalidGrant()) //TODO: ErrInvalidRequest("code missing")?
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"))
 		return
 	}
 	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
@@ -96,7 +96,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	}
 	err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage())
 	if err != nil {
-		return nil, nil, oidc.ErrInvalidClient().WithDescription("invalid client_id / client_secret").WithParent(err)
+		return nil, nil, err
 	}
 	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
 	return request, client, err

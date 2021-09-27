@@ -54,7 +54,7 @@ func ParseRefreshTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.Ref
 //and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (RefreshTokenRequest, Client, error) {
 	if tokenReq.RefreshToken == "" {
-		return nil, nil, oidc.ErrInvalidGrant() //TODO: ErrInvalidRequest("refresh_token missing")?
+		return nil, nil, oidc.ErrInvalidRequest().WithDescription("refresh_token missing")
 	}
 	request, client, err := AuthorizeRefreshClient(ctx, tokenReq, exchanger)
 	if err != nil {

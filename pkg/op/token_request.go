@@ -52,7 +52,7 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-//authenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
+//AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
 //it is implemented by oidc.AuthRequest and oidc.RefreshTokenRequest
 type AuthenticatedTokenRequest interface {
 	SetClientID(string)
@@ -71,35 +71,36 @@ func ParseAuthenticatedTokenRequest(r *http.Request, decoder utils.Decoder, requ
 		return oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 	clientID, clientSecret, ok := r.BasicAuth()
-	if ok {
-		clientID, err = url.QueryUnescape(clientID)
-		if err != nil {
-			return oidc.ErrInvalidRequest().WithDescription("invalid basic auth header").WithParent(err)
-		}
-		clientSecret, err = url.QueryUnescape(clientSecret)
-		if err != nil {
-			return oidc.ErrInvalidRequest().WithDescription("invalid basic auth header").WithParent(err)
-		}
-		request.SetClientID(clientID)
-		request.SetClientSecret(clientSecret)
+	if !ok {
+		return nil
 	}
+	clientID, err = url.QueryUnescape(clientID)
+	if err != nil {
+		return oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
+	}
+	clientSecret, err = url.QueryUnescape(clientSecret)
+	if err != nil {
+		return oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
+	}
+	request.SetClientID(clientID)
+	request.SetClientSecret(clientSecret)
 	return nil
 }
 
-//AuthorizeRefreshClientByClientIDSecret authorizes a client by validating the client_id and client_secret (Basic Auth and POST)
+//AuthorizeClientIDSecret authorizes a client by validating the client_id and client_secret (Basic Auth and POST)
 func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string, storage Storage) error {
 	err := storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
 	if err != nil {
-		return oidc.ErrInvalidGrant().WithDescription("code_challenge required").WithParent(err)
+		return oidc.ErrInvalidClient().WithDescription("invalid client_id / client_secret").WithParent(err)
 	}
 	return nil
 }
 
-//AuthorizeCodeClientByCodeChallenge authorizes a client by validating the code_verifier against the previously sent
+//AuthorizeCodeChallenge authorizes a client by validating the code_verifier against the previously sent
 //code_challenge of the auth request (PKCE)
 func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.CodeChallenge) error {
 	if tokenReq.CodeVerifier == "" {
-		return oidc.ErrInvalidGrant().WithDescription("code_challenge required") //TODO: ErrInvalidRequest("code_challenge required")
+		return oidc.ErrInvalidRequest().WithDescription("code_challenge required")
 	}
 	if !oidc.VerifyCodeChallenge(challenge, tokenReq.CodeVerifier) {
 		return oidc.ErrInvalidGrant().WithDescription("invalid code challenge")
