@@ -7,12 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op"
-	"github.com/caos/oidc/pkg/op/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
+
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/pkg/op/mock"
 )
 
 func TestKeys(t *testing.T) {
@@ -34,7 +35,7 @@ func TestKeys(t *testing.T) {
 			args: args{
 				k: func() op.KeyProvider {
 					m := mock.NewMockKeyProvider(gomock.NewController(t))
-					m.EXPECT().GetKeySet(gomock.Any()).Return(nil, oidc.ErrServerError)
+					m.EXPECT().GetKeySet(gomock.Any()).Return(nil, oidc.ErrServerError())
 					return m
 				}(),
 			},

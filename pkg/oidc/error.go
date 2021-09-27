@@ -52,6 +52,20 @@ func (e *Error) IsRedirectDisabled() bool {
 	return e.redirectDisabled
 }
 
+type errorType string
+
+const (
+	InvalidRequest       errorType = "invalid_request"
+	InvalidScope         errorType = "invalid_scope"
+	InvalidClient        errorType = "invalid_client"
+	InvalidGrant         errorType = "invalid_grant"
+	UnauthorizedClient   errorType = "unauthorized_client"
+	UnsupportedGrantType errorType = "unsupported_grant_type"
+	ServerError          errorType = "server_error"
+	InteractionRequired  errorType = "interaction_required"
+	LoginRequired        errorType = "login_required"
+)
+
 var (
 	ErrInvalidRequest = func() *Error {
 		return &Error{
@@ -117,17 +131,3 @@ func DefaultToServerError(err error, description string) *Error {
 	}
 	return oauth
 }
-
-type errorType string
-
-const (
-	InvalidRequest       errorType = "invalid_request"
-	InvalidScope         errorType = "invalid_scope"
-	InvalidClient        errorType = "invalid_client"
-	InvalidGrant         errorType = "invalid_grant"
-	UnauthorizedClient   errorType = "unauthorized_client"
-	UnsupportedGrantType errorType = "unsupported_grant_type"
-	ServerError          errorType = "server_error"
-	InteractionRequired  errorType = "interaction_required"
-	LoginRequired        errorType = "login_required"
-)
