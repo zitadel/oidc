@@ -7,11 +7,13 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/oidc)](https://goreportcard.com/report/github.com/caos/oidc)
 [![codecov](https://codecov.io/gh/caos/oidc/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/oidc)
 
-> This project is in beta state. It can AND will continue breaking until version 1.0.0 is released
+![openid_certified](https://cloud.githubusercontent.com/assets/1454075/7611268/4d19de32-f97b-11e4-895b-31b2455a7ca6.png)
 
 ## What Is It
 
-This project is a easy to use client and server implementation for the `OIDC` (Open ID Connect) standard written for `Go`.
+This project is a easy to use client (RP) and server (OP) implementation for the `OIDC` (Open ID Connect) standard written for `Go`.
+
+The RP is certified for the [basic](https://www.certification.openid.net/plan-detail.html?public=true&plan=uoprP0OO8Z4Qo) and [config](https://www.certification.openid.net/plan-detail.html?public=true&plan=AYSdLbzmWbu9X) profile.
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
 
@@ -44,6 +46,7 @@ For your convenience you can find the relevant standards linked below.
 | 1.14    | :white_check_mark: |
 | 1.15    | :white_check_mark: |
 | 1.16    | :white_check_mark: |
+| 1.17    | :white_check_mark: |
 
 ## Why another library
 
@@ -51,7 +54,6 @@ As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle serv
 
 ### Goals
 
-- [Certify this library as RP](https://openid.net/certification/#RPs)
 - [Certify this library as OP](https://openid.net/certification/#OPs)
 
 ### Other Go OpenID Connect library's
