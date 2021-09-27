@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 //
@@ -77,7 +77,7 @@ import (
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
 		r       *http.Request
-		decoder utils.Decoder
+		decoder httphelper.Decoder
 	}
 	type res struct {
 		want *oidc.AuthRequest
@@ -103,7 +103,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 			"decoding error",
 			args{
 				&http.Request{URL: &url.URL{RawQuery: "unknown=value"}},
-				func() utils.Decoder {
+				func() httphelper.Decoder {
 					decoder := schema.NewDecoder()
 					decoder.IgnoreUnknownKeys(false)
 					return decoder
@@ -118,7 +118,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 			"parsing ok",
 			args{
 				&http.Request{URL: &url.URL{RawQuery: "scope=openid"}},
-				func() utils.Decoder {
+				func() httphelper.Decoder {
 					decoder := schema.NewDecoder()
 					decoder.IgnoreUnknownKeys(false)
 					return decoder

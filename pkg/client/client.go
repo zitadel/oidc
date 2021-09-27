@@ -10,12 +10,13 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/caos/oidc/pkg/crypto"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 var (
-	Encoder = func() utils.Encoder {
+	Encoder = func() httphelper.Encoder {
 		e := schema.NewEncoder()
 		e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
 			return value.Interface().(oidc.SpaceDelimitedArray).Encode()
@@ -32,7 +33,7 @@ func Discover(issuer string, httpClient *http.Client) (*oidc.DiscoveryConfigurat
 		return nil, err
 	}
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
-	err = utils.HttpRequest(httpClient, req, &discoveryConfig)
+	err = httphelper.HttpRequest(httpClient, req, &discoveryConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +53,12 @@ func CallTokenEndpoint(request interface{}, caller tokenEndpointCaller) (newToke
 }
 
 func callTokenEndpoint(request interface{}, authFn interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
-	req, err := utils.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
+	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
 	tokenRes := new(oidc.AccessTokenResponse)
-	if err := utils.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
 		return nil, err
 	}
 	return &oauth2.Token{
@@ -69,7 +70,7 @@ func callTokenEndpoint(request interface{}, authFn interface{}, caller tokenEndp
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
-	privateKey, err := utils.BytesToPrivateKey(key)
+	privateKey, err := crypto.BytesToPrivateKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) 
 func SignedJWTProfileAssertion(clientID string, audience []string, expiration time.Duration, signer jose.Signer) (string, error) {
 	iat := time.Now()
 	exp := iat.Add(expiration)
-	return utils.Sign(&oidc.JWTTokenRequest{
+	return crypto.Sign(&oidc.JWTTokenRequest{
 		Issuer:    clientID,
 		Subject:   clientID,
 		Audience:  audience,

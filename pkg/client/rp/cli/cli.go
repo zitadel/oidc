@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/caos/oidc/pkg/client/rp"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -28,9 +28,9 @@ func CodeFlow(ctx context.Context, relyingParty rp.RelyingParty, callbackPath, p
 	http.Handle(loginPath, rp.AuthURLHandler(stateProvider, relyingParty))
 	http.Handle(callbackPath, rp.CodeExchangeHandler(callback, relyingParty))
 
-	utils.StartServer(codeflowCtx, ":"+port)
+	httphelper.StartServer(codeflowCtx, ":"+port)
 
-	utils.OpenBrowser("http://localhost:" + port + loginPath)
+	OpenBrowser("http://localhost:" + port + loginPath)
 
 	return <-tokenChan
 }

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/caos/oidc/pkg/client"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type ResourceServer interface {
@@ -39,7 +39,7 @@ func (r *resourceServer) AuthFn() (interface{}, error) {
 
 func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, option ...Option) (ResourceServer, error) {
 	authorizer := func() (interface{}, error) {
-		return utils.AuthorizeBasic(clientID, clientSecret), nil
+		return httphelper.AuthorizeBasic(clientID, clientSecret), nil
 	}
 	return newResourceServer(issuer, authorizer, option...)
 }
@@ -61,7 +61,7 @@ func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, opt
 func newResourceServer(issuer string, authorizer func() (interface{}, error), options ...Option) (*resourceServer, error) {
 	rs := &resourceServer{
 		issuer:     issuer,
-		httpClient: utils.DefaultHTTPClient,
+		httpClient: httphelper.DefaultHTTPClient,
 	}
 	for _, optFunc := range options {
 		optFunc(rs)
@@ -111,12 +111,12 @@ func Introspect(ctx context.Context, rp ResourceServer, token string) (oidc.Intr
 	if err != nil {
 		return nil, err
 	}
-	req, err := utils.FormRequest(rp.IntrospectionURL(), &oidc.IntrospectionRequest{Token: token}, client.Encoder, authFn)
+	req, err := httphelper.FormRequest(rp.IntrospectionURL(), &oidc.IntrospectionRequest{Token: token}, client.Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
 	resp := oidc.NewIntrospectionResponse()
-	if err := utils.HttpRequest(rp.HttpClient(), req, resp); err != nil {
+	if err := httphelper.HttpRequest(rp.HttpClient(), req, resp); err != nil {
 		return nil, err
 	}
 	return resp, nil

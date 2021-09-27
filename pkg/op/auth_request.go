@@ -11,8 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
+	str "github.com/caos/oidc/pkg/strings"
 )
 
 type AuthRequest interface {
@@ -34,8 +35,8 @@ type AuthRequest interface {
 
 type Authorizer interface {
 	Storage() Storage
-	Decoder() utils.Decoder
-	Encoder() utils.Encoder
+	Decoder() httphelper.Decoder
+	Encoder() httphelper.Encoder
 	Signer() Signer
 	IDTokenHintVerifier() IDTokenHintVerifier
 	Crypto() Crypto
@@ -92,7 +93,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 }
 
 //ParseAuthorizeRequest parsed the http request into a oidc.AuthRequest
-func ParseAuthorizeRequest(r *http.Request, decoder utils.Decoder) (*oidc.AuthRequest, error) {
+func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AuthRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
@@ -182,7 +183,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
-		if !utils.Contains(client.RedirectURIs(), uri) {
+		if !str.Contains(client.RedirectURIs(), uri) {
 			return oidc.ErrInvalidRequestRedirectURI().
 				WithDescription("The requested redirect_uri is missing in the client configuration. " +
 					"If you have any questions, you may contact the administrator of the application.")
@@ -192,7 +193,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 	if client.ApplicationType() == ApplicationTypeNative {
 		return validateAuthReqRedirectURINative(client, uri, responseType)
 	}
-	if !utils.Contains(client.RedirectURIs(), uri) {
+	if !str.Contains(client.RedirectURIs(), uri) {
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration. " +
 			"If you have any questions, you may contact the administrator of the application.")
 	}
@@ -214,7 +215,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
-	if utils.Contains(client.RedirectURIs(), uri) {
+	if str.Contains(client.RedirectURIs(), uri) {
 		if isLoopback || isCustomSchema {
 			return nil
 		}
@@ -339,7 +340,7 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-	params, err := utils.URLEncodeResponse(resp, authorizer.Encoder())
+	params, err := httphelper.URLEncodeResponse(resp, authorizer.Encoder())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return

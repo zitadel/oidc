@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type SessionEnder interface {
-	Decoder() utils.Decoder
+	Decoder() httphelper.Decoder
 	Storage() Storage
 	IDTokenHintVerifier() IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
@@ -44,7 +44,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	http.Redirect(w, r, session.RedirectURI, http.StatusFound)
 }
 
-func ParseEndSessionRequest(r *http.Request, decoder utils.Decoder) (*oidc.EndSessionRequest, error) {
+func ParseEndSessionRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.EndSessionRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)

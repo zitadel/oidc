@@ -9,7 +9,8 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/crypto"
+	"github.com/caos/oidc/pkg/http"
 )
 
 const (
@@ -185,7 +186,7 @@ func (a *accessTokenClaims) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return utils.ConcatenateJSON(b, info)
+	return http.ConcatenateJSON(b, info)
 }
 
 func (a *accessTokenClaims) UnmarshalJSON(data []byte) error {
@@ -372,7 +373,7 @@ func (t *idTokenClaims) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return utils.ConcatenateJSON(b, info)
+	return http.ConcatenateJSON(b, info)
 }
 
 func (t *idTokenClaims) UnmarshalJSON(data []byte) error {
@@ -569,12 +570,12 @@ func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte,
 }
 
 func ClaimHash(claim string, sigAlgorithm jose.SignatureAlgorithm) (string, error) {
-	hash, err := utils.GetHashAlgorithm(sigAlgorithm)
+	hash, err := crypto.GetHashAlgorithm(sigAlgorithm)
 	if err != nil {
 		return "", err
 	}
 
-	return utils.HashString(hash, claim, true), nil
+	return crypto.HashString(hash, claim, true), nil
 }
 
 func AppendClientIDToAudience(clientID string, audience []string) []string {
@@ -587,7 +588,7 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 }
 
 func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error) {
-	privateKey, err := utils.BytesToPrivateKey(assertion.GetPrivateKey())
+	privateKey, err := crypto.BytesToPrivateKey(assertion.GetPrivateKey())
 	if err != nil {
 		return "", err
 	}

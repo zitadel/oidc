@@ -3,8 +3,8 @@ package op
 import (
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type ErrAuthRequest interface {
@@ -13,7 +13,7 @@ type ErrAuthRequest interface {
 	GetState() string
 }
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder utils.Encoder) {
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder httphelper.Encoder) {
 	if authReq == nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -24,7 +24,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
-	params, err := utils.URLEncodeResponse(e, encoder)
+	params, err := httphelper.URLEncodeResponse(e, encoder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -45,5 +45,5 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 	if e.ErrorType == oidc.InvalidClient {
 		status = 401
 	}
-	utils.MarshalJSONWithStatus(w, e, status)
+	httphelper.MarshalJSONWithStatus(w, e, status)
 }

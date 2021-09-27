@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/caos/oidc/pkg/utils"
+	httphelper "github.com/caos/oidc/pkg/http"
 )
 
 type ProbesFn func(context.Context) error
@@ -49,7 +49,7 @@ func ReadyStorage(s Storage) ProbesFn {
 }
 
 func ok(w http.ResponseWriter) {
-	utils.MarshalJSON(w, status{"ok"})
+	httphelper.MarshalJSON(w, status{"ok"})
 }
 
 type status struct {

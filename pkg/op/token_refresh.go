@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/strings"
 )
 
 type RefreshTokenRequest interface {
@@ -37,11 +38,11 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 		RequestError(w, r, err)
 		return
 	}
-	utils.MarshalJSON(w, resp)
+	httphelper.MarshalJSON(w, resp)
 }
 
 //ParseRefreshTokenRequest parsed the http request into a oidc.RefreshTokenRequest
-func ParseRefreshTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.RefreshTokenRequest, error) {
+func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.RefreshTokenRequest, error) {
 	request := new(oidc.RefreshTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)
 	if err != nil {
@@ -77,7 +78,7 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 		return nil
 	}
 	for _, scope := range requestedScopes {
-		if !utils.Contains(authRequest.GetScopes(), scope) {
+		if !strings.Contains(authRequest.GetScopes(), scope) {
 			return oidc.ErrInvalidScope()
 		}
 	}

@@ -3,8 +3,8 @@ package op
 import (
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 func discoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http.Request) {
@@ -14,7 +14,7 @@ func discoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http
 }
 
 func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
-	utils.MarshalJSON(w, config)
+	httphelper.MarshalJSON(w, config)
 }
 
 func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfiguration {

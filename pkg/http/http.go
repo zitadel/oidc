@@ -1,4 +1,4 @@
-package utils
+package http
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 
 var (
 	DefaultHTTPClient = &http.Client{
-		Timeout: time.Duration(30 * time.Second),
+		Timeout: 30 * time.Second,
 	}
 )
 

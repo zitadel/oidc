@@ -12,8 +12,8 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -41,8 +41,8 @@ var (
 type OpenIDProvider interface {
 	Configuration
 	Storage() Storage
-	Decoder() utils.Decoder
-	Encoder() utils.Encoder
+	Decoder() httphelper.Decoder
+	Encoder() httphelper.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
 	AccessTokenVerifier() AccessTokenVerifier
 	Crypto() Crypto
@@ -211,11 +211,11 @@ func (o *openidProvider) Storage() Storage {
 	return o.storage
 }
 
-func (o *openidProvider) Decoder() utils.Decoder {
+func (o *openidProvider) Decoder() httphelper.Decoder {
 	return o.decoder
 }
 
-func (o *openidProvider) Encoder() utils.Encoder {
+func (o *openidProvider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 

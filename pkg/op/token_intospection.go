@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"net/url"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type Introspector interface {
-	Decoder() utils.Decoder
+	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
 	AccessTokenVerifier() AccessTokenVerifier
@@ -36,16 +36,16 @@ func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspecto
 	}
 	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), introspector, token)
 	if !ok {
-		utils.MarshalJSON(w, response)
+		httphelper.MarshalJSON(w, response)
 		return
 	}
 	err = introspector.Storage().SetIntrospectionFromToken(r.Context(), response, tokenID, subject, clientID)
 	if err != nil {
-		utils.MarshalJSON(w, response)
+		httphelper.MarshalJSON(w, response)
 		return
 	}
 	response.SetActive(true)
-	utils.MarshalJSON(w, response)
+	httphelper.MarshalJSON(w, response)
 }
 
 func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) (token, clientID string, err error) {

@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"net/url"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type Exchanger interface {
 	Issuer() string
 	Storage() Storage
-	Decoder() utils.Decoder
+	Decoder() httphelper.Decoder
 	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
@@ -61,7 +61,7 @@ type AuthenticatedTokenRequest interface {
 
 //ParseAuthenticatedTokenRequest parses the client_id and client_secret from the HTTP request from either
 //HTTP Basic Auth header or form body and sets them into the provided authenticatedTokenRequest interface
-func ParseAuthenticatedTokenRequest(r *http.Request, decoder utils.Decoder, request AuthenticatedTokenRequest) error {
+func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder, request AuthenticatedTokenRequest) error {
 	err := r.ParseForm()
 	if err != nil {
 		return oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)

@@ -5,11 +5,11 @@
 package mock
 
 import (
-	reflect "reflect"
+	"reflect"
 
-	op "github.com/caos/oidc/pkg/op"
-	utils "github.com/caos/oidc/pkg/utils"
-	gomock "github.com/golang/mock/gomock"
+	utils "github.com/caos/oidc/pkg/http"
+	"github.com/caos/oidc/pkg/op"
+	"github.com/golang/mock/gomock"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.

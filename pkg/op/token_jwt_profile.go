@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type JWTAuthorizationGrantExchanger interface {
@@ -37,10 +37,10 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 		RequestError(w, r, err)
 		return
 	}
-	utils.MarshalJSON(w, resp)
+	httphelper.MarshalJSON(w, resp)
 }
 
-func ParseJWTProfileGrantRequest(r *http.Request, decoder utils.Decoder) (*oidc.JWTProfileGrantRequest, error) {
+func ParseJWTProfileGrantRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.JWTProfileGrantRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
@@ -74,6 +74,6 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 //ParseJWTProfileRequest has been renamed to ParseJWTProfileGrantRequest
 //
 //deprecated: use ParseJWTProfileGrantRequest
-func ParseJWTProfileRequest(r *http.Request, decoder utils.Decoder) (*oidc.JWTProfileGrantRequest, error) {
+func ParseJWTProfileRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.JWTProfileGrantRequest, error) {
 	return ParseJWTProfileGrantRequest(r, decoder)
 }

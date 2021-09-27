@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange
@@ -21,7 +21,7 @@ func ClientAssertionCodeOptions(assertion string) []oauth2.AuthCodeOption {
 	}
 }
 
-func ClientAssertionFormAuthorization(assertion string) utils.FormAuthorization {
+func ClientAssertionFormAuthorization(assertion string) http.FormAuthorization {
 	return func(values url.Values) {
 		values.Set("client_assertion", assertion)
 		values.Set("client_assertion_type", oidc.ClientAssertionTypeJWTAssertion)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 //CodeExchange handles the OAuth 2.0 authorization_code grant, including
@@ -29,11 +29,11 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err)
 		return
 	}
-	utils.MarshalJSON(w, resp)
+	httphelper.MarshalJSON(w, resp)
 }
 
 //ParseAccessTokenRequest parsed the http request into a oidc.AccessTokenRequest
-func ParseAccessTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.AccessTokenRequest, error) {
+func ParseAccessTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AccessTokenRequest, error) {
 	request := new(oidc.AccessTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)
 	if err != nil {
