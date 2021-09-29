@@ -45,6 +45,7 @@ var DefaultSupportedScopes = []string{
 	oidc.ScopeEmail,
 	oidc.ScopePhone,
 	oidc.ScopeAddress,
+	oidc.ScopeOfflineAccess,
 }
 
 func Scopes(c Configuration) []string {
