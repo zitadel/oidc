@@ -43,7 +43,7 @@ func main() {
 	state := func() string {
 		return uuid.New().String()
 	}
-	token := cli.CodeFlow(relyingParty, callbackPath, port, state)
+	token := cli.CodeFlow(ctx, relyingParty, callbackPath, port, state)
 
 	client := github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
 
