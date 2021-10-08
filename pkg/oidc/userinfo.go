@@ -360,6 +360,7 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 func (i *userinfo) UnmarshalJSON(data []byte) error {
 	type Alias userinfo
 	a := &struct {
+		Address *userInfoAddress `json:"address,omitempty"`
 		*Alias
 		UpdatedAt int64 `json:"update_at,omitempty"`
 	}{
@@ -368,7 +369,7 @@ func (i *userinfo) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
 	}
-
+	i.Address = a.Address
 	i.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
 
 	if err := json.Unmarshal(data, &i.claims); err != nil {

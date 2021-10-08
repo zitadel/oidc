@@ -2,7 +2,7 @@ package op
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -280,12 +280,12 @@ type openIDKeySet struct {
 func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keySet, err := o.Storage.GetKeySet(ctx)
 	if err != nil {
-		return nil, errors.New("error fetching keys")
+		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
 	keyID, alg := oidc.GetKeyIDAndAlg(jws)
-	key, ok := oidc.FindKey(keyID, oidc.KeyUseSignature, alg, keySet.Keys...)
-	if !ok {
-		return nil, errors.New("invalid kid")
+	key, err := oidc.FindMatchingKey(keyID, oidc.KeyUseSignature, alg, keySet.Keys...)
+	if err != nil {
+		return nil, fmt.Errorf("invalid signature: %w", err)
 	}
 	return jws.Verify(&key)
 }

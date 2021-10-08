@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"strings"
@@ -169,17 +170,18 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			return nil, err
 		}
 	}
-	endpoints, err := Discover(rp.issuer, rp.httpClient)
+	discoveryConfiguration, err := client.Discover(rp.issuer, rp.httpClient)
 	if err != nil {
 		return nil, err
 	}
+	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
 
 	return rp, nil
 }
 
-//DefaultRPOpts is the type for providing dynamic options to the DefaultRP
+//Option is the type for providing dynamic options to the DefaultRP
 type Option func(*relyingParty) error
 
 //WithCookieHandler set a `CookieHandler` for securing the various redirects
@@ -288,7 +290,7 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 
 //GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier := uuid.New().String()
+	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}

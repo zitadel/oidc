@@ -2,8 +2,11 @@ name: Release
 on:
   push:
     branches:
-      - '**'
+      - main
     tags-ignore:
+      - '**'
+  pull_request:
+    branches:
       - '**'
   workflow_dispatch:
 
@@ -21,7 +24,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov ./pkg/...
-      - uses: codecov/codecov-action@v2.0.2
+      - uses: codecov/codecov-action@v2.1.0
         with:
           file: ./profile.cov
           name: codecov-go
