@@ -68,7 +68,7 @@ As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle serv
 
 - [Certify this library as OP](https://openid.net/certification/#OPs)
 
-### Other Go OpenID Connect library's
+### Other Go OpenID Connect libraries
 
 [https://github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
 
