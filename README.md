@@ -21,6 +21,18 @@ Whenever possible we tried to reuse / extend existing packages like `OAuth2 for 
 
 Check the `/example` folder where example code for different scenarios is located.
 
+```bash
+# start oidc op server
+# oidc discovery http://localhost:9998/.well-known/openid-configuration
+CAOS_OIDC_DEV=1 go run github.com/caos/oidc/example/server/default
+# start oidc web client
+CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
+```
+
+- browser http://localhost:5556/login will redirect to op server
+- input id to login
+- redirect to client app display user info
+
 ## Features
 
 |                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |

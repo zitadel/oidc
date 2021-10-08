@@ -170,17 +170,18 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			return nil, err
 		}
 	}
-	endpoints, err := Discover(rp.issuer, rp.httpClient)
+	discoveryConfiguration, err := client.Discover(rp.issuer, rp.httpClient)
 	if err != nil {
 		return nil, err
 	}
+	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
 
 	return rp, nil
 }
 
-//DefaultRPOpts is the type for providing dynamic options to the DefaultRP
+//Option is the type for providing dynamic options to the DefaultRP
 type Option func(*relyingParty) error
 
 //WithCookieHandler set a `CookieHandler` for securing the various redirects
