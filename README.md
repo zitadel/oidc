@@ -68,7 +68,7 @@ As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle serv
 
 - [Certify this library as OP](https://openid.net/certification/#OPs)
 
-### Other Go OpenID Connect library's
+### Other Go OpenID Connect libraries
 
 [https://github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
 
@@ -76,7 +76,7 @@ The `go-oidc` does only support `RP` and is not feasible to use as `OP` that's w
 
 [https://github.com/ory/fosite](https://github.com/ory/fosite)
 
-We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely in the golang provided package. Nonetheless this is a great project.
+We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely on the golang provided package. Nonetheless this is a great project.
 
 ## License
 
