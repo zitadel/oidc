@@ -25,6 +25,10 @@ type Claims interface {
 	GetAuthenticationContextClassReference() string
 	GetAuthTime() time.Time
 	GetAuthorizedParty() string
+	ClaimsSignature
+}
+
+type ClaimsSignature interface {
 	SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm)
 }
 
@@ -123,7 +127,7 @@ func CheckAuthorizedParty(claims Claims, clientID string) error {
 	return nil
 }
 
-func CheckSignature(ctx context.Context, token string, payload []byte, claims Claims, supportedSigAlgs []string, set KeySet) error {
+func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
 	jws, err := jose.ParseSigned(token)
 	if err != nil {
 		return ErrParse
