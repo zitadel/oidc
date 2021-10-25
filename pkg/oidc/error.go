@@ -64,6 +64,7 @@ const (
 	ServerError          errorType = "server_error"
 	InteractionRequired  errorType = "interaction_required"
 	LoginRequired        errorType = "login_required"
+	RequestNotSupported  errorType = "request_not_supported"
 )
 
 var (
@@ -116,6 +117,11 @@ var (
 	ErrLoginRequired = func() *Error {
 		return &Error{
 			ErrorType: LoginRequired,
+		}
+	}
+	ErrRequestNotSupported = func() *Error {
+		return &Error{
+			ErrorType: RequestNotSupported,
 		}
 	}
 )

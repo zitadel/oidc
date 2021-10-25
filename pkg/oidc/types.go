@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"golang.org/x/text/language"
+	"gopkg.in/square/go-jose.v2"
 )
 
 type Audience []string
@@ -105,4 +106,17 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 
 func (t *Time) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(*t).UTC().Unix())
+}
+
+type RequestObject struct {
+	Issuer   string   `json:"iss"`
+	Audience Audience `json:"aud"`
+	AuthRequest
+}
+
+func (r *RequestObject) GetIssuer() string {
+	return r.Issuer
+}
+
+func (r *RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 }

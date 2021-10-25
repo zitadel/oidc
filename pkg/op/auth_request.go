@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -41,6 +40,7 @@ type Authorizer interface {
 	IDTokenHintVerifier() IDTokenHintVerifier
 	Crypto() Crypto
 	Issuer() string
+	RequestObjectSupported() bool
 }
 
 //AuthorizeValidator is an extension of Authorizer interface
@@ -70,6 +70,13 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
+	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
+		authReq, err = ParseRequestObject(r.Context(), authReq, authorizer.Storage(), authorizer.Issuer())
+		if err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			return
+		}
+	}
 	validation := ValidateAuthRequest
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
@@ -77,6 +84,10 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
+	}
+	if authReq.RequestParam != "" {
+		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer.Encoder())
 		return
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq, userID)
@@ -92,7 +103,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req.GetID(), client, w, r)
 }
 
-//ParseAuthorizeRequest parsed the http request into a oidc.AuthRequest
+//ParseAuthorizeRequest parsed the http request into an oidc.AuthRequest
 func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AuthRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
@@ -104,6 +115,83 @@ func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.A
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse auth request").WithParent(err)
 	}
 	return authReq, nil
+}
+
+//ParseRequestObject parse the `request` parameter, validates the token including the signature
+//and copies the token claims into the auth request
+func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, issuer string) (*oidc.AuthRequest, error) {
+	requestObject := new(oidc.RequestObject)
+	payload, err := oidc.ParseToken(authReq.RequestParam, requestObject)
+	if err != nil {
+		return nil, err
+	}
+
+	if requestObject.ClientID != "" && requestObject.ClientID != authReq.ClientID {
+		return authReq, oidc.ErrInvalidRequest()
+	}
+	if requestObject.ResponseType != "" && requestObject.ResponseType != authReq.ResponseType {
+		return authReq, oidc.ErrInvalidRequest()
+	}
+	if requestObject.Issuer != requestObject.ClientID {
+		return authReq, oidc.ErrInvalidRequest()
+	}
+	if !str.Contains(requestObject.Audience, issuer) {
+		return authReq, oidc.ErrInvalidRequest()
+	}
+	keySet := &jwtProfileKeySet{storage, requestObject.Issuer}
+	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
+		return authReq, err
+	}
+	CopyRequestObjectToAuthRequest(authReq, requestObject)
+	return authReq, nil
+}
+
+//CopyRequestObjectToAuthRequest overwrites present values from the Request Object into the auth request
+//and clears the `RequestParam` of the auth request
+func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oidc.RequestObject) {
+	if str.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
+		authReq.Scopes = requestObject.Scopes
+	}
+	if requestObject.RedirectURI != "" {
+		authReq.RedirectURI = requestObject.RedirectURI
+	}
+	if requestObject.State != "" {
+		authReq.State = requestObject.State
+	}
+	if requestObject.ResponseMode != "" {
+		authReq.ResponseMode = requestObject.ResponseMode
+	}
+	if requestObject.Nonce != "" {
+		authReq.Nonce = requestObject.Nonce
+	}
+	if requestObject.Display != "" {
+		authReq.Display = requestObject.Display
+	}
+	if len(requestObject.Prompt) > 0 {
+		authReq.Prompt = requestObject.Prompt
+	}
+	if requestObject.MaxAge != nil {
+		authReq.MaxAge = requestObject.MaxAge
+	}
+	if len(requestObject.UILocales) > 0 {
+		authReq.UILocales = requestObject.UILocales
+	}
+	if requestObject.IDTokenHint != "" {
+		authReq.IDTokenHint = requestObject.IDTokenHint
+	}
+	if requestObject.LoginHint != "" {
+		authReq.LoginHint = requestObject.LoginHint
+	}
+	if len(requestObject.ACRValues) > 0 {
+		authReq.ACRValues = requestObject.ACRValues
+	}
+	if requestObject.CodeChallenge != "" {
+		authReq.CodeChallenge = requestObject.CodeChallenge
+	}
+	if requestObject.CodeChallengeMethod != "" {
+		authReq.CodeChallengeMethod = requestObject.CodeChallengeMethod
+	}
+	authReq.RequestParam = ""
 }
 
 //ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed

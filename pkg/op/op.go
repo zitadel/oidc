@@ -86,6 +86,7 @@ type Config struct {
 	CodeMethodS256           bool
 	AuthMethodPrivateKeyJWT  bool
 	GrantTypeRefreshToken    bool
+	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
 }
 
@@ -191,6 +192,10 @@ func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
 	return o.config.AuthMethodPrivateKeyJWT
 }
 
+func (o *openidProvider) TokenEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
 func (o *openidProvider) GrantTypeRefreshTokenSupported() bool {
 	return o.config.GrantTypeRefreshToken
 }
@@ -201,6 +206,22 @@ func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
 
 func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
 	return true
+}
+
+func (o *openidProvider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
+	return true
+}
+
+func (o *openidProvider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
+func (o *openidProvider) RequestObjectSupported() bool {
+	return o.config.RequestObjectSupported
+}
+
+func (o *openidProvider) RequestObjectSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
 }
 
 func (o *openidProvider) SupportedUILocales() []language.Tag {

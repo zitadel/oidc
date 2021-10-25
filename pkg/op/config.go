@@ -22,9 +22,14 @@ type Configuration interface {
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
+	TokenEndpointSigningAlgorithmsSupported() []string
 	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
+	IntrospectionAuthMethodPrivateKeyJWTSupported() bool
+	IntrospectionEndpointSigningAlgorithmsSupported() []string
+	RequestObjectSupported() bool
+	RequestObjectSigningAlgorithmsSupported() []string
 
 	SupportedUILocales() []language.Tag
 }
