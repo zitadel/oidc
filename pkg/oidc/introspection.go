@@ -42,181 +42,181 @@ type introspectionResponse struct {
 	claims  map[string]interface{}
 }
 
-func (u *introspectionResponse) IsActive() bool {
-	return u.Active
+func (i *introspectionResponse) IsActive() bool {
+	return i.Active
 }
 
-func (u *introspectionResponse) SetScopes(scope []string) {
-	u.Scope = scope
+func (i *introspectionResponse) SetScopes(scope []string) {
+	i.Scope = scope
 }
 
-func (u *introspectionResponse) SetClientID(id string) {
-	u.ClientID = id
+func (i *introspectionResponse) SetClientID(id string) {
+	i.ClientID = id
 }
 
-func (u *introspectionResponse) GetSubject() string {
-	return u.Subject
+func (i *introspectionResponse) GetSubject() string {
+	return i.Subject
 }
 
-func (u *introspectionResponse) GetName() string {
-	return u.Name
+func (i *introspectionResponse) GetName() string {
+	return i.Name
 }
 
-func (u *introspectionResponse) GetGivenName() string {
-	return u.GivenName
+func (i *introspectionResponse) GetGivenName() string {
+	return i.GivenName
 }
 
-func (u *introspectionResponse) GetFamilyName() string {
-	return u.FamilyName
+func (i *introspectionResponse) GetFamilyName() string {
+	return i.FamilyName
 }
 
-func (u *introspectionResponse) GetMiddleName() string {
-	return u.MiddleName
+func (i *introspectionResponse) GetMiddleName() string {
+	return i.MiddleName
 }
 
-func (u *introspectionResponse) GetNickname() string {
-	return u.Nickname
+func (i *introspectionResponse) GetNickname() string {
+	return i.Nickname
 }
 
-func (u *introspectionResponse) GetProfile() string {
-	return u.Profile
+func (i *introspectionResponse) GetProfile() string {
+	return i.Profile
 }
 
-func (u *introspectionResponse) GetPicture() string {
-	return u.Picture
+func (i *introspectionResponse) GetPicture() string {
+	return i.Picture
 }
 
-func (u *introspectionResponse) GetWebsite() string {
-	return u.Website
+func (i *introspectionResponse) GetWebsite() string {
+	return i.Website
 }
 
-func (u *introspectionResponse) GetGender() Gender {
-	return u.Gender
+func (i *introspectionResponse) GetGender() Gender {
+	return i.Gender
 }
 
-func (u *introspectionResponse) GetBirthdate() string {
-	return u.Birthdate
+func (i *introspectionResponse) GetBirthdate() string {
+	return i.Birthdate
 }
 
-func (u *introspectionResponse) GetZoneinfo() string {
-	return u.Zoneinfo
+func (i *introspectionResponse) GetZoneinfo() string {
+	return i.Zoneinfo
 }
 
-func (u *introspectionResponse) GetLocale() language.Tag {
-	return u.Locale
+func (i *introspectionResponse) GetLocale() language.Tag {
+	return i.Locale
 }
 
-func (u *introspectionResponse) GetPreferredUsername() string {
-	return u.PreferredUsername
+func (i *introspectionResponse) GetPreferredUsername() string {
+	return i.PreferredUsername
 }
 
-func (u *introspectionResponse) GetEmail() string {
-	return u.Email
+func (i *introspectionResponse) GetEmail() string {
+	return i.Email
 }
 
-func (u *introspectionResponse) IsEmailVerified() bool {
-	return u.EmailVerified
+func (i *introspectionResponse) IsEmailVerified() bool {
+	return i.EmailVerified
 }
 
-func (u *introspectionResponse) GetPhoneNumber() string {
-	return u.PhoneNumber
+func (i *introspectionResponse) GetPhoneNumber() string {
+	return i.PhoneNumber
 }
 
-func (u *introspectionResponse) IsPhoneNumberVerified() bool {
-	return u.PhoneNumberVerified
+func (i *introspectionResponse) IsPhoneNumberVerified() bool {
+	return i.PhoneNumberVerified
 }
 
-func (u *introspectionResponse) GetAddress() UserInfoAddress {
-	return u.Address
+func (i *introspectionResponse) GetAddress() UserInfoAddress {
+	return i.Address
 }
 
-func (u *introspectionResponse) GetClaim(key string) interface{} {
-	return u.claims[key]
+func (i *introspectionResponse) GetClaim(key string) interface{} {
+	return i.claims[key]
 }
 
-func (u *introspectionResponse) SetActive(active bool) {
-	u.Active = active
+func (i *introspectionResponse) SetActive(active bool) {
+	i.Active = active
 }
 
-func (u *introspectionResponse) SetSubject(sub string) {
-	u.Subject = sub
+func (i *introspectionResponse) SetSubject(sub string) {
+	i.Subject = sub
 }
 
-func (u *introspectionResponse) SetName(name string) {
-	u.Name = name
+func (i *introspectionResponse) SetName(name string) {
+	i.Name = name
 }
 
-func (u *introspectionResponse) SetGivenName(name string) {
-	u.GivenName = name
+func (i *introspectionResponse) SetGivenName(name string) {
+	i.GivenName = name
 }
 
-func (u *introspectionResponse) SetFamilyName(name string) {
-	u.FamilyName = name
+func (i *introspectionResponse) SetFamilyName(name string) {
+	i.FamilyName = name
 }
 
-func (u *introspectionResponse) SetMiddleName(name string) {
-	u.MiddleName = name
+func (i *introspectionResponse) SetMiddleName(name string) {
+	i.MiddleName = name
 }
 
-func (u *introspectionResponse) SetNickname(name string) {
-	u.Nickname = name
+func (i *introspectionResponse) SetNickname(name string) {
+	i.Nickname = name
 }
 
-func (u *introspectionResponse) SetUpdatedAt(date time.Time) {
-	u.UpdatedAt = Time(date)
+func (i *introspectionResponse) SetUpdatedAt(date time.Time) {
+	i.UpdatedAt = Time(date)
 }
 
-func (u *introspectionResponse) SetProfile(profile string) {
-	u.Profile = profile
+func (i *introspectionResponse) SetProfile(profile string) {
+	i.Profile = profile
 }
 
-func (u *introspectionResponse) SetPicture(picture string) {
-	u.Picture = picture
+func (i *introspectionResponse) SetPicture(picture string) {
+	i.Picture = picture
 }
 
-func (u *introspectionResponse) SetWebsite(website string) {
-	u.Website = website
+func (i *introspectionResponse) SetWebsite(website string) {
+	i.Website = website
 }
 
-func (u *introspectionResponse) SetGender(gender Gender) {
-	u.Gender = gender
+func (i *introspectionResponse) SetGender(gender Gender) {
+	i.Gender = gender
 }
 
-func (u *introspectionResponse) SetBirthdate(birthdate string) {
-	u.Birthdate = birthdate
+func (i *introspectionResponse) SetBirthdate(birthdate string) {
+	i.Birthdate = birthdate
 }
 
-func (u *introspectionResponse) SetZoneinfo(zoneInfo string) {
-	u.Zoneinfo = zoneInfo
+func (i *introspectionResponse) SetZoneinfo(zoneInfo string) {
+	i.Zoneinfo = zoneInfo
 }
 
-func (u *introspectionResponse) SetLocale(locale language.Tag) {
-	u.Locale = locale
+func (i *introspectionResponse) SetLocale(locale language.Tag) {
+	i.Locale = locale
 }
 
-func (u *introspectionResponse) SetPreferredUsername(name string) {
-	u.PreferredUsername = name
+func (i *introspectionResponse) SetPreferredUsername(name string) {
+	i.PreferredUsername = name
 }
 
-func (u *introspectionResponse) SetEmail(email string, verified bool) {
-	u.Email = email
-	u.EmailVerified = verified
+func (i *introspectionResponse) SetEmail(email string, verified bool) {
+	i.Email = email
+	i.EmailVerified = verified
 }
 
-func (u *introspectionResponse) SetPhone(phone string, verified bool) {
-	u.PhoneNumber = phone
-	u.PhoneNumberVerified = verified
+func (i *introspectionResponse) SetPhone(phone string, verified bool) {
+	i.PhoneNumber = phone
+	i.PhoneNumberVerified = verified
 }
 
-func (u *introspectionResponse) SetAddress(address UserInfoAddress) {
-	u.Address = address
+func (i *introspectionResponse) SetAddress(address UserInfoAddress) {
+	i.Address = address
 }
 
-func (u *introspectionResponse) AppendClaims(key string, value interface{}) {
-	if u.claims == nil {
-		u.claims = make(map[string]interface{})
+func (i *introspectionResponse) AppendClaims(key string, value interface{}) {
+	if i.claims == nil {
+		i.claims = make(map[string]interface{})
 	}
-	u.claims[key] = value
+	i.claims[key] = value
 }
 
 func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
