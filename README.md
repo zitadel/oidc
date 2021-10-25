@@ -37,7 +37,7 @@ CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT
 
 |                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
 |----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet | yes         | yes           |
+| Relaying Party | yes       | no[^1]        | not yet     | yes       | yes  | partial        | not yet | yes         | yes           |
 | Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
@@ -85,3 +85,6 @@ The full functionality of this library is and stays open source and free to use 
 See the exact licensing terms [here](./LICENSE)
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+
+[^1]: https://github.com/caos/oidc/issues/135#issuecomment-950563892
