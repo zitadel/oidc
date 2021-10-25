@@ -67,6 +67,8 @@ type Prompt SpaceDelimitedArray
 
 type ResponseType string
 
+type ResponseMode string
+
 func (s SpaceDelimitedArray) Encode() string {
 	return strings.Join(s, " ")
 }

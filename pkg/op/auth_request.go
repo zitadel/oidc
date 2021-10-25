@@ -26,6 +26,7 @@ type AuthRequest interface {
 	GetNonce() string
 	GetRedirectURI() string
 	GetResponseType() oidc.ResponseType
+	GetResponseMode() oidc.ResponseMode
 	GetScopes() []string
 	GetState() string
 	GetSubject() string
@@ -413,9 +414,17 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-	callback := fmt.Sprintf("%s?code=%s", authReq.GetRedirectURI(), code)
-	if authReq.GetState() != "" {
-		callback = callback + "&state=" + authReq.GetState()
+	codeResponse := struct {
+		Code  string
+		State string
+	}{
+		Code:  code,
+		State: authReq.GetState(),
+	}
+	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), &codeResponse, authorizer.Encoder())
+	if err != nil {
+		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		return
 	}
 	http.Redirect(w, r, callback, http.StatusFound)
 }
@@ -428,12 +437,11 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-	params, err := httphelper.URLEncodeResponse(resp, authorizer.Encoder())
+	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), resp, authorizer.Encoder())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
-	callback := fmt.Sprintf("%s#%s", authReq.GetRedirectURI(), params)
 	http.Redirect(w, r, callback, http.StatusFound)
 }
 
@@ -452,4 +460,23 @@ func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Sto
 //BuildAuthRequestCode builds the string representation of the auth code
 func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 	return crypto.Encrypt(authReq.GetID())
+}
+
+//AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
+//depending on the response_mode and response_type
+func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response interface{}, encoder httphelper.Encoder) (string, error) {
+	params, err := httphelper.URLEncodeResponse(response, encoder)
+	if err != nil {
+		return "", err
+	}
+	if responseMode == oidc.ResponseModeQuery {
+		return redirectURI + "?" + params, nil
+	}
+	if responseMode == oidc.ResponseModeFragment {
+		return redirectURI + "#" + params, nil
+	}
+	if responseType == "" || responseType == oidc.ResponseTypeCode {
+		return redirectURI + "?" + params, nil
+	}
+	return redirectURI + "#" + params, nil
 }

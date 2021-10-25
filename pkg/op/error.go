@@ -19,22 +19,19 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		return
 	}
 	e := oidc.DefaultToServerError(err, err.Error()) //TODO: desc?
-	e.State = authReq.GetState()
-	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
+	if authReq == nil || authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
-	params, err := httphelper.URLEncodeResponse(e, encoder)
+	e.State = authReq.GetState()
+	var responseMode oidc.ResponseMode
+	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
+		responseMode = rm.GetResponseMode()
+	}
+	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-	url := authReq.GetRedirectURI()
-	responseType := authReq.GetResponseType()
-	if responseType == "" || responseType == oidc.ResponseTypeCode {
-		url += "?" + params
-	} else {
-		url += "#" + params
 	}
 	http.Redirect(w, r, url, http.StatusFound)
 }

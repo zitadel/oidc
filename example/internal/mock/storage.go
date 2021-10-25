@@ -32,6 +32,7 @@ func NewAuthStorage() op.Storage {
 type AuthRequest struct {
 	ID            string
 	ResponseType  oidc.ResponseType
+	ResponseMode  oidc.ResponseMode
 	RedirectURI   string
 	Nonce         string
 	ClientID      string
@@ -85,6 +86,10 @@ func (a *AuthRequest) GetRedirectURI() string {
 
 func (a *AuthRequest) GetResponseType() oidc.ResponseType {
 	return a.ResponseType
+}
+
+func (a *AuthRequest) GetResponseMode() oidc.ResponseMode {
+	return a.ResponseMode
 }
 
 func (a *AuthRequest) GetScopes() []string {
