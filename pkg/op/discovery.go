@@ -24,6 +24,7 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		TokenEndpoint:                              c.TokenEndpoint().Absolute(c.Issuer()),
 		IntrospectionEndpoint:                      c.IntrospectionEndpoint().Absolute(c.Issuer()),
 		UserinfoEndpoint:                           c.UserinfoEndpoint().Absolute(c.Issuer()),
+		RevocationEndpoint:                         c.RevocationEndpoint().Absolute(c.Issuer()),
 		EndSessionEndpoint:                         c.EndSessionEndpoint().Absolute(c.Issuer()),
 		JwksURI:                                    c.KeysEndpoint().Absolute(c.Issuer()),
 		ScopesSupported:                            Scopes(c),

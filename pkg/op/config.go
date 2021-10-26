@@ -16,6 +16,7 @@ type Configuration interface {
 	TokenEndpoint() Endpoint
 	IntrospectionEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
+	RevocationEndpoint() Endpoint
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 

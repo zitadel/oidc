@@ -74,6 +74,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
+	router.HandleFunc(o.RevocationEndpoint().Relative(), revocationHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
@@ -95,6 +96,7 @@ type endpoints struct {
 	Token              Endpoint
 	Introspection      Endpoint
 	Userinfo           Endpoint
+	Revocation         Endpoint
 	EndSession         Endpoint
 	CheckSessionIframe Endpoint
 	JwksURI            Endpoint
@@ -170,6 +172,10 @@ func (o *openidProvider) IntrospectionEndpoint() Endpoint {
 
 func (o *openidProvider) UserinfoEndpoint() Endpoint {
 	return o.endpoints.Userinfo
+}
+
+func (o *openidProvider) RevocationEndpoint() Endpoint {
+	return o.endpoints.Revocation
 }
 
 func (o *openidProvider) EndSessionEndpoint() Endpoint {
@@ -352,6 +358,16 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
 	}
 }
 
+func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
+	return func(o *openidProvider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.Revocation = endpoint
+		return nil
+	}
+}
+
 func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
 	return func(o *openidProvider) error {
 		if err := endpoint.Validate(); err != nil {
@@ -372,11 +388,12 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndpoints(auth, token, userInfo, endSession, keys Endpoint) Option {
+func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
 	return func(o *openidProvider) error {
 		o.endpoints.Authorization = auth
 		o.endpoints.Token = token
 		o.endpoints.Userinfo = userInfo
+		o.endpoints.Revocation = revocation
 		o.endpoints.EndSession = endSession
 		o.endpoints.JwksURI = keys
 		return nil
