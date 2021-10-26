@@ -415,11 +415,11 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 		return
 	}
 	codeResponse := struct {
-		Code  string
-		State string
+		code  string
+		state string
 	}{
-		Code:  code,
-		State: authReq.GetState(),
+		code:  code,
+		state: authReq.GetState(),
 	}
 	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), &codeResponse, authorizer.Encoder())
 	if err != nil {
