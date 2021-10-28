@@ -14,6 +14,9 @@ func MarshalJSON(w http.ResponseWriter, i interface{}) {
 func MarshalJSONWithStatus(w http.ResponseWriter, i interface{}, status int) {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)
+	if i == nil {
+		return
+	}
 	err := json.NewEncoder(w).Encode(i)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

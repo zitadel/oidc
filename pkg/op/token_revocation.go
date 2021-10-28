@@ -37,19 +37,14 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 	}
 	tokenID, subject, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
 	if ok {
-		err := revoker.Storage().RevokeToken(r.Context(), tokenID, subject, clientID)
-		if err != nil {
-			RevocationRequestError(w, r, err)
-			return
-		}
-		httphelper.MarshalJSON(w, err)
+		token = tokenID
+	}
+	if err := revoker.Storage().RevokeToken(r.Context(), token, subject, clientID); err != nil {
+		RevocationRequestError(w, r, err)
 		return
 	}
-	//if tokenID != "" {
-	//	token = tokenID
-	//}
-	err = revoker.Storage().RevokeToken(r.Context(), token, subject, clientID)
 	httphelper.MarshalJSON(w, nil)
+	return
 }
 
 func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, tokenTypeHint, clientID string, err error) {
