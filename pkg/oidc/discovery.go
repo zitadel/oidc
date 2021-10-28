@@ -38,7 +38,7 @@ type DiscoveryConfiguration struct {
 	JwksURI string `json:"jwks_uri,omitempty"`
 
 	//RegistrationEndpoint is the URL for the Dynamic Client Registration.
-	RegistrationEndpoint string `json:"registration_endpoint"`
+	RegistrationEndpoint string `json:"registration_endpoint,omitempty"`
 
 	//ScopesSupported lists an array of supported scopes. This list must not include every supported scope by the OP.
 	ScopesSupported []string `json:"scopes_supported,omitempty"`
