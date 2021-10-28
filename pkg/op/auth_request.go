@@ -467,7 +467,7 @@ func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response interface{}, encoder httphelper.Encoder) (string, error) {
 	params, err := httphelper.URLEncodeResponse(response, encoder)
 	if err != nil {
-		return "", err
+		return "", oidc.ErrServerError().WithParent(err)
 	}
 	if responseMode == oidc.ResponseModeQuery {
 		return redirectURI + "?" + params, nil

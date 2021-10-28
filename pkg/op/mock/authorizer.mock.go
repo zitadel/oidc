@@ -5,11 +5,11 @@
 package mock
 
 import (
-	"reflect"
+	reflect "reflect"
 
-	utils "github.com/caos/oidc/pkg/http"
-	"github.com/caos/oidc/pkg/op"
-	"github.com/golang/mock/gomock"
+	http "github.com/caos/oidc/pkg/http"
+	op "github.com/caos/oidc/pkg/op"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.
@@ -50,10 +50,10 @@ func (mr *MockAuthorizerMockRecorder) Crypto() *gomock.Call {
 }
 
 // Decoder mocks base method.
-func (m *MockAuthorizer) Decoder() utils.Decoder {
+func (m *MockAuthorizer) Decoder() http.Decoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Decoder")
-	ret0, _ := ret[0].(utils.Decoder)
+	ret0, _ := ret[0].(http.Decoder)
 	return ret0
 }
 
@@ -64,10 +64,10 @@ func (mr *MockAuthorizerMockRecorder) Decoder() *gomock.Call {
 }
 
 // Encoder mocks base method.
-func (m *MockAuthorizer) Encoder() utils.Encoder {
+func (m *MockAuthorizer) Encoder() http.Encoder {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Encoder")
-	ret0, _ := ret[0].(utils.Encoder)
+	ret0, _ := ret[0].(http.Encoder)
 	return ret0
 }
 
@@ -103,6 +103,20 @@ func (m *MockAuthorizer) Issuer() string {
 func (mr *MockAuthorizerMockRecorder) Issuer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Issuer", reflect.TypeOf((*MockAuthorizer)(nil).Issuer))
+}
+
+// RequestObjectSupported mocks base method.
+func (m *MockAuthorizer) RequestObjectSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestObjectSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// RequestObjectSupported indicates an expected call of RequestObjectSupported.
+func (mr *MockAuthorizerMockRecorder) RequestObjectSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestObjectSupported", reflect.TypeOf((*MockAuthorizer)(nil).RequestObjectSupported))
 }
 
 // Signer mocks base method.

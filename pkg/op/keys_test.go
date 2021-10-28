@@ -46,20 +46,20 @@ func TestKeys(t *testing.T) {
 `,
 			},
 		},
-		//{
-		//	name: "empty list",
-		//	args: args{
-		//		k: func() op.KeyProvider {
-		//			m := mock.NewMockKeyProvider(gomock.NewController(t))
-		//			m.EXPECT().GetKeySet(gomock.Any()).Return(nil, nil)
-		//			return m
-		//		}(),
-		//	},
-		//	res: res{
-		//		statusCode:  http.StatusInternalServerError,
-		//		contentType: "application/json",
-		//	},
-		//},
+		{
+			name: "empty list",
+			args: args{
+				k: func() op.KeyProvider {
+					m := mock.NewMockKeyProvider(gomock.NewController(t))
+					m.EXPECT().GetKeySet(gomock.Any()).Return(nil, nil)
+					return m
+				}(),
+			},
+			res: res{
+				statusCode:  http.StatusOK,
+				contentType: "application/json",
+			},
+		},
 		{
 			name: "list",
 			args: args{

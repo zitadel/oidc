@@ -143,7 +143,6 @@ func TestParseAuthorizeRequest(t *testing.T) {
 	}
 }
 
-//TODO: extend cases
 func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
@@ -155,10 +154,6 @@ func TestValidateAuthRequest(t *testing.T) {
 		args    args
 		wantErr error
 	}{
-		//TODO:
-		// {
-		// 	"oauth2 spec"
-		// }
 		{
 			"scope missing fails",
 			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
@@ -198,8 +193,100 @@ func TestValidateAuthRequest(t *testing.T) {
 	}
 }
 
-//TODO: implement
-func TestValidateAuthReqPrompt(t *testing.T) {}
+func TestValidateAuthReqPrompt(t *testing.T) {
+	type args struct {
+		prompts []string
+		maxAge  *uint
+	}
+	type res struct {
+		maxAge *uint
+		err    error
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"no prompts and maxAge, ok",
+			args{
+				nil,
+				nil,
+			},
+			res{
+				nil,
+				nil,
+			},
+		},
+		{
+			"no prompts but maxAge, ok",
+			args{
+				nil,
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(10),
+				nil,
+			},
+		},
+		{
+			"prompt none, ok",
+			args{
+				[]string{"none"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(10),
+				nil,
+			},
+		},
+		{
+			"prompt none with others, err",
+			args{
+				[]string{"none", "login"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				nil,
+				oidc.ErrInvalidRequest(),
+			},
+		},
+		{
+			"prompt login, ok",
+			args{
+				[]string{"login"},
+				nil,
+			},
+			res{
+				oidc.NewMaxAge(0),
+				nil,
+			},
+		},
+		{
+			"prompt login with maxAge, ok",
+			args{
+				[]string{"login"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(0),
+				nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			maxAge, err := op.ValidateAuthReqPrompt(tt.args.prompts, tt.args.maxAge)
+			if tt.res.err == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+			}
+			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+			}
+			assert.Equal(t, tt.res.maxAge, maxAge)
+		})
+	}
+}
 
 func TestValidateAuthReqScopes(t *testing.T) {
 	type args struct {
@@ -474,7 +561,6 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 }
 
-//TODO: test not parsable url
 func TestLoopbackOrLocalhost(t *testing.T) {
 	type args struct {
 		url string
@@ -484,6 +570,21 @@ func TestLoopbackOrLocalhost(t *testing.T) {
 		args args
 		want bool
 	}{
+		{
+			"not parsable, false",
+			args{url: string('\n')},
+			false,
+		},
+		{
+			"not http, false",
+			args{url: "localhost/test"},
+			false,
+		},
+		{
+			"not http, false",
+			args{url: "http://localhost.com/test"},
+			false,
+		},
 		{
 			"v4 no port ok",
 			args{url: "http://127.0.0.1/test"},
@@ -572,9 +673,6 @@ func TestValidateAuthReqResponseType(t *testing.T) {
 	}
 }
 
-//TODO: implement
-func TestValidateAuthReqIDTokenHint(t *testing.T) {}
-
 func TestRedirectToLogin(t *testing.T) {
 	type args struct {
 		authReqID string
@@ -606,55 +704,122 @@ func TestRedirectToLogin(t *testing.T) {
 	}
 }
 
-//TODO: implement
-func TestAuthorizeCallback(t *testing.T) {
+func TestAuthResponseURL(t *testing.T) {
 	type args struct {
-		w          http.ResponseWriter
-		r          *http.Request
-		authorizer op.Authorizer
+		redirectURI  string
+		responseType oidc.ResponseType
+		responseMode oidc.ResponseMode
+		response     interface{}
+		encoder      httphelper.Encoder
+	}
+	type res struct {
+		url string
+		err error
 	}
 	tests := []struct {
 		name string
 		args args
+		res  res
 	}{
-		// TODO: Add test cases.
+		{
+			"encoding error",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				"",
+				map[string]interface{}{"test": "test"},
+				&mockEncoder{
+					errors.New("error encoding"),
+				},
+			},
+			res{
+				"",
+				oidc.ErrServerError(),
+			},
+		},
+		{
+			"response mode query",
+			args{
+				"uri",
+				oidc.ResponseTypeIDToken,
+				oidc.ResponseModeQuery,
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=test",
+				nil,
+			},
+		},
+		{
+			"response mode fragment",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				oidc.ResponseModeFragment,
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri#test=test",
+				nil,
+			},
+		},
+		{
+			"response type code",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=test",
+				nil,
+			},
+		},
+		{
+			"response type id token",
+			args{
+				"uri",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri#test=test",
+				nil,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op.AuthorizeCallback(tt.args.w, tt.args.r, tt.args.authorizer)
+			got, err := op.AuthResponseURL(tt.args.redirectURI, tt.args.responseType, tt.args.responseMode, tt.args.response, tt.args.encoder)
+			if tt.res.err == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+			}
+			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+			}
+			if got != tt.res.url {
+				t.Errorf("AuthResponseURL() got = %v, want %v", got, tt.res.url)
+			}
 		})
 	}
 }
 
-//TODO: implement
-func TestAuthResponse(t *testing.T) {
-	type args struct {
-		authReq    op.AuthRequest
-		authorizer op.Authorizer
-		w          http.ResponseWriter
-		r          *http.Request
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
-		})
-	}
+type mockEncoder struct {
+	err error
 }
 
-//TODO: implement
-func TestAuthResponseCode(t *testing.T) {}
-
-//TODO: implement
-func TestAuthResponseToken(t *testing.T) {}
-
-//TODO: implement
-func TestCreateAuthRequestCode(t *testing.T) {}
-
-//TODO: implement
-func TestBuildAuthRequestCode(t *testing.T) {}
+func (m *mockEncoder) Encode(src interface{}, dst map[string][]string) error {
+	if m.err != nil {
+		return m.err
+	}
+	for s, strings := range src.(map[string][]string) {
+		dst[s] = strings
+	}
+	return nil
+}

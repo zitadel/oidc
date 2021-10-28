@@ -43,7 +43,8 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 		RevocationRequestError(w, r, err)
 		return
 	}
-	httphelper.MarshalJSON(w, nil)
+	var i interface{}
+	httphelper.MarshalJSON(w, i)
 	return
 }
 

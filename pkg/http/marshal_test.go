@@ -2,7 +2,10 @@ package http
 
 import (
 	"bytes"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConcatenateJSON(t *testing.T) {
@@ -85,6 +88,69 @@ func TestConcatenateJSON(t *testing.T) {
 			if !bytes.Equal(got, tt.want) {
 				t.Errorf("ConcatenateJSON() got = %v, want %v", string(got), tt.want)
 			}
+		})
+	}
+}
+
+func TestMarshalJSONWithStatus(t *testing.T) {
+	type args struct {
+		i      interface{}
+		status int
+	}
+	type res struct {
+		statusCode int
+		body       string
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"empty ok",
+			args{
+				nil,
+				200,
+			},
+			res{
+				200,
+				"",
+			},
+		},
+		{
+			"string ok",
+			args{
+				"ok",
+				200,
+			},
+			res{
+				200,
+				`"ok"
+`,
+			},
+		},
+		{
+			"struct ok",
+			args{
+				struct {
+					Test string `json:"test"`
+				}{"ok"},
+				200,
+			},
+			res{
+				200,
+				`{"test":"ok"}
+`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			MarshalJSONWithStatus(w, tt.args.i, tt.args.status)
+			assert.Equal(t, tt.res.statusCode, w.Result().StatusCode)
+			assert.Equal(t, "application/json", w.Header().Get("content-type"))
+			assert.Equal(t, tt.res.body, w.Body.String())
 		})
 	}
 }

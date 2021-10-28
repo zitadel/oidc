@@ -18,8 +18,8 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	e := oidc.DefaultToServerError(err, err.Error()) //TODO: desc?
-	if authReq == nil || authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
+	e := oidc.DefaultToServerError(err, err.Error())
+	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
@@ -37,7 +37,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 }
 
 func RequestError(w http.ResponseWriter, r *http.Request, err error) {
-	e := oidc.DefaultToServerError(err, err.Error()) //TODO: desc?
+	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	if e.ErrorType == oidc.InvalidClient {
 		status = 401
