@@ -170,11 +170,11 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			return nil, err
 		}
 	}
-	config, err := client.Discover(rp.issuer, rp.httpClient)
+	discoveryConfiguration, err := client.Discover(rp.issuer, rp.httpClient)
 	if err != nil {
 		return nil, err
 	}
-	endpoints := GetEndpoints(config)
+	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
 

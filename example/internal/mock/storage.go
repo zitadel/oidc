@@ -37,6 +37,7 @@ type AuthRequest struct {
 	Nonce         string
 	ClientID      string
 	CodeChallenge *oidc.CodeChallenge
+	State         string
 }
 
 func (a *AuthRequest) GetACR() string {
@@ -103,7 +104,7 @@ func (a *AuthRequest) GetScopes() []string {
 func (a *AuthRequest) SetCurrentScopes(scopes []string) {}
 
 func (a *AuthRequest) GetState() string {
-	return ""
+	return a.State
 }
 
 func (a *AuthRequest) GetSubject() string {
@@ -125,7 +126,7 @@ func (s *AuthStorage) Health(ctx context.Context) error {
 }
 
 func (s *AuthStorage) CreateAuthRequest(_ context.Context, authReq *oidc.AuthRequest, _ string) (op.AuthRequest, error) {
-	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI}
+	a = &AuthRequest{ID: "id", ClientID: authReq.ClientID, ResponseType: authReq.ResponseType, Nonce: authReq.Nonce, RedirectURI: authReq.RedirectURI, State: authReq.State}
 	if authReq.CodeChallenge != "" {
 		a.CodeChallenge = &oidc.CodeChallenge{
 			Challenge: authReq.CodeChallenge,
@@ -217,7 +218,7 @@ func (s *AuthStorage) GetClientByClientID(_ context.Context, id string) (op.Clie
 		accessTokenType = op.AccessTokenTypeJWT
 		responseTypes = []oidc.ResponseType{oidc.ResponseTypeIDToken, oidc.ResponseTypeIDTokenOnly}
 	}
-	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType, responseTypes: responseTypes, devMode: false}, nil
+	return &ConfClient{ID: id, applicationType: appType, authMethod: authMethod, accessTokenType: accessTokenType, responseTypes: responseTypes, devMode: false, grantTypes: []oidc.GrantType{oidc.GrantTypeCode}}, nil
 }
 
 func (s *AuthStorage) AuthorizeClientIDSecret(_ context.Context, id string, _ string) error {

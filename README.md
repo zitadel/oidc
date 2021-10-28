@@ -21,11 +21,23 @@ Whenever possible we tried to reuse / extend existing packages like `OAuth2 for 
 
 Check the `/example` folder where example code for different scenarios is located.
 
+```bash
+# start oidc op server
+# oidc discovery http://localhost:9998/.well-known/openid-configuration
+CAOS_OIDC_DEV=1 go run github.com/caos/oidc/example/server/default
+# start oidc web client
+CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
+```
+
+- browser http://localhost:5556/login will redirect to op server
+- input id to login
+- redirect to client app display user info
+
 ## Features
 
 |                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
 |----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relaying Party | yes       | yes           | not yet     | yes       | yes  | partial        | not yet | yes         | yes           |
+| Relaying Party | yes       | no[^1]        | no     | yes       | yes  | partial        | not yet | yes         | yes           |
 | Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
@@ -56,7 +68,7 @@ As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle serv
 
 - [Certify this library as OP](https://openid.net/certification/#OPs)
 
-### Other Go OpenID Connect library's
+### Other Go OpenID Connect libraries
 
 [https://github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
 
@@ -64,7 +76,7 @@ The `go-oidc` does only support `RP` and is not feasible to use as `OP` that's w
 
 [https://github.com/ory/fosite](https://github.com/ory/fosite)
 
-We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely in the golang provided package. Nonetheless this is a great project.
+We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely on the golang provided package. Nonetheless this is a great project.
 
 ## License
 
@@ -73,3 +85,6 @@ The full functionality of this library is and stays open source and free to use 
 See the exact licensing terms [here](./LICENSE)
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+
+[^1]: https://github.com/caos/oidc/issues/135#issuecomment-950563892
