@@ -44,6 +44,36 @@ func TestConcatenateJSON(t *testing.T) {
 			[]byte(`{"some": "thing","another": "thing"}`),
 			false,
 		},
+		{
+			"first empty",
+			args{
+				[]byte(`{}`),
+				[]byte(`{"some": "thing"}`),
+			},
+
+			[]byte(`{"some": "thing"}`),
+			false,
+		},
+		{
+			"second empty",
+			args{
+				[]byte(`{"some": "thing"}`),
+				[]byte(`{}`),
+			},
+
+			[]byte(`{"some": "thing"}`),
+			false,
+		},
+		{
+			"both empty",
+			args{
+				[]byte(`{}`),
+				[]byte(`{}`),
+			},
+
+			[]byte(`{}`),
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,7 +83,7 @@ func TestConcatenateJSON(t *testing.T) {
 				return
 			}
 			if !bytes.Equal(got, tt.want) {
-				t.Errorf("ConcatenateJSON() got = %v, want %v", got, tt.want)
+				t.Errorf("ConcatenateJSON() got = %v, want %v", string(got), tt.want)
 			}
 		})
 	}
