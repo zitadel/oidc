@@ -175,6 +175,11 @@ func (s *AuthStorage) TokenRequestByRefreshToken(ctx context.Context, refreshTok
 func (s *AuthStorage) TerminateSession(_ context.Context, userID, clientID string) error {
 	return nil
 }
+
+func (s *AuthStorage) RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error {
+	return nil
+}
+
 func (s *AuthStorage) GetSigningKey(_ context.Context, keyCh chan<- jose.SigningKey) {
 	keyCh <- jose.SigningKey{Algorithm: jose.RS256, Key: s.key}
 }
@@ -294,7 +299,7 @@ func (c *ConfClient) AuthMethod() oidc.AuthMethod {
 }
 
 func (c *ConfClient) IDTokenLifetime() time.Duration {
-	return time.Duration(5 * time.Minute)
+	return 5 * time.Minute
 }
 func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 	return c.accessTokenType

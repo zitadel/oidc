@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	callbackPath string = "/auth/callback"
-	key          []byte = []byte("test1234test1234")
+	callbackPath = "/auth/callback"
+	key          = []byte("test1234test1234")
 )
 
 func main() {

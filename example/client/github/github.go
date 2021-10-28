@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	callbackPath string = "/orbctl/github/callback"
-	key          []byte = []byte("test1234test1234")
+	callbackPath = "/orbctl/github/callback"
+	key          = []byte("test1234test1234")
 )
 
 func main() {

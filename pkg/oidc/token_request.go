@@ -183,7 +183,7 @@ func (j *JWTTokenRequest) GetSubject() string {
 	return j.Subject
 }
 
-//GetSubject implements the TokenRequest interface
+//GetScopes implements the TokenRequest interface
 func (j *JWTTokenRequest) GetScopes() []string {
 	return j.Scopes
 }

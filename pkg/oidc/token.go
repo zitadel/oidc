@@ -323,7 +323,7 @@ func (t *idTokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm {
 	return t.signatureAlg
 }
 
-//SetSignatureAlgorithm implements the IDTokenClaims interface
+//SetAccessTokenHash implements the IDTokenClaims interface
 func (t *idTokenClaims) SetAccessTokenHash(hash string) {
 	t.AccessTokenHash = hash
 }

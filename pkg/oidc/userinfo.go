@@ -324,20 +324,20 @@ func NewUserInfoAddress(streetAddress, locality, region, postalCode, country, fo
 		Formatted:     formatted,
 	}
 }
-func (i *userinfo) MarshalJSON() ([]byte, error) {
+func (u *userinfo) MarshalJSON() ([]byte, error) {
 	type Alias userinfo
 	a := &struct {
 		*Alias
 		Locale    interface{} `json:"locale,omitempty"`
 		UpdatedAt int64       `json:"updated_at,omitempty"`
 	}{
-		Alias: (*Alias)(i),
+		Alias: (*Alias)(u),
 	}
-	if !i.Locale.IsRoot() {
-		a.Locale = i.Locale
+	if !u.Locale.IsRoot() {
+		a.Locale = u.Locale
 	}
-	if !time.Time(i.UpdatedAt).IsZero() {
-		a.UpdatedAt = time.Time(i.UpdatedAt).Unix()
+	if !time.Time(u.UpdatedAt).IsZero() {
+		a.UpdatedAt = time.Time(u.UpdatedAt).Unix()
 	}
 
 	b, err := json.Marshal(a)
@@ -345,34 +345,34 @@ func (i *userinfo) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	if len(i.claims) == 0 {
+	if len(u.claims) == 0 {
 		return b, nil
 	}
 
-	err = json.Unmarshal(b, &i.claims)
+	err = json.Unmarshal(b, &u.claims)
 	if err != nil {
-		return nil, fmt.Errorf("jws: invalid map of custom claims %v", i.claims)
+		return nil, fmt.Errorf("jws: invalid map of custom claims %v", u.claims)
 	}
 
-	return json.Marshal(i.claims)
+	return json.Marshal(u.claims)
 }
 
-func (i *userinfo) UnmarshalJSON(data []byte) error {
+func (u *userinfo) UnmarshalJSON(data []byte) error {
 	type Alias userinfo
 	a := &struct {
 		Address *userInfoAddress `json:"address,omitempty"`
 		*Alias
 		UpdatedAt int64 `json:"update_at,omitempty"`
 	}{
-		Alias: (*Alias)(i),
+		Alias: (*Alias)(u),
 	}
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
 	}
-	i.Address = a.Address
-	i.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
+	u.Address = a.Address
+	u.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
 
-	if err := json.Unmarshal(data, &i.claims); err != nil {
+	if err := json.Unmarshal(data, &u.claims); err != nil {
 		return err
 	}
 

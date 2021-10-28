@@ -86,7 +86,7 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 	return nil
 }
 
-//AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
+//AuthorizeRefreshClient checks the authorization of the client and that the used method was the one previously registered.
 //It than returns the data representing the original auth request corresponding to the refresh_token
 func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (request RefreshTokenRequest, client Client, err error) {
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {

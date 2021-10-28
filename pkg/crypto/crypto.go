@@ -9,6 +9,10 @@ import (
 	"io"
 )
 
+var (
+	ErrCipherTextBlockSize = errors.New("ciphertext block size is too short")
+)
+
 func EncryptAES(data string, key string) (string, error) {
 	encrypted, err := EncryptBytesAES([]byte(data), key)
 	if err != nil {
@@ -55,8 +59,7 @@ func DecryptBytesAES(cipherText []byte, key string) ([]byte, error) {
 	}
 
 	if len(cipherText) < aes.BlockSize {
-		err = errors.New("Ciphertext block size is too short!")
-		return nil, err
+		return nil, ErrCipherTextBlockSize
 	}
 	iv := cipherText[:aes.BlockSize]
 	cipherText = cipherText[aes.BlockSize:]
