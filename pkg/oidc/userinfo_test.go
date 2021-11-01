@@ -2,8 +2,9 @@ package oidc
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUserInfoMarshal(t *testing.T) {
@@ -23,4 +24,60 @@ func TestUserInfoMarshal(t *testing.T) {
 	expected, err := json.Marshal(out)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, marshal)
+}
+
+func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unmarsha email_verified from json bool true", func(t *testing.T) {
+		jsonBool := []byte(`{"email": "my@email.com", "email_verified": true}`)
+
+		var uie userInfoEmail
+
+		err := json.Unmarshal(jsonBool, &uie)
+		assert.NoError(t, err)
+		assert.Equal(t, userInfoEmail{
+			Email:         "my@email.com",
+			EmailVerified: true,
+		}, uie)
+	})
+
+	t.Run("unmarsha email_verified from json string true", func(t *testing.T) {
+		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "true"}`)
+
+		var uie userInfoEmail
+
+		err := json.Unmarshal(jsonBool, &uie)
+		assert.NoError(t, err)
+		assert.Equal(t, userInfoEmail{
+			Email:         "my@email.com",
+			EmailVerified: true,
+		}, uie)
+	})
+
+	t.Run("unmarsha email_verified from json bool false", func(t *testing.T) {
+		jsonBool := []byte(`{"email": "my@email.com", "email_verified": false}`)
+
+		var uie userInfoEmail
+
+		err := json.Unmarshal(jsonBool, &uie)
+		assert.NoError(t, err)
+		assert.Equal(t, userInfoEmail{
+			Email:         "my@email.com",
+			EmailVerified: false,
+		}, uie)
+	})
+
+	t.Run("unmarsha email_verified from json string false", func(t *testing.T) {
+		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "false"}`)
+
+		var uie userInfoEmail
+
+		err := json.Unmarshal(jsonBool, &uie)
+		assert.NoError(t, err)
+		assert.Equal(t, userInfoEmail{
+			Email:         "my@email.com",
+			EmailVerified: false,
+		}, uie)
+	})
 }
