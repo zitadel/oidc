@@ -87,6 +87,7 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
+	AuthMethodPost           bool
 	AuthMethodPrivateKeyJWT  bool
 	GrantTypeRefreshToken    bool
 	RequestObjectSupported   bool
@@ -189,7 +190,7 @@ func (o *openidProvider) KeysEndpoint() Endpoint {
 }
 
 func (o *openidProvider) AuthMethodPostSupported() bool {
-	return true //todo: config
+	return o.config.AuthMethodPost
 }
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
