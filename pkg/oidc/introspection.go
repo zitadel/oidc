@@ -115,7 +115,7 @@ func (i *introspectionResponse) GetEmail() string {
 }
 
 func (i *introspectionResponse) IsEmailVerified() bool {
-	return i.EmailVerified
+	return bool(i.EmailVerified)
 }
 
 func (i *introspectionResponse) GetPhoneNumber() string {
@@ -200,7 +200,7 @@ func (i *introspectionResponse) SetPreferredUsername(name string) {
 
 func (i *introspectionResponse) SetEmail(email string, verified bool) {
 	i.Email = email
-	i.EmailVerified = verified
+	i.EmailVerified = boolString(verified)
 }
 
 func (i *introspectionResponse) SetPhone(phone string, verified bool) {

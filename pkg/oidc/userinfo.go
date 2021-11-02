@@ -154,7 +154,7 @@ func (u *userinfo) GetEmail() string {
 }
 
 func (u *userinfo) IsEmailVerified() bool {
-	return u.EmailVerified
+	return bool(u.EmailVerified)
 }
 
 func (u *userinfo) GetPhoneNumber() string {
@@ -235,7 +235,7 @@ func (u *userinfo) SetPreferredUsername(name string) {
 
 func (u *userinfo) SetEmail(email string, verified bool) {
 	u.Email = email
-	u.EmailVerified = verified
+	u.EmailVerified = boolString(verified)
 }
 
 func (u *userinfo) SetPhone(phone string, verified bool) {
@@ -296,8 +296,22 @@ type userInfoProfile struct {
 }
 
 type userInfoEmail struct {
-	Email         string `json:"email,omitempty"`
-	EmailVerified bool   `json:"email_verified,omitempty"`
+	Email string `json:"email,omitempty"`
+
+	// Handle providers that return email_verified as a string
+	// https://forums.aws.amazon.com/thread.jspa?messageID=949441&#949441
+	// https://discuss.elastic.co/t/openid-error-after-authenticating-against-aws-cognito/206018/11
+	EmailVerified boolString `json:"email_verified,omitempty"`
+}
+
+type boolString bool
+
+func (bs *boolString) UnmarshalJSON(data []byte) error {
+	if string(data) == "true" || string(data) == `"true"` {
+		*bs = true
+	}
+
+	return nil
 }
 
 type userInfoPhone struct {
@@ -324,6 +338,7 @@ func NewUserInfoAddress(streetAddress, locality, region, postalCode, country, fo
 		Formatted:     formatted,
 	}
 }
+
 func (u *userinfo) MarshalJSON() ([]byte, error) {
 	type Alias userinfo
 	a := &struct {
