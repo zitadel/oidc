@@ -245,6 +245,20 @@ func (mr *MockConfigurationMockRecorder) RequestObjectSupported() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestObjectSupported", reflect.TypeOf((*MockConfiguration)(nil).RequestObjectSupported))
 }
 
+// RevocationAuthMethodPrivateKeyJWTSupported mocks base method.
+func (m *MockConfiguration) RevocationAuthMethodPrivateKeyJWTSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevocationAuthMethodPrivateKeyJWTSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// RevocationAuthMethodPrivateKeyJWTSupported indicates an expected call of RevocationAuthMethodPrivateKeyJWTSupported.
+func (mr *MockConfigurationMockRecorder) RevocationAuthMethodPrivateKeyJWTSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevocationAuthMethodPrivateKeyJWTSupported", reflect.TypeOf((*MockConfiguration)(nil).RevocationAuthMethodPrivateKeyJWTSupported))
+}
+
 // RevocationEndpoint mocks base method.
 func (m *MockConfiguration) RevocationEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
@@ -257,6 +271,20 @@ func (m *MockConfiguration) RevocationEndpoint() op.Endpoint {
 func (mr *MockConfigurationMockRecorder) RevocationEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevocationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).RevocationEndpoint))
+}
+
+// RevocationEndpointSigningAlgorithmsSupported mocks base method.
+func (m *MockConfiguration) RevocationEndpointSigningAlgorithmsSupported() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevocationEndpointSigningAlgorithmsSupported")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// RevocationEndpointSigningAlgorithmsSupported indicates an expected call of RevocationEndpointSigningAlgorithmsSupported.
+func (mr *MockConfigurationMockRecorder) RevocationEndpointSigningAlgorithmsSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevocationEndpointSigningAlgorithmsSupported", reflect.TypeOf((*MockConfiguration)(nil).RevocationEndpointSigningAlgorithmsSupported))
 }
 
 // SupportedUILocales mocks base method.

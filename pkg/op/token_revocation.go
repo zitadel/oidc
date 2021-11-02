@@ -33,7 +33,7 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 	token, _, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RevocationRequestError(w, r, err)
 		return
 	}
 	tokenID, subject, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
