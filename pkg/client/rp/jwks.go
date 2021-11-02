@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/caos/oidc/pkg/utils"
 	"gopkg.in/square/go-jose.v2"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
 )
 
@@ -207,7 +207,7 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 	}
 
 	keySet := new(jsonWebKeySet)
-	if err = utils.HttpRequest(r.httpClient, req, keySet); err != nil {
+	if err = httphelper.HttpRequest(r.httpClient, req, keySet); err != nil {
 		return nil, fmt.Errorf("oidc: failed to get keys: %v", err)
 	}
 	return keySet.Keys, nil

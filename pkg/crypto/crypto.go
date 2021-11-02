@@ -1,4 +1,4 @@
-package utils
+package crypto
 
 import (
 	"crypto/aes"
@@ -7,6 +7,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+)
+
+var (
+	ErrCipherTextBlockSize = errors.New("ciphertext block size is too short")
 )
 
 func EncryptAES(data string, key string) (string, error) {
@@ -55,8 +59,7 @@ func DecryptBytesAES(cipherText []byte, key string) ([]byte, error) {
 	}
 
 	if len(cipherText) < aes.BlockSize {
-		err = errors.New("Ciphertext block size is too short!")
-		return nil, err
+		return nil, ErrCipherTextBlockSize
 	}
 	iv := cipherText[:aes.BlockSize]
 	cipherText = cipherText[aes.BlockSize:]

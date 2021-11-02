@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 type UserinfoProvider interface {
-	Decoder() utils.Decoder
+	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
 	AccessTokenVerifier() AccessTokenVerifier
@@ -37,14 +37,13 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 	info := oidc.NewUserInfo()
 	err = userinfoProvider.Storage().SetUserinfoFromToken(r.Context(), info, tokenID, subject, r.Header.Get("origin"))
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		utils.MarshalJSON(w, err)
+		httphelper.MarshalJSONWithStatus(w, err, http.StatusForbidden)
 		return
 	}
-	utils.MarshalJSON(w, info)
+	httphelper.MarshalJSON(w, info)
 }
 
-func ParseUserinfoRequest(r *http.Request, decoder utils.Decoder) (string, error) {
+func ParseUserinfoRequest(r *http.Request, decoder httphelper.Decoder) (string, error) {
 	accessToken, err := getAccessToken(r)
 	if err == nil {
 		return accessToken, nil

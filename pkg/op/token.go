@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/caos/oidc/pkg/crypto"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/strings"
 )
 
 type TokenCreator interface {
@@ -64,7 +65,7 @@ func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storag
 func needsRefreshToken(tokenRequest TokenRequest, client Client) bool {
 	switch req := tokenRequest.(type) {
 	case AuthRequest:
-		return utils.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
+		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
 	case RefreshTokenRequest:
 		return true
 	default:
@@ -104,7 +105,7 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 		}
 		claims.SetPrivateClaims(privateClaims)
 	}
-	return utils.Sign(claims, signer.Signer())
+	return crypto.Sign(claims, signer.Signer())
 }
 
 type IDTokenRequest interface {
@@ -151,7 +152,7 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		claims.SetCodeHash(codeHash)
 	}
 
-	return utils.Sign(claims, signer.Signer())
+	return crypto.Sign(claims, signer.Signer())
 }
 
 func removeUserinfoScopes(scopes []string) []string {
@@ -167,5 +168,5 @@ func removeUserinfoScopes(scopes []string) []string {
 			newScopeList = append(newScopeList, scope)
 		}
 	}
-	return scopes
+	return newScopeList
 }

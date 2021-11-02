@@ -49,7 +49,7 @@ func (i *accessTokenVerifier) KeySet() oidc.KeySet {
 }
 
 func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet) AccessTokenVerifier {
-	verifier := &idTokenHintVerifier{
+	verifier := &accessTokenVerifier{
 		issuer: issuer,
 		keySet: keySet,
 	}

@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/strings"
 )
 
 type RefreshTokenRequest interface {
@@ -37,11 +38,11 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 		RequestError(w, r, err)
 		return
 	}
-	utils.MarshalJSON(w, resp)
+	httphelper.MarshalJSON(w, resp)
 }
 
 //ParseRefreshTokenRequest parsed the http request into a oidc.RefreshTokenRequest
-func ParseRefreshTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.RefreshTokenRequest, error) {
+func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.RefreshTokenRequest, error) {
 	request := new(oidc.RefreshTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)
 	if err != nil {
@@ -54,14 +55,14 @@ func ParseRefreshTokenRequest(r *http.Request, decoder utils.Decoder) (*oidc.Ref
 //and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (RefreshTokenRequest, Client, error) {
 	if tokenReq.RefreshToken == "" {
-		return nil, nil, ErrInvalidRequest("code missing")
+		return nil, nil, oidc.ErrInvalidRequest().WithDescription("refresh_token missing")
 	}
 	request, client, err := AuthorizeRefreshClient(ctx, tokenReq, exchanger)
 	if err != nil {
 		return nil, nil, err
 	}
 	if client.GetID() != request.GetClientID() {
-		return nil, nil, ErrInvalidRequest("invalid auth code")
+		return nil, nil, oidc.ErrInvalidGrant()
 	}
 	if err = ValidateRefreshTokenScopes(tokenReq.Scopes, request); err != nil {
 		return nil, nil, err
@@ -77,15 +78,15 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 		return nil
 	}
 	for _, scope := range requestedScopes {
-		if !utils.Contains(authRequest.GetScopes(), scope) {
-			return errors.New("invalid_scope")
+		if !strings.Contains(authRequest.GetScopes(), scope) {
+			return oidc.ErrInvalidScope()
 		}
 	}
 	authRequest.SetCurrentScopes(requestedScopes)
 	return nil
 }
 
-//AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
+//AuthorizeRefreshClient checks the authorization of the client and that the used method was the one previously registered.
 //It than returns the data representing the original auth request corresponding to the refresh_token
 func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (request RefreshTokenRequest, client Client, err error) {
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
@@ -98,7 +99,7 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 			return nil, nil, err
 		}
 		if !ValidateGrantType(client, oidc.GrantTypeRefreshToken) {
-			return nil, nil, ErrInvalidRequest("invalid_grant")
+			return nil, nil, oidc.ErrUnauthorizedClient()
 		}
 		request, err = RefreshTokenRequestByRefreshToken(ctx, exchanger.Storage(), tokenReq.RefreshToken)
 		return request, client, err
@@ -108,17 +109,17 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 		return nil, nil, err
 	}
 	if !ValidateGrantType(client, oidc.GrantTypeRefreshToken) {
-		return nil, nil, ErrInvalidRequest("invalid_grant")
+		return nil, nil, oidc.ErrUnauthorizedClient()
 	}
 	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
-		return nil, nil, errors.New("invalid_grant")
+		return nil, nil, oidc.ErrInvalidClient()
 	}
 	if client.AuthMethod() == oidc.AuthMethodNone {
 		request, err = RefreshTokenRequestByRefreshToken(ctx, exchanger.Storage(), tokenReq.RefreshToken)
 		return request, client, err
 	}
 	if client.AuthMethod() == oidc.AuthMethodPost && !exchanger.AuthMethodPostSupported() {
-		return nil, nil, errors.New("auth_method post not supported")
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("auth_method post not supported")
 	}
 	if err = AuthorizeClientIDSecret(ctx, tokenReq.ClientID, tokenReq.ClientSecret, exchanger.Storage()); err != nil {
 		return nil, nil, err
@@ -132,7 +133,7 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 func RefreshTokenRequestByRefreshToken(ctx context.Context, storage Storage, refreshToken string) (RefreshTokenRequest, error) {
 	request, err := storage.TokenRequestByRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return nil, ErrInvalidRequest("invalid refreshToken")
+		return nil, oidc.ErrInvalidGrant().WithParent(err)
 	}
 	return request, nil
 }

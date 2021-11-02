@@ -12,8 +12,8 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -23,6 +23,7 @@ const (
 	defaultTokenEndpoint         = "oauth/token"
 	defaultIntrospectEndpoint    = "oauth/introspect"
 	defaultUserinfoEndpoint      = "userinfo"
+	defaultRevocationEndpoint    = "revoke"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 )
@@ -33,6 +34,7 @@ var (
 		Token:         NewEndpoint(defaultTokenEndpoint),
 		Introspection: NewEndpoint(defaultIntrospectEndpoint),
 		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:    NewEndpoint(defaultRevocationEndpoint),
 		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:       NewEndpoint(defaultKeysEndpoint),
 	}
@@ -41,8 +43,8 @@ var (
 type OpenIDProvider interface {
 	Configuration
 	Storage() Storage
-	Decoder() utils.Decoder
-	Encoder() utils.Encoder
+	Decoder() httphelper.Decoder
+	Encoder() httphelper.Encoder
 	IDTokenHintVerifier() IDTokenHintVerifier
 	AccessTokenVerifier() AccessTokenVerifier
 	Crypto() Crypto
@@ -74,6 +76,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
+	router.HandleFunc(o.RevocationEndpoint().Relative(), revocationHandler(o))
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
@@ -84,8 +87,10 @@ type Config struct {
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
+	AuthMethodPost           bool
 	AuthMethodPrivateKeyJWT  bool
 	GrantTypeRefreshToken    bool
+	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
 }
 
@@ -94,6 +99,7 @@ type endpoints struct {
 	Token              Endpoint
 	Introspection      Endpoint
 	Userinfo           Endpoint
+	Revocation         Endpoint
 	EndSession         Endpoint
 	CheckSessionIframe Endpoint
 	JwksURI            Endpoint
@@ -148,7 +154,6 @@ type openidProvider struct {
 	decoder             *schema.Decoder
 	encoder             *schema.Encoder
 	interceptors        []HttpInterceptor
-	retry               func(int) (bool, int)
 	timer               <-chan time.Time
 }
 
@@ -172,6 +177,10 @@ func (o *openidProvider) UserinfoEndpoint() Endpoint {
 	return o.endpoints.Userinfo
 }
 
+func (o *openidProvider) RevocationEndpoint() Endpoint {
+	return o.endpoints.Revocation
+}
+
 func (o *openidProvider) EndSessionEndpoint() Endpoint {
 	return o.endpoints.EndSession
 }
@@ -181,7 +190,7 @@ func (o *openidProvider) KeysEndpoint() Endpoint {
 }
 
 func (o *openidProvider) AuthMethodPostSupported() bool {
-	return true //todo: config
+	return o.config.AuthMethodPost
 }
 
 func (o *openidProvider) CodeMethodS256Supported() bool {
@@ -190,6 +199,10 @@ func (o *openidProvider) CodeMethodS256Supported() bool {
 
 func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
 	return o.config.AuthMethodPrivateKeyJWT
+}
+
+func (o *openidProvider) TokenEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
 }
 
 func (o *openidProvider) GrantTypeRefreshTokenSupported() bool {
@@ -204,6 +217,30 @@ func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
 	return true
 }
 
+func (o *openidProvider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
+	return true
+}
+
+func (o *openidProvider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
+func (o *openidProvider) RevocationAuthMethodPrivateKeyJWTSupported() bool {
+	return true
+}
+
+func (o *openidProvider) RevocationEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
+func (o *openidProvider) RequestObjectSupported() bool {
+	return o.config.RequestObjectSupported
+}
+
+func (o *openidProvider) RequestObjectSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
 func (o *openidProvider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
 }
@@ -212,11 +249,11 @@ func (o *openidProvider) Storage() Storage {
 	return o.storage
 }
 
-func (o *openidProvider) Decoder() utils.Decoder {
+func (o *openidProvider) Decoder() httphelper.Decoder {
 	return o.decoder
 }
 
-func (o *openidProvider) Encoder() utils.Encoder {
+func (o *openidProvider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 
@@ -332,6 +369,16 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
 	}
 }
 
+func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
+	return func(o *openidProvider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.Revocation = endpoint
+		return nil
+	}
+}
+
 func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
 	return func(o *openidProvider) error {
 		if err := endpoint.Validate(); err != nil {
@@ -352,11 +399,12 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndpoints(auth, token, userInfo, endSession, keys Endpoint) Option {
+func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
 	return func(o *openidProvider) error {
 		o.endpoints.Authorization = auth
 		o.endpoints.Token = token
 		o.endpoints.Userinfo = userInfo
+		o.endpoints.Revocation = revocation
 		o.endpoints.EndSession = endSession
 		o.endpoints.JwksURI = keys
 		return nil

@@ -3,7 +3,7 @@ package oidc
 import (
 	"crypto/sha256"
 
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/crypto"
 )
 
 const (
@@ -19,7 +19,7 @@ type CodeChallenge struct {
 }
 
 func NewSHACodeChallenge(code string) string {
-	return utils.HashString(sha256.New(), code, false)
+	return crypto.HashString(sha256.New(), code, false)
 }
 
 func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {

@@ -12,12 +12,12 @@ import (
 
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/client/rp/cli"
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/http"
 )
 
 var (
-	callbackPath string = "/orbctl/github/callback"
-	key          []byte = []byte("test1234test1234")
+	callbackPath = "/orbctl/github/callback"
+	key          = []byte("test1234test1234")
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
+	cookieHandler := http.NewCookieHandler(key, key, http.WithUnsecure())
 	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		fmt.Printf("error creating relaying party: %v", err)

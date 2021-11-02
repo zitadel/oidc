@@ -89,5 +89,5 @@ func (j *jwtProfileTokenSource) Token() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	return client.JWTProfileExchange(nil, oidc.NewJWTProfileGrantRequest(assertion, j.scopes...), j)
+	return client.JWTProfileExchange(oidc.NewJWTProfileGrantRequest(assertion, j.scopes...), j)
 }

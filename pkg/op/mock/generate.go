@@ -5,3 +5,4 @@ package mock
 //go:generate mockgen -package mock -destination ./client.mock.go github.com/caos/oidc/pkg/op Client
 //go:generate mockgen -package mock -destination ./configuration.mock.go github.com/caos/oidc/pkg/op Configuration
 //go:generate mockgen -package mock -destination ./signer.mock.go github.com/caos/oidc/pkg/op Signer
+//go:generate mockgen -package mock -destination ./key.mock.go github.com/caos/oidc/pkg/op KeyProvider

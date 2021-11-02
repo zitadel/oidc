@@ -42,6 +42,9 @@ const (
 	DisplayTouch Display = "touch"
 	DisplayWAP   Display = "wap"
 
+	ResponseModeQuery    ResponseMode = "query"
+	ResponseModeFragment ResponseMode = "fragment"
+
 	//PromptNone (`none`) disallows the Authorization Server to display any authentication or consent user interface pages.
 	//An error (login_required, interaction_required, ...) will be returned if the user is not already authenticated or consent is needed
 	PromptNone = "none"
@@ -59,27 +62,28 @@ const (
 //AuthRequest according to:
 //https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {
-	ID           string
-	Scopes       SpaceDelimitedArray `schema:"scope"`
-	ResponseType ResponseType        `schema:"response_type"`
-	ClientID     string              `schema:"client_id"`
-	RedirectURI  string              `schema:"redirect_uri"` //TODO: type
+	Scopes       SpaceDelimitedArray `json:"scope" schema:"scope"`
+	ResponseType ResponseType        `json:"response_type" schema:"response_type"`
+	ClientID     string              `json:"client_id" schema:"client_id"`
+	RedirectURI  string              `json:"redirect_uri" schema:"redirect_uri"`
 
-	State string `schema:"state"`
+	State string `json:"state" schema:"state"`
+	Nonce string `json:"nonce" schema:"nonce"`
 
-	// ResponseMode TODO: ?
+	ResponseMode ResponseMode        `json:"response_mode" schema:"response_mode"`
+	Display      Display             `json:"display" schema:"display"`
+	Prompt       SpaceDelimitedArray `json:"prompt" schema:"prompt"`
+	MaxAge       *uint               `json:"max_age" schema:"max_age"`
+	UILocales    Locales             `json:"ui_locales" schema:"ui_locales"`
+	IDTokenHint  string              `json:"id_token_hint" schema:"id_token_hint"`
+	LoginHint    string              `json:"login_hint" schema:"login_hint"`
+	ACRValues    []string            `json:"acr_values" schema:"acr_values"`
 
-	Nonce       string              `schema:"nonce"`
-	Display     Display             `schema:"display"`
-	Prompt      SpaceDelimitedArray `schema:"prompt"`
-	MaxAge      *uint               `schema:"max_age"`
-	UILocales   Locales             `schema:"ui_locales"`
-	IDTokenHint string              `schema:"id_token_hint"`
-	LoginHint   string              `schema:"login_hint"`
-	ACRValues   []string            `schema:"acr_values"`
+	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
+	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
 
-	CodeChallenge       string              `schema:"code_challenge"`
-	CodeChallengeMethod CodeChallengeMethod `schema:"code_challenge_method"`
+	//RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)
+	RequestParam string `schema:"request"`
 }
 
 //GetRedirectURI returns the redirect_uri value for the ErrAuthRequest interface

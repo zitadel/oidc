@@ -1,13 +1,18 @@
-package utils
+package crypto
 
 import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash"
 
 	"gopkg.in/square/go-jose.v2"
+)
+
+var (
+	ErrUnsupportedAlgorithm = errors.New("unsupported signing algorithm")
 )
 
 func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
@@ -19,7 +24,7 @@ func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 	case jose.RS512, jose.ES512, jose.PS512:
 		return sha512.New(), nil
 	default:
-		return nil, fmt.Errorf("oidc: unsupported signing algorithm %q", sigAlgorithm)
+		return nil, fmt.Errorf("%w: %q", ErrUnsupportedAlgorithm, sigAlgorithm)
 	}
 }
 

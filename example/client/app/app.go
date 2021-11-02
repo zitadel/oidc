@@ -12,13 +12,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/caos/oidc/pkg/client/rp"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 var (
-	callbackPath string = "/auth/callback"
-	key          []byte = []byte("test1234test1234")
+	callbackPath = "/auth/callback"
+	key          = []byte("test1234test1234")
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
-	cookieHandler := utils.NewCookieHandler(key, key, utils.WithUnsecure())
+	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
 	options := []rp.Option{
 		rp.WithCookieHandler(cookieHandler),

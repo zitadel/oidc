@@ -20,7 +20,8 @@ type AuthStorage interface {
 	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error)
 	TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (RefreshTokenRequest, error)
 
-	TerminateSession(context.Context, string, string) error
+	TerminateSession(ctx context.Context, userID string, clientID string) error
+	RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error
 
 	GetSigningKey(context.Context, chan<- jose.SigningKey)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)

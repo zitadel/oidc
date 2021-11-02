@@ -1,24 +1,26 @@
-package utils
+package http
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/sirupsen/logrus"
+	"reflect"
 )
 
 func MarshalJSON(w http.ResponseWriter, i interface{}) {
-	b, err := json.Marshal(i)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	MarshalJSONWithStatus(w, i, http.StatusOK)
+}
+
+func MarshalJSONWithStatus(w http.ResponseWriter, i interface{}, status int) {
+	w.Header().Set("content-type", "application/json")
+	w.WriteHeader(status)
+	if i == nil || (reflect.ValueOf(i).Kind() == reflect.Ptr && reflect.ValueOf(i).IsNil()) {
 		return
 	}
-	w.Header().Set("content-type", "application/json")
-	_, err = w.Write(b)
+	err := json.NewEncoder(w).Encode(i)
 	if err != nil {
-		logrus.Error("error writing response")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

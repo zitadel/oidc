@@ -12,7 +12,7 @@ const (
 	//GrantTypeCode defines the grant_type `authorization_code` used for the Token Request in the Authorization Code Flow
 	GrantTypeCode GrantType = "authorization_code"
 
-	//GrantTypeCode defines the grant_type `refresh_token` used for the Token Request in the Refresh Token Flow
+	//GrantTypeRefreshToken defines the grant_type `refresh_token` used for the Token Request in the Refresh Token Flow
 	GrantTypeRefreshToken GrantType = "refresh_token"
 
 	//GrantTypeBearer defines the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
@@ -183,7 +183,7 @@ func (j *JWTTokenRequest) GetSubject() string {
 	return j.Subject
 }
 
-//GetSubject implements the TokenRequest interface
+//GetScopes implements the TokenRequest interface
 func (j *JWTTokenRequest) GetScopes() []string {
 	return j.Scopes
 }

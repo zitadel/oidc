@@ -13,8 +13,8 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/client"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 const (
@@ -39,7 +39,7 @@ type RelyingParty interface {
 	IsPKCE() bool
 
 	//CookieHandler returns a http cookie handler used for various state transfer cookies
-	CookieHandler() *utils.CookieHandler
+	CookieHandler() *httphelper.CookieHandler
 
 	//HttpClient returns a http client used for calls to the openid provider, e.g. calling token endpoint
 	HttpClient() *http.Client
@@ -76,7 +76,7 @@ type relyingParty struct {
 	pkce        bool
 
 	httpClient    *http.Client
-	cookieHandler *utils.CookieHandler
+	cookieHandler *httphelper.CookieHandler
 
 	errorHandler    func(http.ResponseWriter, *http.Request, string, string, string)
 	idTokenVerifier IDTokenVerifier
@@ -96,7 +96,7 @@ func (rp *relyingParty) IsPKCE() bool {
 	return rp.pkce
 }
 
-func (rp *relyingParty) CookieHandler() *utils.CookieHandler {
+func (rp *relyingParty) CookieHandler() *httphelper.CookieHandler {
 	return rp.cookieHandler
 }
 
@@ -136,7 +136,7 @@ func (rp *relyingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, 
 func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingParty, error) {
 	rp := &relyingParty{
 		oauthConfig: config,
-		httpClient:  utils.DefaultHTTPClient,
+		httpClient:  httphelper.DefaultHTTPClient,
 		oauth2Only:  true,
 	}
 
@@ -161,7 +161,7 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			RedirectURL:  redirectURI,
 			Scopes:       scopes,
 		},
-		httpClient: utils.DefaultHTTPClient,
+		httpClient: httphelper.DefaultHTTPClient,
 		oauth2Only: false,
 	}
 
@@ -181,11 +181,11 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 	return rp, nil
 }
 
-//Option is the type for providing dynamic options to the DefaultRP
+//Option is the type for providing dynamic options to the relyingParty
 type Option func(*relyingParty) error
 
 //WithCookieHandler set a `CookieHandler` for securing the various redirects
-func WithCookieHandler(cookieHandler *utils.CookieHandler) Option {
+func WithCookieHandler(cookieHandler *httphelper.CookieHandler) Option {
 	return func(rp *relyingParty) error {
 		rp.cookieHandler = cookieHandler
 		return nil
@@ -195,7 +195,7 @@ func WithCookieHandler(cookieHandler *utils.CookieHandler) Option {
 //WithPKCE sets the RP to use PKCE (oauth2 code challenge)
 //it also sets a `CookieHandler` for securing the various redirects
 //and exchanging the code challenge
-func WithPKCE(cookieHandler *utils.CookieHandler) Option {
+func WithPKCE(cookieHandler *httphelper.CookieHandler) Option {
 	return func(rp *relyingParty) error {
 		rp.pkce = true
 		rp.cookieHandler = cookieHandler
@@ -246,7 +246,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 		return Endpoints{}, err
 	}
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
-	err = utils.HttpRequest(httpClient, req, &discoveryConfig)
+	err = httphelper.HttpRequest(httpClient, req, &discoveryConfig)
 	if err != nil {
 		return Endpoints{}, err
 	}
@@ -395,7 +395,7 @@ func Userinfo(token, tokenType, subject string, rp RelyingParty) (oidc.UserInfo,
 	}
 	req.Header.Set("authorization", tokenType+" "+token)
 	userinfo := oidc.NewUserInfo()
-	if err := utils.HttpRequest(rp.HttpClient(), req, &userinfo); err != nil {
+	if err := httphelper.HttpRequest(rp.HttpClient(), req, &userinfo); err != nil {
 		return nil, err
 	}
 	if userinfo.GetSubject() != subject {

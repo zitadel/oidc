@@ -1,6 +1,8 @@
 package op_test
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,10 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/op"
 	"github.com/caos/oidc/pkg/op/mock"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 //
@@ -75,7 +77,7 @@ import (
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
 		r       *http.Request
-		decoder utils.Decoder
+		decoder httphelper.Decoder
 	}
 	type res struct {
 		want *oidc.AuthRequest
@@ -101,7 +103,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 			"decoding error",
 			args{
 				&http.Request{URL: &url.URL{RawQuery: "unknown=value"}},
-				func() utils.Decoder {
+				func() httphelper.Decoder {
 					decoder := schema.NewDecoder()
 					decoder.IgnoreUnknownKeys(false)
 					return decoder
@@ -116,7 +118,7 @@ func TestParseAuthorizeRequest(t *testing.T) {
 			"parsing ok",
 			args{
 				&http.Request{URL: &url.URL{RawQuery: "scope=openid"}},
-				func() utils.Decoder {
+				func() httphelper.Decoder {
 					decoder := schema.NewDecoder()
 					decoder.IgnoreUnknownKeys(false)
 					return decoder
@@ -150,44 +152,138 @@ func TestValidateAuthRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr bool
+		wantErr error
 	}{
-		//TODO:
-		// {
-		// 	"oauth2 spec"
-		// }
 		{
 			"scope missing fails",
 			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"scope openid missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidScope(),
 		},
 		{
 			"response_type missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"client_id missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 		{
 			"redirect_uri missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
-			true,
+			oidc.ErrInvalidRequest(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := op.ValidateAuthRequest(nil, tt.args.authRequest, tt.args.storage, tt.args.verifier)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateAuthRequest() error = %v, wantErr %v", err, tt.wantErr)
+			_, err := op.ValidateAuthRequest(context.TODO(), tt.args.authRequest, tt.args.storage, tt.args.verifier)
+			if tt.wantErr == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
 			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAuthReqPrompt(t *testing.T) {
+	type args struct {
+		prompts []string
+		maxAge  *uint
+	}
+	type res struct {
+		maxAge *uint
+		err    error
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"no prompts and maxAge, ok",
+			args{
+				nil,
+				nil,
+			},
+			res{
+				nil,
+				nil,
+			},
+		},
+		{
+			"no prompts but maxAge, ok",
+			args{
+				nil,
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(10),
+				nil,
+			},
+		},
+		{
+			"prompt none, ok",
+			args{
+				[]string{"none"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(10),
+				nil,
+			},
+		},
+		{
+			"prompt none with others, err",
+			args{
+				[]string{"none", "login"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				nil,
+				oidc.ErrInvalidRequest(),
+			},
+		},
+		{
+			"prompt login, ok",
+			args{
+				[]string{"login"},
+				nil,
+			},
+			res{
+				oidc.NewMaxAge(0),
+				nil,
+			},
+		},
+		{
+			"prompt login with maxAge, ok",
+			args{
+				[]string{"login"},
+				oidc.NewMaxAge(10),
+			},
+			res{
+				oidc.NewMaxAge(0),
+				nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			maxAge, err := op.ValidateAuthReqPrompt(tt.args.prompts, tt.args.maxAge)
+			if tt.res.err == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+			}
+			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+			}
+			assert.Equal(t, tt.res.maxAge, maxAge)
 		})
 	}
 }
@@ -465,6 +561,80 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 	}
 }
 
+func TestLoopbackOrLocalhost(t *testing.T) {
+	type args struct {
+		url string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			"not parsable, false",
+			args{url: string('\n')},
+			false,
+		},
+		{
+			"not http, false",
+			args{url: "localhost/test"},
+			false,
+		},
+		{
+			"not http, false",
+			args{url: "http://localhost.com/test"},
+			false,
+		},
+		{
+			"v4 no port ok",
+			args{url: "http://127.0.0.1/test"},
+			true,
+		},
+		{
+			"v6 short no port ok",
+			args{url: "http://[::1]/test"},
+			true,
+		},
+		{
+			"v6 long no port ok",
+			args{url: "http://[0:0:0:0:0:0:0:1]/test"},
+			true,
+		},
+		{
+			"locahost no port ok",
+			args{url: "http://localhost/test"},
+			true,
+		},
+		{
+			"v4 with port ok",
+			args{url: "http://127.0.0.1:4200/test"},
+			true,
+		},
+		{
+			"v6 short with port ok",
+			args{url: "http://[::1]:4200/test"},
+			true,
+		},
+		{
+			"v6 long with port ok",
+			args{url: "http://[0:0:0:0:0:0:0:1]:4200/test"},
+			true,
+		},
+		{
+			"localhost with port ok",
+			args{url: "http://localhost:4200/test"},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, got := op.HTTPLoopbackOrLocalhost(tt.args.url); got != tt.want {
+				t.Errorf("loopbackOrLocalhost() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidateAuthReqResponseType(t *testing.T) {
 	type args struct {
 		responseType oidc.ResponseType
@@ -534,100 +704,122 @@ func TestRedirectToLogin(t *testing.T) {
 	}
 }
 
-func TestAuthorizeCallback(t *testing.T) {
+func TestAuthResponseURL(t *testing.T) {
 	type args struct {
-		w          http.ResponseWriter
-		r          *http.Request
-		authorizer op.Authorizer
+		redirectURI  string
+		responseType oidc.ResponseType
+		responseMode oidc.ResponseMode
+		response     interface{}
+		encoder      httphelper.Encoder
 	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.AuthorizeCallback(tt.args.w, tt.args.r, tt.args.authorizer)
-		})
-	}
-}
-
-func TestAuthResponse(t *testing.T) {
-	type args struct {
-		authReq    op.AuthRequest
-		authorizer op.Authorizer
-		w          http.ResponseWriter
-		r          *http.Request
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			op.AuthResponse(tt.args.authReq, tt.args.authorizer, tt.args.w, tt.args.r)
-		})
-	}
-}
-
-func Test_LoopbackOrLocalhost(t *testing.T) {
-	type args struct {
+	type res struct {
 		url string
+		err error
 	}
 	tests := []struct {
 		name string
 		args args
-		want bool
+		res  res
 	}{
 		{
-			"v4 no port ok",
-			args{url: "http://127.0.0.1/test"},
-			true,
+			"encoding error",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				"",
+				map[string]interface{}{"test": "test"},
+				&mockEncoder{
+					errors.New("error encoding"),
+				},
+			},
+			res{
+				"",
+				oidc.ErrServerError(),
+			},
 		},
 		{
-			"v6 short no port ok",
-			args{url: "http://[::1]/test"},
-			true,
+			"response mode query",
+			args{
+				"uri",
+				oidc.ResponseTypeIDToken,
+				oidc.ResponseModeQuery,
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=test",
+				nil,
+			},
 		},
 		{
-			"v6 long no port ok",
-			args{url: "http://[0:0:0:0:0:0:0:1]/test"},
-			true,
+			"response mode fragment",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				oidc.ResponseModeFragment,
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri#test=test",
+				nil,
+			},
 		},
 		{
-			"locahost no port ok",
-			args{url: "http://localhost/test"},
-			true,
+			"response type code",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=test",
+				nil,
+			},
 		},
 		{
-			"v4 with port ok",
-			args{url: "http://127.0.0.1:4200/test"},
-			true,
-		},
-		{
-			"v6 short with port ok",
-			args{url: "http://[::1]:4200/test"},
-			true,
-		},
-		{
-			"v6 long with port ok",
-			args{url: "http://[0:0:0:0:0:0:0:1]:4200/test"},
-			true,
-		},
-		{
-			"localhost with port ok",
-			args{url: "http://localhost:4200/test"},
-			true,
+			"response type id token",
+			args{
+				"uri",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri#test=test",
+				nil,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, got := op.HTTPLoopbackOrLocalhost(tt.args.url); got != tt.want {
-				t.Errorf("loopbackOrLocalhost() = %v, want %v", got, tt.want)
+			got, err := op.AuthResponseURL(tt.args.redirectURI, tt.args.responseType, tt.args.responseMode, tt.args.response, tt.args.encoder)
+			if tt.res.err == nil && err != nil {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+			}
+			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
+				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+			}
+			if got != tt.res.url {
+				t.Errorf("AuthResponseURL() got = %v, want %v", got, tt.res.url)
 			}
 		})
 	}
+}
+
+type mockEncoder struct {
+	err error
+}
+
+func (m *mockEncoder) Encode(src interface{}, dst map[string][]string) error {
+	if m.err != nil {
+		return m.err
+	}
+	for s, strings := range src.(map[string][]string) {
+		dst[s] = strings
+	}
+	return nil
 }

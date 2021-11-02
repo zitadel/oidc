@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	client *http.Client = http.DefaultClient
+	client = http.DefaultClient
 )
 
 func main() {

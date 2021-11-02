@@ -1,7 +1,7 @@
 package op
 
 import (
-	"github.com/caos/oidc/pkg/utils"
+	"github.com/caos/oidc/pkg/crypto"
 )
 
 type Crypto interface {
@@ -18,9 +18,9 @@ func NewAESCrypto(key [32]byte) Crypto {
 }
 
 func (c *aesCrypto) Encrypt(s string) (string, error) {
-	return utils.EncryptAES(s, c.key)
+	return crypto.EncryptAES(s, c.key)
 }
 
 func (c *aesCrypto) Decrypt(s string) (string, error) {
-	return utils.DecryptAES(s, c.key)
+	return crypto.DecryptAES(s, c.key)
 }

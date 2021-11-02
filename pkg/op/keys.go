@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/utils"
+	httphelper "github.com/caos/oidc/pkg/http"
 )
 
 type KeyProvider interface {
@@ -22,9 +22,8 @@ func keysHandler(k KeyProvider) func(http.ResponseWriter, *http.Request) {
 func Keys(w http.ResponseWriter, r *http.Request, k KeyProvider) {
 	keySet, err := k.GetKeySet(r.Context())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		utils.MarshalJSON(w, err)
+		httphelper.MarshalJSONWithStatus(w, err, http.StatusInternalServerError)
 		return
 	}
-	utils.MarshalJSON(w, keySet)
+	httphelper.MarshalJSON(w, keySet)
 }

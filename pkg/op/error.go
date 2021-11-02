@@ -1,49 +1,11 @@
 package op
 
 import (
-	"fmt"
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
-
-const (
-	InvalidRequest      errorType = "invalid_request"
-	InvalidRequestURI   errorType = "invalid_request_uri"
-	InteractionRequired errorType = "interaction_required"
-	ServerError         errorType = "server_error"
-)
-
-var (
-	ErrInvalidRequest = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   InvalidRequest,
-			Description: description,
-		}
-	}
-	ErrInvalidRequestRedirectURI = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:        InvalidRequestURI,
-			Description:      description,
-			redirectDisabled: true,
-		}
-	}
-	ErrInteractionRequired = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   InteractionRequired,
-			Description: description,
-		}
-	}
-	ErrServerError = func(description string) *OAuthError {
-		return &OAuthError{
-			ErrorType:   ServerError,
-			Description: description,
-		}
-	}
-)
-
-type errorType string
 
 type ErrAuthRequest interface {
 	GetRedirectURI() string
@@ -51,55 +13,34 @@ type ErrAuthRequest interface {
 	GetState() string
 }
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder utils.Encoder) {
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder httphelper.Encoder) {
 	if authReq == nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	e, ok := err.(*OAuthError)
-	if !ok {
-		e = new(OAuthError)
-		e.ErrorType = ServerError
-		e.Description = err.Error()
-	}
-	e.State = authReq.GetState()
-	if authReq.GetRedirectURI() == "" || e.redirectDisabled {
+	e := oidc.DefaultToServerError(err, err.Error())
+	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
-	params, err := utils.URLEncodeResponse(e, encoder)
+	e.State = authReq.GetState()
+	var responseMode oidc.ResponseMode
+	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
+		responseMode = rm.GetResponseMode()
+	}
+	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-	url := authReq.GetRedirectURI()
-	responseType := authReq.GetResponseType()
-	if responseType == "" || responseType == oidc.ResponseTypeCode {
-		url += "?" + params
-	} else {
-		url += "#" + params
 	}
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func RequestError(w http.ResponseWriter, r *http.Request, err error) {
-	e, ok := err.(*OAuthError)
-	if !ok {
-		e = new(OAuthError)
-		e.ErrorType = ServerError
-		e.Description = err.Error()
+	e := oidc.DefaultToServerError(err, err.Error())
+	status := http.StatusBadRequest
+	if e.ErrorType == oidc.InvalidClient {
+		status = 401
 	}
-	w.WriteHeader(http.StatusBadRequest)
-	utils.MarshalJSON(w, e)
-}
-
-type OAuthError struct {
-	ErrorType        errorType `json:"error" schema:"error"`
-	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
-	State            string    `json:"state,omitempty" schema:"state,omitempty"`
-	redirectDisabled bool      `json:"-" schema:"-"`
-}
-
-func (e *OAuthError) Error() string {
-	return fmt.Sprintf("%s: %s", e.ErrorType, e.Description)
+	httphelper.MarshalJSONWithStatus(w, e, status)
 }

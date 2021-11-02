@@ -12,7 +12,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/utils"
+	str "github.com/caos/oidc/pkg/strings"
 )
 
 type Claims interface {
@@ -25,6 +25,10 @@ type Claims interface {
 	GetAuthenticationContextClassReference() string
 	GetAuthTime() time.Time
 	GetAuthorizedParty() string
+	ClaimsSignature
+}
+
+type ClaimsSignature interface {
 	SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm)
 }
 
@@ -61,10 +65,10 @@ type Verifier interface {
 type ACRVerifier func(string) error
 
 //DefaultACRVerifier implements `ACRVerifier` returning an error
-//if non of the provided values matches the acr claim
+//if none of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
-		if !utils.Contains(possibleValues, acr) {
+		if !str.Contains(possibleValues, acr) {
 			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, acr)
 		}
 		return nil
@@ -103,7 +107,7 @@ func CheckIssuer(claims Claims, issuer string) error {
 }
 
 func CheckAudience(claims Claims, clientID string) error {
-	if !utils.Contains(claims.GetAudience(), clientID) {
+	if !str.Contains(claims.GetAudience(), clientID) {
 		return fmt.Errorf("%w: Audience must contain client_id %q", ErrAudience, clientID)
 	}
 
@@ -123,7 +127,7 @@ func CheckAuthorizedParty(claims Claims, clientID string) error {
 	return nil
 }
 
-func CheckSignature(ctx context.Context, token string, payload []byte, claims Claims, supportedSigAlgs []string, set KeySet) error {
+func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
 	jws, err := jose.ParseSigned(token)
 	if err != nil {
 		return ErrParse
@@ -138,7 +142,7 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 	if len(supportedSigAlgs) == 0 {
 		supportedSigAlgs = []string{"RS256"}
 	}
-	if !utils.Contains(supportedSigAlgs, sig.Header.Algorithm) {
+	if !str.Contains(supportedSigAlgs, sig.Header.Algorithm) {
 		return fmt.Errorf("%w: id token signed with unsupported algorithm, expected %q got %q", ErrSignatureUnsupportedAlg, supportedSigAlgs, sig.Header.Algorithm)
 	}
 

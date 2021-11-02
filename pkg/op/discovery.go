@@ -3,8 +3,8 @@ package op
 import (
 	"net/http"
 
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 )
 
 func discoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http.Request) {
@@ -14,28 +14,35 @@ func discoveryHandler(c Configuration, s Signer) func(http.ResponseWriter, *http
 }
 
 func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
-	utils.MarshalJSON(w, config)
+	httphelper.MarshalJSON(w, config)
 }
 
 func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfiguration {
 	return &oidc.DiscoveryConfiguration{
-		Issuer:                                    c.Issuer(),
-		AuthorizationEndpoint:                     c.AuthorizationEndpoint().Absolute(c.Issuer()),
-		TokenEndpoint:                             c.TokenEndpoint().Absolute(c.Issuer()),
-		IntrospectionEndpoint:                     c.IntrospectionEndpoint().Absolute(c.Issuer()),
-		UserinfoEndpoint:                          c.UserinfoEndpoint().Absolute(c.Issuer()),
-		EndSessionEndpoint:                        c.EndSessionEndpoint().Absolute(c.Issuer()),
-		JwksURI:                                   c.KeysEndpoint().Absolute(c.Issuer()),
-		ScopesSupported:                           Scopes(c),
-		ResponseTypesSupported:                    ResponseTypes(c),
-		GrantTypesSupported:                       GrantTypes(c),
-		SubjectTypesSupported:                     SubjectTypes(c),
-		IDTokenSigningAlgValuesSupported:          SigAlgorithms(s),
-		TokenEndpointAuthMethodsSupported:         AuthMethodsTokenEndpoint(c),
-		IntrospectionEndpointAuthMethodsSupported: AuthMethodsIntrospectionEndpoint(c),
-		ClaimsSupported:                           SupportedClaims(c),
-		CodeChallengeMethodsSupported:             CodeChallengeMethods(c),
-		UILocalesSupported:                        c.SupportedUILocales(),
+		Issuer:                                     c.Issuer(),
+		AuthorizationEndpoint:                      c.AuthorizationEndpoint().Absolute(c.Issuer()),
+		TokenEndpoint:                              c.TokenEndpoint().Absolute(c.Issuer()),
+		IntrospectionEndpoint:                      c.IntrospectionEndpoint().Absolute(c.Issuer()),
+		UserinfoEndpoint:                           c.UserinfoEndpoint().Absolute(c.Issuer()),
+		RevocationEndpoint:                         c.RevocationEndpoint().Absolute(c.Issuer()),
+		EndSessionEndpoint:                         c.EndSessionEndpoint().Absolute(c.Issuer()),
+		JwksURI:                                    c.KeysEndpoint().Absolute(c.Issuer()),
+		ScopesSupported:                            Scopes(c),
+		ResponseTypesSupported:                     ResponseTypes(c),
+		GrantTypesSupported:                        GrantTypes(c),
+		SubjectTypesSupported:                      SubjectTypes(c),
+		IDTokenSigningAlgValuesSupported:           SigAlgorithms(s),
+		RequestObjectSigningAlgValuesSupported:     RequestObjectSigAlgorithms(c),
+		TokenEndpointAuthMethodsSupported:          AuthMethodsTokenEndpoint(c),
+		TokenEndpointAuthSigningAlgValuesSupported: TokenSigAlgorithms(c),
+		IntrospectionEndpointAuthSigningAlgValuesSupported: IntrospectionSigAlgorithms(c),
+		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(c),
+		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(c),
+		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(c),
+		ClaimsSupported:                                    SupportedClaims(c),
+		CodeChallengeMethodsSupported:                      CodeChallengeMethods(c),
+		UILocalesSupported:                                 c.SupportedUILocales(),
+		RequestParameterSupported:                          c.RequestObjectSupported(),
 	}
 }
 
@@ -45,6 +52,7 @@ var DefaultSupportedScopes = []string{
 	oidc.ScopeEmail,
 	oidc.ScopePhone,
 	oidc.ScopeAddress,
+	oidc.ScopeOfflineAccess,
 }
 
 func Scopes(c Configuration) []string {
@@ -127,9 +135,30 @@ func AuthMethodsTokenEndpoint(c Configuration) []oidc.AuthMethod {
 	return authMethods
 }
 
+func TokenSigAlgorithms(c Configuration) []string {
+	if !c.AuthMethodPrivateKeyJWTSupported() {
+		return nil
+	}
+	return c.TokenEndpointSigningAlgorithmsSupported()
+}
+
 func AuthMethodsIntrospectionEndpoint(c Configuration) []oidc.AuthMethod {
 	authMethods := []oidc.AuthMethod{
 		oidc.AuthMethodBasic,
+	}
+	if c.AuthMethodPrivateKeyJWTSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
+	}
+	return authMethods
+}
+
+func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
+	authMethods := []oidc.AuthMethod{
+		oidc.AuthMethodNone,
+		oidc.AuthMethodBasic,
+	}
+	if c.AuthMethodPostSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPost)
 	}
 	if c.AuthMethodPrivateKeyJWTSupported() {
 		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
@@ -143,4 +172,25 @@ func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
 		codeMethods = append(codeMethods, oidc.CodeChallengeMethodS256)
 	}
 	return codeMethods
+}
+
+func IntrospectionSigAlgorithms(c Configuration) []string {
+	if !c.IntrospectionAuthMethodPrivateKeyJWTSupported() {
+		return nil
+	}
+	return c.IntrospectionEndpointSigningAlgorithmsSupported()
+}
+
+func RevocationSigAlgorithms(c Configuration) []string {
+	if !c.RevocationAuthMethodPrivateKeyJWTSupported() {
+		return nil
+	}
+	return c.RevocationEndpointSigningAlgorithmsSupported()
+}
+
+func RequestObjectSigAlgorithms(c Configuration) []string {
+	if !c.RequestObjectSupported() {
+		return nil
+	}
+	return c.RequestObjectSigningAlgorithmsSupported()
 }

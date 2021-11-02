@@ -16,15 +16,23 @@ type Configuration interface {
 	TokenEndpoint() Endpoint
 	IntrospectionEndpoint() Endpoint
 	UserinfoEndpoint() Endpoint
+	RevocationEndpoint() Endpoint
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
+	TokenEndpointSigningAlgorithmsSupported() []string
 	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
+	IntrospectionAuthMethodPrivateKeyJWTSupported() bool
+	IntrospectionEndpointSigningAlgorithmsSupported() []string
+	RevocationAuthMethodPrivateKeyJWTSupported() bool
+	RevocationEndpointSigningAlgorithmsSupported() []string
+	RequestObjectSupported() bool
+	RequestObjectSigningAlgorithmsSupported() []string
 
 	SupportedUILocales() []language.Tag
 }

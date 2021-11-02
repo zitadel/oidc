@@ -230,6 +230,20 @@ func (mr *MockStorageMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockStorage)(nil).Health), arg0)
 }
 
+// RevokeToken mocks base method.
+func (m *MockStorage) RevokeToken(arg0 context.Context, arg1, arg2, arg3 string) *oidc.Error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeToken", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*oidc.Error)
+	return ret0
+}
+
+// RevokeToken indicates an expected call of RevokeToken.
+func (mr *MockStorageMockRecorder) RevokeToken(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeToken", reflect.TypeOf((*MockStorage)(nil).RevokeToken), arg0, arg1, arg2, arg3)
+}
+
 // SaveAuthCode mocks base method.
 func (m *MockStorage) SaveAuthCode(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
