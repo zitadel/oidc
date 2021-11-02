@@ -44,9 +44,7 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 		RevocationRequestError(w, r, err)
 		return
 	}
-	var i interface{}
-	httphelper.MarshalJSON(w, i)
-	return
+	httphelper.MarshalJSON(w, nil)
 }
 
 func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, tokenTypeHint, clientID string, err error) {
