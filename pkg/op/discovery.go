@@ -37,10 +37,12 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		TokenEndpointAuthSigningAlgValuesSupported: TokenSigAlgorithms(c),
 		IntrospectionEndpointAuthSigningAlgValuesSupported: IntrospectionSigAlgorithms(c),
 		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(c),
-		ClaimsSupported:               SupportedClaims(c),
-		CodeChallengeMethodsSupported: CodeChallengeMethods(c),
-		UILocalesSupported:            c.SupportedUILocales(),
-		RequestParameterSupported:     c.RequestObjectSupported(),
+		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(c),
+		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(c),
+		ClaimsSupported:                                    SupportedClaims(c),
+		CodeChallengeMethodsSupported:                      CodeChallengeMethods(c),
+		UILocalesSupported:                                 c.SupportedUILocales(),
+		RequestParameterSupported:                          c.RequestObjectSupported(),
 	}
 }
 
@@ -150,6 +152,20 @@ func AuthMethodsIntrospectionEndpoint(c Configuration) []oidc.AuthMethod {
 	return authMethods
 }
 
+func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
+	authMethods := []oidc.AuthMethod{
+		oidc.AuthMethodNone,
+		oidc.AuthMethodBasic,
+	}
+	if c.AuthMethodPostSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPost)
+	}
+	if c.AuthMethodPrivateKeyJWTSupported() {
+		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
+	}
+	return authMethods
+}
+
 func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
 	codeMethods := make([]oidc.CodeChallengeMethod, 0, 1)
 	if c.CodeMethodS256Supported() {
@@ -163,6 +179,13 @@ func IntrospectionSigAlgorithms(c Configuration) []string {
 		return nil
 	}
 	return c.IntrospectionEndpointSigningAlgorithmsSupported()
+}
+
+func RevocationSigAlgorithms(c Configuration) []string {
+	if !c.RevocationAuthMethodPrivateKeyJWTSupported() {
+		return nil
+	}
+	return c.RevocationEndpointSigningAlgorithmsSupported()
 }
 
 func RequestObjectSigAlgorithms(c Configuration) []string {

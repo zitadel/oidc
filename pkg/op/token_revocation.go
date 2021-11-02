@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,6 +15,8 @@ type Revoker interface {
 	Crypto() Crypto
 	Storage() Storage
 	AccessTokenVerifier() AccessTokenVerifier
+	AuthMethodPrivateKeyJWTSupported() bool
+	AuthMethodPostSupported() bool
 }
 
 type RevokerJWTProfile interface {
@@ -51,17 +52,23 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, tokenTypeHint, clientID string, err error) {
 	err = r.ParseForm()
 	if err != nil {
-		return "", "", "", errors.New("unable to parse request")
+		return "", "", "", oidc.ErrInvalidRequest().WithDescription("unable to parse request").WithParent(err)
 	}
 	req := new(struct {
 		oidc.RevocationRequest
-		oidc.ClientAssertionParams
+		oidc.ClientAssertionParams        //for auth_method private_key_jwt
+		ClientID                   string `schema:"client_id"`     //for auth_method none and post
+		ClientSecret               string `schema:"client_secret"` //for auth_method post
 	})
 	err = revoker.Decoder().Decode(req, r.Form)
 	if err != nil {
-		return "", "", "", errors.New("unable to parse request")
+		return "", "", "", oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
-	if revokerJWTProfile, ok := revoker.(RevokerJWTProfile); ok && req.ClientAssertion != "" {
+	if req.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
+		revokerJWTProfile, ok := revoker.(RevokerJWTProfile)
+		if !ok || !revoker.AuthMethodPrivateKeyJWTSupported() {
+			return "", "", "", oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
+		}
 		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, revokerJWTProfile.JWTProfileVerifier())
 		if err == nil {
 			return req.Token, req.TokenTypeHint, profile.Issuer, nil
@@ -72,18 +79,37 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 	if ok {
 		clientID, err = url.QueryUnescape(clientID)
 		if err != nil {
-			return "", "", "", errors.New("invalid basic auth header")
+			return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
 		}
 		clientSecret, err = url.QueryUnescape(clientSecret)
 		if err != nil {
-			return "", "", "", errors.New("invalid basic auth header")
+			return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
 		}
-		if err := revoker.Storage().AuthorizeClientIDSecret(r.Context(), clientID, clientSecret); err != nil {
+		if err = AuthorizeClientIDSecret(r.Context(), clientID, clientSecret, revoker.Storage()); err != nil {
 			return "", "", "", err
 		}
 		return req.Token, req.TokenTypeHint, clientID, nil
 	}
-	return "", "", "", errors.New("invalid authorization")
+	if req.ClientID == "" {
+		return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid authorization")
+	}
+	client, err := revoker.Storage().GetClientByClientID(r.Context(), req.ClientID)
+	if err != nil {
+		return "", "", "", oidc.ErrInvalidClient().WithParent(err)
+	}
+	if req.ClientSecret == "" {
+		if client.AuthMethod() != oidc.AuthMethodNone {
+			return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid authorization")
+		}
+		return req.Token, req.TokenTypeHint, req.ClientID, nil
+	}
+	if client.AuthMethod() == oidc.AuthMethodPost && !revoker.AuthMethodPostSupported() {
+		return "", "", "", oidc.ErrInvalidClient().WithDescription("auth_method post not supported")
+	}
+	if err = AuthorizeClientIDSecret(r.Context(), req.ClientID, req.ClientSecret, revoker.Storage()); err != nil {
+		return "", "", "", err
+	}
+	return req.Token, req.TokenTypeHint, req.ClientID, nil
 }
 
 func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {

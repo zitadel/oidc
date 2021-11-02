@@ -29,6 +29,8 @@ type Configuration interface {
 	GrantTypeJWTAuthorizationSupported() bool
 	IntrospectionAuthMethodPrivateKeyJWTSupported() bool
 	IntrospectionEndpointSigningAlgorithmsSupported() []string
+	RevocationAuthMethodPrivateKeyJWTSupported() bool
+	RevocationEndpointSigningAlgorithmsSupported() []string
 	RequestObjectSupported() bool
 	RequestObjectSigningAlgorithmsSupported() []string
 

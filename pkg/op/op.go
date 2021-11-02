@@ -23,6 +23,7 @@ const (
 	defaultTokenEndpoint         = "oauth/token"
 	defaultIntrospectEndpoint    = "oauth/introspect"
 	defaultUserinfoEndpoint      = "userinfo"
+	defaultRevocationEndpoint    = "revoke"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 )
@@ -33,6 +34,7 @@ var (
 		Token:         NewEndpoint(defaultTokenEndpoint),
 		Introspection: NewEndpoint(defaultIntrospectEndpoint),
 		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:    NewEndpoint(defaultRevocationEndpoint),
 		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:       NewEndpoint(defaultKeysEndpoint),
 	}
@@ -219,6 +221,14 @@ func (o *openidProvider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
 }
 
 func (o *openidProvider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
+func (o *openidProvider) RevocationAuthMethodPrivateKeyJWTSupported() bool {
+	return true
+}
+
+func (o *openidProvider) RevocationEndpointSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
