@@ -37,8 +37,8 @@ CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT
 
 |                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
 |----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relaying Party | yes       | no[^1]        | no     | yes       | yes  | partial        | not yet | yes         | yes           |
-| Origin Party   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
+| Relying Party  | yes       | no[^1]        | no     | yes       | yes  | partial        | not yet | yes         | yes           |
+| OpenID Provider   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
 
