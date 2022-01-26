@@ -181,6 +181,42 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 	return rp, nil
 }
 
+//NewRelyingPartyOIDCWithCustomEndpoints creates an (OIDC) RelyingParty with the given
+//discoveryConfiguration, clientID, clientSecret, redirectURI, scopes and other possible configOptions
+//it will use the provided end points
+//This is usefull when the server does not use standard endpoint paths
+func NewRelyingPartyOIDCWithCustomEndpoints(
+	discoveryConfiguration *oidc.DiscoveryConfiguration,
+	clientID,
+	clientSecret,
+	redirectURI string,
+	scopes []string,
+	options ...Option) (RelyingParty, error) {
+
+	rp := &relyingParty{
+		issuer: discoveryConfiguration.Issuer,
+		oauthConfig: &oauth2.Config{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			RedirectURL:  redirectURI,
+			Scopes:       scopes,
+		},
+		httpClient: httphelper.DefaultHTTPClient,
+		oauth2Only: false,
+	}
+
+	for _, optFunc := range options {
+		if err := optFunc(rp); err != nil {
+			return nil, err
+		}
+	}
+	endpoints := GetEndpoints(discoveryConfiguration)
+	rp.oauthConfig.Endpoint = endpoints.Endpoint
+	rp.endpoints = endpoints
+
+	return rp, nil
+}
+
 //Option is the type for providing dynamic options to the relyingParty
 type Option func(*relyingParty) error
 
