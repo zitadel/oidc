@@ -140,6 +140,27 @@ func TestFindKey(t *testing.T) {
 			},
 		},
 		{
+			"single key no use, jwt with kid, match",
+			args{
+				keyID:       "id",
+				use:         KeyUseSignature,
+				expectedAlg: "RS256",
+				keys: []jose.JSONWebKey{
+					{
+						KeyID: "id",
+						Key:   &rsa.PublicKey{},
+					},
+				},
+			},
+			res{
+				key: jose.JSONWebKey{
+					KeyID: "id",
+					Key:   &rsa.PublicKey{},
+				},
+				err: nil,
+			},
+		},
+		{
 			"single key wrong kid, ErrKeyNone",
 			args{
 				keyID:       "id",
@@ -299,6 +320,94 @@ func TestFindKey(t *testing.T) {
 			res{
 				key: jose.JSONWebKey{
 					Use: "sig",
+					Key: &rsa.PublicKey{},
+				},
+				err: nil,
+			},
+		},
+		{
+			"multiple keys, no use, jwt with kid, match",
+			args{
+				keyID:       "id1",
+				use:         KeyUseSignature,
+				expectedAlg: "RS256",
+				keys: []jose.JSONWebKey{
+					{
+						KeyID: "id1",
+						Key:   &rsa.PublicKey{},
+					},
+					{
+						KeyID: "id2",
+						Key:   &rsa.PublicKey{},
+					},
+				},
+			},
+			res{
+				key: jose.JSONWebKey{
+					KeyID: "id1",
+					Key:   &rsa.PublicKey{},
+				},
+				err: nil,
+			},
+		},
+		{
+			"multiple keys, no use, jwt without kid, ErrKeyMultiple",
+			args{
+				use:         KeyUseSignature,
+				expectedAlg: "RS256",
+				keys: []jose.JSONWebKey{
+					{
+						KeyID: "id1",
+						Key:   &rsa.PublicKey{},
+					},
+					{
+						KeyID: "id2",
+						Key:   &rsa.PublicKey{},
+					},
+				},
+			},
+			res{
+				key: jose.JSONWebKey{},
+				err: ErrKeyMultiple,
+			},
+		},
+		{
+			"multiple keys, no use or id, jwt with kid, ErrKeyMultiple",
+			args{
+				use:         KeyUseSignature,
+				expectedAlg: "RS256",
+				keyID:       "id1",
+				keys: []jose.JSONWebKey{
+					{
+						Key: &rsa.PublicKey{},
+					},
+					{
+						Key: &rsa.PublicKey{},
+					},
+				},
+			},
+			res{
+				key: jose.JSONWebKey{},
+				err: ErrKeyMultiple,
+			},
+		},
+		{
+			"multiple keys (only one matching alg), jwt with kid, match",
+			args{
+				use:         KeyUseSignature,
+				expectedAlg: "RS256",
+				keyID:       "id1",
+				keys: []jose.JSONWebKey{
+					{
+						Key: &rsa.PublicKey{},
+					},
+					{
+						Key: &ecdsa.PublicKey{},
+					},
+				},
+			},
+			res{
+				key: jose.JSONWebKey{
 					Key: &rsa.PublicKey{},
 				},
 				err: nil,
