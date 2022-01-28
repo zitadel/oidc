@@ -53,7 +53,7 @@ func FindKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (jose.JSON
 	return key, err == nil
 }
 
-//FindMatchingKey searches the given JSON Web Keys for the requested key ID, usage and key type
+//FindMatchingKey searches the given JSON Web Keys for the requested key ID, usage and alg type
 //
 //will return the key immediately if matches exact (id, usage, type)
 //
@@ -61,15 +61,27 @@ func FindKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (jose.JSON
 func FindMatchingKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (key jose.JSONWebKey, err error) {
 	var validKeys []jose.JSONWebKey
 	for _, k := range keys {
-		if k.Use == use && algToKeyType(k.Key, expectedAlg) {
-			if k.KeyID == keyID && keyID != "" {
-				return k, nil
-			}
-			if k.KeyID == "" || keyID == "" {
-				validKeys = append(validKeys, k)
-			}
+		//ignore all keys with wrong use (let empty use of published key pass)
+		if k.Use != use && k.Use != "" {
+			continue
+		}
+		//ignore all keys with wrong algorithm type
+		if !algToKeyType(k.Key, expectedAlg) {
+			continue
+		}
+		//if we get here, use and alg match, so an equal (not empty) keyID is an exact match
+		if k.KeyID == keyID && keyID != "" {
+			return k, nil
+		}
+		//keyIDs did not match or at least one was empty (if later, then it could be a match)
+		if k.KeyID == "" || keyID == "" {
+			validKeys = append(validKeys, k)
 		}
 	}
+	//if we get here, no match was possible at all (use / alg) or no exact match due to
+	//the signed JWT and / or the published keys didn't have a kid
+	//if later applies and only one key could be found, we'll return it
+	//otherwise a corresponding error will be thrown
 	if len(validKeys) == 1 {
 		return validKeys[0], nil
 	}
