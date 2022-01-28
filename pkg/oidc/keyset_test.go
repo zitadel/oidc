@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
 	"reflect"
