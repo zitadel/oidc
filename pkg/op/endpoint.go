@@ -15,6 +15,15 @@ func NewEndpointWithURL(path, url string) Endpoint {
 	return Endpoint{path: path, url: url}
 }
 
+func NewEndpointWithIssuersPath(issuer, path string) Endpoint {
+	issuerPath := getIssuerPath(issuer)
+	if len(issuerPath) > 0 {
+		issuerPath = issuerPath + "/"
+	}
+
+	return Endpoint{path: issuerPath + path}
+}
+
 func (e Endpoint) Relative() string {
 	return relativeEndpoint(e.path)
 }

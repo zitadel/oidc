@@ -26,7 +26,7 @@ Check the `/example` folder where example code for different scenarios is locate
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
 CAOS_OIDC_DEV=1 go run github.com/caos/oidc/example/server/default
 # start oidc web client
-CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
+CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/path/to/my/server SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
 ```
 
 - browser http://localhost:5556/login will redirect to op server

@@ -17,16 +17,16 @@ func main() {
 	ctx := context.Background()
 	port := "9998"
 	config := &op.Config{
-		Issuer:    "http://localhost:9998/",
+		Issuer:    "http://localhost:9998/path/to/my/server",
 		CryptoKey: sha256.Sum256([]byte("test")),
 	}
 	storage := mock.NewAuthStorage()
-	handler, err := op.NewOpenIDProvider(ctx, config, storage, op.WithCustomTokenEndpoint(op.NewEndpoint("test")))
+	handler, err := op.NewOpenIDProvider(ctx, config, storage, op.WithCustomTokenEndpoint(op.NewEndpointWithIssuersPath(config.Issuer, "test")))
 	if err != nil {
 		log.Fatal(err)
 	}
 	router := handler.HttpHandler().(*mux.Router)
-	router.Methods("GET").Path("/login").HandlerFunc(HandleLogin)
+	router.Methods("GET").Path("/path/to/my/server/login").HandlerFunc(HandleLogin)
 	router.Methods("POST").Path("/login").HandlerFunc(HandleCallback)
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -68,5 +68,5 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 func HandleCallback(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	client := r.FormValue("client")
-	http.Redirect(w, r, "/authorize/callback?id="+client, http.StatusFound)
+	http.Redirect(w, r, "/path/to/my/server/authorize/callback?id="+client, http.StatusFound)
 }

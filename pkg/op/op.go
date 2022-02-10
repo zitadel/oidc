@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -68,9 +69,15 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
 		handlers.AllowedOriginValidator(allowAllOrigins),
 	))
-	router.HandleFunc(healthEndpoint, healthHandler)
-	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
-	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
+
+	issuerPath := getIssuerPath(o.Issuer())
+	if len(issuerPath) > 0 {
+		issuerPath = "/" + issuerPath
+	}
+
+	router.HandleFunc(issuerPath+healthEndpoint, healthHandler)
+	router.HandleFunc(issuerPath+readinessEndpoint, readyHandler(o.Probes()))
+	router.HandleFunc(issuerPath+oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
 	router.NewRoute().Path(o.AuthorizationEndpoint().Relative()+"/callback").Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
@@ -80,6 +87,36 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
+}
+
+func NewDefaultEndpoints(issuer string) *endpoints {
+	return &endpoints{
+		Authorization: NewEndpointWithIssuersPath(issuer, defaultAuthorizationEndpoint),
+		Token:         NewEndpointWithIssuersPath(issuer, defaultTokenEndpoint),
+		Introspection: NewEndpointWithIssuersPath(issuer, defaultIntrospectEndpoint),
+		Userinfo:      NewEndpointWithIssuersPath(issuer, defaultUserinfoEndpoint),
+		Revocation:    NewEndpointWithIssuersPath(issuer, defaultRevocationEndpoint),
+		EndSession:    NewEndpointWithIssuersPath(issuer, defaultEndSessionEndpoint),
+		JwksURI:       NewEndpointWithIssuersPath(issuer, defaultKeysEndpoint),
+	}
+}
+
+func getIssuerHost(issuer string) string {
+	split := strings.Split(issuer, "/")
+	if len(split) > 3 {
+		return strings.Join(split[:3], "/")
+	} else {
+		return issuer
+	}
+}
+
+func getIssuerPath(issuer string) string {
+	split := strings.Split(issuer, "/")
+	if len(split) > 3 && len(split[3]) > 0 {
+		return strings.Join(split[3:], "/")
+	} else {
+		return ""
+	}
 }
 
 type Config struct {
@@ -114,7 +151,7 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 	o := &openidProvider{
 		config:    config,
 		storage:   storage,
-		endpoints: DefaultEndpoints,
+		endpoints: NewDefaultEndpoints(config.Issuer),
 		timer:     make(<-chan time.Time),
 	}
 
