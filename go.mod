@@ -3,7 +3,7 @@ module github.com/caos/oidc
 go 1.15
 
 require (
-	github.com/caos/logging v0.0.2
+	github.com/caos/logging v0.2.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/go-github/v31 v31.0.0
