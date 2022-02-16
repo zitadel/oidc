@@ -26,8 +26,13 @@ var (
 )
 
 //Discover calls the discovery endpoint of the provided issuer and returns its configuration
-func Discover(issuer string, httpClient *http.Client) (*oidc.DiscoveryConfiguration, error) {
+//It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
+func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
+
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
+	if len(wellKnownUrl) == 1 && wellKnownUrl[0] != "" {
+		wellKnown = wellKnownUrl[0]
+	}
 	req, err := http.NewRequest("GET", wellKnown, nil)
 	if err != nil {
 		return nil, err

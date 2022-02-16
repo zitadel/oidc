@@ -69,11 +69,12 @@ var (
 )
 
 type relyingParty struct {
-	issuer      string
-	endpoints   Endpoints
-	oauthConfig *oauth2.Config
-	oauth2Only  bool
-	pkce        bool
+	issuer            string
+	DiscoveryEndpoint string
+	endpoints         Endpoints
+	oauthConfig       *oauth2.Config
+	oauth2Only        bool
+	pkce              bool
 
 	httpClient    *http.Client
 	cookieHandler *httphelper.CookieHandler
@@ -170,7 +171,7 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 			return nil, err
 		}
 	}
-	discoveryConfiguration, err := client.Discover(rp.issuer, rp.httpClient)
+	discoveryConfiguration, err := client.Discover(rp.issuer, rp.httpClient, rp.DiscoveryEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +184,13 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 
 //Option is the type for providing dynamic options to the relyingParty
 type Option func(*relyingParty) error
+
+func WithCustomDiscoveryUrl(url string) Option {
+	return func(rp *relyingParty) error {
+		rp.DiscoveryEndpoint = url
+		return nil
+	}
+}
 
 //WithCookieHandler set a `CookieHandler` for securing the various redirects
 func WithCookieHandler(cookieHandler *httphelper.CookieHandler) Option {
