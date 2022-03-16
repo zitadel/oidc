@@ -11,11 +11,30 @@
 
 ## What Is It
 
-This project is a easy to use client (RP) and server (OP) implementation for the `OIDC` (Open ID Connect) standard written for `Go`.
+This project is an easy-to-use client (RP) and server (OP) implementation for the `OIDC` (OpenID Connect) standard written for `Go`.
 
 The RP is certified for the [basic](https://www.certification.openid.net/plan-detail.html?public=true&plan=uoprP0OO8Z4Qo) and [config](https://www.certification.openid.net/plan-detail.html?public=true&plan=AYSdLbzmWbu9X) profile.
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
+
+## Basic Overview
+
+The most important packages of the library:
+<pre>
+/pkg
+    /client     clients using the OP for retrieving, exchanging and verifying tokens       
+        /rp     definition and implementation of an OIDC Relying Party (client)
+        /rs     definition and implementation of an OAuth Resource Server (API)
+    /op         definition and implementation of an OIDC OpenID Provider (server)
+    /oidc       definitions shared by clients and server
+
+/example
+    /api        example of an api / resource server implementation using token introspection
+    /app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
+    /github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
+    /service    demonstration of JWT Profile Authorization Grant
+    /server     example of an OpenID Provider implementation including some very basic login UI
+</pre>
 
 ## How To Use It
 
@@ -35,10 +54,10 @@ CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT
 
 ## Features
 
-|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
-|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relying Party  | yes       | no[^1]        | no     | yes       | yes  | partial        | not yet | yes         | yes           |
-| OpenID Provider   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
+|                  | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
+|------------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
+| Relying Party    | yes       | no[^1]        | no          | yes       | yes  | partial        | not yet | yes         | yes           |
+| OpenID Provider  | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
 
