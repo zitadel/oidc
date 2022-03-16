@@ -19,6 +19,7 @@ import (
 const (
 	healthEndpoint               = "/healthz"
 	readinessEndpoint            = "/ready"
+	authCallbackPathSuffix       = "/callback"
 	defaultAuthorizationEndpoint = "authorize"
 	defaultTokenEndpoint         = "oauth/token"
 	defaultIntrospectEndpoint    = "oauth/introspect"
@@ -72,7 +73,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
 	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
-	router.NewRoute().Path(o.AuthorizationEndpoint().Relative()+"/callback").Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
+	router.NewRoute().Path(authCallbackPath(o)).Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
 	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
@@ -80,6 +81,17 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
+}
+
+//AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
+func AuthCallbackURL(o OpenIDProvider) func(string) string {
+	return func(requestID string) string {
+		return o.AuthorizationEndpoint().Absolute(o.Issuer()) + authCallbackPathSuffix + "?id=" + requestID
+	}
+}
+
+func authCallbackPath(o OpenIDProvider) string {
+	return o.AuthorizationEndpoint().Relative() + authCallbackPathSuffix
 }
 
 type Config struct {
@@ -125,8 +137,8 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 	}
 
 	keyCh := make(chan jose.SigningKey)
-	o.signer = NewSigner(ctx, storage, keyCh)
 	go storage.GetSigningKey(ctx, keyCh)
+	o.signer = NewSigner(ctx, storage, keyCh)
 
 	o.httpHandler = CreateRouter(o, o.interceptors...)
 
