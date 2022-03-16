@@ -65,16 +65,16 @@ func (s *tokenSigner) exchangeSigningKey(key jose.SigningKey) {
 	s.alg = key.Algorithm
 	if key.Algorithm == "" || key.Key == nil {
 		s.signer = nil
-		logging.Log("OP-DAvt4").Warn("signer has no key")
+		logging.Warn("signer has no key")
 		return
 	}
 	var err error
 	s.signer, err = jose.NewSigner(key, &jose.SignerOptions{})
 	if err != nil {
-		logging.Log("OP-pf32aw").WithError(err).Error("error creating signer")
+		logging.New().WithError(err).Error("error creating signer")
 		return
 	}
-	logging.Log("OP-agRf2").Info("signer exchanged signing key")
+	logging.Info("signer exchanged signing key")
 }
 
 func (s *tokenSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
