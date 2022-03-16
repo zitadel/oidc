@@ -53,7 +53,7 @@ func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.S
 			s.alg = key.Algorithm
 			if key.Algorithm == "" || key.Key == nil {
 				s.signer = nil
-				logging.New().Warn("signer has no key")
+				logging.Warn("signer has no key")
 				continue
 			}
 			var err error
@@ -62,7 +62,7 @@ func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.S
 				logging.New().WithError(err).Error("error creating signer")
 				continue
 			}
-			logging.New().Info("signer exchanged signing key")
+			logging.Info("signer exchanged signing key")
 		}
 	}
 }
