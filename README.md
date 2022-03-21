@@ -52,12 +52,14 @@ For your convenience you can find the relevant standards linked below.
 
 ## Supported Go Versions
 
+For security reasons, we only support and recommend the use of one of the latest two Go versions (:white_check_mark:).  
+Versions that also build are marked with :warning:.
+
 | Version | Supported          |
 |---------|--------------------|
-| <1.13   | :x:                |
-| 1.14    | :white_check_mark: |
-| 1.15    | :white_check_mark: |
-| 1.16    | :white_check_mark: |
+| <1.15   | :x:                |
+| 1.15    | :warning:          |
+| 1.16    | :warning:          |
 | 1.17    | :white_check_mark: |
 | 1.18    | :white_check_mark: |
 
