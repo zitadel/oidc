@@ -59,6 +59,7 @@ For your convenience you can find the relevant standards linked below.
 | 1.15    | :white_check_mark: |
 | 1.16    | :white_check_mark: |
 | 1.17    | :white_check_mark: |
+| 1.18    | :white_check_mark: |
 
 ## Why another library
 
