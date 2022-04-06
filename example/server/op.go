@@ -30,8 +30,13 @@ func init() {
 func main() {
 	ctx := context.Background()
 
+	//this will allow us to use an issuer with http:// instead of https://
 	os.Setenv(op.OidcDevMode, "true")
+
 	port := "9998"
+
+	//the OpenID Provider requires a 32-byte key for (token) encryption
+	//be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 
 	router := mux.NewRouter()

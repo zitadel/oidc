@@ -44,7 +44,7 @@ func (c *Client) RedirectURIs() []string {
 	return c.redirectURIs
 }
 
-//PostLogoutRedirectURIs must return the registered post_logout_redirect_uris for signouts
+//PostLogoutRedirectURIs must return the registered post_logout_redirect_uris for sign-outs
 func (c *Client) PostLogoutRedirectURIs() []string {
 	return []string{}
 }
@@ -160,7 +160,7 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 	}
 }
 
-//WebClient will create a client of type web, which will always use PKCE and allow the use of refresh tokens
+//WebClient will create a client of type web, which will always use Basic Auth and allow the use of refresh tokens
 //user-defined redirectURIs may include:
 // - http://localhost with port specification (e.g. http://localhost:9999/auth/callback)
 //(the example will be used as default, if none is provided)

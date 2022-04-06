@@ -379,6 +379,9 @@ func (s *storage) GetKeyByIDAndUserID(ctx context.Context, keyID, userID string)
 		return nil, fmt.Errorf("user not found")
 	}
 	key, ok := service.keys[keyID]
+	if !ok {
+		return nil, fmt.Errorf("key not found")
+	}
 	return &jose.JSONWebKey{
 		KeyID: keyID,
 		Use:   "sig",
