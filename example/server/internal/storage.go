@@ -23,6 +23,7 @@ type storage struct {
 	tokens        map[string]*Token
 	clients       map[string]*Client
 	users         map[string]*User
+	services      map[string]Service
 	refreshTokens map[string]*RefreshToken
 	signingKey    signingKey
 }
@@ -31,11 +32,6 @@ type signingKey struct {
 	ID        string
 	Algorithm string
 	Key       *rsa.PrivateKey
-}
-
-//TODO: describe
-var defaultLoginURL = func(id string) string {
-	return "/login/username?authRequestID=" + id
 }
 
 func NewStorage() *storage {
@@ -378,13 +374,28 @@ func (s *storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, client
 //GetKeyByIDAndUserID implements the op.Storage interface
 //it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
 func (s *storage) GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
-	return nil, fmt.Errorf("example does not yet support authentication with JWT") //TODO: implement
+	service, ok := s.services[userID]
+	if !ok {
+		return nil, fmt.Errorf("user not found")
+	}
+	key, ok := service.keys[keyID]
+	return &jose.JSONWebKey{
+		KeyID: keyID,
+		Use:   "sig",
+		Key:   key,
+	}, nil
 }
 
 //ValidateJWTProfileScopes implements the op.Storage interface
 //it will be called to validate the scopes of a JWT Profile Authorization Grant request
 func (s *storage) ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error) {
-	return nil, fmt.Errorf("example does not yet support authentication with JWT") //TODO: implement
+	allowedScopes := make([]string, 0)
+	for _, scope := range scopes {
+		if scope == oidc.ScopeOpenID {
+			allowedScopes = append(allowedScopes, scope)
+		}
+	}
+	return allowedScopes, nil
 }
 
 //Health implements the op.Storage interface

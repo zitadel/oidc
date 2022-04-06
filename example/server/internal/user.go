@@ -1,6 +1,10 @@
 package internal
 
-import "golang.org/x/text/language"
+import (
+	"crypto/rsa"
+
+	"golang.org/x/text/language"
+)
 
 type User struct {
 	id                string
@@ -13,4 +17,8 @@ type User struct {
 	phone             string
 	phoneVerified     bool
 	preferredLanguage language.Tag
+}
+
+type Service struct {
+	keys map[string]*rsa.PublicKey
 }

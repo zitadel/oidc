@@ -99,7 +99,7 @@ func newOP(ctx context.Context, storage op.Storage, port string, key [32]byte) (
 		AuthMethodPost: true,
 
 		//enables additional authentication by using private_key_jwt
-		AuthMethodPrivateKeyJWT: false, //TODO: implement and set to true
+		AuthMethodPrivateKeyJWT: true,
 
 		//enables refresh_token grant use
 		GrantTypeRefreshToken: true,

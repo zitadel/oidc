@@ -25,13 +25,13 @@ type AuthRequest struct {
 	ApplicationID string
 	CallbackURI   string
 	TransferState string
-	Prompt        []Prompt
+	Prompt        []string
 	UiLocales     []language.Tag
 	LoginHint     string
 	MaxAuthAge    *time.Duration
 	UserID        string
 	Scopes        []string
-	ResponseType  OIDCResponseType
+	ResponseType  oidc.ResponseType
 	Nonce         string
 	CodeChallenge *OIDCCodeChallenge
 
@@ -80,7 +80,7 @@ func (a *AuthRequest) GetRedirectURI() string {
 }
 
 func (a *AuthRequest) GetResponseType() oidc.ResponseType {
-	return ResponseTypeToOIDC(a.ResponseType)
+	return a.ResponseType
 }
 
 func (a *AuthRequest) GetResponseMode() oidc.ResponseMode {
@@ -103,52 +103,18 @@ func (a *AuthRequest) Done() bool {
 	return a.passwordChecked //this example only uses password for authentication
 }
 
-type Prompt int32
-
-const (
-	PromptUnspecified Prompt = iota
-	PromptNone
-	PromptLogin
-	PromptConsent
-	PromptSelectAccount
-)
-
-func PromptToInternal(oidcPrompt oidc.SpaceDelimitedArray) []Prompt {
-	prompts := make([]Prompt, len(oidcPrompt))
+func PromptToInternal(oidcPrompt oidc.SpaceDelimitedArray) []string {
+	prompts := make([]string, len(oidcPrompt))
 	for _, oidcPrompt := range oidcPrompt {
 		switch oidcPrompt {
-		case oidc.PromptNone:
-			prompts = append(prompts, PromptNone)
-		case oidc.PromptLogin:
-			prompts = append(prompts, PromptLogin)
-		case oidc.PromptConsent:
-			prompts = append(prompts, PromptConsent)
-		case oidc.PromptSelectAccount:
-			prompts = append(prompts, PromptSelectAccount)
+		case oidc.PromptNone,
+			oidc.PromptLogin,
+			oidc.PromptConsent,
+			oidc.PromptSelectAccount:
+			prompts = append(prompts, oidcPrompt)
 		}
 	}
 	return prompts
-}
-
-type OIDCResponseType int32
-
-const (
-	OIDCResponseTypeCode OIDCResponseType = iota
-	OIDCResponseTypeIDToken
-	OIDCResponseTypeIDTokenToken
-)
-
-func ResponseTypeToInternal(responseType oidc.ResponseType) OIDCResponseType {
-	switch responseType {
-	case oidc.ResponseTypeCode:
-		return OIDCResponseTypeCode
-	case oidc.ResponseTypeIDTokenOnly:
-		return OIDCResponseTypeIDToken
-	case oidc.ResponseTypeIDToken:
-		return OIDCResponseTypeIDTokenToken
-	default:
-		return OIDCResponseTypeCode
-	}
 }
 
 func MaxAgeToInternal(maxAge *uint) *time.Duration {
@@ -157,13 +123,6 @@ func MaxAgeToInternal(maxAge *uint) *time.Duration {
 	}
 	dur := time.Duration(*maxAge) * time.Second
 	return &dur
-}
-
-type AuthRequestOIDC struct {
-	Scopes        []string
-	ResponseType  interface{}
-	Nonce         string
-	CodeChallenge *OIDCCodeChallenge
 }
 
 func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthRequest {
@@ -178,7 +137,7 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 		MaxAuthAge:    MaxAgeToInternal(authReq.MaxAge),
 		UserID:        userID,
 		Scopes:        authReq.Scopes,
-		ResponseType:  ResponseTypeToInternal(authReq.ResponseType),
+		ResponseType:  authReq.ResponseType,
 		Nonce:         authReq.Nonce,
 		CodeChallenge: &OIDCCodeChallenge{
 			Challenge: authReq.CodeChallenge,
@@ -203,19 +162,6 @@ func CodeChallengeToOIDC(challenge *OIDCCodeChallenge) *oidc.CodeChallenge {
 	return &oidc.CodeChallenge{
 		Challenge: challenge.Challenge,
 		Method:    challengeMethod,
-	}
-}
-
-func ResponseTypeToOIDC(responseType OIDCResponseType) oidc.ResponseType {
-	switch responseType {
-	case OIDCResponseTypeCode:
-		return oidc.ResponseTypeCode
-	case OIDCResponseTypeIDTokenToken:
-		return oidc.ResponseTypeIDToken
-	case OIDCResponseTypeIDToken:
-		return oidc.ResponseTypeIDTokenOnly
-	default:
-		return oidc.ResponseTypeCode
 	}
 }
 
