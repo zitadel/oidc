@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/caos/oidc/pkg/oidc"
@@ -42,6 +43,20 @@ func NewStorage() *storage {
 		tokens:        make(map[string]*Token),
 		refreshTokens: make(map[string]*RefreshToken),
 		clients:       clients,
+		users: map[string]*User{
+			"id1": {
+				id:                "id1",
+				username:          "test-user",
+				password:          "verysecure",
+				firstname:         "Test",
+				lastname:          "User",
+				email:             "test-user@zitadel.ch",
+				emailVerified:     true,
+				phone:             "",
+				phoneVerified:     false,
+				preferredLanguage: language.German,
+			},
+		},
 		signingKey: signingKey{
 			ID:        "id",
 			Algorithm: "RS256",
@@ -52,26 +67,27 @@ func NewStorage() *storage {
 
 //CheckUsernamePassword implements the `authenticate` interface of the login
 func (s *storage) CheckUsernamePassword(username, password, id string) error {
-	//for demonstration purposes we'll check on a static list with plain text password
-	//for real world scenarios, be sure to have the password hashed and salted (e.g. using bcrypt)
-	user, ok := s.users[username]
-	if !ok || user.password != password {
-		return fmt.Errorf("username or password wrong")
-	}
 	request, ok := s.authRequests[id]
 	if !ok {
 		return fmt.Errorf("request not found")
 	}
 
-	//be sure to set user id into the auth request after the user was checked (either with or without password),
-	//so that you'll be able to get more information about the user after the login
-	request.UserID = user.id
+	//for demonstration purposes we'll check on a static list with plain text password
+	//for real world scenarios, be sure to have the password hashed and salted (e.g. using bcrypt)
+	for _, user := range s.users {
+		if user.username == username && user.password == password {
+			//be sure to set user id into the auth request after the user was checked,
+			//so that you'll be able to get more information about the user after the login
+			request.UserID = user.id
 
-	//you will have to change some state on the request to guide the user through possible multiple steps of the login process
-	//in this example we'll simply check the username / password and set a boolean to true
-	//therefore we will also just check this boolean if the request / login has been finished
-	request.passwordChecked = true
-	return nil
+			//you will have to change some state on the request to guide the user through possible multiple steps of the login process
+			//in this example we'll simply check the username / password and set a boolean to true
+			//therefore we will also just check this boolean if the request / login has been finished
+			request.passwordChecked = true
+			return nil
+		}
+	}
+	return fmt.Errorf("username or password wrong")
 }
 
 //CreateAuthRequest implements the op.Storage interface
