@@ -43,14 +43,15 @@ Check the `/example` folder where example code for different scenarios is locate
 ```bash
 # start oidc op server
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
-CAOS_OIDC_DEV=1 go run github.com/caos/oidc/example/server/default
+go run github.com/caos/oidc/example/server
 # start oidc web client
-CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
+CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid profile" PORT=9999 go run github.com/caos/oidc/example/client/app
 ```
 
-- browser http://localhost:5556/login will redirect to op server
-- input id to login
-- redirect to client app display user info
+- open http://localhost:9999/login in your browser
+- you will be redirected to op server and the login UI 
+- login with user `test-user` and password `verysecret`
+- the OP will redirect you to the client app, which displays the user info
 
 ## Features
 
