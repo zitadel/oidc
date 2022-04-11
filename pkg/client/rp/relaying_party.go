@@ -237,14 +237,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 //
 //deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
-	return func(rp *relyingParty) error {
-		config, err := client.ConfigFromKeyFile(path)
-		if err != nil {
-			return err
-		}
-		rp.signer, err = client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
-		return err
-	}
+	return WithJWTProfile(SignerFromKeyPath(path))
 }
 
 // WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
