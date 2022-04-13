@@ -50,7 +50,7 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid 
 
 - open http://localhost:9999/login in your browser
 - you will be redirected to op server and the login UI 
-- login with user `test-user` and password `verysecret`
+- login with user `test-user` and password `verysecure`
 - the OP will redirect you to the client app, which displays the user info
 
 ## Features
