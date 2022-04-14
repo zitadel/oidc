@@ -233,14 +233,50 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 	}
 }
 
+// WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
+//
+//deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
+	return WithJWTProfile(SignerFromKeyPath(path))
+}
+
+// WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
+func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	return func(rp *relyingParty) error {
-		config, err := client.ConfigFromKeyFile(path)
+		signer, err := signerFromKey()
 		if err != nil {
 			return err
 		}
-		rp.signer, err = client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
-		return err
+		rp.signer = signer
+		return nil
+	}
+}
+
+type SignerFromKey func() (jose.Signer, error)
+
+func SignerFromKeyPath(path string) SignerFromKey {
+	return func() (jose.Signer, error) {
+		config, err := client.ConfigFromKeyFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
+	}
+}
+
+func SignerFromKeyFile(fileData []byte) SignerFromKey {
+	return func() (jose.Signer, error) {
+		config, err := client.ConfigFromKeyFileData(fileData)
+		if err != nil {
+			return nil, err
+		}
+		return client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
+	}
+}
+
+func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
+	return func() (jose.Signer, error) {
+		return client.NewSignerFromPrivateKeyByte(key, keyID)
 	}
 }
 

@@ -40,7 +40,7 @@ func main() {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 	if keyPath != "" {
-		options = append(options, rp.WithClientKey(keyPath))
+		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
 	}
 
 	provider, err := rp.NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI, scopes, options...)
