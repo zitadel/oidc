@@ -98,11 +98,6 @@ func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientC
 		return nil, oidc.ErrUnauthorizedClient()
 	}
 
-	am := client.AuthMethod()
-	if am != oidc.AuthMethodBasic || am != oidc.AuthMethodPost {
-		return nil, oidc.ErrInvalidClient().WithDescription("auth_method %s not supported for client_credentials grant.", am)
-	}
-
 	return client, nil
 }
 
