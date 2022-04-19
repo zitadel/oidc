@@ -5,6 +5,7 @@
 package mock
 
 import (
+	http "net/http"
 	reflect "reflect"
 
 	op "github.com/caos/oidc/pkg/op"
@@ -147,6 +148,20 @@ func (mr *MockConfigurationMockRecorder) GrantTypeTokenExchangeSupported() *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeTokenExchangeSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeTokenExchangeSupported))
 }
 
+// Insecure mocks base method.
+func (m *MockConfiguration) Insecure() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Insecure")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Insecure indicates an expected call of Insecure.
+func (mr *MockConfigurationMockRecorder) Insecure() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insecure", reflect.TypeOf((*MockConfiguration)(nil).Insecure))
+}
+
 // IntrospectionAuthMethodPrivateKeyJWTSupported mocks base method.
 func (m *MockConfiguration) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
 	m.ctrl.T.Helper()
@@ -189,18 +204,18 @@ func (mr *MockConfigurationMockRecorder) IntrospectionEndpointSigningAlgorithmsS
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IntrospectionEndpointSigningAlgorithmsSupported", reflect.TypeOf((*MockConfiguration)(nil).IntrospectionEndpointSigningAlgorithmsSupported))
 }
 
-// Issuer mocks base method.
-func (m *MockConfiguration) Issuer() string {
+// IssuerFromRequest mocks base method.
+func (m *MockConfiguration) IssuerFromRequest(arg0 *http.Request) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Issuer")
+	ret := m.ctrl.Call(m, "IssuerFromRequest", arg0)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// Issuer indicates an expected call of Issuer.
-func (mr *MockConfigurationMockRecorder) Issuer() *gomock.Call {
+// IssuerFromRequest indicates an expected call of IssuerFromRequest.
+func (mr *MockConfigurationMockRecorder) IssuerFromRequest(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Issuer", reflect.TypeOf((*MockConfiguration)(nil).Issuer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssuerFromRequest", reflect.TypeOf((*MockConfiguration)(nil).IssuerFromRequest), arg0)
 }
 
 // KeysEndpoint mocks base method.

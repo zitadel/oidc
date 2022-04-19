@@ -10,7 +10,7 @@ import (
 )
 
 type KeyProvider interface {
-	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
+	KeySet(context.Context) ([]Key, error)
 }
 
 func keysHandler(k KeyProvider) func(http.ResponseWriter, *http.Request) {
@@ -20,10 +20,23 @@ func keysHandler(k KeyProvider) func(http.ResponseWriter, *http.Request) {
 }
 
 func Keys(w http.ResponseWriter, r *http.Request, k KeyProvider) {
-	keySet, err := k.GetKeySet(r.Context())
+	keySet, err := k.KeySet(r.Context())
 	if err != nil {
 		httphelper.MarshalJSONWithStatus(w, err, http.StatusInternalServerError)
 		return
 	}
-	httphelper.MarshalJSON(w, keySet)
+	httphelper.MarshalJSON(w, jsonWebKeySet(keySet))
+}
+
+func jsonWebKeySet(keys []Key) *jose.JSONWebKeySet {
+	webKeys := make([]jose.JSONWebKey, len(keys))
+	for i, key := range keys {
+		webKeys[i] = jose.JSONWebKey{
+			KeyID:     key.ID(),
+			Algorithm: string(key.Algorithm()),
+			Use:       key.Use(),
+			Key:       key.Key(),
+		}
+	}
+	return &jose.JSONWebKeySet{Keys: webKeys}
 }

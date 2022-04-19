@@ -14,7 +14,7 @@ type UserinfoProvider interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier() AccessTokenVerifier
+	AccessTokenVerifier(context.Context) AccessTokenVerifier
 }
 
 func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter, *http.Request) {
@@ -81,7 +81,7 @@ func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider
 		}
 		return splitToken[0], splitToken[1], true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
+	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", false
 	}

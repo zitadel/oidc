@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
@@ -29,9 +27,6 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-
-	//this will allow us to use an issuer with http:// instead of https://
-	os.Setenv(op.OidcDevMode, "true")
 
 	port := "9998"
 
@@ -62,7 +57,7 @@ func main() {
 
 	//the provider will only take care of the OpenID Protocol, so there must be some sort of UI for the login process
 	//for the simplicity of the example this means a simple page with username and password field
-	l := NewLogin(storage, op.AuthCallbackURL(provider))
+	l := NewLogin(storage, op.AuthCallbackURL(provider), op.NewIssuerInterceptor(provider.IssuerFromRequest))
 
 	//regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	//so we will direct all calls to /login to the login UI
@@ -72,7 +67,8 @@ func main() {
 	//is served on the correct path
 	//
 	//if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
-	//then you would have to set the path prefix (/custom/path/)
+	//then you would have to set the path prefix (/custom/path/):
+	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider.HttpHandler()))
 	router.PathPrefix("/").Handler(provider.HttpHandler())
 
 	server := &http.Server{
@@ -89,9 +85,8 @@ func main() {
 //newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
 //and a predefined default logout uri
 //it will enable all options (see descriptions)
-func newOP(ctx context.Context, storage op.Storage, port string, key [32]byte) (op.OpenIDProvider, error) {
+func newOP(ctx context.Context, storage op.Storage, port string, key [32]byte) (*op.Provider, error) {
 	config := &op.Config{
-		Issuer:    fmt.Sprintf("http://localhost:%s/", port),
 		CryptoKey: key,
 
 		//will be used if the end_session endpoint is called without a post_logout_redirect_uri
@@ -115,7 +110,10 @@ func newOP(ctx context.Context, storage op.Storage, port string, key [32]byte) (
 		//this example has only static texts (in English), so we'll set the here accordingly
 		SupportedUILocales: []language.Tag{language.English},
 	}
-	handler, err := op.NewOpenIDProvider(ctx, config, storage,
+	//handler, err := op.NewOpenIDProvider(ctx, fmt.Sprintf("http://localhost:%s/", port), config, storage,
+	handler, err := op.NewDynamicOpenIDProvider(ctx, "/", config, storage,
+		//we must explicitly allow the use of the http issuer
+		op.WithAllowInsecure(),
 		//as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
 	)

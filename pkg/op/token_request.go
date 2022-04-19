@@ -10,10 +10,8 @@ import (
 )
 
 type Exchanger interface {
-	Issuer() string
 	Storage() Storage
 	Decoder() httphelper.Decoder
-	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
@@ -111,7 +109,7 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.C
 //AuthorizePrivateJWTKey authorizes a client by validating the client_assertion's signature with a previously
 //registered public key (JWT Profile)
 func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchanger JWTAuthorizationGrantExchanger) (Client, error) {
-	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier())
+	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))
 	if err != nil {
 		return nil, err
 	}

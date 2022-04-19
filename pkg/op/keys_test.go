@@ -35,7 +35,7 @@ func TestKeys(t *testing.T) {
 			args: args{
 				k: func() op.KeyProvider {
 					m := mock.NewMockKeyProvider(gomock.NewController(t))
-					m.EXPECT().GetKeySet(gomock.Any()).Return(nil, oidc.ErrServerError())
+					m.EXPECT().KeySet(gomock.Any()).Return(nil, oidc.ErrServerError())
 					return m
 				}(),
 			},
@@ -51,39 +51,39 @@ func TestKeys(t *testing.T) {
 			args: args{
 				k: func() op.KeyProvider {
 					m := mock.NewMockKeyProvider(gomock.NewController(t))
-					m.EXPECT().GetKeySet(gomock.Any()).Return(nil, nil)
+					m.EXPECT().KeySet(gomock.Any()).Return(nil, nil)
 					return m
 				}(),
 			},
 			res: res{
 				statusCode:  http.StatusOK,
 				contentType: "application/json",
+				body: `{"keys":[]}
+`,
 			},
 		},
 		{
 			name: "list",
 			args: args{
 				k: func() op.KeyProvider {
-					m := mock.NewMockKeyProvider(gomock.NewController(t))
-					m.EXPECT().GetKeySet(gomock.Any()).Return(
-						&jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-							{
-								Key: &rsa.PublicKey{
-									N: big.NewInt(1),
-									E: 1,
-								},
-								KeyID: "id",
-							},
-						}},
-						nil,
-					)
+					ctrl := gomock.NewController(t)
+					m := mock.NewMockKeyProvider(ctrl)
+					k := mock.NewMockKey(ctrl)
+					k.EXPECT().Key().Return(&rsa.PublicKey{
+						N: big.NewInt(1),
+						E: 1,
+					})
+					k.EXPECT().ID().Return("id")
+					k.EXPECT().Algorithm().Return(jose.RS256)
+					k.EXPECT().Use().Return("sig")
+					m.EXPECT().KeySet(gomock.Any()).Return([]op.Key{k}, nil)
 					return m
 				}(),
 			},
 			res: res{
 				statusCode:  http.StatusOK,
 				contentType: "application/json",
-				body: `{"keys":[{"kty":"RSA","kid":"id","n":"AQ","e":"AQ"}]}
+				body: `{"keys":[{"use":"sig","kty":"RSA","kid":"id","alg":"RS256","n":"AQ","e":"AQ"}]}
 `,
 			},
 		},

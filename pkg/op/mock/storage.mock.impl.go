@@ -3,11 +3,10 @@ package mock
 import (
 	"context"
 	"errors"
-	"github.com/caos/oidc/pkg/oidc"
 	"testing"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
+	"github.com/caos/oidc/pkg/oidc"
 
 	"github.com/golang/mock/gomock"
 
@@ -40,12 +39,12 @@ func NewMockStorageAny(t *testing.T) op.Storage {
 
 func NewMockStorageSigningKeyInvalid(t *testing.T) op.Storage {
 	m := NewStorage(t)
-	ExpectSigningKeyInvalid(m)
+	//ExpectSigningKeyInvalid(m)
 	return m
 }
 func NewMockStorageSigningKey(t *testing.T) op.Storage {
 	m := NewStorage(t)
-	ExpectSigningKey(m)
+	//ExpectSigningKey(m)
 	return m
 }
 
@@ -83,23 +82,24 @@ func ExpectValidClientID(s op.Storage) {
 		})
 }
 
-func ExpectSigningKeyInvalid(s op.Storage) {
-	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, keyCh chan<- jose.SigningKey) {
-			keyCh <- jose.SigningKey{}
-		},
-	)
-}
-
-func ExpectSigningKey(s op.Storage) {
-	mockS := s.(*MockStorage)
-	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, keyCh chan<- jose.SigningKey) {
-			keyCh <- jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}
-		},
-	)
-}
+//
+//func ExpectSigningKeyInvalid(s op.Storage) {
+//	mockS := s.(*MockStorage)
+//	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
+//		func(_ context.Context, keyCh chan<- jose.SigningKey) {
+//			keyCh <- jose.SigningKey{}
+//		},
+//	)
+//}
+//
+//func ExpectSigningKey(s op.Storage) {
+//	mockS := s.(*MockStorage)
+//	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
+//		func(_ context.Context, keyCh chan<- jose.SigningKey) {
+//			keyCh <- jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}
+//		},
+//	)
+//}
 
 type ConfClient struct {
 	id              string

@@ -10,8 +10,6 @@ import (
 )
 
 type TokenCreator interface {
-	Issuer() string
-	Signer() Signer
 	Storage() Storage
 	Crypto() Crypto
 }
@@ -32,7 +30,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 			return nil, err
 		}
 	}
-	idToken, err := CreateIDToken(ctx, creator.Issuer(), request, client.IDTokenLifetime(), accessToken, code, creator.Storage(), creator.Signer(), client)
+	idToken, err := CreateIDToken(ctx, IssuerFromContext(ctx), request, client.IDTokenLifetime(), accessToken, code, creator.Storage(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +82,7 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	}
 	validity = exp.Add(clockSkew).Sub(time.Now().UTC())
 	if accessTokenType == AccessTokenTypeJWT {
-		accessToken, err = CreateJWT(ctx, creator.Issuer(), tokenRequest, exp, id, creator.Signer(), client, creator.Storage())
+		accessToken, err = CreateJWT(ctx, IssuerFromContext(ctx), tokenRequest, exp, id, client, creator.Storage())
 		return
 	}
 	accessToken, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
@@ -95,7 +93,7 @@ func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
 	return crypto.Encrypt(tokenID + ":" + subject)
 }
 
-func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, signer Signer, client Client, storage Storage) (string, error) {
+func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client Client, storage Storage) (string, error) {
 	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
@@ -105,7 +103,15 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 		}
 		claims.SetPrivateClaims(privateClaims)
 	}
-	return crypto.Sign(claims, signer.Signer())
+	signingKey, err := storage.SigningKey(ctx)
+	if err != nil {
+		return "", err
+	}
+	signer, err := SignerFromKey(signingKey)
+	if err != nil {
+		return "", err
+	}
+	return crypto.Sign(claims, signer)
 }
 
 type IDTokenRequest interface {
@@ -117,7 +123,7 @@ type IDTokenRequest interface {
 	GetSubject() string
 }
 
-func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, signer Signer, client Client) (string, error) {
+func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, client Client) (string, error) {
 	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
 	var acr, nonce string
 	if authRequest, ok := request.(AuthRequest); ok {
@@ -126,8 +132,12 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 	}
 	claims := oidc.NewIDTokenClaims(issuer, request.GetSubject(), request.GetAudience(), exp, request.GetAuthTime(), nonce, acr, request.GetAMR(), request.GetClientID(), client.ClockSkew())
 	scopes := client.RestrictAdditionalIdTokenScopes()(request.GetScopes())
+	signingKey, err := storage.SigningKey(ctx)
+	if err != nil {
+		return "", err
+	}
 	if accessToken != "" {
-		atHash, err := oidc.ClaimHash(accessToken, signer.SignatureAlgorithm())
+		atHash, err := oidc.ClaimHash(accessToken, signingKey.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
@@ -145,14 +155,17 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		claims.SetUserinfo(userInfo)
 	}
 	if code != "" {
-		codeHash, err := oidc.ClaimHash(code, signer.SignatureAlgorithm())
+		codeHash, err := oidc.ClaimHash(code, signingKey.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
 		claims.SetCodeHash(codeHash)
 	}
-
-	return crypto.Sign(claims, signer.Signer())
+	signer, err := SignerFromKey(signingKey)
+	if err != nil {
+		return "", err
+	}
+	return crypto.Sign(claims, signer)
 }
 
 func removeUserinfoScopes(scopes []string) []string {

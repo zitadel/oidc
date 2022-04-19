@@ -23,8 +23,9 @@ type AuthStorage interface {
 	TerminateSession(ctx context.Context, userID string, clientID string) error
 	RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error
 
-	GetSigningKey(context.Context, chan<- jose.SigningKey)
-	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
+	SigningKey(context.Context) (SigningKey, error)
+	SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error)
+	KeySet(context.Context) ([]Key, error)
 }
 
 type OPStorage interface {

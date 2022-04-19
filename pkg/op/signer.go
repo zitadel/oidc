@@ -1,82 +1,38 @@
 package op
 
 import (
-	"context"
 	"errors"
 
-	"github.com/caos/logging"
 	"gopkg.in/square/go-jose.v2"
 )
 
-type Signer interface {
-	Health(ctx context.Context) error
-	Signer() jose.Signer
+var (
+	ErrSignerCreationFailed = errors.New("signer creation failed")
+)
+
+type SigningKey interface {
 	SignatureAlgorithm() jose.SignatureAlgorithm
+	Key() interface{}
+	ID() string
 }
 
-type tokenSigner struct {
-	signer  jose.Signer
-	storage AuthStorage
-	alg     jose.SignatureAlgorithm
-}
-
-func NewSigner(ctx context.Context, storage AuthStorage, keyCh <-chan jose.SigningKey) Signer {
-	s := &tokenSigner{
-		storage: storage,
-	}
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case key := <-keyCh:
-		s.exchangeSigningKey(key)
-	}
-	go s.refreshSigningKey(ctx, keyCh)
-
-	return s
-}
-
-func (s *tokenSigner) Health(_ context.Context) error {
-	if s.signer == nil {
-		return errors.New("no signer")
-	}
-	if string(s.alg) == "" {
-		return errors.New("no signing algorithm")
-	}
-	return nil
-}
-
-func (s *tokenSigner) Signer() jose.Signer {
-	return s.signer
-}
-
-func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.SigningKey) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case key := <-keyCh:
-			s.exchangeSigningKey(key)
-		}
-	}
-}
-
-func (s *tokenSigner) exchangeSigningKey(key jose.SigningKey) {
-	s.alg = key.Algorithm
-	if key.Algorithm == "" || key.Key == nil {
-		s.signer = nil
-		logging.Warn("signer has no key")
-		return
-	}
-	var err error
-	s.signer, err = jose.NewSigner(key, &jose.SignerOptions{})
+func SignerFromKey(key SigningKey) (jose.Signer, error) {
+	signer, err := jose.NewSigner(jose.SigningKey{
+		Algorithm: key.SignatureAlgorithm(),
+		Key: &jose.JSONWebKey{
+			Key:   key.Key(),
+			KeyID: key.ID(),
+		},
+	}, &jose.SignerOptions{})
 	if err != nil {
-		logging.New().WithError(err).Error("error creating signer")
-		return
+		return nil, ErrSignerCreationFailed //TODO: log / wrap error?
 	}
-	logging.Info("signer exchanged signing key")
+	return signer, nil
 }
 
-func (s *tokenSigner) SignatureAlgorithm() jose.SignatureAlgorithm {
-	return s.alg
+type Key interface {
+	ID() string
+	Algorithm() jose.SignatureAlgorithm
+	Use() string
+	Key() interface{}
 }

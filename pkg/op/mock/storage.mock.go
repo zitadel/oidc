@@ -174,21 +174,6 @@ func (mr *MockStorageMockRecorder) GetKeyByIDAndUserID(arg0, arg1, arg2 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyByIDAndUserID", reflect.TypeOf((*MockStorage)(nil).GetKeyByIDAndUserID), arg0, arg1, arg2)
 }
 
-// GetKeySet mocks base method.
-func (m *MockStorage) GetKeySet(arg0 context.Context) (*jose.JSONWebKeySet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKeySet", arg0)
-	ret0, _ := ret[0].(*jose.JSONWebKeySet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetKeySet indicates an expected call of GetKeySet.
-func (mr *MockStorageMockRecorder) GetKeySet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySet", reflect.TypeOf((*MockStorage)(nil).GetKeySet), arg0)
-}
-
 // GetPrivateClaimsFromScopes mocks base method.
 func (m *MockStorage) GetPrivateClaimsFromScopes(arg0 context.Context, arg1, arg2 string, arg3 []string) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
@@ -204,18 +189,6 @@ func (mr *MockStorageMockRecorder) GetPrivateClaimsFromScopes(arg0, arg1, arg2, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateClaimsFromScopes", reflect.TypeOf((*MockStorage)(nil).GetPrivateClaimsFromScopes), arg0, arg1, arg2, arg3)
 }
 
-// GetSigningKey mocks base method.
-func (m *MockStorage) GetSigningKey(arg0 context.Context, arg1 chan<- jose.SigningKey) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "GetSigningKey", arg0, arg1)
-}
-
-// GetSigningKey indicates an expected call of GetSigningKey.
-func (mr *MockStorageMockRecorder) GetSigningKey(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSigningKey", reflect.TypeOf((*MockStorage)(nil).GetSigningKey), arg0, arg1)
-}
-
 // Health mocks base method.
 func (m *MockStorage) Health(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -228,6 +201,21 @@ func (m *MockStorage) Health(arg0 context.Context) error {
 func (mr *MockStorageMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockStorage)(nil).Health), arg0)
+}
+
+// KeySet mocks base method.
+func (m *MockStorage) KeySet(arg0 context.Context) ([]op.Key, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KeySet", arg0)
+	ret0, _ := ret[0].([]op.Key)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KeySet indicates an expected call of KeySet.
+func (mr *MockStorageMockRecorder) KeySet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeySet", reflect.TypeOf((*MockStorage)(nil).KeySet), arg0)
 }
 
 // RevokeToken mocks base method.
@@ -298,6 +286,36 @@ func (m *MockStorage) SetUserinfoFromToken(arg0 context.Context, arg1 oidc.UserI
 func (mr *MockStorageMockRecorder) SetUserinfoFromToken(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserinfoFromToken", reflect.TypeOf((*MockStorage)(nil).SetUserinfoFromToken), arg0, arg1, arg2, arg3, arg4)
+}
+
+// SignatureAlgorithms mocks base method.
+func (m *MockStorage) SignatureAlgorithms(arg0 context.Context) ([]jose.SignatureAlgorithm, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SignatureAlgorithms", arg0)
+	ret0, _ := ret[0].([]jose.SignatureAlgorithm)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SignatureAlgorithms indicates an expected call of SignatureAlgorithms.
+func (mr *MockStorageMockRecorder) SignatureAlgorithms(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignatureAlgorithms", reflect.TypeOf((*MockStorage)(nil).SignatureAlgorithms), arg0)
+}
+
+// SigningKey mocks base method.
+func (m *MockStorage) SigningKey(arg0 context.Context) (op.SigningKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SigningKey", arg0)
+	ret0, _ := ret[0].(op.SigningKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SigningKey indicates an expected call of SigningKey.
+func (mr *MockStorageMockRecorder) SigningKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SigningKey", reflect.TypeOf((*MockStorage)(nil).SigningKey), arg0)
 }
 
 // TerminateSession mocks base method.

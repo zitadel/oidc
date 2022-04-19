@@ -11,7 +11,7 @@ import (
 
 type JWTAuthorizationGrantExchanger interface {
 	Exchanger
-	JWTProfileVerifier() JWTProfileVerifier
+	JWTProfileVerifier(context.Context) JWTProfileVerifier
 }
 
 //JWTProfile handles the OAuth 2.0 JWT Profile Authorization Grant https://tools.ietf.org/html/rfc7523#section-2.1
@@ -21,7 +21,7 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 		RequestError(w, r, err)
 	}
 
-	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest.Assertion, exchanger.JWTProfileVerifier())
+	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest.Assertion, exchanger.JWTProfileVerifier(r.Context()))
 	if err != nil {
 		RequestError(w, r, err)
 		return

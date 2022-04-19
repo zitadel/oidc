@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
-	jose "gopkg.in/square/go-jose.v2"
 )
 
 // MockKeyProvider is a mock of KeyProvider interface.
@@ -35,17 +35,17 @@ func (m *MockKeyProvider) EXPECT() *MockKeyProviderMockRecorder {
 	return m.recorder
 }
 
-// GetKeySet mocks base method.
-func (m *MockKeyProvider) GetKeySet(arg0 context.Context) (*jose.JSONWebKeySet, error) {
+// KeySet mocks base method.
+func (m *MockKeyProvider) KeySet(arg0 context.Context) ([]op.Key, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKeySet", arg0)
-	ret0, _ := ret[0].(*jose.JSONWebKeySet)
+	ret := m.ctrl.Call(m, "KeySet", arg0)
+	ret0, _ := ret[0].([]op.Key)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetKeySet indicates an expected call of GetKeySet.
-func (mr *MockKeyProviderMockRecorder) GetKeySet(arg0 interface{}) *gomock.Call {
+// KeySet indicates an expected call of KeySet.
+func (mr *MockKeyProviderMockRecorder) KeySet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySet", reflect.TypeOf((*MockKeyProvider)(nil).GetKeySet), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeySet", reflect.TypeOf((*MockKeyProvider)(nil).KeySet), arg0)
 }
