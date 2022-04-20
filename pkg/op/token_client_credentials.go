@@ -68,7 +68,7 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (TokenRequest, Client, error) {
 	storage, ok := exchanger.Storage().(ClientCredentialsXXX)
 	if !ok {
-		return nil, nil, oidc.ErrRequestNotSupported().WithDescription("client_credentials grant not supported")
+		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
 	}
 
 	client, err := AuthorizeClientCredentialsClient(ctx, request, exchanger)
