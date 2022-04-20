@@ -66,7 +66,7 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 //ValidateClientCredentialsRequest validates the refresh_token request parameters including authorization check of the client
 //and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (TokenRequest, Client, error) {
-	storage, ok := exchanger.Storage().(ClientCredentialsXXX)
+	storage, ok := exchanger.Storage().(ClientCredentialsStorage)
 	if !ok {
 		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
 	}

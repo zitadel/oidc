@@ -27,7 +27,7 @@ type AuthStorage interface {
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 }
 
-type ClientCredentialsXXX interface {
+type ClientCredentialsStorage interface {
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
 }
 

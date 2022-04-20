@@ -230,7 +230,7 @@ func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
 }
 
 func (o *openidProvider) GrantTypeClientCredentialsSupported() bool {
-	_, ok := o.storage.(ClientCredentialsXXX)
+	_, ok := o.storage.(ClientCredentialsStorage)
 	return ok
 }
 
