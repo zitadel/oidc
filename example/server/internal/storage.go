@@ -480,7 +480,7 @@ func (s *storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	return token, refreshToken.ID, nil
 }
 
-//createRefreshToken will store an access_token in-memory based on the provided information
+//accessToken will store an access_token in-memory based on the provided information
 func (s *storage) accessToken(applicationID, refreshTokenID, subject string, audience, scopes []string) (*Token, error) {
 	token := &Token{
 		ID:             uuid.NewString(),
