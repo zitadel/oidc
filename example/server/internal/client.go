@@ -125,7 +125,9 @@ func (c *Client) ClockSkew() time.Duration {
 	return c.clockSkew
 }
 
-//RegisterClients enables you to register clients for the example
+//RegisterClients enables you to register clients for the example implementation
+//there are some clients (web and native) to try out different cases
+//add more if necessary
 func RegisterClients(registerClients ...*Client) {
 	for _, client := range registerClients {
 		clients[client.id] = client
