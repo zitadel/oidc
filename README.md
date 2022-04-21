@@ -11,11 +11,30 @@
 
 ## What Is It
 
-This project is a easy to use client (RP) and server (OP) implementation for the `OIDC` (Open ID Connect) standard written for `Go`.
+This project is an easy-to-use client (RP) and server (OP) implementation for the `OIDC` (OpenID Connect) standard written for `Go`.
 
 The RP is certified for the [basic](https://www.certification.openid.net/plan-detail.html?public=true&plan=uoprP0OO8Z4Qo) and [config](https://www.certification.openid.net/plan-detail.html?public=true&plan=AYSdLbzmWbu9X) profile.
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
+
+## Basic Overview
+
+The most important packages of the library:
+<pre>
+/pkg
+    /client     clients using the OP for retrieving, exchanging and verifying tokens       
+        /rp     definition and implementation of an OIDC Relying Party (client)
+        /rs     definition and implementation of an OAuth Resource Server (API)
+    /op         definition and implementation of an OIDC OpenID Provider (server)
+    /oidc       definitions shared by clients and server
+
+/example
+    /api        example of an api / resource server implementation using token introspection
+    /app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
+    /github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
+    /service    demonstration of JWT Profile Authorization Grant
+    /server     example of an OpenID Provider implementation including some very basic login UI
+</pre>
 
 ## How To Use It
 
@@ -24,21 +43,22 @@ Check the `/example` folder where example code for different scenarios is locate
 ```bash
 # start oidc op server
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
-CAOS_OIDC_DEV=1 go run github.com/caos/oidc/example/server/default
+go run github.com/caos/oidc/example/server
 # start oidc web client
-CLIENT_ID=web CLIENT_SECRET=web ISSUER=http://localhost:9998/ SCOPES=openid PORT=5556 go run github.com/caos/oidc/example/client/app
+CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid profile" PORT=9999 go run github.com/caos/oidc/example/client/app
 ```
 
-- browser http://localhost:5556/login will redirect to op server
-- input id to login
-- redirect to client app display user info
+- open http://localhost:9999/login in your browser
+- you will be redirected to op server and the login UI 
+- login with user `test-user` and password `verysecure`
+- the OP will redirect you to the client app, which displays the user info
 
 ## Features
 
-|                | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
-|----------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relying Party  | yes       | no[^1]        | no     | yes       | yes  | partial        | not yet | yes         | yes           |
-| OpenID Provider   | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
+|                  | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
+|------------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
+| Relying Party    | yes       | no[^1]        | no          | yes       | yes  | partial        | not yet | yes         | yes           |
+| OpenID Provider  | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
 
 ### Resources
 
