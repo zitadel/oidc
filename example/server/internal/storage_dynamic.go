@@ -254,7 +254,7 @@ func (s *multiStorage) Health(ctx context.Context) error {
 func (s *multiStorage) storageFromContext(ctx context.Context) (*storage, *oidc.Error) {
 	storage, ok := s.issuers[op.IssuerFromContext(ctx)]
 	if !ok {
-
+		return nil, oidc.ErrInvalidRequest().WithDescription("invalid issuer")
 	}
 	return storage, nil
 }

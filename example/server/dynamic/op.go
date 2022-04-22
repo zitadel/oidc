@@ -40,7 +40,7 @@ func main() {
 	port := "9998"
 	issuers := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
-		issuers[i] = fmt.Sprintf("http://%s:%s", hostname, port)
+		issuers[i] = fmt.Sprintf("http://%s:%s/", hostname, port)
 	}
 
 	//the OpenID Provider requires a 32-byte key for (token) encryption

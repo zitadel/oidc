@@ -82,7 +82,7 @@ func (s *publicKey) Key() interface{} {
 }
 
 func NewStorage(issuer string) *storage {
-	hostname := strings.Split(strings.Split(issuer, "://")[0], ":")[0]
+	hostname := strings.Split(strings.Split(issuer, "://")[1], ":")[0]
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &storage{
 		authRequests:  make(map[string]*AuthRequest),
