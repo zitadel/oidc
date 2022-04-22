@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/caos/oidc/pkg/client/profile"
+	"github.com/caos/oidc/v2/pkg/client/profile"
 )
 
 var (

@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	http "github.com/caos/oidc/pkg/http"
-	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
+
+	http "github.com/caos/oidc/v2/pkg/http"
+	op "github.com/caos/oidc/v2/pkg/op"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.

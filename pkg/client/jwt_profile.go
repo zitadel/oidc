@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/caos/oidc/pkg/http"
-	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/http"
+	"github.com/caos/oidc/v2/pkg/oidc"
 )
 
 //JWTProfileExchange handles the oauth2 jwt profile exchange

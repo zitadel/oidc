@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/op"
-	"github.com/caos/oidc/pkg/op/mock"
+	"github.com/caos/oidc/v2/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/op"
+	"github.com/caos/oidc/v2/pkg/op/mock"
 )
 
 func TestKeys(t *testing.T) {

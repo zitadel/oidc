@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/oidc"
 )
 
 // MockVerifier is a mock of Verifier interface

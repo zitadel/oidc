@@ -12,9 +12,9 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/caos/oidc/pkg/client"
-	httphelper "github.com/caos/oidc/pkg/http"
-	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/client"
+	httphelper "github.com/caos/oidc/v2/pkg/http"
+	"github.com/caos/oidc/v2/pkg/oidc"
 )
 
 const (

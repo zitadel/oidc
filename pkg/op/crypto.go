@@ -1,7 +1,7 @@
 package op
 
 import (
-	"github.com/caos/oidc/pkg/crypto"
+	"github.com/caos/oidc/v2/pkg/crypto"
 )
 
 type Crypto interface {

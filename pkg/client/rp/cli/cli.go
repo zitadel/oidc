@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/caos/oidc/pkg/client/rp"
-	httphelper "github.com/caos/oidc/pkg/http"
-	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/client/rp"
+	httphelper "github.com/caos/oidc/v2/pkg/http"
+	"github.com/caos/oidc/v2/pkg/oidc"
 )
 
 const (

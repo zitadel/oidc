@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/caos/oidc/pkg/oidc"
-
 	"github.com/golang/mock/gomock"
 
-	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/v2/pkg/oidc"
+	"github.com/caos/oidc/v2/pkg/op"
 )
 
 func NewStorage(t *testing.T) op.Storage {

@@ -8,9 +8,10 @@ import (
 	http "net/http"
 	reflect "reflect"
 
-	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
 	language "golang.org/x/text/language"
+
+	op "github.com/caos/oidc/v2/pkg/op"
 )
 
 // MockConfiguration is a mock of Configuration interface.

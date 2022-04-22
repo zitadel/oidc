@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	op "github.com/caos/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
+
+	op "github.com/caos/oidc/v2/pkg/op"
 )
 
 // MockKeyProvider is a mock of KeyProvider interface.

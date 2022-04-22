@@ -8,7 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/caos/oidc/pkg/op"
+	"github.com/caos/oidc/v2/pkg/op"
 )
 
 const (
