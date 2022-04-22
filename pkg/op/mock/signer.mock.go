@@ -34,6 +34,20 @@ func (m *MockSigningKey) EXPECT() *MockSigningKeyMockRecorder {
 	return m.recorder
 }
 
+// ID mocks base method.
+func (m *MockSigningKey) ID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ID indicates an expected call of ID.
+func (mr *MockSigningKeyMockRecorder) ID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockSigningKey)(nil).ID))
+}
+
 // Key mocks base method.
 func (m *MockSigningKey) Key() interface{} {
 	m.ctrl.T.Helper()
