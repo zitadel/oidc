@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -80,7 +81,8 @@ func (s *publicKey) Key() interface{} {
 	return &s.key.PublicKey
 }
 
-func NewStorage() *storage {
+func NewStorage(issuer string) *storage {
+	hostname := strings.Split(strings.Split(issuer, "://")[0], ":")[0]
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &storage{
 		authRequests:  make(map[string]*AuthRequest),
@@ -91,7 +93,7 @@ func NewStorage() *storage {
 		users: map[string]*User{
 			"id1": {
 				id:                "id1",
-				username:          "test-user",
+				username:          "test-user@" + hostname,
 				password:          "verysecure",
 				firstname:         "Test",
 				lastname:          "User",
