@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/caos/logging"
+	"github.com/zitadel/logging"
 	"gopkg.in/square/go-jose.v2"
 )
 
