@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
 
-	"github.com/caos/oidc/example/server/internal"
-	"github.com/caos/oidc/pkg/op"
+	"github.com/zitadel/oidc/example/server/internal"
+	"github.com/zitadel/oidc/pkg/op"
 )
 
 const (

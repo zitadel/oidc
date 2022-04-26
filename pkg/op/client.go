@@ -3,7 +3,7 @@ package op
 import (
 	"time"
 
-	"github.com/caos/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/pkg/oidc"
 )
 
 const (
