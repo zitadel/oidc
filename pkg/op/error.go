@@ -3,8 +3,8 @@ package op
 import (
 	"net/http"
 
-	httphelper "github.com/caos/oidc/v2/pkg/http"
-	"github.com/caos/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type ErrAuthRequest interface {

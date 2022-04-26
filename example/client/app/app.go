@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/caos/oidc/v2/pkg/client/rp"
-	httphelper "github.com/caos/oidc/v2/pkg/http"
-	"github.com/caos/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 var (

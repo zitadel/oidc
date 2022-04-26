@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/caos/oidc/v2/pkg/client/rs"
-	"github.com/caos/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client/rs"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 const (

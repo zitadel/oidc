@@ -10,9 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	httphelper "github.com/caos/oidc/v2/pkg/http"
-	"github.com/caos/oidc/v2/pkg/oidc"
-	str "github.com/caos/oidc/v2/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	str "github.com/zitadel/oidc/v2/pkg/strings"
 )
 
 type AuthRequest interface {
