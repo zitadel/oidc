@@ -7,9 +7,9 @@ package mock
 import (
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
 	http "github.com/zitadel/oidc/pkg/http"
 	op "github.com/zitadel/oidc/pkg/op"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.

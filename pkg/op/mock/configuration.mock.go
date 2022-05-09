@@ -7,8 +7,8 @@ package mock
 import (
 	reflect "reflect"
 
-	op "github.com/zitadel/oidc/pkg/op"
 	gomock "github.com/golang/mock/gomock"
+	op "github.com/zitadel/oidc/pkg/op"
 	language "golang.org/x/text/language"
 )
 
@@ -103,6 +103,20 @@ func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 func (mr *MockConfigurationMockRecorder) EndSessionEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSessionEndpoint", reflect.TypeOf((*MockConfiguration)(nil).EndSessionEndpoint))
+}
+
+// GrantTypeClientCredentialsSupported mocks base method.
+func (m *MockConfiguration) GrantTypeClientCredentialsSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypeClientCredentialsSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GrantTypeClientCredentialsSupported indicates an expected call of GrantTypeClientCredentialsSupported.
+func (mr *MockConfigurationMockRecorder) GrantTypeClientCredentialsSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeClientCredentialsSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeClientCredentialsSupported))
 }
 
 // GrantTypeJWTAuthorizationSupported mocks base method.

@@ -8,9 +8,9 @@ import (
 	reflect "reflect"
 	time "time"
 
+	gomock "github.com/golang/mock/gomock"
 	oidc "github.com/zitadel/oidc/pkg/oidc"
 	op "github.com/zitadel/oidc/pkg/op"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockClient is a mock of Client interface.
