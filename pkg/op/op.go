@@ -229,6 +229,11 @@ func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
 	return true
 }
 
+func (o *openidProvider) GrantTypeClientCredentialsSupported() bool {
+	_, ok := o.storage.(ClientCredentialsStorage)
+	return ok
+}
+
 func (o *openidProvider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
 	return true
 }
