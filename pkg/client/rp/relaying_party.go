@@ -476,6 +476,7 @@ type Endpoints struct {
 	IntrospectURL string
 	UserinfoURL   string
 	JKWsURL       string
+	EndSessionURL string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -488,6 +489,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 		IntrospectURL: discoveryConfig.IntrospectionEndpoint,
 		UserinfoURL:   discoveryConfig.UserinfoEndpoint,
 		JKWsURL:       discoveryConfig.JwksURI,
+		EndSessionURL: discoveryConfig.EndSessionEndpoint,
 	}
 }
 
