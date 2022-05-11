@@ -55,10 +55,18 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid 
 
 ## Features
 
-|                  | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token |
-|------------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|
-| Relying Party    | yes       | no[^1]        | no          | yes       | yes  | partial        | not yet | yes         | yes           |
-| OpenID Provider  | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           |
+|                  | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token | Client Credentials |
+|------------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|--------------------|
+| Relying Party    | yes       | no[^1]        | no          | yes       | yes  | partial        | not yet | yes         | yes           | not yet            |
+| OpenID Provider  | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           | yes                |
+
+## Contributors
+
+<a href="https://github.com/zitadel/oidc/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=zitadel/oidc" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 ### Resources
 
