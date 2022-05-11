@@ -117,6 +117,10 @@ func (rp *relyingParty) UserinfoEndpoint() string {
 	return rp.endpoints.UserinfoURL
 }
 
+func (rp *relyingParty) GetEndSessionEndpoint() string {
+	return rp.endpoints.EndSessionURL
+}
+
 func (rp *relyingParty) IDTokenVerifier() IDTokenVerifier {
 	if rp.idTokenVerifier == nil {
 		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
