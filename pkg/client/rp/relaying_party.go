@@ -50,6 +50,9 @@ type RelyingParty interface {
 	//Signer is used if the relaying party uses the JWT Profile
 	Signer() jose.Signer
 
+	//GetEndSessionEndpoint returns the endpoint to sign out on a IDP
+	GetEndSessionEndpoint() string
+
 	//UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
