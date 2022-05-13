@@ -50,6 +50,9 @@ type RelyingParty interface {
 	//Signer is used if the relaying party uses the JWT Profile
 	Signer() jose.Signer
 
+	//GetEndSessionEndpoint returns the endpoint to sign out on a IDP
+	GetEndSessionEndpoint() string
+
 	//UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
@@ -115,6 +118,10 @@ func (rp *relyingParty) Signer() jose.Signer {
 
 func (rp *relyingParty) UserinfoEndpoint() string {
 	return rp.endpoints.UserinfoURL
+}
+
+func (rp *relyingParty) GetEndSessionEndpoint() string {
+	return rp.endpoints.EndSessionURL
 }
 
 func (rp *relyingParty) IDTokenVerifier() IDTokenVerifier {
@@ -476,6 +483,7 @@ type Endpoints struct {
 	IntrospectURL string
 	UserinfoURL   string
 	JKWsURL       string
+	EndSessionURL string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -488,6 +496,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 		IntrospectURL: discoveryConfig.IntrospectionEndpoint,
 		UserinfoURL:   discoveryConfig.UserinfoEndpoint,
 		JKWsURL:       discoveryConfig.JwksURI,
+		EndSessionURL: discoveryConfig.EndSessionEndpoint,
 	}
 }
 
