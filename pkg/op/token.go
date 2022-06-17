@@ -35,11 +35,13 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		return nil, err
 	}
 
+	var state string
 	if authRequest, ok := request.(AuthRequest); ok {
 		err = creator.Storage().DeleteAuthRequest(ctx, authRequest.GetID())
 		if err != nil {
 			return nil, err
 		}
+		state = authRequest.GetState()
 	}
 
 	exp := uint64(validity.Seconds())
@@ -49,6 +51,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		RefreshToken: newRefreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    exp,
+		State:        state,
 	}, nil
 }
 
