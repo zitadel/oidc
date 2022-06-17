@@ -793,6 +793,90 @@ func TestAuthResponseURL(t *testing.T) {
 				nil,
 			},
 		},
+		{
+			"with query",
+			args{
+				"uri?param=value",
+				oidc.ResponseTypeCode,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?param=value&test=test",
+				nil,
+			},
+		},
+		{
+			"with query response type id token",
+			args{
+				"uri?param=value",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?param=value#test=test",
+				nil,
+			},
+		},
+		{
+			"with existing query",
+			args{
+				"uri?test=value",
+				oidc.ResponseTypeCode,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=value&test=test",
+				nil,
+			},
+		},
+		{
+			"with existing query response type id token",
+			args{
+				"uri?test=value",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"test": {"test"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=value#test=test",
+				nil,
+			},
+		},
+		{
+			"with existing query and multiple values",
+			args{
+				"uri?test=value",
+				oidc.ResponseTypeCode,
+				"",
+				map[string][]string{"test": {"test", "test2"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=value&test=test&test=test2",
+				nil,
+			},
+		},
+		{
+			"with existing query and multiple values response type id token",
+			args{
+				"uri?test=value",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"test": {"test", "test2"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?test=value#test=test&test=test2",
+				nil,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
