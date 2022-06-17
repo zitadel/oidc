@@ -496,7 +496,7 @@ func mergeQueryParams(uri *url.URL, params url.Values) string {
 	queries := uri.Query()
 	for param, values := range params {
 		for _, value := range values {
-			queries.Set(param, value)
+			queries.Add(param, value)
 		}
 	}
 	uri.RawQuery = queries.Encode()
