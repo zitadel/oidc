@@ -465,18 +465,41 @@ func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 //AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
 //depending on the response_mode and response_type
 func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response interface{}, encoder httphelper.Encoder) (string, error) {
-	params, err := httphelper.URLEncodeResponse(response, encoder)
+	uri, err := url.Parse(redirectURI)
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)
 	}
+	params, err := httphelper.URLEncodeParams(response, encoder)
+	if err != nil {
+		return "", oidc.ErrServerError().WithParent(err)
+	}
+	//return explicitly requested mode
 	if responseMode == oidc.ResponseModeQuery {
-		return redirectURI + "?" + params, nil
+		return mergeQueryParams(uri, params), nil
 	}
 	if responseMode == oidc.ResponseModeFragment {
-		return redirectURI + "#" + params, nil
+		return setFragment(uri, params), nil
 	}
-	if responseType == "" || responseType == oidc.ResponseTypeCode {
-		return redirectURI + "?" + params, nil
+	//implicit must use fragment mode is not specified by client
+	if responseType == oidc.ResponseTypeIDToken || responseType == oidc.ResponseTypeIDTokenOnly {
+		return setFragment(uri, params), nil
 	}
-	return redirectURI + "#" + params, nil
+	//if we get here it's code flow: defaults to query
+	return mergeQueryParams(uri, params), nil
+}
+
+func setFragment(uri *url.URL, params url.Values) string {
+	uri.Fragment = params.Encode()
+	return uri.String()
+}
+
+func mergeQueryParams(uri *url.URL, params url.Values) string {
+	queries := uri.Query()
+	for param, values := range params {
+		for _, value := range values {
+			queries.Set(param, value)
+		}
+	}
+	uri.RawQuery = queries.Encode()
+	return uri.String()
 }
