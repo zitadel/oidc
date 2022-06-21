@@ -77,14 +77,13 @@ func HttpRequest(client *http.Client, req *http.Request, response interface{}) e
 	return nil
 }
 
-func URLEncodeResponse(resp interface{}, encoder Encoder) (string, error) {
+func URLEncodeParams(resp interface{}, encoder Encoder) (url.Values, error) {
 	values := make(map[string][]string)
 	err := encoder.Encode(resp, values)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	v := url.Values(values)
-	return v.Encode(), nil
+	return values, nil
 }
 
 func StartServer(ctx context.Context, port string) {
