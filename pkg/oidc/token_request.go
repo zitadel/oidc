@@ -24,6 +24,9 @@ const (
 	//GrantTypeTokenExchange defines the grant_type `urn:ietf:params:oauth:grant-type:token-exchange` used for the OAuth Token Exchange Grant
 	GrantTypeTokenExchange GrantType = "urn:ietf:params:oauth:grant-type:token-exchange"
 
+	//GrantTypeImplicit defines the grant type `implicit` used for implicit flows that skip the generation and exchange of an Authorization Code
+	GrantTypeImplicit GrantType = "implicit"
+
 	//ClientAssertionTypeJWTAssertion defines the client_assertion_type `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
 	//used for the OAuth JWT Profile Client Authentication
 	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
