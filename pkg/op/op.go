@@ -117,6 +117,23 @@ type endpoints struct {
 	JwksURI            Endpoint
 }
 
+//NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
+//a http.Router that handles a suite of endpoints (some paths can be overridden):
+//  /healthz
+//  /ready
+//  /.well-known/openid-configuration
+//  /oauth/token
+//  /oauth/introspect
+//  /callback
+//  /authorize
+//  /userinfo
+//  /revoke
+//  /end_session
+//  /keys
+//This does not include login. Login is handled with a redirect that includes the
+//request ID. The redirect for logins is specified per-client by Client.LoginURL().
+//Successful logins should make the request as authorized and redirect back to to
+//op.AuthCallbackURL(provider) which is probably /callback.
 func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
