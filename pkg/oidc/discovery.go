@@ -157,7 +157,3 @@ const (
 	AuthMethodNone          AuthMethod = "none"
 	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
 )
-
-const (
-	GrantTypeImplicit GrantType = "implicit"
-)
