@@ -20,7 +20,7 @@ type AuthStorage interface {
 	// - TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest
 	// - RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
 	// - AuthRequest as returned one of the AuthStorage methods above
-	// - oidc.JWTTokenRequest created by decoding a JWT
+	// - *oidc.JWTTokenRequest created by decoding a JWT
 	CreateAccessToken(context.Context, TokenRequest) (string, time.Time, error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
