@@ -21,17 +21,17 @@ type AuthStorage interface {
 	// - RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
 	// - AuthRequest as returned one of the AuthStorage methods above
 	// - *oidc.JWTTokenRequest created by decoding a JWT
-	CreateAccessToken(context.Context, TokenRequest) (string, time.Time, error)
+	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, err error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
 	// - TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest
 	// - RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
 	// - AuthRequest as returned one of the AuthStorage methods above
-	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error)
-	TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (RefreshTokenRequest, error)
+	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
+	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
 	TerminateSession(ctx context.Context, userID string, clientID string) error
-	RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error
+	RevokeToken(ctx context.Context, tokenID string, userID string, clientID string) *oidc.Error
 
 	GetSigningKey(context.Context, chan<- jose.SigningKey)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
