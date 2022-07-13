@@ -1,7 +1,9 @@
 package oidc
 
 import (
+	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -93,6 +95,34 @@ func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
 	}
 	*s = strings.Split(str, " ")
 	return nil
+}
+
+func (s *SpaceDelimitedArray) Scan(src interface{}) error {
+	if src == nil {
+		*s = nil
+		return nil
+	}
+	switch v := src.(type) {
+	case string:
+		if len(v) == 0 {
+			*s = SpaceDelimitedArray{}
+			return nil
+		}
+		*s = strings.Split(v, " ")
+	case []byte:
+		if len(v) == 0 {
+			*s = SpaceDelimitedArray{}
+			return nil
+		}
+		*s = strings.Split(string(v), " ")
+	default:
+		return fmt.Errorf("cannot convert %T to SpaceDelimitedArray", src)
+	}
+	return nil
+}
+
+func (s SpaceDelimitedArray) Value() (driver.Value, error) {
+	return strings.Join(s, " "), nil
 }
 
 type Time time.Time

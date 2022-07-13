@@ -32,6 +32,11 @@ const (
 	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 )
 
+var AllGrantTypes = []GrantType{
+	GrantTypeCode, GrantTypeRefreshToken, GrantTypeClientCredentials,
+	GrantTypeBearer, GrantTypeTokenExchange, GrantTypeImplicit,
+	ClientAssertionTypeJWTAssertion}
+
 type GrantType string
 
 type TokenRequest interface {
