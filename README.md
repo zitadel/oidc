@@ -113,7 +113,7 @@ We did not choose `fosite` because it implements `OAuth 2.0` on its own and does
 
 ## License
 
-The full functionality of this library is and stays open source and free to use for everyone. Visit our [website](https://caos.ch) and get in touch.
+The full functionality of this library is and stays open source and free to use for everyone. Visit our [website](https://zitadel.com) and get in touch.
 
 See the exact licensing terms [here](./LICENSE)
 
