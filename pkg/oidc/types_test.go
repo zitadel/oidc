@@ -3,6 +3,8 @@ package oidc
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -228,6 +230,7 @@ func TestScopes_UnmarshalText(t *testing.T) {
 		})
 	}
 }
+
 func TestScopes_MarshalText(t *testing.T) {
 	type args struct {
 		scopes SpaceDelimitedArray
@@ -292,5 +295,43 @@ func TestScopes_MarshalText(t *testing.T) {
 				t.Errorf("MarshalText() is = %q, want %q", text, tt.res.scopes)
 			}
 		})
+	}
+}
+
+func TestSpaceDelimitatedArray_ValuerNotNil(t *testing.T) {
+	inputs := [][]string{
+		{"two", "elements"},
+		{"one"},
+		{ /*zero*/ },
+	}
+	for _, input := range inputs {
+		t.Run(strconv.Itoa(len(input))+strings.Join(input, "_"), func(t *testing.T) {
+			sda := SpaceDelimitedArray(input)
+			dbValue, err := sda.Value()
+			if !assert.NoError(t, err, "Value") {
+				return
+			}
+			var reversed SpaceDelimitedArray
+			err = reversed.Scan(dbValue)
+			if assert.NoError(t, err, "Scan string") {
+				assert.Equal(t, sda, reversed, "scan string")
+			}
+			reversed = nil
+			dbValueString, ok := dbValue.(string)
+			if assert.True(t, ok, "dbValue is string") {
+				err = reversed.Scan([]byte(dbValueString))
+				if assert.NoError(t, err, "Scan bytes") {
+					assert.Equal(t, sda, reversed, "scan bytes")
+				}
+			}
+		})
+	}
+}
+
+func TestSpaceDelimitatedArray_ValuerNil(t *testing.T) {
+	var reversed SpaceDelimitedArray
+	err := reversed.Scan(nil)
+	if assert.NoError(t, err, "Scan nil") {
+		assert.Equal(t, SpaceDelimitedArray(nil), reversed, "scan nil")
 	}
 }
