@@ -17,16 +17,27 @@ type AuthStorage interface {
 	DeleteAuthRequest(context.Context, string) error
 
 	// The TokenRequest parameter of CreateAccessToken can be any of:
-	// - TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest
-	// - RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
-	// - AuthRequest as returned one of the AuthStorage methods above
-	// - *oidc.JWTTokenRequest created by decoding a JWT
+	//
+	// * TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest,
+	//
+	// * RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
+	//   (CreateAccessAndRefreshTokens will also be called)
+	//
+	// * AuthRequest as returned by AuthRequestByID or AuthRequestByCode (above)
+	//
+	// * *oidc.JWTTokenRequest from a JWT that is the assertion value of a JWT Profile
+	//   Grant: https://datatracker.ietf.org/doc/html/rfc7523#section-2.1
 	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, err error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
-	// - TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest
-	// - RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
-	// - AuthRequest as returned one of the AuthStorage methods above
+	//
+	// * TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest
+	//
+	// * RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
+	//
+	// * AuthRequest as by returned by the AuthRequestByID or AuthRequestByCode (above).
+	//   Used for the authorization code flow which requested offline_access scope and
+	//   registered the refresh_token grant type in advance
 	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
 	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
