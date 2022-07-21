@@ -15,17 +15,20 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-var Encoder = func() httphelper.Encoder {
-	e := schema.NewEncoder()
-	e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
-		return value.Interface().(oidc.SpaceDelimitedArray).Encode()
-	})
-	return e
-}()
+var (
+	Encoder = func() httphelper.Encoder {
+		e := schema.NewEncoder()
+		e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
+			return value.Interface().(oidc.SpaceDelimitedArray).Encode()
+		})
+		return e
+	}()
+)
 
-// Discover calls the discovery endpoint of the provided issuer and returns its configuration
-// It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
+//Discover calls the discovery endpoint of the provided issuer and returns its configuration
+//It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
 func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
+
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	if len(wellKnownUrl) == 1 && wellKnownUrl[0] != "" {
 		wellKnown = wellKnownUrl[0]

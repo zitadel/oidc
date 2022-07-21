@@ -236,14 +236,14 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 	}
 }
 
-//WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
+// WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
 //deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
 
-//WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
+// WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
 func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	return func(rp *relyingParty) error {
 		signer, err := signerFromKey()
