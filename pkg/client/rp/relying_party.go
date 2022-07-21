@@ -23,53 +23,49 @@ const (
 	pkceCode   = "pkce"
 )
 
-var (
-	ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
-)
+var ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
 
-//RelyingParty declares the minimal interface for oidc clients
+// RelyingParty declares the minimal interface for oidc clients
 type RelyingParty interface {
-	//OAuthConfig returns the oauth2 Config
+	// OAuthConfig returns the oauth2 Config
 	OAuthConfig() *oauth2.Config
 
-	//Issuer returns the issuer of the oidc config
+	// Issuer returns the issuer of the oidc config
 	Issuer() string
 
-	//IsPKCE returns if authorization is done using `Authorization Code Flow with Proof Key for Code Exchange (PKCE)`
+	// IsPKCE returns if authorization is done using `Authorization Code Flow with Proof Key for Code Exchange (PKCE)`
 	IsPKCE() bool
 
-	//CookieHandler returns a http cookie handler used for various state transfer cookies
+	// CookieHandler returns a http cookie handler used for various state transfer cookies
 	CookieHandler() *httphelper.CookieHandler
 
-	//HttpClient returns a http client used for calls to the openid provider, e.g. calling token endpoint
+	// HttpClient returns a http client used for calls to the openid provider, e.g. calling token endpoint
 	HttpClient() *http.Client
 
-	//IsOAuth2Only specifies whether relaying party handles only oauth2 or oidc calls
+	// IsOAuth2Only specifies whether relaying party handles only oauth2 or oidc calls
 	IsOAuth2Only() bool
 
-	//Signer is used if the relaying party uses the JWT Profile
+	// Signer is used if the relaying party uses the JWT Profile
 	Signer() jose.Signer
 
-	//GetEndSessionEndpoint returns the endpoint to sign out on a IDP
+	// GetEndSessionEndpoint returns the endpoint to sign out on a IDP
 	GetEndSessionEndpoint() string
 
-	//UserinfoEndpoint returns the userinfo
+	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
-	//IDTokenVerifier returns the verifier interface used for oidc id_token verification
+	// IDTokenVerifier returns the verifier interface used for oidc id_token verification
 	IDTokenVerifier() IDTokenVerifier
-	//ErrorHandler returns the handler used for callback errors
+	// ErrorHandler returns the handler used for callback errors
 
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 }
 
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
 
-var (
-	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
-		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
-	}
-)
+var DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
+	http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
+}
 
 type relyingParty struct {
 	issuer            string
@@ -138,9 +134,9 @@ func (rp *relyingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, 
 	return rp.errorHandler
 }
 
-//NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
-//OAuth2 Config and possible configOptions
-//it will use the AuthURL and TokenURL set in config
+// NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
+// OAuth2 Config and possible configOptions
+// it will use the AuthURL and TokenURL set in config
 func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingParty, error) {
 	rp := &relyingParty{
 		oauthConfig: config,
@@ -157,9 +153,9 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 	return rp, nil
 }
 
-//NewRelyingPartyOIDC creates an (OIDC) RelyingParty with the given
-//issuer, clientID, clientSecret, redirectURI, scopes and possible configOptions
-//it will run discovery on the provided issuer and use the found endpoints
+// NewRelyingPartyOIDC creates an (OIDC) RelyingParty with the given
+// issuer, clientID, clientSecret, redirectURI, scopes and possible configOptions
+// it will run discovery on the provided issuer and use the found endpoints
 func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, scopes []string, options ...Option) (RelyingParty, error) {
 	rp := &relyingParty{
 		issuer: issuer,
@@ -189,7 +185,7 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 	return rp, nil
 }
 
-//Option is the type for providing dynamic options to the relyingParty
+// Option is the type for providing dynamic options to the relyingParty
 type Option func(*relyingParty) error
 
 func WithCustomDiscoveryUrl(url string) Option {
@@ -199,7 +195,7 @@ func WithCustomDiscoveryUrl(url string) Option {
 	}
 }
 
-//WithCookieHandler set a `CookieHandler` for securing the various redirects
+// WithCookieHandler set a `CookieHandler` for securing the various redirects
 func WithCookieHandler(cookieHandler *httphelper.CookieHandler) Option {
 	return func(rp *relyingParty) error {
 		rp.cookieHandler = cookieHandler
@@ -207,9 +203,9 @@ func WithCookieHandler(cookieHandler *httphelper.CookieHandler) Option {
 	}
 }
 
-//WithPKCE sets the RP to use PKCE (oauth2 code challenge)
-//it also sets a `CookieHandler` for securing the various redirects
-//and exchanging the code challenge
+// WithPKCE sets the RP to use PKCE (oauth2 code challenge)
+// it also sets a `CookieHandler` for securing the various redirects
+// and exchanging the code challenge
 func WithPKCE(cookieHandler *httphelper.CookieHandler) Option {
 	return func(rp *relyingParty) error {
 		rp.pkce = true
@@ -218,7 +214,7 @@ func WithPKCE(cookieHandler *httphelper.CookieHandler) Option {
 	}
 }
 
-//WithHTTPClient provides the ability to set an http client to be used for the relaying party and verifier
+// WithHTTPClient provides the ability to set an http client to be used for the relaying party and verifier
 func WithHTTPClient(client *http.Client) Option {
 	return func(rp *relyingParty) error {
 		rp.httpClient = client
@@ -287,7 +283,7 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 	}
 }
 
-//Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
+// Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
 //
 //deprecated: use client.Discover
 func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
@@ -307,7 +303,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	return GetEndpoints(discoveryConfig), nil
 }
 
-//AuthURL returns the auth request url
+// AuthURL returns the auth request url
 //(wrapping the oauth2 `AuthCodeURL`)
 func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
@@ -317,8 +313,8 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	return rp.OAuthConfig().AuthCodeURL(state, authOpts...)
 }
 
-//AuthURLHandler extends the `AuthURL` method with a http redirect handler
-//including handling setting cookie for secure `state` transfer
+// AuthURLHandler extends the `AuthURL` method with a http redirect handler
+// including handling setting cookie for secure `state` transfer
 func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := make([]AuthURLOpt, 0)
@@ -339,7 +335,7 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 	}
 }
 
-//GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
+// GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
 	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
@@ -348,8 +344,8 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 	return oidc.NewSHACodeChallenge(codeVerifier), nil
 }
 
-//CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
-//returning it parsed together with the oauth2 tokens (access, refresh)
+// CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
+// returning it parsed together with the oauth2 tokens (access, refresh)
 func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens, err error) {
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
@@ -381,9 +377,9 @@ func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...Cod
 
 type CodeExchangeCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp RelyingParty)
 
-//CodeExchangeHandler extends the `CodeExchange` method with a http handler
-//including cookie handling for secure `state` transfer
-//and optional PKCE code verifier checking
+// CodeExchangeHandler extends the `CodeExchange` method with a http handler
+// including cookie handling for secure `state` transfer
+// and optional PKCE code verifier checking
 func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)
@@ -424,9 +420,9 @@ func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.Ha
 
 type CodeExchangeUserinfoCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, provider RelyingParty, info oidc.UserInfo)
 
-//UserinfoCallback wraps the callback function of the CodeExchangeHandler
-//and calls the userinfo endpoint with the access token
-//on success it will pass the userinfo into its callback function as well
+// UserinfoCallback wraps the callback function of the CodeExchangeHandler
+// and calls the userinfo endpoint with the access token
+// on success it will pass the userinfo into its callback function as well
 func UserinfoCallback(f CodeExchangeUserinfoCallback) CodeExchangeCallback {
 	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp RelyingParty) {
 		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
@@ -438,7 +434,7 @@ func UserinfoCallback(f CodeExchangeUserinfoCallback) CodeExchangeCallback {
 	}
 }
 
-//Userinfo will call the OIDC Userinfo Endpoint with the provided token
+// Userinfo will call the OIDC Userinfo Endpoint with the provided token
 func Userinfo(token, tokenType, subject string, rp RelyingParty) (oidc.UserInfo, error) {
 	req, err := http.NewRequest("GET", rp.UserinfoEndpoint(), nil)
 	if err != nil {
@@ -502,7 +498,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 
 type AuthURLOpt func() []oauth2.AuthCodeOption
 
-//WithCodeChallenge sets the `code_challenge` params in the auth request
+// WithCodeChallenge sets the `code_challenge` params in the auth request
 func WithCodeChallenge(codeChallenge string) AuthURLOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{
@@ -512,7 +508,7 @@ func WithCodeChallenge(codeChallenge string) AuthURLOpt {
 	}
 }
 
-//WithPrompt sets the `prompt` params in the auth request
+// WithPrompt sets the `prompt` params in the auth request
 func WithPrompt(prompt ...string) AuthURLOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{
@@ -523,16 +519,36 @@ func WithPrompt(prompt ...string) AuthURLOpt {
 
 type CodeExchangeOpt func() []oauth2.AuthCodeOption
 
-//WithCodeVerifier sets the `code_verifier` param in the token request
+// WithCodeVerifier sets the `code_verifier` param in the token request
 func WithCodeVerifier(codeVerifier string) CodeExchangeOpt {
 	return func() []oauth2.AuthCodeOption {
 		return []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("code_verifier", codeVerifier)}
 	}
 }
 
-//WithClientAssertionJWT sets the `client_assertion` param in the token request
+// WithClientAssertionJWT sets the `client_assertion` param in the token request
 func WithClientAssertionJWT(clientAssertion string) CodeExchangeOpt {
 	return func() []oauth2.AuthCodeOption {
 		return client.ClientAssertionCodeOptions(clientAssertion)
 	}
+}
+
+type tokenEndpointCaller struct {
+	RelyingParty
+}
+
+func (t tokenEndpointCaller) TokenEndpoint() string {
+	return t.OAuthConfig().Endpoint.TokenURL
+}
+
+func RefreshAccessToken(rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oauth2.Token, error) {
+	request := oidc.RefreshTokenRequest{
+		RefreshToken:        refreshToken,
+		Scopes:              rp.OAuthConfig().Scopes,
+		ClientID:            rp.OAuthConfig().ClientID,
+		ClientSecret:        rp.OAuthConfig().ClientSecret,
+		ClientAssertion:     clientAssertion,
+		ClientAssertionType: clientAssertionType,
+	}
+	return client.CallTokenEndpoint(request, tokenEndpointCaller{RelyingParty: rp})
 }
