@@ -23,7 +23,9 @@ const (
 	pkceCode   = "pkce"
 )
 
-var ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
+var (
+	ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
+)
 
 //RelyingParty declares the minimal interface for oidc clients
 type RelyingParty interface {
@@ -63,9 +65,11 @@ type RelyingParty interface {
 
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
 
-var DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
-	http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
-}
+var (
+	DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
+		http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
+	}
+)
 
 type relyingParty struct {
 	issuer            string
