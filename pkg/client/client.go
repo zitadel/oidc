@@ -15,20 +15,17 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-var (
-	Encoder = func() httphelper.Encoder {
-		e := schema.NewEncoder()
-		e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
-			return value.Interface().(oidc.SpaceDelimitedArray).Encode()
-		})
-		return e
-	}()
-)
+var Encoder = func() httphelper.Encoder {
+	e := schema.NewEncoder()
+	e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
+		return value.Interface().(oidc.SpaceDelimitedArray).Encode()
+	})
+	return e
+}()
 
-//Discover calls the discovery endpoint of the provided issuer and returns its configuration
-//It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
+// Discover calls the discovery endpoint of the provided issuer and returns its configuration
+// It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
 func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
-
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	if len(wellKnownUrl) == 1 && wellKnownUrl[0] != "" {
 		wellKnown = wellKnownUrl[0]
@@ -48,16 +45,16 @@ func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*
 	return discoveryConfig, nil
 }
 
-type tokenEndpointCaller interface {
+type TokenEndpointCaller interface {
 	TokenEndpoint() string
 	HttpClient() *http.Client
 }
 
-func CallTokenEndpoint(request interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func CallTokenEndpoint(request interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	return callTokenEndpoint(request, nil, caller)
 }
 
-func callTokenEndpoint(request interface{}, authFn interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
