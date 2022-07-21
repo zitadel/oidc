@@ -6,15 +6,18 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
+//go:generate go get github.com/dmarkham/enumer
+//go:generate go run github.com/dmarkham/enumer -linecomment -sql -json -text -yaml -gqlgen -type=ApplicationType,AccessTokenType
+
 const (
-	ApplicationTypeWeb ApplicationType = iota
-	ApplicationTypeUserAgent
-	ApplicationTypeNative
+	ApplicationTypeWeb       ApplicationType = iota // web
+	ApplicationTypeUserAgent                        // user_agent
+	ApplicationTypeNative                           // native
 )
 
 const (
-	AccessTokenTypeBearer AccessTokenType = iota
-	AccessTokenTypeJWT
+	AccessTokenTypeBearer AccessTokenType = iota // bearer
+	AccessTokenTypeJWT                           // JWT
 )
 
 type ApplicationType int
