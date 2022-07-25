@@ -19,10 +19,17 @@ type ClientAssertionParams struct {
 
 type IntrospectionResponse interface {
 	UserInfoSetter
-	SetActive(bool)
 	IsActive() bool
+	SetActive(bool)
 	SetScopes(scopes []string)
 	SetClientID(id string)
+	SetTokenType(tokenType string)
+	SetExpiration(exp time.Time)
+	SetIssuedAt(iat time.Time)
+	SetNotBefore(nbf time.Time)
+	SetAudience(audience []string)
+	SetIssuer(issuer string)
+	SetJWTID(id string)
 }
 
 func NewIntrospectionResponse() IntrospectionResponse {
@@ -30,10 +37,17 @@ func NewIntrospectionResponse() IntrospectionResponse {
 }
 
 type introspectionResponse struct {
-	Active   bool                `json:"active"`
-	Scope    SpaceDelimitedArray `json:"scope,omitempty"`
-	ClientID string              `json:"client_id,omitempty"`
-	Subject  string              `json:"sub,omitempty"`
+	Active     bool                `json:"active"`
+	Scope      SpaceDelimitedArray `json:"scope,omitempty"`
+	ClientID   string              `json:"client_id,omitempty"`
+	TokenType  string              `json:"token_type,omitempty"`
+	Expiration Time                `json:"exp,omitempty"`
+	IssuedAt   Time                `json:"iat,omitempty"`
+	NotBefore  Time                `json:"nbf,omitempty"`
+	Subject    string              `json:"sub,omitempty"`
+	Audience   Audience            `json:"aud,omitempty"`
+	Issuer     string              `json:"iss,omitempty"`
+	JWTID      string              `json:"jti,omitempty"`
 	userInfoProfile
 	userInfoEmail
 	userInfoPhone
@@ -44,14 +58,6 @@ type introspectionResponse struct {
 
 func (i *introspectionResponse) IsActive() bool {
 	return i.Active
-}
-
-func (i *introspectionResponse) SetScopes(scope []string) {
-	i.Scope = scope
-}
-
-func (i *introspectionResponse) SetClientID(id string) {
-	i.ClientID = id
 }
 
 func (i *introspectionResponse) GetSubject() string {
@@ -136,6 +142,42 @@ func (i *introspectionResponse) GetClaim(key string) interface{} {
 
 func (i *introspectionResponse) SetActive(active bool) {
 	i.Active = active
+}
+
+func (i *introspectionResponse) SetScopes(scope []string) {
+	i.Scope = scope
+}
+
+func (i *introspectionResponse) SetClientID(id string) {
+	i.ClientID = id
+}
+
+func (i *introspectionResponse) SetTokenType(tokenType string) {
+	i.TokenType = tokenType
+}
+
+func (i *introspectionResponse) SetExpiration(exp time.Time) {
+	i.Expiration = Time(exp)
+}
+
+func (i *introspectionResponse) SetIssuedAt(iat time.Time) {
+	i.IssuedAt = Time(iat)
+}
+
+func (i *introspectionResponse) SetNotBefore(nbf time.Time) {
+	i.NotBefore = Time(nbf)
+}
+
+func (i *introspectionResponse) SetAudience(audience []string) {
+	i.Audience = audience
+}
+
+func (i *introspectionResponse) SetIssuer(issuer string) {
+	i.Issuer = issuer
+}
+
+func (i *introspectionResponse) SetJWTID(id string) {
+	i.JWTID = id
 }
 
 func (i *introspectionResponse) SetSubject(sub string) {
@@ -223,9 +265,12 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 	type Alias introspectionResponse
 	a := &struct {
 		*Alias
-		Locale    interface{} `json:"locale,omitempty"`
-		UpdatedAt int64       `json:"updated_at,omitempty"`
-		Username  string      `json:"username,omitempty"`
+		Expiration int64       `json:"exp,omitempty"`
+		IssuedAt   int64       `json:"iat,omitempty"`
+		NotBefore  int64       `json:"nbf,omitempty"`
+		Locale     interface{} `json:"locale,omitempty"`
+		UpdatedAt  int64       `json:"updated_at,omitempty"`
+		Username   string      `json:"username,omitempty"`
 	}{
 		Alias: (*Alias)(i),
 	}
@@ -234,6 +279,15 @@ func (i *introspectionResponse) MarshalJSON() ([]byte, error) {
 	}
 	if !time.Time(i.UpdatedAt).IsZero() {
 		a.UpdatedAt = time.Time(i.UpdatedAt).Unix()
+	}
+	if !time.Time(i.Expiration).IsZero() {
+		a.Expiration = time.Time(i.Expiration).Unix()
+	}
+	if !time.Time(i.IssuedAt).IsZero() {
+		a.IssuedAt = time.Time(i.IssuedAt).Unix()
+	}
+	if !time.Time(i.NotBefore).IsZero() {
+		a.NotBefore = time.Time(i.NotBefore).Unix()
 	}
 	a.Username = i.PreferredUsername
 
