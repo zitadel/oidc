@@ -51,6 +51,6 @@ type StorageNotFoundError interface {
 
 type EndSessionRequest struct {
 	UserID      string
-	Client      Client
+	ClientID    string
 	RedirectURI string
 }
