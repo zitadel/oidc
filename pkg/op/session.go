@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	httphelper "github.com/zitadel/oidc/pkg/http"
 	"github.com/zitadel/oidc/pkg/oidc"
@@ -32,11 +33,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 		RequestError(w, r, err)
 		return
 	}
-	var clientID string
-	if session.Client != nil {
-		clientID = session.Client.GetID()
-	}
-	err = ender.Storage().TerminateSession(r.Context(), session.UserID, clientID)
+	err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.ClientID)
 	if err != nil {
 		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"))
 		return
@@ -58,28 +55,48 @@ func ParseEndSessionRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.
 }
 
 func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest, ender SessionEnder) (*EndSessionRequest, error) {
-	session := new(EndSessionRequest)
-	if req.IdTokenHint == "" {
-		return session, nil
+	session := &EndSessionRequest{
+		RedirectURI: ender.DefaultLogoutRedirectURI(),
 	}
-	claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier())
-	if err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
+	if req.IdTokenHint != "" {
+		claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier())
+		if err != nil {
+			return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
+		}
+		session.UserID = claims.GetSubject()
+		if req.ClientID != "" && req.ClientID != claims.GetAuthorizedParty() {
+			return nil, oidc.ErrInvalidRequest().WithDescription("client_id does not match azp of id_token_hint")
+		}
+		req.ClientID = claims.GetAuthorizedParty()
 	}
-	session.UserID = claims.GetSubject()
-	session.Client, err = ender.Storage().GetClientByClientID(ctx, claims.GetAuthorizedParty())
-	if err != nil {
-		return nil, oidc.DefaultToServerError(err, "")
-	}
-	if req.PostLogoutRedirectURI == "" {
-		session.RedirectURI = ender.DefaultLogoutRedirectURI()
-		return session, nil
-	}
-	for _, uri := range session.Client.PostLogoutRedirectURIs() {
-		if uri == req.PostLogoutRedirectURI {
-			session.RedirectURI = uri + "?state=" + req.State
-			return session, nil
+	if req.ClientID != "" {
+		client, err := ender.Storage().GetClientByClientID(ctx, req.ClientID)
+		if err != nil {
+			return nil, oidc.DefaultToServerError(err, "")
+		}
+		session.ClientID = client.GetID()
+		if req.PostLogoutRedirectURI != "" {
+			if err := ValidateEndSessionPostLogoutRedirectURI(req.PostLogoutRedirectURI, client); err != nil {
+				return nil, err
+			}
+			session.RedirectURI = req.PostLogoutRedirectURI
 		}
 	}
-	return nil, oidc.ErrInvalidRequest().WithDescription("post_logout_redirect_uri invalid")
+	if req.State != "" {
+		redirect, err := url.Parse(session.RedirectURI)
+		if err != nil {
+			return nil, oidc.DefaultToServerError(err, "")
+		}
+		session.RedirectURI = mergeQueryParams(redirect, url.Values{"state": {req.State}})
+	}
+	return session, nil
+}
+
+func ValidateEndSessionPostLogoutRedirectURI(postLogoutRedirectURI string, client Client) error {
+	for _, uri := range client.PostLogoutRedirectURIs() {
+		if uri == postLogoutRedirectURI {
+			return nil
+		}
+	}
+	return oidc.ErrInvalidRequest().WithDescription("post_logout_redirect_uri invalid")
 }
