@@ -20,9 +20,6 @@ type AuthStorage interface {
 	//
 	// * TokenRequest as returned by ClientCredentialsStorage.ClientCredentialsTokenRequest,
 	//
-	// * RefreshTokenRequest as returned by AuthStorage.TokenRequestByRefreshToken
-	//   (CreateAccessAndRefreshTokens will also be called)
-	//
 	// * AuthRequest as returned by AuthRequestByID or AuthRequestByCode (above)
 	//
 	// * *oidc.JWTTokenRequest from a JWT that is the assertion value of a JWT Profile
