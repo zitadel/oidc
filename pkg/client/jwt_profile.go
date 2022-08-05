@@ -9,8 +9,8 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-//JWTProfileExchange handles the oauth2 jwt profile exchange
-func JWTProfileExchange(jwtProfileGrantRequest *oidc.JWTProfileGrantRequest, caller tokenEndpointCaller) (*oauth2.Token, error) {
+// JWTProfileExchange handles the oauth2 jwt profile exchange
+func JWTProfileExchange(jwtProfileGrantRequest *oidc.JWTProfileGrantRequest, caller TokenEndpointCaller) (*oauth2.Token, error) {
 	return CallTokenEndpoint(jwtProfileGrantRequest, caller)
 }
 

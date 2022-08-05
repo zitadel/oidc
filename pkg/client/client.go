@@ -48,16 +48,16 @@ func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*
 	return discoveryConfig, nil
 }
 
-type tokenEndpointCaller interface {
+type TokenEndpointCaller interface {
 	TokenEndpoint() string
 	HttpClient() *http.Client
 }
 
-func CallTokenEndpoint(request interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func CallTokenEndpoint(request interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	return callTokenEndpoint(request, nil, caller)
 }
 
-func callTokenEndpoint(request interface{}, authFn interface{}, caller tokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err

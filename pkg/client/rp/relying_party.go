@@ -536,3 +536,23 @@ func WithClientAssertionJWT(clientAssertion string) CodeExchangeOpt {
 		return client.ClientAssertionCodeOptions(clientAssertion)
 	}
 }
+
+type tokenEndpointCaller struct {
+	RelyingParty
+}
+
+func (t tokenEndpointCaller) TokenEndpoint() string {
+	return t.OAuthConfig().Endpoint.TokenURL
+}
+
+func RefreshAccessToken(rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oauth2.Token, error) {
+	request := oidc.RefreshTokenRequest{
+		RefreshToken:        refreshToken,
+		Scopes:              rp.OAuthConfig().Scopes,
+		ClientID:            rp.OAuthConfig().ClientID,
+		ClientSecret:        rp.OAuthConfig().ClientSecret,
+		ClientAssertion:     clientAssertion,
+		ClientAssertionType: clientAssertionType,
+	}
+	return client.CallTokenEndpoint(request, tokenEndpointCaller{RelyingParty: rp})
+}
