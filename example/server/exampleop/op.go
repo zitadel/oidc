@@ -1,4 +1,4 @@
-package main
+package exampleop
 
 import (
 	"context"
@@ -27,13 +27,14 @@ func init() {
 	)
 }
 
-func main() {
-	ctx := context.Background()
+type Storage interface {
+	op.Storage
+	CheckUsernamePassword(username, password, id string) error
+}
 
+func SetupServer(ctx context.Context, port string, storage Storage) *mux.Router {
 	// this will allow us to use an issuer with http:// instead of https://
 	os.Setenv(op.OidcDevMode, "true")
-
-	port := "9998"
 
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
@@ -48,11 +49,6 @@ func main() {
 			log.Printf("error serving logged out page: %v", err)
 		}
 	})
-
-	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
-	// this might be the layer for accessing your database
-	// in this example it will be handled in-memory
-	storage := storage.NewStorage(storage.NewUserStore())
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
 	provider, err := newOP(ctx, storage, port, key)
@@ -75,15 +71,7 @@ func main() {
 	// then you would have to set the path prefix (/custom/path/)
 	router.PathPrefix("/").Handler(provider.HttpHandler())
 
-	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: router,
-	}
-	err = server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	<-ctx.Done()
+	return router
 }
 
 // newOP will create an OpenID Provider for localhost on a specified port with a given encryption key

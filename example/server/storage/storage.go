@@ -26,6 +26,9 @@ var serviceKey1 = &rsa.PublicKey{
 	E: 65537,
 }
 
+// var _ op.Storage = &storage{}
+// var _ op.ClientCredentialsStorage = &storage{}
+
 // storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
