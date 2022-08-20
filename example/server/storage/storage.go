@@ -87,10 +87,10 @@ func (s *storage) CheckUsernamePassword(username, password, id string) error {
 	// a plain text password.  For real world scenarios, be sure to have the password
 	// hashed and salted (e.g. using bcrypt)
 	user := s.userStore.GetUserByUsername(username)
-	if user != nil && user.password == password {
+	if user != nil && user.Password == password {
 		// be sure to set user id into the auth request after the user was checked,
 		// so that you'll be able to get more information about the user after the login
-		request.UserID = user.id
+		request.UserID = user.ID
 
 		// you will have to change some state on the request to guide the user through possible multiple steps of the login process
 		// in this example we'll simply check the username / password and set a boolean to true
@@ -541,17 +541,17 @@ func (s *storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter,
 	for _, scope := range scopes {
 		switch scope {
 		case oidc.ScopeOpenID:
-			userInfo.SetSubject(user.id)
+			userInfo.SetSubject(user.ID)
 		case oidc.ScopeEmail:
-			userInfo.SetEmail(user.email, user.emailVerified)
+			userInfo.SetEmail(user.Email, user.EmailVerified)
 		case oidc.ScopeProfile:
-			userInfo.SetPreferredUsername(user.username)
-			userInfo.SetName(user.firstname + " " + user.lastname)
-			userInfo.SetFamilyName(user.lastname)
-			userInfo.SetGivenName(user.firstname)
-			userInfo.SetLocale(user.preferredLanguage)
+			userInfo.SetPreferredUsername(user.Username)
+			userInfo.SetName(user.FirstName + " " + user.LastName)
+			userInfo.SetFamilyName(user.LastName)
+			userInfo.SetGivenName(user.FirstName)
+			userInfo.SetLocale(user.PreferredLanguage)
 		case oidc.ScopePhone:
-			userInfo.SetPhone(user.phone, user.phoneVerified)
+			userInfo.SetPhone(user.Phone, user.PhoneVerified)
 		case CustomScope:
 			// you can also have a custom scope and assert public or custom claims based on that
 			userInfo.AppendClaims(CustomClaim, customClaim(clientID))

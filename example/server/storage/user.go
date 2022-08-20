@@ -7,16 +7,16 @@ import (
 )
 
 type User struct {
-	id                string
-	username          string
-	password          string
-	firstname         string
-	lastname          string
-	email             string
-	emailVerified     bool
-	phone             string
-	phoneVerified     bool
-	preferredLanguage language.Tag
+	ID                string
+	Username          string
+	Password          string
+	FirstName         string
+	LastName          string
+	Email             string
+	EmailVerified     bool
+	Phone             string
+	PhoneVerified     bool
+	PreferredLanguage language.Tag
 }
 
 type Service struct {
@@ -36,16 +36,16 @@ func NewUserStore() UserStore {
 	return userStore{
 		users: map[string]*User{
 			"id1": {
-				id:                "id1",
-				username:          "test-user",
-				password:          "verysecure",
-				firstname:         "Test",
-				lastname:          "User",
-				email:             "test-user@zitadel.ch",
-				emailVerified:     true,
-				phone:             "",
-				phoneVerified:     false,
-				preferredLanguage: language.German,
+				ID:                "id1",
+				Username:          "test-user",
+				Password:          "verysecure",
+				FirstName:         "Test",
+				LastName:          "User",
+				Email:             "test-user@zitadel.ch",
+				EmailVerified:     true,
+				Phone:             "",
+				PhoneVerified:     false,
+				PreferredLanguage: language.German,
 			},
 		},
 	}
@@ -57,7 +57,7 @@ func (u userStore) GetUserByID(id string) *User {
 
 func (u userStore) GetUserByUsername(username string) *User {
 	for _, user := range u.users {
-		if user.username == username {
+		if user.Username == username {
 			return user
 		}
 	}
