@@ -15,6 +15,7 @@ type UserInfo interface {
 	UserInfoPhone
 	GetAddress() UserInfoAddress
 	GetClaim(key string) interface{}
+	GetClaims() map[string]interface{}
 }
 
 type UserInfoProfile interface {
@@ -171,6 +172,10 @@ func (u *userinfo) GetAddress() UserInfoAddress {
 
 func (u *userinfo) GetClaim(key string) interface{} {
 	return u.claims[key]
+}
+
+func (u *userinfo) GetClaims() map[string]interface{} {
+	return u.claims
 }
 
 func (u *userinfo) SetSubject(sub string) {
