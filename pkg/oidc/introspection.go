@@ -140,6 +140,10 @@ func (i *introspectionResponse) GetClaim(key string) interface{} {
 	return i.claims[key]
 }
 
+func (i *introspectionResponse) GetClaims() map[string]interface{} {
+	return i.claims
+}
+
 func (i *introspectionResponse) SetActive(active bool) {
 	i.Active = active
 }
