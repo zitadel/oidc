@@ -32,6 +32,9 @@ type Storage interface {
 	CheckUsernamePassword(username, password, id string) error
 }
 
+// SetupServer creates an OIDC server with Issuer=http://localhost:<port>
+//
+// Use one of the pre-made clients in storage/clients.go or register a new one.
 func SetupServer(ctx context.Context, port string, storage Storage) *mux.Router {
 	// this will allow us to use an issuer with http:// instead of https://
 	os.Setenv(op.OidcDevMode, "true")
