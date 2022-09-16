@@ -259,27 +259,27 @@ func (u *userinfo) AppendClaims(key string, value interface{}) {
 	u.claims[key] = value
 }
 
-func (u *userInfoAddress) GetFormatted() string {
+func (u userInfoAddress) GetFormatted() string {
 	return u.Formatted
 }
 
-func (u *userInfoAddress) GetStreetAddress() string {
+func (u userInfoAddress) GetStreetAddress() string {
 	return u.StreetAddress
 }
 
-func (u *userInfoAddress) GetLocality() string {
+func (u userInfoAddress) GetLocality() string {
 	return u.Locality
 }
 
-func (u *userInfoAddress) GetRegion() string {
+func (u userInfoAddress) GetRegion() string {
 	return u.Region
 }
 
-func (u *userInfoAddress) GetPostalCode() string {
+func (u userInfoAddress) GetPostalCode() string {
 	return u.PostalCode
 }
 
-func (u *userInfoAddress) GetCountry() string {
+func (u userInfoAddress) GetCountry() string {
 	return u.Country
 }
 
@@ -334,7 +334,7 @@ type userInfoAddress struct {
 }
 
 func NewUserInfoAddress(streetAddress, locality, region, postalCode, country, formatted string) UserInfoAddress {
-	return &userInfoAddress{
+	return userInfoAddress{
 		StreetAddress: streetAddress,
 		Locality:      locality,
 		Region:        region,
@@ -380,7 +380,7 @@ func (u *userinfo) MarshalJSON() ([]byte, error) {
 func (u *userinfo) UnmarshalJSON(data []byte) error {
 	type Alias userinfo
 	a := &struct {
-		Address *userInfoAddress `json:"address,omitempty"`
+		Address userInfoAddress `json:"address,omitempty"`
 		*Alias
 		UpdatedAt int64 `json:"update_at,omitempty"`
 	}{
