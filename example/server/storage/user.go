@@ -26,6 +26,7 @@ type Service struct {
 type UserStore interface {
 	GetUserByID(string) *User
 	GetUserByUsername(string) *User
+	ExampleClientID() string
 }
 
 type userStore struct {
@@ -49,6 +50,11 @@ func NewUserStore() UserStore {
 			},
 		},
 	}
+}
+
+// ExampleClientID is only used in the example server
+func (u userStore) ExampleClientID() string {
+	return "service"
 }
 
 func (u userStore) GetUserByID(id string) *User {

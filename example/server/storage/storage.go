@@ -60,7 +60,7 @@ func NewStorage(userStore UserStore) *Storage {
 		clients:       clients,
 		userStore:     userStore,
 		services: map[string]Service{
-			"service": {
+			userStore.ExampleClientID(): {
 				keys: map[string]*rsa.PublicKey{
 					"key1": serviceKey1,
 				},
@@ -436,12 +436,12 @@ func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, client
 
 // GetKeyByIDAndUserID implements the op.Storage interface
 // it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
-func (s *Storage) GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
+func (s *Storage) GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	service, ok := s.services[userID]
+	service, ok := s.services[clientID]
 	if !ok {
-		return nil, fmt.Errorf("user not found")
+		return nil, fmt.Errorf("clientID not found")
 	}
 	key, ok := service.keys[keyID]
 	if !ok {

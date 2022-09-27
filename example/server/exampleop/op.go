@@ -3,7 +3,6 @@ package exampleop
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -35,7 +34,7 @@ type Storage interface {
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
-func SetupServer(ctx context.Context, port string, storage Storage) *mux.Router {
+func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Router {
 	// this will allow us to use an issuer with http:// instead of https://
 	os.Setenv(op.OidcDevMode, "true")
 
@@ -54,7 +53,7 @@ func SetupServer(ctx context.Context, port string, storage Storage) *mux.Router 
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newOP(ctx, storage, port, key)
+	provider, err := newOP(ctx, storage, issuer, key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,9 +79,9 @@ func SetupServer(ctx context.Context, port string, storage Storage) *mux.Router 
 // newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newOP(ctx context.Context, storage op.Storage, port string, key [32]byte) (op.OpenIDProvider, error) {
+func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
 	config := &op.Config{
-		Issuer:    fmt.Sprintf("http://localhost:%s/", port),
+		Issuer:    issuer,
 		CryptoKey: key,
 
 		// will be used if the end_session endpoint is called without a post_logout_redirect_uri

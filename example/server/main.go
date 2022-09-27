@@ -18,7 +18,7 @@ func main() {
 	storage := storage.NewStorage(storage.NewUserStore())
 
 	port := "9998"
-	router := exampleop.SetupServer(ctx, port, storage)
+	router := exampleop.SetupServer(ctx, "http://localhost:"+port, storage)
 
 	server := &http.Server{
 		Addr:    ":" + port,
