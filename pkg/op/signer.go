@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/zitadel/logging"
 	"gopkg.in/square/go-jose.v2"
@@ -18,6 +19,7 @@ type tokenSigner struct {
 	signer  jose.Signer
 	storage AuthStorage
 	alg     jose.SignatureAlgorithm
+	lock    sync.RWMutex
 }
 
 func NewSigner(ctx context.Context, storage AuthStorage, keyCh <-chan jose.SigningKey) Signer {
@@ -47,6 +49,8 @@ func (s *tokenSigner) Health(_ context.Context) error {
 }
 
 func (s *tokenSigner) Signer() jose.Signer {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.signer
 }
 
@@ -62,6 +66,8 @@ func (s *tokenSigner) refreshSigningKey(ctx context.Context, keyCh <-chan jose.S
 }
 
 func (s *tokenSigner) exchangeSigningKey(key jose.SigningKey) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.alg = key.Algorithm
 	if key.Algorithm == "" || key.Key == nil {
 		s.signer = nil
