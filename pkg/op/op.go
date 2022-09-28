@@ -170,20 +170,21 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 }
 
 type openidProvider struct {
-	config              *Config
-	endpoints           *endpoints
-	storage             Storage
-	signer              Signer
-	idTokenHintVerifier IDTokenHintVerifier
-	jwtProfileVerifier  JWTProfileVerifier
-	accessTokenVerifier AccessTokenVerifier
-	keySet              *openIDKeySet
-	crypto              Crypto
-	httpHandler         http.Handler
-	decoder             *schema.Decoder
-	encoder             *schema.Encoder
-	interceptors        []HttpInterceptor
-	timer               <-chan time.Time
+	config                  *Config
+	endpoints               *endpoints
+	storage                 Storage
+	signer                  Signer
+	idTokenHintVerifier     IDTokenHintVerifier
+	jwtProfileVerifier      JWTProfileVerifier
+	accessTokenVerifier     AccessTokenVerifier
+	keySet                  *openIDKeySet
+	crypto                  Crypto
+	httpHandler             http.Handler
+	decoder                 *schema.Decoder
+	encoder                 *schema.Encoder
+	interceptors            []HttpInterceptor
+	timer                   <-chan time.Time
+	accessTokenVerifierOpts []AccessTokenVerifierOpt
 }
 
 func (o *openidProvider) Issuer() string {
@@ -448,6 +449,13 @@ func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys End
 func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
 	return func(o *openidProvider) error {
 		o.interceptors = append(o.interceptors, interceptors...)
+		return nil
+	}
+}
+
+func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
+	return func(o *openidProvider) error {
+		o.accessTokenVerifierOpts = opts
 		return nil
 	}
 }
