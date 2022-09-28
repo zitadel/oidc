@@ -154,6 +154,8 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 		}
 	}
 
+	_ = rp.IDTokenVerifier()
+
 	return rp, nil
 }
 
