@@ -166,6 +166,11 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 
 	o.crypto = NewAESCrypto(config.CryptoKey)
 
+	// Avoid potential race conditions by calling these early
+	_ = o.AccessTokenVerifier()
+	_ = o.JWTProfileVerifier()
+	_ = o.openIDKeySet()
+
 	return o, nil
 }
 
