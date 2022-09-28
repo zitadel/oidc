@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -77,6 +78,14 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 			return
 		}
+	}
+	if authReq.ClientID == "" {
+		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing client_id"), authorizer.Encoder())
+		return
+	}
+	if authReq.RedirectURI == "" {
+		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing redirect_uri"), authorizer.Encoder())
+		return
 	}
 	validation := ValidateAuthRequest
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
@@ -378,6 +387,10 @@ func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	params := mux.Vars(r)
 	id := params["id"]
+	if id == "" {
+		AuthRequestError(w, r, nil, fmt.Errorf("auth request callback is missing id"), authorizer.Encoder())
+		return
+	}
 
 	authReq, err := authorizer.Storage().AuthRequestByID(r.Context(), id)
 	if err != nil {

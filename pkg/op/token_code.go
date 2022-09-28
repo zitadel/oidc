@@ -53,7 +53,7 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 		return nil, nil, oidc.ErrInvalidGrant()
 	}
 	if !ValidateGrantType(client, oidc.GrantTypeCode) {
-		return nil, nil, oidc.ErrUnauthorizedClient()
+		return nil, nil, oidc.ErrUnauthorizedClient().WithDescription("client missing grant type " + string(oidc.GrantTypeCode))
 	}
 	if tokenReq.RedirectURI != authReq.GetRedirectURI() {
 		return nil, nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
