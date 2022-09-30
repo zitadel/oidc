@@ -148,7 +148,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	if !str.Contains(requestObject.Audience, issuer) {
 		return authReq, oidc.ErrInvalidRequest()
 	}
-	keySet := &jwtProfileKeySet{storage, requestObject.Issuer}
+	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
 	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
 		return authReq, err
 	}
