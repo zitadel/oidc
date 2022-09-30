@@ -13,6 +13,7 @@ type CookieHandler struct {
 	sameSite     http.SameSite
 	maxAge       int
 	domain       string
+	path         string
 }
 
 func NewCookieHandler(hashKey, encryptKey []byte, opts ...CookieHandlerOpt) *CookieHandler {
@@ -20,6 +21,7 @@ func NewCookieHandler(hashKey, encryptKey []byte, opts ...CookieHandlerOpt) *Coo
 		securecookie: securecookie.New(hashKey, encryptKey),
 		secureOnly:   true,
 		sameSite:     http.SameSiteLaxMode,
+		path:         "/",
 	}
 
 	for _, opt := range opts {
@@ -55,6 +57,12 @@ func WithDomain(domain string) CookieHandlerOpt {
 	}
 }
 
+func WithPath(path string) CookieHandlerOpt {
+	return func(c *CookieHandler) {
+		c.domain = path
+	}
+}
+
 func (c *CookieHandler) CheckCookie(r *http.Request, name string) (string, error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
@@ -87,7 +95,7 @@ func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) err
 		Name:     name,
 		Value:    encoded,
 		Domain:   c.domain,
-		Path:     "/",
+		Path:     c.path,
 		MaxAge:   c.maxAge,
 		HttpOnly: true,
 		Secure:   c.secureOnly,
@@ -101,7 +109,7 @@ func (c *CookieHandler) DeleteCookie(w http.ResponseWriter, name string) {
 		Name:     name,
 		Value:    "",
 		Domain:   c.domain,
-		Path:     "/",
+		Path:     c.path,
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   c.secureOnly,
