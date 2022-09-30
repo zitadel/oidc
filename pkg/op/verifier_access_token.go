@@ -48,10 +48,21 @@ func (i *accessTokenVerifier) KeySet() oidc.KeySet {
 	return i.keySet
 }
 
-func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet) AccessTokenVerifier {
+type AccessTokenVerifierOpt func(*accessTokenVerifier)
+
+func WithSupportedAccessTokenSigningAlgorithms(algs ...string) AccessTokenVerifierOpt {
+	return func(verifier *accessTokenVerifier) {
+		verifier.supportedSignAlgs = algs
+	}
+}
+
+func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTokenVerifierOpt) AccessTokenVerifier {
 	verifier := &accessTokenVerifier{
 		issuer: issuer,
 		keySet: keySet,
+	}
+	for _, opt := range opts {
+		opt(verifier)
 	}
 	return verifier
 }
