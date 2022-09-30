@@ -547,14 +547,25 @@ func (t tokenEndpointCaller) TokenEndpoint() string {
 	return t.OAuthConfig().Endpoint.TokenURL
 }
 
+type RefreshTokenRequest struct {
+	RefreshToken        string                   `schema:"refresh_token"`
+	Scopes              oidc.SpaceDelimitedArray `schema:"scope"`
+	ClientID            string                   `schema:"client_id"`
+	ClientSecret        string                   `schema:"client_secret"`
+	ClientAssertion     string                   `schema:"client_assertion"`
+	ClientAssertionType string                   `schema:"client_assertion_type"`
+	GrantType           oidc.GrantType           `schema:"grant_type"`
+}
+
 func RefreshAccessToken(rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oauth2.Token, error) {
-	request := oidc.RefreshTokenRequest{
+	request := RefreshTokenRequest{
 		RefreshToken:        refreshToken,
 		Scopes:              rp.OAuthConfig().Scopes,
 		ClientID:            rp.OAuthConfig().ClientID,
 		ClientSecret:        rp.OAuthConfig().ClientSecret,
 		ClientAssertion:     clientAssertion,
 		ClientAssertionType: clientAssertionType,
+		GrantType:           oidc.GrantTypeRefreshToken,
 	}
 	return client.CallTokenEndpoint(request, tokenEndpointCaller{RelyingParty: rp})
 }
