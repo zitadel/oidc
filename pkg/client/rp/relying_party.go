@@ -248,6 +248,8 @@ func WithClientKey(path string) Option {
 }
 
 // WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
+// When creating the signer, be sure to include the KeyID in the SigningKey.
+// See client.NewSignerFromPrivateKeyByte for an example.
 func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	return func(rp *relyingParty) error {
 		signer, err := signerFromKey()

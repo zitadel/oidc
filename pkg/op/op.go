@@ -133,7 +133,8 @@ type endpoints struct {
 //This does not include login. Login is handled with a redirect that includes the
 //request ID. The redirect for logins is specified per-client by Client.LoginURL().
 //Successful logins should mark the request as authorized and redirect back to to
-//op.AuthCallbackURL(provider) which is probably /callback.
+//op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
+// to the AuthCallbackURL, the request id should be passed as the "id" parameter.
 func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {

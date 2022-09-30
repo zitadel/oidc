@@ -70,6 +70,8 @@ func (a *AccessTokenRequest) SetClientSecret(clientSecret string) {
 	a.ClientSecret = clientSecret
 }
 
+// RefreshTokenRequest is not useful for making refresh requests because the
+// grant_type is not included explicitly but rather implied.
 type RefreshTokenRequest struct {
 	RefreshToken        string              `schema:"refresh_token"`
 	Scopes              SpaceDelimitedArray `schema:"scope"`
