@@ -1,4 +1,4 @@
-package main
+package exampleop
 
 import (
 	"fmt"
@@ -12,8 +12,7 @@ const (
 	queryAuthRequestID = "authRequestID"
 )
 
-var (
-	loginTmpl, _ = template.New("login").Parse(`
+var loginTmpl, _ = template.New("login").Parse(`
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -41,7 +40,6 @@ var (
 			</form>
 		</body>
 	</html>`)
-)
 
 type login struct {
 	authenticate authenticate
@@ -74,8 +72,8 @@ func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
 		return
 	}
-	//the oidc package will pass the id of the auth request as query parameter
-	//we will use this id through the login process and therefore pass it to the  login page
+	// the oidc package will pass the id of the auth request as query parameter
+	// we will use this id through the login process and therefore pass it to the  login page
 	renderLogin(w, r.FormValue(queryAuthRequestID), nil)
 }
 

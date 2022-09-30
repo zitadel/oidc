@@ -1,4 +1,4 @@
-package internal
+package storage
 
 import (
 	"time"
@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	//CustomScope is an example for how to use custom scopes in this library
+	// CustomScope is an example for how to use custom scopes in this library
 	//(in this scenario, when requested, it will return a custom claim)
 	CustomScope = "custom_scope"
 
-	//CustomClaim is an example for how to return custom claims with this library
+	// CustomClaim is an example for how to return custom claims with this library
 	CustomClaim = "custom_claim"
 )
 
@@ -44,11 +44,11 @@ func (a *AuthRequest) GetID() string {
 }
 
 func (a *AuthRequest) GetACR() string {
-	return "" //we won't handle acr in this example
+	return "" // we won't handle acr in this example
 }
 
 func (a *AuthRequest) GetAMR() []string {
-	//this example only uses password for authentication
+	// this example only uses password for authentication
 	if a.passwordChecked {
 		return []string{"pwd"}
 	}
@@ -56,7 +56,7 @@ func (a *AuthRequest) GetAMR() []string {
 }
 
 func (a *AuthRequest) GetAudience() []string {
-	return []string{a.ApplicationID} //this example will always just use the client_id as audience
+	return []string{a.ApplicationID} // this example will always just use the client_id as audience
 }
 
 func (a *AuthRequest) GetAuthTime() time.Time {
@@ -84,7 +84,7 @@ func (a *AuthRequest) GetResponseType() oidc.ResponseType {
 }
 
 func (a *AuthRequest) GetResponseMode() oidc.ResponseMode {
-	return "" //we won't handle response mode in this example
+	return "" // we won't handle response mode in this example
 }
 
 func (a *AuthRequest) GetScopes() []string {
@@ -100,7 +100,7 @@ func (a *AuthRequest) GetSubject() string {
 }
 
 func (a *AuthRequest) Done() bool {
-	return a.passwordChecked //this example only uses password for authentication
+	return a.passwordChecked // this example only uses password for authentication
 }
 
 func PromptToInternal(oidcPrompt oidc.SpaceDelimitedArray) []string {
@@ -165,7 +165,7 @@ func CodeChallengeToOIDC(challenge *OIDCCodeChallenge) *oidc.CodeChallenge {
 	}
 }
 
-//RefreshTokenRequestFromBusiness will simply wrap the internal RefreshToken to implement the op.RefreshTokenRequest interface
+// RefreshTokenRequestFromBusiness will simply wrap the storage RefreshToken to implement the op.RefreshTokenRequest interface
 func RefreshTokenRequestFromBusiness(token *RefreshToken) op.RefreshTokenRequest {
 	return &RefreshTokenRequest{token}
 }
