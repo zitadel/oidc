@@ -25,37 +25,42 @@ type Exchanger interface {
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		grantType := r.FormValue("grant_type")
-		switch grantType {
-		case string(oidc.GrantTypeCode):
-			CodeExchange(w, r, exchanger)
-			return
-		case string(oidc.GrantTypeRefreshToken):
-			if exchanger.GrantTypeRefreshTokenSupported() {
-				RefreshTokenExchange(w, r, exchanger)
-				return
-			}
-		case string(oidc.GrantTypeBearer):
-			if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
-				JWTProfile(w, r, ex)
-				return
-			}
-		case string(oidc.GrantTypeTokenExchange):
-			if exchanger.GrantTypeTokenExchangeSupported() {
-				TokenExchange(w, r, exchanger)
-				return
-			}
-		case string(oidc.GrantTypeClientCredentials):
-			if exchanger.GrantTypeClientCredentialsSupported() {
-				ClientCredentialsExchange(w, r, exchanger)
-				return
-			}
-		case "":
-			RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
+		Exchange(w, r, exchanger)
+	}
+}
+
+//Exchange performs a token exchange appropriate for the grant type
+func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	grantType := r.FormValue("grant_type")
+	switch grantType {
+	case string(oidc.GrantTypeCode):
+		CodeExchange(w, r, exchanger)
+		return
+	case string(oidc.GrantTypeRefreshToken):
+		if exchanger.GrantTypeRefreshTokenSupported() {
+			RefreshTokenExchange(w, r, exchanger)
 			return
 		}
-		RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType))
+	case string(oidc.GrantTypeBearer):
+		if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
+			JWTProfile(w, r, ex)
+			return
+		}
+	case string(oidc.GrantTypeTokenExchange):
+		if exchanger.GrantTypeTokenExchangeSupported() {
+			TokenExchange(w, r, exchanger)
+			return
+		}
+	case string(oidc.GrantTypeClientCredentials):
+		if exchanger.GrantTypeClientCredentialsSupported() {
+			ClientCredentialsExchange(w, r, exchanger)
+			return
+		}
+	case "":
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
+		return
 	}
+	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType))
 }
 
 //AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
