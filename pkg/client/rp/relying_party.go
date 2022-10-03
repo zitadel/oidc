@@ -190,6 +190,10 @@ func NewRelyingPartyOIDC(issuer, clientID, clientSecret, redirectURI string, sco
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
 
+	// avoid races by calling these early
+	_ = rp.IDTokenVerifier() // sets idTokenVerifier
+	_ = rp.ErrorHandler()    // sets errorHandler
+
 	return rp, nil
 }
 
