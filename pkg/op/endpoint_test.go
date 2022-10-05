@@ -87,7 +87,7 @@ func TestEndpoint_Absolute(t *testing.T) {
 	}
 }
 
-//TODO: impl test
+// TODO: impl test
 func TestEndpoint_Validate(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -21,12 +21,12 @@ func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKe
 	return keyset
 }
 
-//SkipRemoteCheck will suppress checking for new remote keys if signature validation fails with cached keys
-//and no kid header is set in the JWT
+// SkipRemoteCheck will suppress checking for new remote keys if signature validation fails with cached keys
+// and no kid header is set in the JWT
 //
-//this might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
-//there is only a single remote key
-//please notice that remote keys will then only be fetched if cached keys are empty
+// this might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
+// there is only a single remote key
+// please notice that remote keys will then only be fetched if cached keys are empty
 func SkipRemoteCheck() func(set *remoteKeySet) {
 	return func(set *remoteKeySet) {
 		set.skipRemoteCheck = true
@@ -97,15 +97,15 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	return r.verifySignatureRemote(ctx, jws, keyID, alg)
 }
 
-//verifySignatureCached checks for a matching key in the cached key list
+// verifySignatureCached checks for a matching key in the cached key list
 //
-//if there is only one possible, it tries to verify the signature and will return the payload if successful
+// if there is only one possible, it tries to verify the signature and will return the payload if successful
 //
-//it only returns an error if signature validation fails and keys exactMatch which is if either:
+// it only returns an error if signature validation fails and keys exactMatch which is if either:
 // - both kid are empty and skipRemoteCheck is set to true
 // - or both (JWT and JWK) kid are equal
 //
-//otherwise it will return no error (so remote keys will be loaded)
+// otherwise it will return no error (so remote keys will be loaded)
 func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
 	keys := r.keysFromCache()
 	if len(keys) == 0 {
@@ -113,7 +113,7 @@ func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, 
 	}
 	key, err := oidc.FindMatchingKey(keyID, oidc.KeyUseSignature, alg, keys...)
 	if err != nil {
-		//no key / multiple found, try with remote keys
+		// no key / multiple found, try with remote keys
 		return nil, nil //nolint:nilerr
 	}
 	payload, err := jws.Verify(&key)
@@ -121,7 +121,7 @@ func (r *remoteKeySet) verifySignatureCached(jws *jose.JSONWebSignature, keyID, 
 		return payload, nil
 	}
 	if !r.exactMatch(key.KeyID, keyID) {
-		//no exact key match, try getting better match with remote keys
+		// no exact key match, try getting better match with remote keys
 		return nil, nil
 	}
 	return nil, fmt.Errorf("signature verification failed: %w", err)
@@ -213,11 +213,11 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 	return keySet.Keys, nil
 }
 
-//jsonWebKeySet is an alias for jose.JSONWebKeySet which ignores unknown key types (kty)
+// jsonWebKeySet is an alias for jose.JSONWebKeySet which ignores unknown key types (kty)
 type jsonWebKeySet jose.JSONWebKeySet
 
-//UnmarshalJSON overrides the default jose.JSONWebKeySet method to ignore any error
-//which might occur because of unknown key types (kty)
+// UnmarshalJSON overrides the default jose.JSONWebKeySet method to ignore any error
+// which might occur because of unknown key types (kty)
 func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	var raw rawJSONWebKeySet
 	err = json.Unmarshal(data, &raw)

@@ -39,6 +39,7 @@ func ReadySigner(s Signer) ProbesFn {
 		return s.Health(ctx)
 	}
 }
+
 func ReadyStorage(s Storage) ProbesFn {
 	return func(ctx context.Context) error {
 		if s == nil {

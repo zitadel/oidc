@@ -34,14 +34,14 @@ func main() {
 
 	router := mux.NewRouter()
 
-	//public url accessible without any authorization
-	//will print `OK` and current timestamp
+	// public url accessible without any authorization
+	// will print `OK` and current timestamp
 	router.HandleFunc(publicURL, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK " + time.Now().String()))
 	})
 
-	//protected url which needs an active token
-	//will print the result of the introspection endpoint on success
+	// protected url which needs an active token
+	// will print the result of the introspection endpoint on success
 	router.HandleFunc(protectedURL, func(w http.ResponseWriter, r *http.Request) {
 		ok, token := checkToken(w, r)
 		if !ok {
@@ -60,9 +60,9 @@ func main() {
 		w.Write(data)
 	})
 
-	//protected url which needs an active token and checks if the response of the introspect endpoint
-	//contains a requested claim with the required (string) value
-	//e.g. /protected/username/livio@caos.ch
+	// protected url which needs an active token and checks if the response of the introspect endpoint
+	// contains a requested claim with the required (string) value
+	// e.g. /protected/username/livio@caos.ch
 	router.HandleFunc(protectedClaimURL, func(w http.ResponseWriter, r *http.Request) {
 		ok, token := checkToken(w, r)
 		if !ok {

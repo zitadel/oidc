@@ -56,7 +56,7 @@ var DefaultSupportedScopes = []string{
 }
 
 func Scopes(c Configuration) []string {
-	return DefaultSupportedScopes //TODO: config
+	return DefaultSupportedScopes // TODO: config
 }
 
 func ResponseTypes(c Configuration) []string {
@@ -64,7 +64,7 @@ func ResponseTypes(c Configuration) []string {
 		string(oidc.ResponseTypeCode),
 		string(oidc.ResponseTypeIDTokenOnly),
 		string(oidc.ResponseTypeIDToken),
-	} //TODO: ok for now, check later if dynamic needed
+	} // TODO: ok for now, check later if dynamic needed
 }
 
 func GrantTypes(c Configuration) []oidc.GrantType {
@@ -88,7 +88,7 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 }
 
 func SupportedClaims(c Configuration) []string {
-	return []string{ //TODO: config
+	return []string{ // TODO: config
 		"sub",
 		"aud",
 		"exp",
@@ -121,7 +121,7 @@ func SigAlgorithms(s Signer) []string {
 }
 
 func SubjectTypes(c Configuration) []string {
-	return []string{"public"} //TODO: config
+	return []string{"public"} // TODO: config
 }
 
 func AuthMethodsTokenEndpoint(c Configuration) []oidc.AuthMethod {

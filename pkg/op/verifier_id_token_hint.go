@@ -61,7 +61,7 @@ func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet) IDTokenHintVerifi
 	return verifier
 }
 
-//VerifyIDTokenHint validates the id token according to
+// VerifyIDTokenHint validates the id token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier) (oidc.IDTokenClaims, error) {
 	claims := oidc.EmptyIDTokenClaims()

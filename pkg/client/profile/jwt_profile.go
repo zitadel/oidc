@@ -11,9 +11,9 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-//jwtProfileTokenSource implement the oauth2.TokenSource
-//it will request a token using the OAuth2 JWT Profile Grant
-//therefore sending an `assertion` by singing a JWT with the provided private key
+// jwtProfileTokenSource implement the oauth2.TokenSource
+// it will request a token using the OAuth2 JWT Profile Grant
+// therefore sending an `assertion` by singing a JWT with the provided private key
 type jwtProfileTokenSource struct {
 	clientID      string
 	audience      []string

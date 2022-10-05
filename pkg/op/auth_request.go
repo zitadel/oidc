@@ -45,8 +45,8 @@ type Authorizer interface {
 	RequestObjectSupported() bool
 }
 
-//AuthorizeValidator is an extension of Authorizer interface
-//implementing its own validation mechanism for the auth request
+// AuthorizeValidator is an extension of Authorizer interface
+// implementing its own validation mechanism for the auth request
 type AuthorizeValidator interface {
 	Authorizer
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, IDTokenHintVerifier) (string, error)
@@ -64,8 +64,8 @@ func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *
 	}
 }
 
-//Authorize handles the authorization request, including
-//parsing, validating, storing and finally redirecting to the login handler
+// Authorize handles the authorization request, including
+// parsing, validating, storing and finally redirecting to the login handler
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
@@ -113,7 +113,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	RedirectToLogin(req.GetID(), client, w, r)
 }
 
-//ParseAuthorizeRequest parsed the http request into an oidc.AuthRequest
+// ParseAuthorizeRequest parsed the http request into an oidc.AuthRequest
 func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AuthRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
@@ -127,8 +127,8 @@ func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.A
 	return authReq, nil
 }
 
-//ParseRequestObject parse the `request` parameter, validates the token including the signature
-//and copies the token claims into the auth request
+// ParseRequestObject parse the `request` parameter, validates the token including the signature
+// and copies the token claims into the auth request
 func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, issuer string) (*oidc.AuthRequest, error) {
 	requestObject := new(oidc.RequestObject)
 	payload, err := oidc.ParseToken(authReq.RequestParam, requestObject)
@@ -156,8 +156,8 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	return authReq, nil
 }
 
-//CopyRequestObjectToAuthRequest overwrites present values from the Request Object into the auth request
-//and clears the `RequestParam` of the auth request
+// CopyRequestObjectToAuthRequest overwrites present values from the Request Object into the auth request
+// and clears the `RequestParam` of the auth request
 func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oidc.RequestObject) {
 	if str.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
 		authReq.Scopes = requestObject.Scopes
@@ -204,7 +204,7 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 	authReq.RequestParam = ""
 }
 
-//ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
+// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (sub string, err error) {
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
@@ -227,7 +227,7 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
-//ValidateAuthReqPrompt validates the passed prompt values and sets max_age to 0 if prompt login is present
+// ValidateAuthReqPrompt validates the passed prompt values and sets max_age to 0 if prompt login is present
 func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) {
 	for _, prompt := range prompts {
 		if prompt == oidc.PromptNone && len(prompts) > 1 {
@@ -240,7 +240,7 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 	return maxAge, nil
 }
 
-//ValidateAuthReqScopes validates the passed scopes
+// ValidateAuthReqScopes validates the passed scopes
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
 		return nil, oidc.ErrInvalidRequest().
@@ -274,7 +274,7 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	return scopes, nil
 }
 
-//ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
+// ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
 func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
 	if uri == "" {
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
@@ -309,7 +309,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		"If you have any questions, you may contact the administrator of the application.")
 }
 
-//ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
+// ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
 func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
@@ -350,7 +350,7 @@ func HTTPLoopbackOrLocalhost(rawurl string) (*url.URL, bool) {
 	return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 }
 
-//ValidateAuthReqResponseType validates the passed response_type to the registered response types
+// ValidateAuthReqResponseType validates the passed response_type to the registered response types
 func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) error {
 	if responseType == "" {
 		return oidc.ErrInvalidRequest().WithDescription("The response type is missing in your request. " +
@@ -363,8 +363,8 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 	return nil
 }
 
-//ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)
-//and returns the `sub` claim
+// ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)
+// and returns the `sub` claim
 func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier IDTokenHintVerifier) (string, error) {
 	if idTokenHint == "" {
 		return "", nil
@@ -377,13 +377,13 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 	return claims.GetSubject(), nil
 }
 
-//RedirectToLogin redirects the end user to the Login UI for authentication
+// RedirectToLogin redirects the end user to the Login UI for authentication
 func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *http.Request) {
 	login := client.LoginURL(authReqID)
 	http.Redirect(w, r, login, http.StatusFound)
 }
 
-//AuthorizeCallback handles the callback after authentication in the Login UI
+// AuthorizeCallback handles the callback after authentication in the Login UI
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	params := mux.Vars(r)
 	id := params["id"]
@@ -406,7 +406,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 	AuthResponse(authReq, authorizer, w, r)
 }
 
-//AuthResponse creates the successful authentication response (either code or tokens)
+// AuthResponse creates the successful authentication response (either code or tokens)
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	client, err := authorizer.Storage().GetClientByClientID(r.Context(), authReq.GetClientID())
 	if err != nil {
@@ -420,7 +420,7 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 	AuthResponseToken(w, r, authReq, authorizer, client)
 }
 
-//AuthResponseCode creates the successful code authentication response
+// AuthResponseCode creates the successful code authentication response
 func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
 	code, err := CreateAuthRequestCode(r.Context(), authReq, authorizer.Storage(), authorizer.Crypto())
 	if err != nil {
@@ -442,7 +442,7 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 	http.Redirect(w, r, callback, http.StatusFound)
 }
 
-//AuthResponseToken creates the successful token(s) authentication response
+// AuthResponseToken creates the successful token(s) authentication response
 func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
 	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "", "")
@@ -458,7 +458,7 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 	http.Redirect(w, r, callback, http.StatusFound)
 }
 
-//CreateAuthRequestCode creates and stores a code for the auth code response
+// CreateAuthRequestCode creates and stores a code for the auth code response
 func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Storage, crypto Crypto) (string, error) {
 	code, err := BuildAuthRequestCode(authReq, crypto)
 	if err != nil {
@@ -470,13 +470,13 @@ func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Sto
 	return code, nil
 }
 
-//BuildAuthRequestCode builds the string representation of the auth code
+// BuildAuthRequestCode builds the string representation of the auth code
 func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 	return crypto.Encrypt(authReq.GetID())
 }
 
-//AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
-//depending on the response_mode and response_type
+// AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
+// depending on the response_mode and response_type
 func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response interface{}, encoder httphelper.Encoder) (string, error) {
 	uri, err := url.Parse(redirectURI)
 	if err != nil {
@@ -486,18 +486,18 @@ func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, respons
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)
 	}
-	//return explicitly requested mode
+	// return explicitly requested mode
 	if responseMode == oidc.ResponseModeQuery {
 		return mergeQueryParams(uri, params), nil
 	}
 	if responseMode == oidc.ResponseModeFragment {
 		return setFragment(uri, params), nil
 	}
-	//implicit must use fragment mode is not specified by client
+	// implicit must use fragment mode is not specified by client
 	if responseType == oidc.ResponseTypeIDToken || responseType == oidc.ResponseTypeIDTokenOnly {
 		return setFragment(uri, params), nil
 	}
-	//if we get here it's code flow: defaults to query
+	// if we get here it's code flow: defaults to query
 	return mergeQueryParams(uri, params), nil
 }
 

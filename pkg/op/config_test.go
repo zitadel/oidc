@@ -60,7 +60,7 @@ func TestValidateIssuer(t *testing.T) {
 			true,
 		},
 	}
-	//ensure env is not set
+	// ensure env is not set
 	//nolint:errcheck
 	os.Unsetenv(OidcDevMode)
 	for _, tt := range tests {

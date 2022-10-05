@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	//BearerToken defines the token_type `Bearer`, which is returned in a successful token response
+	// BearerToken defines the token_type `Bearer`, which is returned in a successful token response
 	BearerToken = "Bearer"
 
 	PrefixBearer = BearerToken + " "
@@ -91,62 +91,62 @@ type accessTokenClaims struct {
 	signatureAlg jose.SignatureAlgorithm `json:"-"`
 }
 
-//GetIssuer implements the Claims interface
+// GetIssuer implements the Claims interface
 func (a *accessTokenClaims) GetIssuer() string {
 	return a.Issuer
 }
 
-//GetAudience implements the Claims interface
+// GetAudience implements the Claims interface
 func (a *accessTokenClaims) GetAudience() []string {
 	return a.Audience
 }
 
-//GetExpiration implements the Claims interface
+// GetExpiration implements the Claims interface
 func (a *accessTokenClaims) GetExpiration() time.Time {
 	return time.Time(a.Expiration)
 }
 
-//GetIssuedAt implements the Claims interface
+// GetIssuedAt implements the Claims interface
 func (a *accessTokenClaims) GetIssuedAt() time.Time {
 	return time.Time(a.IssuedAt)
 }
 
-//GetNonce implements the Claims interface
+// GetNonce implements the Claims interface
 func (a *accessTokenClaims) GetNonce() string {
 	return a.Nonce
 }
 
-//GetAuthenticationContextClassReference implements the Claims interface
+// GetAuthenticationContextClassReference implements the Claims interface
 func (a *accessTokenClaims) GetAuthenticationContextClassReference() string {
 	return a.AuthenticationContextClassReference
 }
 
-//GetAuthTime implements the Claims interface
+// GetAuthTime implements the Claims interface
 func (a *accessTokenClaims) GetAuthTime() time.Time {
 	return time.Time(a.AuthTime)
 }
 
-//GetAuthorizedParty implements the Claims interface
+// GetAuthorizedParty implements the Claims interface
 func (a *accessTokenClaims) GetAuthorizedParty() string {
 	return a.AuthorizedParty
 }
 
-//SetSignatureAlgorithm implements the Claims interface
+// SetSignatureAlgorithm implements the Claims interface
 func (a *accessTokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 	a.signatureAlg = algorithm
 }
 
-//GetSubject implements the AccessTokenClaims interface
+// GetSubject implements the AccessTokenClaims interface
 func (a *accessTokenClaims) GetSubject() string {
 	return a.Subject
 }
 
-//GetTokenID implements the AccessTokenClaims interface
+// GetTokenID implements the AccessTokenClaims interface
 func (a *accessTokenClaims) GetTokenID() string {
 	return a.JWTID
 }
 
-//SetPrivateClaims implements the AccessTokenClaims interface
+// SetPrivateClaims implements the AccessTokenClaims interface
 func (a *accessTokenClaims) SetPrivateClaims(claims map[string]interface{}) {
 	a.claims = claims
 }
@@ -243,97 +243,97 @@ type idTokenClaims struct {
 	signatureAlg jose.SignatureAlgorithm
 }
 
-//GetIssuer implements the Claims interface
+// GetIssuer implements the Claims interface
 func (t *idTokenClaims) GetIssuer() string {
 	return t.Issuer
 }
 
-//GetAudience implements the Claims interface
+// GetAudience implements the Claims interface
 func (t *idTokenClaims) GetAudience() []string {
 	return t.Audience
 }
 
-//GetExpiration implements the Claims interface
+// GetExpiration implements the Claims interface
 func (t *idTokenClaims) GetExpiration() time.Time {
 	return time.Time(t.Expiration)
 }
 
-//GetIssuedAt implements the Claims interface
+// GetIssuedAt implements the Claims interface
 func (t *idTokenClaims) GetIssuedAt() time.Time {
 	return time.Time(t.IssuedAt)
 }
 
-//GetNonce implements the Claims interface
+// GetNonce implements the Claims interface
 func (t *idTokenClaims) GetNonce() string {
 	return t.Nonce
 }
 
-//GetAuthenticationContextClassReference implements the Claims interface
+// GetAuthenticationContextClassReference implements the Claims interface
 func (t *idTokenClaims) GetAuthenticationContextClassReference() string {
 	return t.AuthenticationContextClassReference
 }
 
-//GetAuthTime implements the Claims interface
+// GetAuthTime implements the Claims interface
 func (t *idTokenClaims) GetAuthTime() time.Time {
 	return time.Time(t.AuthTime)
 }
 
-//GetAuthorizedParty implements the Claims interface
+// GetAuthorizedParty implements the Claims interface
 func (t *idTokenClaims) GetAuthorizedParty() string {
 	return t.AuthorizedParty
 }
 
-//SetSignatureAlgorithm implements the Claims interface
+// SetSignatureAlgorithm implements the Claims interface
 func (t *idTokenClaims) SetSignatureAlgorithm(alg jose.SignatureAlgorithm) {
 	t.signatureAlg = alg
 }
 
-//GetNotBefore implements the IDTokenClaims interface
+// GetNotBefore implements the IDTokenClaims interface
 func (t *idTokenClaims) GetNotBefore() time.Time {
 	return time.Time(t.NotBefore)
 }
 
-//GetJWTID implements the IDTokenClaims interface
+// GetJWTID implements the IDTokenClaims interface
 func (t *idTokenClaims) GetJWTID() string {
 	return t.JWTID
 }
 
-//GetAccessTokenHash implements the IDTokenClaims interface
+// GetAccessTokenHash implements the IDTokenClaims interface
 func (t *idTokenClaims) GetAccessTokenHash() string {
 	return t.AccessTokenHash
 }
 
-//GetCodeHash implements the IDTokenClaims interface
+// GetCodeHash implements the IDTokenClaims interface
 func (t *idTokenClaims) GetCodeHash() string {
 	return t.CodeHash
 }
 
-//GetAuthenticationMethodsReferences implements the IDTokenClaims interface
+// GetAuthenticationMethodsReferences implements the IDTokenClaims interface
 func (t *idTokenClaims) GetAuthenticationMethodsReferences() []string {
 	return t.AuthenticationMethodsReferences
 }
 
-//GetClientID implements the IDTokenClaims interface
+// GetClientID implements the IDTokenClaims interface
 func (t *idTokenClaims) GetClientID() string {
 	return t.ClientID
 }
 
-//GetSignatureAlgorithm implements the IDTokenClaims interface
+// GetSignatureAlgorithm implements the IDTokenClaims interface
 func (t *idTokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm {
 	return t.signatureAlg
 }
 
-//SetAccessTokenHash implements the IDTokenClaims interface
+// SetAccessTokenHash implements the IDTokenClaims interface
 func (t *idTokenClaims) SetAccessTokenHash(hash string) {
 	t.AccessTokenHash = hash
 }
 
-//SetUserinfo implements the IDTokenClaims interface
+// SetUserinfo implements the IDTokenClaims interface
 func (t *idTokenClaims) SetUserinfo(info UserInfo) {
 	t.UserInfo = info
 }
 
-//SetCodeHash implements the IDTokenClaims interface
+// SetCodeHash implements the IDTokenClaims interface
 func (t *idTokenClaims) SetCodeHash(hash string) {
 	t.CodeHash = hash
 }
