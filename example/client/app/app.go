@@ -93,5 +93,5 @@ func main() {
 
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
 	logrus.Infof("listening on http://%s/", lis)
-	logrus.Fatal(http.ListenAndServe("127.0.0.1:"+port, nil))
+	logrus.Fatal(http.ListenAndServe(lis, nil))
 }
