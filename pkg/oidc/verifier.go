@@ -61,11 +61,11 @@ type Verifier interface {
 	Offset() time.Duration
 }
 
-//ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
+// ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
 type ACRVerifier func(string) error
 
-//DefaultACRVerifier implements `ACRVerifier` returning an error
-//if none of the provided values matches the acr claim
+// DefaultACRVerifier implements `ACRVerifier` returning an error
+// if none of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
 		if !str.Contains(possibleValues, acr) {
@@ -76,7 +76,7 @@ func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 }
 
 func DecryptToken(tokenString string) (string, error) {
-	return tokenString, nil //TODO: impl
+	return tokenString, nil // TODO: impl
 }
 
 func ParseToken(tokenString string, claims interface{}) ([]byte, error) {
@@ -111,7 +111,7 @@ func CheckAudience(claims Claims, clientID string) error {
 		return fmt.Errorf("%w: Audience must contain client_id %q", ErrAudience, clientID)
 	}
 
-	//TODO: check aud trusted
+	// TODO: check aud trusted
 	return nil
 }
 
@@ -202,6 +202,7 @@ func CheckAuthorizationContextClassReference(claims Claims, acr ACRVerifier) err
 	}
 	return nil
 }
+
 func CheckAuthTime(claims Claims, maxAge time.Duration) error {
 	if maxAge == 0 {
 		return nil

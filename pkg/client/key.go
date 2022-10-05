@@ -14,12 +14,12 @@ type keyFile struct {
 	Type   string `json:"type"` // serviceaccount or application
 	KeyID  string `json:"keyId"`
 	Key    string `json:"key"`
-	Issuer string `json:"issuer"` //not yet in file
+	Issuer string `json:"issuer"` // not yet in file
 
-	//serviceaccount
+	// serviceaccount
 	UserID string `json:"userId"`
 
-	//application
+	// application
 	ClientID string `json:"clientId"`
 }
 

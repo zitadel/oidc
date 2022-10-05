@@ -29,17 +29,15 @@ const (
 	defaultKeysEndpoint          = "keys"
 )
 
-var (
-	DefaultEndpoints = &endpoints{
-		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
-		Token:         NewEndpoint(defaultTokenEndpoint),
-		Introspection: NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
-		Revocation:    NewEndpoint(defaultRevocationEndpoint),
-		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:       NewEndpoint(defaultKeysEndpoint),
-	}
-)
+var DefaultEndpoints = &endpoints{
+	Authorization: NewEndpoint(defaultAuthorizationEndpoint),
+	Token:         NewEndpoint(defaultTokenEndpoint),
+	Introspection: NewEndpoint(defaultIntrospectEndpoint),
+	Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
+	Revocation:    NewEndpoint(defaultRevocationEndpoint),
+	EndSession:    NewEndpoint(defaultEndSessionEndpoint),
+	JwksURI:       NewEndpoint(defaultKeysEndpoint),
+}
 
 type OpenIDProvider interface {
 	Configuration
@@ -83,7 +81,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	return router
 }
 
-//AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
+// AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
 func AuthCallbackURL(o OpenIDProvider) func(string) string {
 	return func(requestID string) string {
 		return o.AuthorizationEndpoint().Absolute(o.Issuer()) + authCallbackPathSuffix + "?id=" + requestID
@@ -117,8 +115,8 @@ type endpoints struct {
 	JwksURI            Endpoint
 }
 
-//NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
-//a http.Router that handles a suite of endpoints (some paths can be overridden):
+// NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
+// a http.Router that handles a suite of endpoints (some paths can be overridden):
 //  /healthz
 //  /ready
 //  /.well-known/openid-configuration
@@ -130,10 +128,10 @@ type endpoints struct {
 //  /revoke
 //  /end_session
 //  /keys
-//This does not include login. Login is handled with a redirect that includes the
-//request ID. The redirect for logins is specified per-client by Client.LoginURL().
-//Successful logins should mark the request as authorized and redirect back to to
-//op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
+// This does not include login. Login is handled with a redirect that includes the
+// request ID. The redirect for logins is specified per-client by Client.LoginURL().
+// Successful logins should mark the request as authorized and redirect back to to
+// op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
 func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
@@ -354,8 +352,8 @@ type openIDKeySet struct {
 	Storage
 }
 
-//VerifySignature implements the oidc.KeySet interface
-//providing an implementation for the keys stored in the OP Storage interface
+// VerifySignature implements the oidc.KeySet interface
+// providing an implementation for the keys stored in the OP Storage interface
 func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keySet, err := o.Storage.GetKeySet(ctx)
 	if err != nil {

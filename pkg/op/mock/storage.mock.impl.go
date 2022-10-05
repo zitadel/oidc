@@ -44,6 +44,7 @@ func NewMockStorageSigningKeyInvalid(t *testing.T) op.Storage {
 	ExpectSigningKeyInvalid(m)
 	return m
 }
+
 func NewMockStorageSigningKey(t *testing.T) op.Storage {
 	m := NewStorage(t)
 	ExpectSigningKey(m)
@@ -120,6 +121,7 @@ func (c *ConfClient) RedirectURIs() []string {
 		"custom://callback",
 	}
 }
+
 func (c *ConfClient) PostLogoutRedirectURIs() []string {
 	return []string{}
 }
@@ -143,34 +145,43 @@ func (c *ConfClient) GetID() string {
 func (c *ConfClient) AccessTokenLifetime() time.Duration {
 	return 5 * time.Minute
 }
+
 func (c *ConfClient) IDTokenLifetime() time.Duration {
 	return 5 * time.Minute
 }
+
 func (c *ConfClient) AccessTokenType() op.AccessTokenType {
 	return c.accessTokenType
 }
+
 func (c *ConfClient) ResponseTypes() []oidc.ResponseType {
 	return c.responseTypes
 }
+
 func (c *ConfClient) GrantTypes() []oidc.GrantType {
 	return c.grantTypes
 }
+
 func (c *ConfClient) DevMode() bool {
 	return c.devMode
 }
+
 func (c *ConfClient) AllowedScopes() []string {
 	return nil
 }
+
 func (c *ConfClient) RestrictAdditionalIdTokenScopes() func(scopes []string) []string {
 	return func(scopes []string) []string {
 		return scopes
 	}
 }
+
 func (c *ConfClient) RestrictAdditionalAccessTokenScopes() func(scopes []string) []string {
 	return func(scopes []string) []string {
 		return scopes
 	}
 }
+
 func (c *ConfClient) IsScopeAllowed(scope string) bool {
 	return false
 }

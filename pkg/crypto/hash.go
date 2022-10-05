@@ -11,9 +11,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-var (
-	ErrUnsupportedAlgorithm = errors.New("unsupported signing algorithm")
-)
+var ErrUnsupportedAlgorithm = errors.New("unsupported signing algorithm")
 
 func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 	switch sigAlgorithm {

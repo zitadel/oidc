@@ -21,8 +21,8 @@ type RefreshTokenRequest interface {
 	SetCurrentScopes(scopes []string)
 }
 
-//RefreshTokenExchange handles the OAuth 2.0 refresh_token grant, including
-//parsing, validating, authorizing the client and finally exchanging the refresh_token for new tokens
+// RefreshTokenExchange handles the OAuth 2.0 refresh_token grant, including
+// parsing, validating, authorizing the client and finally exchanging the refresh_token for new tokens
 func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseRefreshTokenRequest(r, exchanger.Decoder())
 	if err != nil {
@@ -41,7 +41,7 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 	httphelper.MarshalJSON(w, resp)
 }
 
-//ParseRefreshTokenRequest parsed the http request into a oidc.RefreshTokenRequest
+// ParseRefreshTokenRequest parsed the http request into a oidc.RefreshTokenRequest
 func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.RefreshTokenRequest, error) {
 	request := new(oidc.RefreshTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)
@@ -51,8 +51,8 @@ func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oid
 	return request, nil
 }
 
-//ValidateRefreshTokenRequest validates the refresh_token request parameters including authorization check of the client
-//and returns the data representing the original auth request corresponding to the refresh_token
+// ValidateRefreshTokenRequest validates the refresh_token request parameters including authorization check of the client
+// and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (RefreshTokenRequest, Client, error) {
 	if tokenReq.RefreshToken == "" {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("refresh_token missing")
@@ -70,9 +70,9 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 	return request, client, nil
 }
 
-//ValidateRefreshTokenScopes validates that the requested scope is a subset of the original auth request scope
-//it will set the requested scopes as current scopes onto RefreshTokenRequest
-//if empty the original scopes will be used
+// ValidateRefreshTokenScopes validates that the requested scope is a subset of the original auth request scope
+// it will set the requested scopes as current scopes onto RefreshTokenRequest
+// if empty the original scopes will be used
 func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTokenRequest) error {
 	if len(requestedScopes) == 0 {
 		return nil
@@ -86,8 +86,8 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 	return nil
 }
 
-//AuthorizeRefreshClient checks the authorization of the client and that the used method was the one previously registered.
-//It than returns the data representing the original auth request corresponding to the refresh_token
+// AuthorizeRefreshClient checks the authorization of the client and that the used method was the one previously registered.
+// It than returns the data representing the original auth request corresponding to the refresh_token
 func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (request RefreshTokenRequest, client Client, err error) {
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
@@ -128,8 +128,8 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 	return request, client, err
 }
 
-//RefreshTokenRequestByRefreshToken returns the RefreshTokenRequest (data representing the original auth request)
-//corresponding to the refresh_token from Storage or an error
+// RefreshTokenRequestByRefreshToken returns the RefreshTokenRequest (data representing the original auth request)
+// corresponding to the refresh_token from Storage or an error
 func RefreshTokenRequestByRefreshToken(ctx context.Context, storage Storage, refreshToken string) (RefreshTokenRequest, error) {
 	request, err := storage.TokenRequestByRefreshToken(ctx, refreshToken)
 	if err != nil {

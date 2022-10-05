@@ -9,8 +9,8 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-//ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including
-//parsing, validating, authorizing the client and finally returning a token
+// ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including
+// parsing, validating, authorizing the client and finally returning a token
 func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	request, err := ParseClientCredentialsRequest(r, exchanger.Decoder())
 	if err != nil {
@@ -32,7 +32,7 @@ func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger
 	httphelper.MarshalJSON(w, resp)
 }
 
-//ParseClientCredentialsRequest parsed the http request into a oidc.ClientCredentialsRequest
+// ParseClientCredentialsRequest parsed the http request into a oidc.ClientCredentialsRequest
 func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.ClientCredentialsRequest, error) {
 	err := r.ParseForm()
 	if err != nil {
@@ -63,8 +63,8 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 	return request, nil
 }
 
-//ValidateClientCredentialsRequest validates the refresh_token request parameters including authorization check of the client
-//and returns the data representing the original auth request corresponding to the refresh_token
+// ValidateClientCredentialsRequest validates the refresh_token request parameters including authorization check of the client
+// and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (TokenRequest, Client, error) {
 	storage, ok := exchanger.Storage().(ClientCredentialsStorage)
 	if !ok {

@@ -8,8 +8,8 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-//CodeExchange handles the OAuth 2.0 authorization_code grant, including
-//parsing, validating, authorizing the client and finally exchanging the code for tokens
+// CodeExchange handles the OAuth 2.0 authorization_code grant, including
+// parsing, validating, authorizing the client and finally exchanging the code for tokens
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
@@ -32,7 +32,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	httphelper.MarshalJSON(w, resp)
 }
 
-//ParseAccessTokenRequest parsed the http request into a oidc.AccessTokenRequest
+// ParseAccessTokenRequest parsed the http request into a oidc.AccessTokenRequest
 func ParseAccessTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AccessTokenRequest, error) {
 	request := new(oidc.AccessTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)
@@ -42,8 +42,8 @@ func ParseAccessTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc
 	return request, nil
 }
 
-//ValidateAccessTokenRequest validates the token request parameters including authorization check of the client
-//and returns the previous created auth request corresponding to the auth code
+// ValidateAccessTokenRequest validates the token request parameters including authorization check of the client
+// and returns the previous created auth request corresponding to the auth code
 func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {
 	authReq, client, err := AuthorizeCodeClient(ctx, tokenReq, exchanger)
 	if err != nil {
@@ -61,8 +61,8 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 	return authReq, client, nil
 }
 
-//AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
-//It than returns the auth request corresponding to the auth code
+// AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
+// It than returns the auth request corresponding to the auth code
 func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (request AuthRequest, client Client, err error) {
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
@@ -102,7 +102,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	return request, client, err
 }
 
-//AuthRequestByCode returns the AuthRequest previously created from Storage corresponding to the auth code or an error
+// AuthRequestByCode returns the AuthRequest previously created from Storage corresponding to the auth code or an error
 func AuthRequestByCode(ctx context.Context, storage Storage, code string) (AuthRequest, error) {
 	authReq, err := storage.AuthRequestByCode(ctx, code)
 	if err != nil {

@@ -9,9 +9,7 @@ import (
 	"io"
 )
 
-var (
-	ErrCipherTextBlockSize = errors.New("ciphertext block size is too short")
-)
+var ErrCipherTextBlockSize = errors.New("ciphertext block size is too short")
 
 func EncryptAES(data string, key string) (string, error) {
 	encrypted, err := EncryptBytesAES([]byte(data), key)

@@ -16,9 +16,7 @@ import (
 	"github.com/zitadel/oidc/pkg/client/profile"
 )
 
-var (
-	client = http.DefaultClient
-)
+var client = http.DefaultClient
 
 func main() {
 	keyPath := os.Getenv("KEY_PATH")
@@ -145,7 +143,6 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-
 	})
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
 	logrus.Infof("listening on http://%s/", lis)

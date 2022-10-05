@@ -20,7 +20,8 @@ func NewClientExpectAny(t *testing.T, appType op.ApplicationType) op.Client {
 		"https://registered.com/callback",
 		"http://registered.com/callback",
 		"http://localhost:9999/callback",
-		"custom://callback"})
+		"custom://callback",
+	})
 	m.EXPECT().ApplicationType().AnyTimes().Return(appType)
 	m.EXPECT().LoginURL(gomock.Any()).AnyTimes().DoAndReturn(
 		func(id string) string {

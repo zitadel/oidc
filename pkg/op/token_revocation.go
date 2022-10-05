@@ -54,9 +54,9 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 	}
 	req := new(struct {
 		oidc.RevocationRequest
-		oidc.ClientAssertionParams        //for auth_method private_key_jwt
-		ClientID                   string `schema:"client_id"`     //for auth_method none and post
-		ClientSecret               string `schema:"client_secret"` //for auth_method post
+		oidc.ClientAssertionParams        // for auth_method private_key_jwt
+		ClientID                   string `schema:"client_id"`     // for auth_method none and post
+		ClientSecret               string `schema:"client_secret"` // for auth_method post
 	})
 	err = revoker.Decoder().Decode(req, r.Form)
 	if err != nil {

@@ -43,6 +43,7 @@ func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, o
 	}
 	return newResourceServer(issuer, authorizer, option...)
 }
+
 func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, options ...Option) (ResourceServer, error) {
 	signer, err := client.NewSignerFromPrivateKeyByte(key, keyID)
 	if err != nil {
@@ -91,14 +92,14 @@ func NewResourceServerFromKeyFile(issuer, path string, options ...Option) (Resou
 
 type Option func(*resourceServer)
 
-//WithClient provides the ability to set an http client to be used for the resource server
+// WithClient provides the ability to set an http client to be used for the resource server
 func WithClient(client *http.Client) Option {
 	return func(server *resourceServer) {
 		server.httpClient = client
 	}
 }
 
-//WithStaticEndpoints provides the ability to set static token and introspect URL
+// WithStaticEndpoints provides the ability to set static token and introspect URL
 func WithStaticEndpoints(tokenURL, introspectURL string) Option {
 	return func(server *resourceServer) {
 		server.tokenURL = tokenURL

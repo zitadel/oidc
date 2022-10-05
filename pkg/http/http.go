@@ -12,15 +12,14 @@ import (
 	"time"
 )
 
-var (
-	DefaultHTTPClient = &http.Client{
-		Timeout: 30 * time.Second,
-	}
-)
+var DefaultHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
 
 type Decoder interface {
 	Decode(dst interface{}, src map[string][]string) error
 }
+
 type Encoder interface {
 	Encode(src interface{}, dst map[string][]string) error
 }

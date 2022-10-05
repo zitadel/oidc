@@ -27,7 +27,7 @@ func (e Endpoint) Absolute(host string) string {
 }
 
 func (e Endpoint) Validate() error {
-	return nil //TODO:
+	return nil // TODO:
 }
 
 func absoluteEndpoint(host, endpoint string) string {

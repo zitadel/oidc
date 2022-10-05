@@ -19,7 +19,7 @@ type IDTokenVerifier interface {
 	MaxAge() time.Duration
 }
 
-//VerifyTokens implement the Token Response Validation as defined in OIDC specification
+// VerifyTokens implement the Token Response Validation as defined in OIDC specification
 //https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
 func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
 	idToken, err := VerifyIDToken(ctx, idTokenString, v)
@@ -32,7 +32,7 @@ func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTo
 	return idToken, nil
 }
 
-//VerifyIDToken validates the id token according to
+// VerifyIDToken validates the id token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
 	claims := oidc.EmptyIDTokenClaims()
@@ -88,7 +88,7 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.I
 	return claims, nil
 }
 
-//VerifyAccessToken validates the access token according to
+// VerifyAccessToken validates the access token according to
 //https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
 	if atHash == "" {
@@ -105,8 +105,8 @@ func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAl
 	return nil
 }
 
-//NewIDTokenVerifier returns an implementation of `IDTokenVerifier`
-//for `VerifyTokens` and `VerifyIDToken`
+// NewIDTokenVerifier returns an implementation of `IDTokenVerifier`
+// for `VerifyTokens` and `VerifyIDToken`
 func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...VerifierOption) IDTokenVerifier {
 	v := &idTokenVerifier{
 		issuer:   issuer,
@@ -125,46 +125,46 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 	return v
 }
 
-//VerifierOption is the type for providing dynamic options to the IDTokenVerifier
+// VerifierOption is the type for providing dynamic options to the IDTokenVerifier
 type VerifierOption func(*idTokenVerifier)
 
-//WithIssuedAtOffset mitigates the risk of iat to be in the future
-//because of clock skews with the ability to add an offset to the current time
+// WithIssuedAtOffset mitigates the risk of iat to be in the future
+// because of clock skews with the ability to add an offset to the current time
 func WithIssuedAtOffset(offset time.Duration) func(*idTokenVerifier) {
 	return func(v *idTokenVerifier) {
 		v.offset = offset
 	}
 }
 
-//WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
+// WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
 func WithIssuedAtMaxAge(maxAge time.Duration) func(*idTokenVerifier) {
 	return func(v *idTokenVerifier) {
 		v.maxAge = maxAge
 	}
 }
 
-//WithNonce sets the function to check the nonce
+// WithNonce sets the function to check the nonce
 func WithNonce(nonce func(context.Context) string) VerifierOption {
 	return func(v *idTokenVerifier) {
 		v.nonce = nonce
 	}
 }
 
-//WithACRVerifier sets the verifier for the acr claim
+// WithACRVerifier sets the verifier for the acr claim
 func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
 	return func(v *idTokenVerifier) {
 		v.acr = verifier
 	}
 }
 
-//WithAuthTimeMaxAge provides the ability to define the maximum duration between auth_time and now
+// WithAuthTimeMaxAge provides the ability to define the maximum duration between auth_time and now
 func WithAuthTimeMaxAge(maxAge time.Duration) VerifierOption {
 	return func(v *idTokenVerifier) {
 		v.maxAge = maxAge
 	}
 }
 
-//WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
+// WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
 func WithSupportedSigningAlgorithms(algs ...string) VerifierOption {
 	return func(v *idTokenVerifier) {
 		v.supportedSignAlgs = algs
