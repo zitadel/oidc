@@ -36,6 +36,8 @@ type Configuration interface {
 	RequestObjectSigningAlgorithmsSupported() []string
 
 	SupportedUILocales() []language.Tag
+
+	SupportedScopes() []string
 }
 
 func ValidateIssuer(issuer string) error {

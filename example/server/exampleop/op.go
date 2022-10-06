@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/example/server/storage"
+	"github.com/zitadel/oidc/pkg/oidc"
 	"github.com/zitadel/oidc/pkg/op"
 )
 
@@ -80,31 +81,33 @@ func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Route
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
 func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
-	config := &op.Config{
-		Issuer:    issuer,
-		CryptoKey: key,
+	config := op.NewConfig()
+	config.Issuer = issuer
+	config.CryptoKey = key
 
-		// will be used if the end_session endpoint is called without a post_logout_redirect_uri
-		DefaultLogoutRedirectURI: pathLoggedOut,
+	config.SupportedScopes = []string{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}
 
-		// enables code_challenge_method S256 for PKCE (and therefore PKCE in general)
-		CodeMethodS256: true,
+	// will be used if the end_session endpoint is called without a post_logout_redirect_uri
+	config.DefaultLogoutRedirectURI = pathLoggedOut
 
-		// enables additional client_id/client_secret authentication by form post (not only HTTP Basic Auth)
-		AuthMethodPost: true,
+	// enables code_challenge_method S256 for PKCE (and therefore PKCE in general)
+	config.CodeMethodS256 = true
 
-		// enables additional authentication by using private_key_jwt
-		AuthMethodPrivateKeyJWT: true,
+	// enables additional client_id/client_secret authentication by form post (not only HTTP Basic Auth)
+	config.AuthMethodPost = true
 
-		// enables refresh_token grant use
-		GrantTypeRefreshToken: true,
+	// enables additional authentication by using private_key_jwt
+	config.AuthMethodPrivateKeyJWT = true
 
-		// enables use of the `request` Object parameter
-		RequestObjectSupported: true,
+	// enables refresh_token grant use
+	config.GrantTypeRefreshToken = true
 
-		// this example has only static texts (in English), so we'll set the here accordingly
-		SupportedUILocales: []language.Tag{language.English},
-	}
+	// enables use of the `request` Object parameter
+	config.RequestObjectSupported = true
+
+	// this example has only static texts (in English), so we'll set the here accordingly
+	config.SupportedUILocales = []language.Tag{language.English}
+
 	handler, err := op.NewOpenIDProvider(ctx, config, storage,
 		// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),

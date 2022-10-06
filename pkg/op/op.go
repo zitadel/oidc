@@ -14,6 +14,7 @@ import (
 
 	httphelper "github.com/zitadel/oidc/pkg/http"
 	"github.com/zitadel/oidc/pkg/oidc"
+	str "github.com/zitadel/oidc/pkg/strings"
 )
 
 const (
@@ -92,7 +93,7 @@ func authCallbackPath(o OpenIDProvider) string {
 	return o.AuthorizationEndpoint().Relative() + authCallbackPathSuffix
 }
 
-type Config struct {
+type config struct {
 	Issuer                   string
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
@@ -102,6 +103,7 @@ type Config struct {
 	GrantTypeRefreshToken    bool
 	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
+	SupportedScopes          []string
 }
 
 type endpoints struct {
@@ -113,6 +115,14 @@ type endpoints struct {
 	EndSession         Endpoint
 	CheckSessionIframe Endpoint
 	JwksURI            Endpoint
+}
+
+func NewConfig() *config {
+	// config defaults
+	config := &config{
+		SupportedScopes: DefaultSupportedScopes,
+	}
+	return config
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -133,7 +143,7 @@ type endpoints struct {
 // Successful logins should mark the request as authorized and redirect back to to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
+func NewOpenIDProvider(ctx context.Context, config *config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
 	err := ValidateIssuer(config.Issuer)
 	if err != nil {
 		return nil, err
@@ -175,7 +185,7 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 }
 
 type openidProvider struct {
-	config                  *Config
+	config                  *config
 	endpoints               *endpoints
 	storage                 Storage
 	signer                  Signer
@@ -190,6 +200,23 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
+}
+
+func RestrictToSupportedScopes(provider *openidProvider, scopes []string) []string {
+	newScopeList := make([]string, 0, len(scopes))
+	// filter out unsupported scopes
+	for _, scope := range scopes {
+		if str.Contains(provider.config.SupportedScopes, scope) {
+			newScopeList = append(newScopeList, scope)
+		}
+	}
+
+	return newScopeList
+}
+
+func (o *openidProvider) ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (string, error) {
+	authReq.Scopes = RestrictToSupportedScopes(o, authReq.Scopes)
+	return ValidateAuthRequest(ctx, authReq, storage, verifier)
 }
 
 func (o *openidProvider) Issuer() string {
@@ -283,6 +310,14 @@ func (o *openidProvider) RequestObjectSigningAlgorithmsSupported() []string {
 
 func (o *openidProvider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
+}
+
+func (o *openidProvider) SupportedScopes() []string {
+	return o.config.SupportedScopes
+}
+
+func (o *openidProvider) SetScopesSupported(scopes []string) {
+	o.config.SupportedScopes = scopes
 }
 
 func (o *openidProvider) Storage() Storage {

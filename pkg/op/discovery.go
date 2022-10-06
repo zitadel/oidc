@@ -27,7 +27,7 @@ func CreateDiscoveryConfig(c Configuration, s Signer) *oidc.DiscoveryConfigurati
 		RevocationEndpoint:                         c.RevocationEndpoint().Absolute(c.Issuer()),
 		EndSessionEndpoint:                         c.EndSessionEndpoint().Absolute(c.Issuer()),
 		JwksURI:                                    c.KeysEndpoint().Absolute(c.Issuer()),
-		ScopesSupported:                            Scopes(c),
+		ScopesSupported:                            c.SupportedScopes(),
 		ResponseTypesSupported:                     ResponseTypes(c),
 		GrantTypesSupported:                        GrantTypes(c),
 		SubjectTypesSupported:                      SubjectTypes(c),

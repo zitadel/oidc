@@ -301,6 +301,20 @@ func (mr *MockConfigurationMockRecorder) RevocationEndpointSigningAlgorithmsSupp
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevocationEndpointSigningAlgorithmsSupported", reflect.TypeOf((*MockConfiguration)(nil).RevocationEndpointSigningAlgorithmsSupported))
 }
 
+// SupportedScopes mocks base method.
+func (m *MockConfiguration) SupportedScopes() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportedScopes")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// SupportedScopes indicates an expected call of SupportedScopes.
+func (mr *MockConfigurationMockRecorder) SupportedScopes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportedScopes", reflect.TypeOf((*MockConfiguration)(nil).SupportedScopes))
+}
+
 // SupportedUILocales mocks base method.
 func (m *MockConfiguration) SupportedUILocales() []language.Tag {
 	m.ctrl.T.Helper()
