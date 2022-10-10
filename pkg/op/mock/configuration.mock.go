@@ -35,6 +35,20 @@ func (m *MockConfiguration) EXPECT() *MockConfigurationMockRecorder {
 	return m.recorder
 }
 
+// AllowedCorsHeaders mocks base method.
+func (m *MockConfiguration) AllowedCorsHeaders() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllowedCorsHeaders")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// AllowedCorsHeaders indicates an expected call of AllowedCorsHeaders.
+func (mr *MockConfigurationMockRecorder) AllowedCorsHeaders() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowedCorsHeaders", reflect.TypeOf((*MockConfiguration)(nil).AllowedCorsHeaders))
+}
+
 // AuthMethodPostSupported mocks base method.
 func (m *MockConfiguration) AuthMethodPostSupported() bool {
 	m.ctrl.T.Helper()

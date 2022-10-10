@@ -38,6 +38,8 @@ type Configuration interface {
 	SupportedUILocales() []language.Tag
 
 	SupportedScopes() []string
+
+	AllowedCorsHeaders() []string
 }
 
 func ValidateIssuer(issuer string) error {

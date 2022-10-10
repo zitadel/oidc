@@ -65,7 +65,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router := mux.NewRouter()
 	router.Use(handlers.CORS(
 		handlers.AllowCredentials(),
-		handlers.AllowedHeaders([]string{"authorization", "content-type", "dpop"}),
+		handlers.AllowedHeaders(o.AllowedCorsHeaders()),
 		handlers.AllowedOriginValidator(allowAllOrigins),
 	))
 	router.HandleFunc(healthEndpoint, healthHandler)
@@ -104,6 +104,7 @@ type config struct {
 	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
 	SupportedScopes          []string
+	AllowedCorsHeaders       []string
 }
 
 type endpoints struct {
@@ -120,7 +121,8 @@ type endpoints struct {
 func NewConfig() *config {
 	// config defaults
 	config := &config{
-		SupportedScopes: DefaultSupportedScopes,
+		SupportedScopes:    DefaultSupportedScopes,
+		AllowedCorsHeaders: []string{"authorization", "content-type"},
 	}
 	return config
 }
@@ -316,8 +318,8 @@ func (o *openidProvider) SupportedScopes() []string {
 	return o.config.SupportedScopes
 }
 
-func (o *openidProvider) SetScopesSupported(scopes []string) {
-	o.config.SupportedScopes = scopes
+func (o *openidProvider) AllowedCorsHeaders() []string {
+	return o.config.AllowedCorsHeaders
 }
 
 func (o *openidProvider) Storage() Storage {
