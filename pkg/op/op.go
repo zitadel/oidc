@@ -192,6 +192,7 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
+	idTokenHintVerifierOpts     []IDTokenHintVerifierOpt
 }
 
 func (o *openidProvider) Issuer() string {
@@ -301,7 +302,7 @@ func (o *openidProvider) Encoder() httphelper.Encoder {
 
 func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
 	if o.idTokenHintVerifier == nil {
-		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet())
+		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 	}
 	return o.idTokenHintVerifier
 }
@@ -463,6 +464,13 @@ func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
 func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
 	return func(o *openidProvider) error {
 		o.accessTokenVerifierOpts = opts
+		return nil
+	}
+}
+
+func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
+	return func(o *openidProvider) error {
+		o.idTokenHintVerifierOpts = opts
 		return nil
 	}
 }
