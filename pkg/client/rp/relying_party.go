@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -600,4 +601,14 @@ func RevokeToken(rp RelyingParty, token string, tokenTypeHint string) error {
 		return client.CallRevokeEndpoint(request, nil, rc)
 	}
 	return fmt.Errorf("RelyingParty does not support RevokeCaller")
+}
+
+func EndSession(rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
+	request := oidc.EndSessionRequest{
+		IdTokenHint:           idToken,
+		ClientID:              rp.OAuthConfig().ClientID,
+		PostLogoutRedirectURI: optionalRedirectURI,
+		State:                 optionalState,
+	}
+	return client.CallEndSessionEndpoint(request, nil, rp)
 }
