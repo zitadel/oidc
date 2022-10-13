@@ -99,10 +99,10 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	// According to RFC7009 in section 2.2:
 	// "The content of the response body is ignored by the client as all
 	// necessary information is conveyed in the response code."
-	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		// TODO: switch to io.ReadAll when go1.15 support is retired
 		body, err := ioutil.ReadAll(resp.Body)
