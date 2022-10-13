@@ -39,7 +39,12 @@ type AuthStorage interface {
 	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
 	TerminateSession(ctx context.Context, userID string, clientID string) error
-	RevokeToken(ctx context.Context, tokenID string, userID string, clientID string) *oidc.Error
+
+	// RevokeToken should revoke a token. In the situation that the original request was to
+	// revoke an access token, then tokenOrTokenID will be a tokenID and userID will be set
+	// but if the original request was for a refresh token, then userID will be empty and
+	// tokenOrTokenID will be the refresh token, not its ID.
+	RevokeToken(ctx context.Context, tokenOrTokenID string, userID string, clientID string) *oidc.Error
 
 	GetSigningKey(context.Context, chan<- jose.SigningKey)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
