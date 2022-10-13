@@ -2,6 +2,7 @@ package client
 
 import (
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -72,6 +73,32 @@ func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndp
 		RefreshToken: tokenRes.RefreshToken,
 		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
 	}, nil
+}
+
+type EndSessionCaller interface {
+	GetEndSessionEndpoint() string
+	HttpClient() *http.Client
+}
+
+func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndSessionCaller) (*url.URL, error) {
+	req, err := httphelper.FormRequest(caller.GetEndSessionEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return nil, err
+	}
+	client := caller.HttpClient()
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	location, err := resp.Location()
+	if err != nil {
+		return nil, err
+	}
+	return location, nil
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
