@@ -157,3 +157,7 @@ const (
 	AuthMethodNone          AuthMethod = "none"
 	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
 )
+
+var AllAuthMethods = []AuthMethod{
+	AuthMethodBasic, AuthMethodPost, AuthMethodNone, AuthMethodPrivateKeyJWT,
+}
