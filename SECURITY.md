@@ -1,6 +1,6 @@
 # Security Policy
 
-At CAOS we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
+At ZITADEL we are extremely grateful for security aware people that disclose vulnerabilities to us and the open source community. All reports will be investigated by our team.
 
 ## Supported Versions
 
@@ -8,12 +8,13 @@ After the initial Release the following version support will apply
 
 | Version | Supported                               |
 | ------- | ------------------                      |
-| 1.x.x   | :white_check_mark: (not yet available)  |
 | 0.x.x   | :x:                                     |
+| 1.x.x   | :white_check_mark:                      |
+| 2.x.x   | :white_check_mark: (not released)       |
 
 ## Reporting a vulnerability
 
-To file a incident, please disclose by email to security@caos.ch with the security details.
+To file a incident, please disclose by email to security@zitadel.com with the security details.
 
 At the moment GPG encryption is no yet supported, however you may sign your message at will.
 

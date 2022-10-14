@@ -8,7 +8,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-const OidcDevMode = "CAOS_OIDC_DEV"
+const OidcDevMode = "ZITADEL_OIDC_DEV"
 
 type Configuration interface {
 	Issuer() string

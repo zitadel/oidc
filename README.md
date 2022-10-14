@@ -96,7 +96,7 @@ Versions that also build are marked with :warning:.
 
 ## Why another library
 
-As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. CAOS is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
+As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. ZITADEL is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
 
 ### Goals
 
