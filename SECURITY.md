@@ -36,8 +36,8 @@ TBD
 
 ## Public Disclosure
 
-All accepted and mitigated vulnerabilitys will be published on the [Github Security Page](https://github.com/zitadel/oidc/security/advisories)
+All accepted and mitigated vulnerability's will be published on the [Github Security Page](https://github.com/zitadel/oidc/security/advisories)
 
 ### Timing
 
-We think it is crucial to publish advisories `ASAP` as mitigations are ready. But due to the unknown nature of the discloures the time frame can range from 7 to 90 days.
+We think it is crucial to publish advisories `ASAP` as mitigation's are ready. But due to the unknown nature of the disclosures the time frame can range from 7 to 90 days.
