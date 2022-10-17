@@ -36,7 +36,7 @@ TBD
 
 ## Public Disclosure
 
-All accepted and mitigated vulnerability's will be published on the [Github Security Page](https://github.com/zitadel/oidc/security/advisories)
+All accepted and mitigated vulnerabilities will be published on the [Github Security Page](https://github.com/zitadel/oidc/security/advisories)
 
 ### Timing
 
