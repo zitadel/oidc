@@ -8,7 +8,11 @@ import (
 	"golang.org/x/text/language"
 )
 
-const OidcDevMode = "CAOS_OIDC_DEV"
+const (
+	OidcDevMode = "ZITADEL_OIDC_DEV"
+	// deprecated: use OidcDevMode (ZITADEL_OIDC_DEV=true)
+	devMode = "CAOS_OIDC_DEV"
+)
 
 type Configuration interface {
 	Issuer() string
@@ -63,7 +67,11 @@ func ValidateIssuer(issuer string) error {
 func devLocalAllowed(url *url.URL) bool {
 	_, b := os.LookupEnv(OidcDevMode)
 	if !b {
-		return b
+		// check the old / current env var as well
+		_, b = os.LookupEnv(devMode)
+		if !b {
+			return b
+		}
 	}
 	return url.Scheme == "http"
 }
