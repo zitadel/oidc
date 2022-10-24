@@ -313,7 +313,7 @@ func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
 
 func (o *openidProvider) AccessTokenVerifier() AccessTokenVerifier {
 	if o.accessTokenVerifier == nil {
-		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet())
+		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 	}
 	return o.accessTokenVerifier
 }
