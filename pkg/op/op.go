@@ -190,7 +190,7 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
-	idTokenHintVerifierOpts     []IDTokenHintVerifierOpt
+	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 }
 
 func (o *openidProvider) Issuer() string {
@@ -314,7 +314,7 @@ func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
 
 func (o *openidProvider) AccessTokenVerifier() AccessTokenVerifier {
 	if o.accessTokenVerifier == nil {
-		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet())
+		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 	}
 	return o.accessTokenVerifier
 }
