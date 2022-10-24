@@ -46,7 +46,7 @@ Check the `/example` folder where example code for different scenarios is locate
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
 go run github.com/zitadel/oidc/example/server
 # start oidc web client
-CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
+CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998 SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
 ```
 
 - open http://localhost:9999/login in your browser
@@ -96,7 +96,7 @@ Versions that also build are marked with :warning:.
 
 ## Why another library
 
-As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. CAOS is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
+As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. ZITADEL is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
 
 ### Goals
 
