@@ -2,6 +2,8 @@ package client
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -78,8 +80,6 @@ type EndSessionCaller interface {
 	HttpClient() *http.Client
 }
 
-// CallEndSessionEndpoint terminates a session.  The server may respond with
-// a redirect, or it may not.  If not, the returned URL will be nil.
 func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndSessionCaller) (*url.URL, error) {
 	req, err := httphelper.FormRequest(caller.GetEndSessionEndpoint(), request, Encoder, authFn)
 	if err != nil {
@@ -90,15 +90,19 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 		return http.ErrUseLastResponse
 	}
 	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("EndSession failure, %d status code: %s", resp.StatusCode, string(body))
+	}
+	location, err := resp.Location()
 	if err != nil {
 		if errors.Is(err, http.ErrNoLocation) {
 			return nil, nil
 		}
-		return nil, err
-	}
-	defer resp.Body.Close()
-	location, err := resp.Location()
-	if err != nil {
 		return nil, err
 	}
 	return location, nil

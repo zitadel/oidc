@@ -575,8 +575,6 @@ func RefreshAccessToken(rp RelyingParty, refreshToken, clientAssertion, clientAs
 	return client.CallTokenEndpoint(request, tokenEndpointCaller{RelyingParty: rp})
 }
 
-// EndSession terminates a session.  The server may respond with
-// a redirect, or it may not.  If not, the returned URL will be nil.
 func EndSession(rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
 	request := oidc.EndSessionRequest{
 		IdTokenHint:           idToken,
