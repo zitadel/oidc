@@ -3,7 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -92,7 +92,8 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		body, err := io.ReadAll(resp.Body)
+		// TODO: switch to io.ReadAll when go1.15 support is retired
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
