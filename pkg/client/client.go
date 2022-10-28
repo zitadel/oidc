@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -16,20 +17,17 @@ import (
 	"github.com/zitadel/oidc/pkg/oidc"
 )
 
-var (
-	Encoder = func() httphelper.Encoder {
-		e := schema.NewEncoder()
-		e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
-			return value.Interface().(oidc.SpaceDelimitedArray).Encode()
-		})
-		return e
-	}()
-)
+var Encoder = func() httphelper.Encoder {
+	e := schema.NewEncoder()
+	e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
+		return value.Interface().(oidc.SpaceDelimitedArray).Encode()
+	})
+	return e
+}()
 
-//Discover calls the discovery endpoint of the provided issuer and returns its configuration
-//It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
+// Discover calls the discovery endpoint of the provided issuer and returns its configuration
+// It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
 func Discover(issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
-
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	if len(wellKnownUrl) == 1 && wellKnownUrl[0] != "" {
 		wellKnown = wellKnownUrl[0]
@@ -80,6 +78,8 @@ type EndSessionCaller interface {
 	HttpClient() *http.Client
 }
 
+// CallEndSessionEndpoint terminates a session.  The server may respond with
+// a redirect, or it may not.  If not, the returned URL will be nil.
 func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndSessionCaller) (*url.URL, error) {
 	req, err := httphelper.FormRequest(caller.GetEndSessionEndpoint(), request, Encoder, authFn)
 	if err != nil {
@@ -91,6 +91,9 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		if errors.Is(err, http.ErrNoLocation) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
