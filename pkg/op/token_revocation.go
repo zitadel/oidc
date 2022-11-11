@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,14 +32,33 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 }
 
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
-	token, _, clientID, err := ParseTokenRevocationRequest(r, revoker)
+	token, tokenTypeHint, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
 		RevocationRequestError(w, r, err)
 		return
 	}
-	tokenID, subject, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
-	if ok {
-		token = tokenID
+	var subject string
+	doDecrypt := true
+	if canRefreshInfo, ok := revoker.Storage().(CanRefreshTokenInfo); ok && tokenTypeHint != "access_token" {
+		userID, tokenID, err := canRefreshInfo.GetRefreshTokenInfo(r.Context(), clientID, token)
+		if err != nil {
+			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
+			if !errors.Is(err, oidc.ErrInvalidRefreshToken()) {
+				RevocationRequestError(w, r, oidc.ErrServerError().WithParent(err))
+				return
+			}
+		} else {
+			token = tokenID
+			subject = userID
+			doDecrypt = false
+		}
+	}
+	if doDecrypt {
+		tokenID, userID, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
+		if ok {
+			token = tokenID
+			subject = userID
+		}
 	}
 	if err := revoker.Storage().RevokeToken(r.Context(), token, subject, clientID); err != nil {
 		RevocationRequestError(w, r, err)
