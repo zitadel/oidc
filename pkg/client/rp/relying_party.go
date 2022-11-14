@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -51,6 +52,9 @@ type RelyingParty interface {
 
 	// GetEndSessionEndpoint returns the endpoint to sign out on a IDP
 	GetEndSessionEndpoint() string
+
+	// GetRevokeEndpoint returns the endpoint to revoke a specific token
+	// "GetRevokeEndpoint() string" will be added in a future release
 
 	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
@@ -119,6 +123,10 @@ func (rp *relyingParty) UserinfoEndpoint() string {
 
 func (rp *relyingParty) GetEndSessionEndpoint() string {
 	return rp.endpoints.EndSessionURL
+}
+
+func (rp *relyingParty) GetRevokeEndpoint() string {
+	return rp.endpoints.RevokeURL
 }
 
 func (rp *relyingParty) IDTokenVerifier() IDTokenVerifier {
@@ -491,6 +499,7 @@ type Endpoints struct {
 	UserinfoURL   string
 	JKWsURL       string
 	EndSessionURL string
+	RevokeURL     string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -504,6 +513,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 		UserinfoURL:   discoveryConfig.UserinfoEndpoint,
 		JKWsURL:       discoveryConfig.JwksURI,
 		EndSessionURL: discoveryConfig.EndSessionEndpoint,
+		RevokeURL:     discoveryConfig.RevocationEndpoint,
 	}
 }
 
@@ -583,4 +593,22 @@ func EndSession(rp RelyingParty, idToken, optionalRedirectURI, optionalState str
 		State:                 optionalState,
 	}
 	return client.CallEndSessionEndpoint(request, nil, rp)
+}
+
+// RevokeToken requires a RelyingParty that is also a client.RevokeCaller.  The RelyingParty
+// returned by NewRelyingPartyOIDC() meets that criteria, but the one returned by
+// NewRelyingPartyOAuth() does not.
+//
+// tokenTypeHint should be either "id_token" or "refresh_token".
+func RevokeToken(rp RelyingParty, token string, tokenTypeHint string) error {
+	request := client.RevokeRequest{
+		Token:         token,
+		TokenTypeHint: tokenTypeHint,
+		ClientID:      rp.OAuthConfig().ClientID,
+		ClientSecret:  rp.OAuthConfig().ClientSecret,
+	}
+	if rc, ok := rp.(client.RevokeCaller); ok && rc.GetRevokeEndpoint() != "" {
+		return client.CallRevokeEndpoint(request, nil, rc)
+	}
+	return fmt.Errorf("RelyingParty does not support RevokeCaller")
 }

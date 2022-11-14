@@ -255,11 +255,11 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 
 // RevokeToken implements the op.Storage interface
 // it will be called after parsing and validation of the token revocation request
-func (s *Storage) RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error {
+func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID string, clientID string) *oidc.Error {
 	// a single token was requested to be removed
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	accessToken, ok := s.tokens[token]
+	accessToken, ok := s.tokens[tokenIDOrToken] // tokenID
 	if ok {
 		if accessToken.ApplicationID != clientID {
 			return oidc.ErrInvalidClient().WithDescription("token was not issued for this client")
@@ -269,7 +269,7 @@ func (s *Storage) RevokeToken(ctx context.Context, token string, userID string, 
 		delete(s.tokens, accessToken.ID)
 		return nil
 	}
-	refreshToken, ok := s.refreshTokens[token]
+	refreshToken, ok := s.refreshTokens[tokenIDOrToken] // token
 	if !ok {
 		// if the token is neither an access nor a refresh token, just ignore it, the expected behaviour of
 		// being not valid (anymore) is achieved
