@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -572,4 +573,14 @@ func RefreshAccessToken(rp RelyingParty, refreshToken, clientAssertion, clientAs
 		GrantType:           oidc.GrantTypeRefreshToken,
 	}
 	return client.CallTokenEndpoint(request, tokenEndpointCaller{RelyingParty: rp})
+}
+
+func EndSession(rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
+	request := oidc.EndSessionRequest{
+		IdTokenHint:           idToken,
+		ClientID:              rp.OAuthConfig().ClientID,
+		PostLogoutRedirectURI: optionalRedirectURI,
+		State:                 optionalState,
+	}
+	return client.CallEndSessionEndpoint(request, nil, rp)
 }
