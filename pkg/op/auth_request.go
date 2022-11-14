@@ -314,6 +314,9 @@ func validateAuthReqRedirectURINative(client Client, uri string, responseType oi
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
 	if str.Contains(client.RedirectURIs(), uri) {
+		if client.DevMode() {
+			return nil
+		}
 		if isLoopback || isCustomSchema {
 			return nil
 		}
