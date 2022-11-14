@@ -59,7 +59,7 @@ func WithDomain(domain string) CookieHandlerOpt {
 
 func WithPath(path string) CookieHandlerOpt {
 	return func(c *CookieHandler) {
-		c.domain = path
+		c.path = path
 	}
 }
 
