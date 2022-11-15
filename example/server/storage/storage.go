@@ -150,7 +150,7 @@ func (s *Storage) AuthRequestByCode(ctx context.Context, code string) (op.AuthRe
 
 // SaveAuthCode implements the op.Storage interface
 // it will be called after the authentication has been successful and before redirecting the user agent to the redirect_uri
-//(in an authorization code flow)
+// (in an authorization code flow)
 func (s *Storage) SaveAuthCode(ctx context.Context, id string, code string) error {
 	// for this example we'll just save the authRequestID to the code
 	s.lock.Lock()
@@ -161,8 +161,8 @@ func (s *Storage) SaveAuthCode(ctx context.Context, id string, code string) erro
 
 // DeleteAuthRequest implements the op.Storage interface
 // it will be called after creating the token response (id and access tokens) for a valid
-//- authentication request (in an implicit flow)
-//- token request (in an authorization code flow)
+// - authentication request (in an implicit flow)
+// - token request (in an authorization code flow)
 func (s *Storage) DeleteAuthRequest(ctx context.Context, id string) error {
 	// you can simply delete all reference to the auth request
 	s.lock.Lock()
@@ -247,7 +247,6 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 		if token.ApplicationID == clientID && token.Subject == userID {
 			delete(s.tokens, token.ID)
 			delete(s.refreshTokens, token.RefreshTokenID)
-			return nil
 		}
 	}
 	return nil
@@ -509,6 +508,7 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	// creates a new refresh token based on the current one
 	token := uuid.NewString()
 	refreshToken.Token = token
+	refreshToken.ID = token
 	s.refreshTokens[token] = refreshToken
 	return token, refreshToken.ID, nil
 }
