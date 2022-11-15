@@ -85,6 +85,11 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 	if err != nil {
 		return nil, err
 	}
+	client := caller.HttpClient()
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		// TODO: switch to io.ReadAll when go1.15 support is retired
