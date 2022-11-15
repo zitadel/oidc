@@ -109,6 +109,47 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 	return location, nil
 }
 
+type RevokeCaller interface {
+	GetRevokeEndpoint() string
+	HttpClient() *http.Client
+}
+
+type RevokeRequest struct {
+	Token         string `schema:"token"`
+	TokenTypeHint string `schema:"token_type_hint"`
+	ClientID      string `schema:"client_id"`
+	ClientSecret  string `schema:"client_secret"`
+}
+
+func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCaller) error {
+	req, err := httphelper.FormRequest(caller.GetRevokeEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return err
+	}
+	client := caller.HttpClient()
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	// According to RFC7009 in section 2.2:
+	// "The content of the response body is ignored by the client as all
+	// necessary information is conveyed in the response code."
+	if resp.StatusCode != 200 {
+		// TODO: switch to io.ReadAll when go1.15 support is retired
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			return fmt.Errorf("revoke returned status %d and text: %s", resp.StatusCode, string(body))
+		} else {
+			return fmt.Errorf("revoke returned status %d", resp.StatusCode)
+		}
+	}
+	return nil
+}
+
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
 	privateKey, err := crypto.BytesToPrivateKey(key)
 	if err != nil {

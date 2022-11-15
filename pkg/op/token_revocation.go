@@ -113,8 +113,11 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
-	if e.ErrorType == oidc.InvalidClient {
+	switch e.ErrorType {
+	case oidc.InvalidClient:
 		status = 401
+	case oidc.ServerError:
+		status = 500
 	}
 	httphelper.MarshalJSONWithStatus(w, e, status)
 }
