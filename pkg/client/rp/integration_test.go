@@ -91,7 +91,7 @@ func TestRelyingPartySession(t *testing.T) {
 	startAuthURL, err := resp.Location()
 	require.NoError(t, err, "get redirect")
 	assert.NotEmpty(t, startAuthURL, "login url")
-	t.Log("Staring auth at", startAuthURL)
+	t.Log("Starting auth at", startAuthURL)
 
 	t.Log("------- get redirect to OP to login page ------")
 	loginPageURL := getRedirect(t, "get redirect to login page", httpClient, startAuthURL)
