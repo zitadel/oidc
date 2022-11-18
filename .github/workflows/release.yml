@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
-      - run: go test -race -v -coverprofile=profile.cov ./pkg/...
+      - run: go test -race -v -coverprofile=profile.cov -coverpkg=github.com/zitadel/oidc/... ./pkg/...
       - uses: codecov/codecov-action@v3.1.1
         with:
           file: ./profile.cov
