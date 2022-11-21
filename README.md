@@ -6,7 +6,7 @@
 [![license](https://badgen.net/github/license/zitadel/oidc/)](https://github.com/zitadel/oidc/blob/master/LICENSE)
 [![release](https://badgen.net/github/release/zitadel/oidc/stable)](https://github.com/zitadel/oidc/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/zitadel/oidc)](https://goreportcard.com/report/github.com/zitadel/oidc)
-[![codecov](https://codecov.io/gh/zitadel/oidc/branch/master/graph/badge.svg)](https://codecov.io/gh/zitadel/oidc)
+[![codecov](https://codecov.io/gh/zitadel/oidc/branch/main/graph/badge.svg)](https://codecov.io/gh/zitadel/oidc)
 
 ![openid_certified](https://cloud.githubusercontent.com/assets/1454075/7611268/4d19de32-f97b-11e4-895b-31b2455a7ca6.png)
 
