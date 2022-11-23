@@ -202,6 +202,7 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
+	idTokenHintVerifierOpts     []IDTokenHintVerifierOpt
 }
 
 func RestrictToSupportedScopes(provider *openidProvider, scopes []string) []string {
@@ -336,7 +337,7 @@ func (o *openidProvider) Encoder() httphelper.Encoder {
 
 func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
 	if o.idTokenHintVerifier == nil {
-		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet())
+		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 	}
 	return o.idTokenHintVerifier
 }
@@ -350,7 +351,7 @@ func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
 
 func (o *openidProvider) AccessTokenVerifier() AccessTokenVerifier {
 	if o.accessTokenVerifier == nil {
-		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet())
+		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 	}
 	return o.accessTokenVerifier
 }
@@ -498,6 +499,13 @@ func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
 func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
 	return func(o *openidProvider) error {
 		o.accessTokenVerifierOpts = opts
+		return nil
+	}
+}
+
+func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
+	return func(o *openidProvider) error {
+		o.idTokenHintVerifierOpts = opts
 		return nil
 	}
 }

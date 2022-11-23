@@ -6,7 +6,7 @@
 [![license](https://badgen.net/github/license/zitadel/oidc/)](https://github.com/zitadel/oidc/blob/master/LICENSE)
 [![release](https://badgen.net/github/release/zitadel/oidc/stable)](https://github.com/zitadel/oidc/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/zitadel/oidc)](https://goreportcard.com/report/github.com/zitadel/oidc)
-[![codecov](https://codecov.io/gh/zitadel/oidc/branch/master/graph/badge.svg)](https://codecov.io/gh/zitadel/oidc)
+[![codecov](https://codecov.io/gh/zitadel/oidc/branch/main/graph/badge.svg)](https://codecov.io/gh/zitadel/oidc)
 
 ![openid_certified](https://cloud.githubusercontent.com/assets/1454075/7611268/4d19de32-f97b-11e4-895b-31b2455a7ca6.png)
 
@@ -46,7 +46,7 @@ Check the `/example` folder where example code for different scenarios is locate
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
 go run github.com/zitadel/oidc/example/server
 # start oidc web client
-CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
+CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998 SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
 ```
 
 - open http://localhost:9999/login in your browser
@@ -78,7 +78,7 @@ For your convenience you can find the relevant standards linked below.
 - [OAuth 2.0 Token Exchange](https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-19)
 - [OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://tools.ietf.org/html/draft-ietf-oauth-mtls-17)
 - [JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants](https://tools.ietf.org/html/rfc7523)
-- [OIDC/OAuth Flow in Zitadel (using this library)](https://docs.zitadel.com/docs/guides/authentication/login-users)
+- [OIDC/OAuth Flow in Zitadel (using this library)](https://docs.zitadel.com/docs/guides/integrate/login-users)
 
 ## Supported Go Versions
 
@@ -96,7 +96,7 @@ Versions that also build are marked with :warning:.
 
 ## Why another library
 
-As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. CAOS is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
+As of 2020 there are not a lot of `OIDC` library's in `Go` which can handle server and client implementations. ZITADEL is strongly committed to the general field of IAM (Identity and Access Management) and as such, we need solid frameworks to implement services.
 
 ### Goals
 

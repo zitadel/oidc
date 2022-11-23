@@ -150,7 +150,7 @@ func (s *Storage) AuthRequestByCode(ctx context.Context, code string) (op.AuthRe
 
 // SaveAuthCode implements the op.Storage interface
 // it will be called after the authentication has been successful and before redirecting the user agent to the redirect_uri
-//(in an authorization code flow)
+// (in an authorization code flow)
 func (s *Storage) SaveAuthCode(ctx context.Context, id string, code string) error {
 	// for this example we'll just save the authRequestID to the code
 	s.lock.Lock()
@@ -161,8 +161,8 @@ func (s *Storage) SaveAuthCode(ctx context.Context, id string, code string) erro
 
 // DeleteAuthRequest implements the op.Storage interface
 // it will be called after creating the token response (id and access tokens) for a valid
-//- authentication request (in an implicit flow)
-//- token request (in an authorization code flow)
+// - authentication request (in an implicit flow)
+// - token request (in an authorization code flow)
 func (s *Storage) DeleteAuthRequest(ctx context.Context, id string) error {
 	// you can simply delete all reference to the auth request
 	s.lock.Lock()
@@ -247,7 +247,6 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 		if token.ApplicationID == clientID && token.Subject == userID {
 			delete(s.tokens, token.ID)
 			delete(s.refreshTokens, token.RefreshTokenID)
-			return nil
 		}
 	}
 	return nil
@@ -255,11 +254,11 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 
 // RevokeToken implements the op.Storage interface
 // it will be called after parsing and validation of the token revocation request
-func (s *Storage) RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error {
+func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID string, clientID string) *oidc.Error {
 	// a single token was requested to be removed
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	accessToken, ok := s.tokens[token]
+	accessToken, ok := s.tokens[tokenIDOrToken] // tokenID
 	if ok {
 		if accessToken.ApplicationID != clientID {
 			return oidc.ErrInvalidClient().WithDescription("token was not issued for this client")
@@ -269,7 +268,7 @@ func (s *Storage) RevokeToken(ctx context.Context, token string, userID string, 
 		delete(s.tokens, accessToken.ID)
 		return nil
 	}
-	refreshToken, ok := s.refreshTokens[token]
+	refreshToken, ok := s.refreshTokens[tokenIDOrToken] // token
 	if !ok {
 		// if the token is neither an access nor a refresh token, just ignore it, the expected behaviour of
 		// being not valid (anymore) is achieved
@@ -509,6 +508,7 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	// creates a new refresh token based on the current one
 	token := uuid.NewString()
 	refreshToken.Token = token
+	refreshToken.ID = token
 	s.refreshTokens[token] = refreshToken
 	return token, refreshToken.ID, nil
 }

@@ -1,7 +1,11 @@
 package client
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -69,6 +73,81 @@ func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndp
 		RefreshToken: tokenRes.RefreshToken,
 		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
 	}, nil
+}
+
+type EndSessionCaller interface {
+	GetEndSessionEndpoint() string
+	HttpClient() *http.Client
+}
+
+func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndSessionCaller) (*url.URL, error) {
+	req, err := httphelper.FormRequest(caller.GetEndSessionEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return nil, err
+	}
+	client := caller.HttpClient()
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		// TODO: switch to io.ReadAll when go1.15 support is retired
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("EndSession failure, %d status code: %s", resp.StatusCode, string(body))
+	}
+	location, err := resp.Location()
+	if err != nil {
+		if errors.Is(err, http.ErrNoLocation) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return location, nil
+}
+
+type RevokeCaller interface {
+	GetRevokeEndpoint() string
+	HttpClient() *http.Client
+}
+
+type RevokeRequest struct {
+	Token         string `schema:"token"`
+	TokenTypeHint string `schema:"token_type_hint"`
+	ClientID      string `schema:"client_id"`
+	ClientSecret  string `schema:"client_secret"`
+}
+
+func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCaller) error {
+	req, err := httphelper.FormRequest(caller.GetRevokeEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return err
+	}
+	client := caller.HttpClient()
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	// According to RFC7009 in section 2.2:
+	// "The content of the response body is ignored by the client as all
+	// necessary information is conveyed in the response code."
+	if resp.StatusCode != 200 {
+		// TODO: switch to io.ReadAll when go1.15 support is retired
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			return fmt.Errorf("revoke returned status %d and text: %s", resp.StatusCode, string(body))
+		} else {
+			return fmt.Errorf("revoke returned status %d", resp.StatusCode)
+		}
+	}
+	return nil
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
