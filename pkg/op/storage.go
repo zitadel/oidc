@@ -51,8 +51,8 @@ type AuthStorage interface {
 }
 
 // CanRefreshTokenInfo is an optional additional interface that Storage can support.
-// Supporting CanRefreshTokenInfo is required to be able to revoke a refresh token that
-// does not happen to also be JWTs.
+// Supporting CanRefreshTokenInfo is required to be able to (revoke) a refresh token that
+// is neither an encrypted string of <tokenID>:<userID> nor a JWT.
 type CanRefreshTokenInfo interface {
 	// GetRefreshTokenInfo must return oidc.ErrInvalidRefreshToken when presented
 	// with a token that is not a refresh token.
