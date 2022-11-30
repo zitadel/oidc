@@ -31,6 +31,8 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 	}
 }
 
+var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
+
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 	token, tokenTypeHint, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
@@ -43,7 +45,7 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 		userID, tokenID, err := canRefreshInfo.GetRefreshTokenInfo(r.Context(), clientID, token)
 		if err != nil {
 			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
-			if !errors.Is(err, oidc.ErrInvalidRefreshToken()) {
+			if !errors.Is(err, ErrInvalidRefreshToken) {
 				RevocationRequestError(w, r, oidc.ErrServerError().WithParent(err))
 				return
 			}

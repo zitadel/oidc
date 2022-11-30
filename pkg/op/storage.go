@@ -54,7 +54,7 @@ type AuthStorage interface {
 // Supporting CanRefreshTokenInfo is required to be able to (revoke) a refresh token that
 // is neither an encrypted string of <tokenID>:<userID> nor a JWT.
 type CanRefreshTokenInfo interface {
-	// GetRefreshTokenInfo must return oidc.ErrInvalidRefreshToken when presented
+	// GetRefreshTokenInfo must return ErrInvalidRefreshToken when presented
 	// with a token that is not a refresh token.
 	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
 }
