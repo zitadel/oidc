@@ -50,6 +50,15 @@ type AuthStorage interface {
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 }
 
+// CanRefreshTokenInfo is an optional additional interface that Storage can support.
+// Supporting CanRefreshTokenInfo is required to be able to revoke a refresh token that
+// does not happen to also be JWTs.
+type CanRefreshTokenInfo interface {
+	// GetRefreshTokenInfo must return oidc.ErrInvalidRefreshToken when presented
+	// with a token that is not a refresh token.
+	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
+}
+
 type ClientCredentialsStorage interface {
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
 }
