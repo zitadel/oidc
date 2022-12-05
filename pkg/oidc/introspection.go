@@ -30,6 +30,16 @@ type IntrospectionResponse interface {
 	SetAudience(audience []string)
 	SetIssuer(issuer string)
 	SetJWTID(id string)
+	GetScope() []string
+	GetClientID() string
+	GetTokenType() string
+	GetExpiration() time.Time
+	GetIssuedAt() time.Time
+	GetNotBefore() time.Time
+	GetSubject() string
+	GetAudience() []string
+	GetIssuer() string
+	GetJWTID() string
 }
 
 func NewIntrospectionResponse() IntrospectionResponse {
@@ -142,6 +152,42 @@ func (i *introspectionResponse) GetClaim(key string) interface{} {
 
 func (i *introspectionResponse) GetClaims() map[string]interface{} {
 	return i.claims
+}
+
+func (i *introspectionResponse) GetScope() []string {
+	return []string(i.Scope)
+}
+
+func (i *introspectionResponse) GetClientID() string {
+	return i.ClientID
+}
+
+func (i *introspectionResponse) GetTokenType() string {
+	return i.TokenType
+}
+
+func (i *introspectionResponse) GetExpiration() time.Time {
+	return time.Time(i.Expiration)
+}
+
+func (i *introspectionResponse) GetIssuedAt() time.Time {
+	return time.Time(i.IssuedAt)
+}
+
+func (i *introspectionResponse) GetNotBefore() time.Time {
+	return time.Time(i.NotBefore)
+}
+
+func (i *introspectionResponse) GetAudience() []string {
+	return []string(i.Audience)
+}
+
+func (i *introspectionResponse) GetIssuer() string {
+	return i.Issuer
+}
+
+func (i *introspectionResponse) GetJWTID() string {
+	return i.JWTID
 }
 
 func (i *introspectionResponse) SetActive(active bool) {
