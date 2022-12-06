@@ -23,18 +23,18 @@ Whenever possible we tried to reuse / extend existing packages like `OAuth2 for 
 The most important packages of the library:
 <pre>
 /pkg
-    /client     clients using the OP for retrieving, exchanging and verifying tokens       
-        /rp     definition and implementation of an OIDC Relying Party (client)
-        /rs     definition and implementation of an OAuth Resource Server (API)
-    /op         definition and implementation of an OIDC OpenID Provider (server)
-    /oidc       definitions shared by clients and server
+    /client            clients using the OP for retrieving, exchanging and verifying tokens       
+        /rp            definition and implementation of an OIDC Relying Party (client)
+        /rs            definition and implementation of an OAuth Resource Server (API)
+    /op                definition and implementation of an OIDC OpenID Provider (server)
+    /oidc              definitions shared by clients and server
 
 /example
-    /api        example of an api / resource server implementation using token introspection
-    /app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
-    /github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
-    /service    demonstration of JWT Profile Authorization Grant
-    /server     example of an OpenID Provider implementation including some very basic login UI
+    /client/api        example of an api / resource server implementation using token introspection
+    /client/app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
+    /client/github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
+    /client/service    demonstration of JWT Profile Authorization Grant
+    /server            example of an OpenID Provider implementation including some very basic login UI
 </pre>
 
 ## How To Use It
@@ -64,7 +64,7 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998 SCOPES="openid p
 ## Contributors
 
 <a href="https://github.com/zitadel/oidc/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=zitadel/oidc" />
+  <img src="https://contrib.rocks/image?repo=zitadel/oidc" alt="Screen with contributors' avatars from contrib.rocks" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
@@ -114,11 +114,14 @@ We did not choose `fosite` because it implements `OAuth 2.0` on its own and does
 
 ## License
 
-The full functionality of this library is and stays open source and free to use for everyone. Visit our [website](https://zitadel.com) and get in touch.
+The full functionality of this library is and stays open source and free to use for everyone. Visit
+our [website](https://zitadel.com) and get in touch.
 
-See the exact licensing terms [here](./LICENSE)
+See the exact licensing terms [here](LICENSE)
 
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "
+AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+language governing permissions and limitations under the License.
 
 
 [^1]: https://github.com/zitadel/oidc/issues/135#issuecomment-950563892
