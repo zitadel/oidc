@@ -190,7 +190,7 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
-	idTokenHintVerifierOpts     []IDTokenHintVerifierOpt
+	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 }
 
 func (o *openidProvider) Issuer() string {
@@ -246,7 +246,8 @@ func (o *openidProvider) GrantTypeRefreshTokenSupported() bool {
 }
 
 func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
-	return false
+	_, ok := o.storage.(TokenExchangeStorage)
+	return ok
 }
 
 func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {

@@ -69,6 +69,8 @@ func needsRefreshToken(tokenRequest TokenRequest, client Client) bool {
 	switch req := tokenRequest.(type) {
 	case AuthRequest:
 		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
+	case TokenExchangeRequest:
+		return req.GetRequestedTokenType() == oidc.RefreshTokenType
 	case RefreshTokenRequest:
 		return true
 	default:
@@ -102,7 +104,20 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
-		privateClaims, err := storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
+
+		var (
+			privateClaims map[string]interface{}
+			err           error
+		)
+		if tokenExchangeRequest, ok := tokenRequest.(TokenExchangeRequest); ok {
+			privateClaims, err = storage.(TokenExchangeStorage).GetPrivateClaimsFromTokenExchangeRequest(
+				ctx,
+				tokenExchangeRequest,
+			)
+		} else {
+			privateClaims, err = storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
+		}
+
 		if err != nil {
 			return "", err
 		}
@@ -139,7 +154,16 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 			scopes = removeUserinfoScopes(scopes)
 		}
 	}
-	if len(scopes) > 0 {
+
+	if tokenExchangeRequest, ok := request.(TokenExchangeRequest); ok {
+		userInfo := oidc.NewUserInfo()
+		teStorage := storage.(TokenExchangeStorage)
+		err := teStorage.SetUserinfoFromTokenExchangeRequest(ctx, userInfo, tokenExchangeRequest)
+		if err != nil {
+			return "", err
+		}
+		claims.SetUserinfo(userInfo)
+	} else if len(scopes) > 0 {
 		userInfo := oidc.NewUserInfo()
 		err := storage.SetUserinfoFromScopes(ctx, userInfo, request.GetSubject(), request.GetClientID(), scopes)
 		if err != nil {

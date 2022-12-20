@@ -21,6 +21,8 @@ type Exchanger interface {
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 	GrantTypeClientCredentialsSupported() bool
+	AccessTokenVerifier() AccessTokenVerifier
+	IDTokenHintVerifier() IDTokenHintVerifier
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
