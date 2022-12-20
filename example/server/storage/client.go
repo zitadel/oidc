@@ -113,14 +113,14 @@ func (c *Client) IsScopeAllowed(scope string) bool {
 
 // IDTokenUserinfoClaimsAssertion allows specifying if claims of scope profile, email, phone and address are asserted into the id_token
 // even if an access token if issued which violates the OIDC Core spec
-//(5.4. Requesting Claims using Scope Values: https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims)
+// (5.4. Requesting Claims using Scope Values: https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims)
 // some clients though require that e.g. email is always in the id_token when requested even if an access_token is issued
 func (c *Client) IDTokenUserinfoClaimsAssertion() bool {
 	return c.idTokenUserinfoClaimsAssertion
 }
 
 // ClockSkew enables clients to instruct the OP to apply a clock skew on the various times and expirations
-//(subtract from issued_at, add to expiration, ...)
+// (subtract from issued_at, add to expiration, ...)
 func (c *Client) ClockSkew() time.Duration {
 	return c.clockSkew
 }
@@ -158,7 +158,7 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 		loginURL:                       defaultLoginURL,
 		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
 		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken},
-		accessTokenType:                0,
+		accessTokenType:                op.AccessTokenTypeBearer,
 		devMode:                        false,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
@@ -184,7 +184,7 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 		loginURL:                       defaultLoginURL,
 		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
 		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken},
-		accessTokenType:                0,
+		accessTokenType:                op.AccessTokenTypeBearer,
 		devMode:                        false,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,

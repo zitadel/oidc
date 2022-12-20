@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -181,11 +183,14 @@ func (s *Storage) DeleteAuthRequest(ctx context.Context, id string) error {
 // it will be called for all requests able to return an access token (Authorization Code Flow, Implicit Flow, JWT Profile, ...)
 func (s *Storage) CreateAccessToken(ctx context.Context, request op.TokenRequest) (string, time.Time, error) {
 	var applicationID string
-	// if authenticated for an app (auth code / implicit flow) we must save the client_id to the token
-	authReq, ok := request.(*AuthRequest)
-	if ok {
-		applicationID = authReq.ApplicationID
+	switch req := request.(type) {
+	case *AuthRequest:
+		// if authenticated for an app (auth code / implicit flow) we must save the client_id to the token
+		applicationID = req.ApplicationID
+	case op.TokenExchangeRequest:
+		applicationID = req.GetClientID()
 	}
+
 	token, err := s.accessToken(applicationID, "", request.GetSubject(), request.GetAudience(), request.GetScopes())
 	if err != nil {
 		return "", time.Time{}, err
@@ -196,6 +201,11 @@ func (s *Storage) CreateAccessToken(ctx context.Context, request op.TokenRequest
 // CreateAccessAndRefreshTokens implements the op.Storage interface
 // it will be called for all requests able to return an access and refresh token (Authorization Code Flow, Refresh Token Request)
 func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
+	// generate tokens via token exchange flow if request is relevant
+	if teReq, ok := request.(op.TokenExchangeRequest); ok {
+		return s.exchangeRefreshToken(ctx, teReq)
+	}
+
 	// get the information depending on the request type / implementation
 	applicationID, authTime, amr := getInfoFromRequest(request)
 
@@ -223,6 +233,24 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
+	return accessToken.ID, refreshToken, accessToken.Expiration, nil
+}
+
+func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExchangeRequest) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
+	applicationID := request.GetClientID()
+	authTime := request.GetAuthTime()
+
+	refreshTokenID := uuid.NewString()
+	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	refreshToken, err := s.createRefreshToken(accessToken, nil, authTime)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
 	return accessToken.ID, refreshToken, accessToken.Expiration, nil
 }
 
@@ -424,6 +452,10 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection o
 // GetPrivateClaimsFromScopes implements the op.Storage interface
 // it will be called for the creation of a JWT access token to assert claims for custom scopes
 func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
+	return s.getPrivateClaimsFromScopes(ctx, userID, clientID, scopes)
+}
+
+func (s *Storage) getPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
 	for _, scope := range scopes {
 		switch scope {
 		case CustomScope:
@@ -558,6 +590,101 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter,
 		}
 	}
 	return nil
+}
+
+// ValidateTokenExchangeRequest implements the op.TokenExchangeStorage interface
+// it will be called to validate parsed Token Exchange Grant request
+func (s *Storage) ValidateTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) error {
+	if request.GetRequestedTokenType() == "" {
+		request.SetRequestedTokenType(oidc.RefreshTokenType)
+	}
+
+	// Just an example, some use cases might need this use case
+	if request.GetExchangeSubjectTokenType() == oidc.IDTokenType && request.GetRequestedTokenType() == oidc.RefreshTokenType {
+		return errors.New("exchanging id_token to refresh_token is not supported")
+	}
+
+	// Check impersonation permissions
+	if request.GetExchangeActor() == "" && !s.userStore.GetUserByID(request.GetExchangeSubject()).IsAdmin {
+		return errors.New("user doesn't have impersonation permission")
+	}
+
+	allowedScopes := make([]string, 0)
+	for _, scope := range request.GetScopes() {
+		if scope == oidc.ScopeAddress {
+			continue
+		}
+
+		if strings.HasPrefix(scope, CustomScopeImpersonatePrefix) {
+			subject := strings.TrimPrefix(scope, CustomScopeImpersonatePrefix)
+			request.SetSubject(subject)
+		}
+
+		allowedScopes = append(allowedScopes, scope)
+	}
+
+	request.SetCurrentScopes(allowedScopes)
+
+	return nil
+}
+
+// ValidateTokenExchangeRequest implements the op.TokenExchangeStorage interface
+// Common use case is to store request for audit purposes. For this example we skip the storing.
+func (s *Storage) CreateTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) error {
+	return nil
+}
+
+// GetPrivateClaimsFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
+// it will be called for the creation of an exchanged JWT access token to assert claims for custom scopes
+// plus adding token exchange specific claims related to delegation or impersonation
+func (s *Storage) GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}, err error) {
+	claims, err = s.getPrivateClaimsFromScopes(ctx, "", request.GetClientID(), request.GetScopes())
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range s.getTokenExchangeClaims(ctx, request) {
+		claims = appendClaim(claims, k, v)
+	}
+
+	return claims, nil
+}
+
+// SetUserinfoFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
+// it will be called for the creation of an id_token - we are using the same private function as for other flows,
+// plus adding token exchange specific claims related to delegation or impersonation
+func (s *Storage) SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request op.TokenExchangeRequest) error {
+	err := s.setUserinfo(ctx, userinfo, request.GetSubject(), request.GetClientID(), request.GetScopes())
+	if err != nil {
+		return err
+	}
+
+	for k, v := range s.getTokenExchangeClaims(ctx, request) {
+		userinfo.AppendClaims(k, v)
+	}
+
+	return nil
+}
+
+func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}) {
+	for _, scope := range request.GetScopes() {
+		switch {
+		case strings.HasPrefix(scope, CustomScopeImpersonatePrefix) && request.GetExchangeActor() == "":
+			// Set actor subject claim for impersonation flow
+			claims = appendClaim(claims, "act", map[string]interface{}{
+				"sub": request.GetExchangeSubject(),
+			})
+		}
+	}
+
+	// Set actor subject claim for delegation flow
+	// if request.GetExchangeActor() != "" {
+	// 	claims = appendClaim(claims, "act", map[string]interface{}{
+	// 		"sub": request.GetExchangeActor(),
+	// 	})
+	// }
+
+	return claims
 }
 
 // getInfoFromRequest returns the clientID, authTime and amr depending on the op.TokenRequest type / implementation

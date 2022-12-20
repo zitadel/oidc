@@ -17,6 +17,7 @@ type User struct {
 	Phone             string
 	PhoneVerified     bool
 	PreferredLanguage language.Tag
+	IsAdmin           bool
 }
 
 type Service struct {
@@ -47,6 +48,20 @@ func NewUserStore() UserStore {
 				Phone:             "",
 				PhoneVerified:     false,
 				PreferredLanguage: language.German,
+				IsAdmin:           true,
+			},
+			"id2": {
+				ID:                "id2",
+				Username:          "test-user2",
+				Password:          "verysecure",
+				FirstName:         "Test",
+				LastName:          "User2",
+				Email:             "test-user2@zitadel.ch",
+				EmailVerified:     true,
+				Phone:             "",
+				PhoneVerified:     false,
+				PreferredLanguage: language.German,
+				IsAdmin:           false,
 			},
 		},
 	}

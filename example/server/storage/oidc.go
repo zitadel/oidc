@@ -17,6 +17,9 @@ const (
 
 	// CustomClaim is an example for how to return custom claims with this library
 	CustomClaim = "custom_claim"
+
+	// CustomScopeImpersonatePrefix is an example scope prefix for passing user id to impersonate using token exchage
+	CustomScopeImpersonatePrefix = "custom_scope:impersonate:"
 )
 
 type AuthRequest struct {
