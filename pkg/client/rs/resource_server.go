@@ -13,6 +13,7 @@ import (
 
 type ResourceServer interface {
 	IntrospectionURL() string
+	TokenEndpoint() string
 	HttpClient() *http.Client
 	AuthFn() (interface{}, error)
 }
@@ -27,6 +28,10 @@ type resourceServer struct {
 
 func (r *resourceServer) IntrospectionURL() string {
 	return r.introspectURL
+}
+
+func (r *resourceServer) TokenEndpoint() string {
+	return r.tokenURL
 }
 
 func (r *resourceServer) HttpClient() *http.Client {

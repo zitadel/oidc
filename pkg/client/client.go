@@ -90,6 +90,9 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 		return http.ErrUseLastResponse
 	}
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		// TODO: switch to io.ReadAll when go1.15 support is retired
@@ -148,6 +151,22 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 		}
 	}
 	return nil
+}
+
+func CallTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
+	return callTokenExchangeEndpoint(request, authFn, caller)
+}
+
+func callTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
+	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return nil, err
+	}
+	tokenRes := new(oidc.TokenExchangeResponse)
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
+		return nil, err
+	}
+	return tokenRes, nil
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
