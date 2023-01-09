@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"github.com/rs/cors"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
@@ -39,6 +39,30 @@ var (
 		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:       NewEndpoint(defaultKeysEndpoint),
 	}
+
+	defaultCORSOptions = cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders: []string{
+			"Origin",
+			"Accept",
+			"Accept-Language",
+			"Authorization",
+			"Content-Type",
+			"X-Requested-With",
+		},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodPost,
+		},
+		ExposedHeaders: []string{
+			"Location",
+			"Content-Length",
+		},
+		AllowOriginFunc: func(_ string) bool {
+			return true
+		},
+	}
 )
 
 type OpenIDProvider interface {
@@ -55,10 +79,6 @@ type OpenIDProvider interface {
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
-
-var allowAllOrigins = func(_ string) bool {
-	return true
-}
 
 func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router {
 	router := mux.NewRouter()
@@ -425,16 +445,11 @@ func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
 }
 
 func intercept(i IssuerFromRequest, interceptors ...HttpInterceptor) func(handler http.Handler) http.Handler {
-	cors := handlers.CORS(
-		handlers.AllowCredentials(),
-		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
-		handlers.AllowedOriginValidator(allowAllOrigins),
-	)
 	issuerInterceptor := NewIssuerInterceptor(i)
 	return func(handler http.Handler) http.Handler {
 		for i := len(interceptors) - 1; i >= 0; i-- {
 			handler = interceptors[i](handler)
 		}
-		return cors(issuerInterceptor.Handler(handler))
+		return cors.New(defaultCORSOptions).Handler(issuerInterceptor.Handler(handler))
 	}
 }
