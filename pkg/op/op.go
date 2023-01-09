@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"github.com/rs/cors"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
@@ -55,18 +55,34 @@ type OpenIDProvider interface {
 
 type HttpInterceptor func(http.Handler) http.Handler
 
-var allowAllOrigins = func(_ string) bool {
-	return true
+var defaultCORSOptions = cors.Options{
+	AllowCredentials: true,
+	AllowedHeaders: []string{
+		"Origin",
+		"Accept",
+		"Accept-Language",
+		"Authorization",
+		"Content-Type",
+		"X-Requested-With",
+	},
+	AllowedMethods: []string{
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodPost,
+	},
+	ExposedHeaders: []string{
+		"Location",
+		"Content-Length",
+	},
+	AllowOriginFunc: func(_ string) bool {
+		return true
+	},
 }
 
 func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router {
 	intercept := buildInterceptor(interceptors...)
 	router := mux.NewRouter()
-	router.Use(handlers.CORS(
-		handlers.AllowCredentials(),
-		handlers.AllowedHeaders([]string{"authorization", "content-type"}),
-		handlers.AllowedOriginValidator(allowAllOrigins),
-	))
+	router.Use(cors.New(defaultCORSOptions).Handler)
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
@@ -190,7 +206,7 @@ type openidProvider struct {
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
-	idTokenHintVerifierOpts     []IDTokenHintVerifierOpt
+	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 }
 
 func (o *openidProvider) Issuer() string {
