@@ -45,7 +45,7 @@ Check the `/example` folder where example code for different scenarios is locate
 # start oidc op server
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
 go run github.com/zitadel/oidc/example/server
-# start oidc web client
+# start oidc web client (in a new terminal)
 CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998 SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
 ```
 
