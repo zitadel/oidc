@@ -24,6 +24,8 @@ func main() {
 		Addr:    ":" + port,
 		Handler: router,
 	}
+	log.Printf("server listening on http://localhost:%s/", port)
+	log.Println("press ctrl+c to stop")
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
