@@ -67,6 +67,8 @@ type ClientCredentialsStorage interface {
 }
 
 type OPStorage interface {
+	// GetClientByClientID loads a Client. The returned Client is never cached and is only used to
+	// handle the current request.
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
 	SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error
