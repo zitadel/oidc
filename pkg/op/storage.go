@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -58,6 +59,8 @@ type CanRefreshTokenInfo interface {
 	// with a token that is not a refresh token.
 	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
 }
+
+var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 
 type ClientCredentialsStorage interface {
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)

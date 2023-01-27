@@ -31,8 +31,6 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 	}
 }
 
-var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
-
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 	token, tokenTypeHint, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
