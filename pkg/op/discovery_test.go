@@ -130,6 +130,7 @@ func Test_GrantTypes(t *testing.T) {
 					c.EXPECT().GrantTypeRefreshTokenSupported().Return(false)
 					c.EXPECT().GrantTypeTokenExchangeSupported().Return(false)
 					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(false)
+					c.EXPECT().GrantTypeClientCredentialsSupported().Return(false)
 					return c
 				}(),
 			},
@@ -139,13 +140,14 @@ func Test_GrantTypes(t *testing.T) {
 			},
 		},
 		{
-			"code, implicit flow, refresh token, token exchange, jwt profile",
+			"code, implicit flow, refresh token, token exchange, jwt profile, client_credentials",
 			args{
 				func() op.Configuration {
 					c := mock.NewMockConfiguration(gomock.NewController(t))
 					c.EXPECT().GrantTypeRefreshTokenSupported().Return(true)
 					c.EXPECT().GrantTypeTokenExchangeSupported().Return(true)
 					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(true)
+					c.EXPECT().GrantTypeClientCredentialsSupported().Return(true)
 					return c
 				}(),
 			},
@@ -153,6 +155,7 @@ func Test_GrantTypes(t *testing.T) {
 				oidc.GrantTypeCode,
 				oidc.GrantTypeImplicit,
 				oidc.GrantTypeRefreshToken,
+				oidc.GrantTypeClientCredentials,
 				oidc.GrantTypeTokenExchange,
 				oidc.GrantTypeBearer,
 			},
