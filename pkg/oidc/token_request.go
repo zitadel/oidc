@@ -15,6 +15,9 @@ const (
 	//GrantTypeRefreshToken defines the grant_type `refresh_token` used for the Token Request in the Refresh Token Flow
 	GrantTypeRefreshToken GrantType = "refresh_token"
 
+	//GrantTypeClientCredentials defines the grant_type `client_credentials` used for the Token Request in the Client Credentials Token Flow
+	GrantTypeClientCredentials GrantType = "client_credentials"
+
 	//GrantTypeBearer defines the grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer` used for the JWT Authorization Grant
 	GrantTypeBearer GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
@@ -197,4 +200,13 @@ type TokenExchangeRequest struct {
 	audience           Audience            `schema:"audience"`
 	Scope              SpaceDelimitedArray `schema:"scope"`
 	requestedTokenType string              `schema:"requested_token_type"`
+}
+
+type ClientCredentialsRequest struct {
+	GrantType           GrantType           `schema:"grant_type"`
+	Scope               SpaceDelimitedArray `schema:"scope"`
+	ClientID            string              `schema:"client_id"`
+	ClientSecret        string              `schema:"client_secret"`
+	ClientAssertion     string              `schema:"client_assertion"`
+	ClientAssertionType string              `schema:"client_assertion_type"`
 }

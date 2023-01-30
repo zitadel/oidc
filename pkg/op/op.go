@@ -256,6 +256,11 @@ func (o *Provider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
+func (o *Provider) GrantTypeClientCredentialsSupported() bool {
+	_, ok := o.storage.(ClientCredentialsStorage)
+	return ok
+}
+
 func (o *Provider) RevocationAuthMethodPrivateKeyJWTSupported() bool {
 	return true
 }
