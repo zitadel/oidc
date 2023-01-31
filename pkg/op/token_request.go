@@ -18,6 +18,7 @@ type Exchanger interface {
 	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
+	GrantTypeClientCredentialsSupported() bool
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +41,11 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 		case string(oidc.GrantTypeTokenExchange):
 			if exchanger.GrantTypeTokenExchangeSupported() {
 				TokenExchange(w, r, exchanger)
+				return
+			}
+		case string(oidc.GrantTypeClientCredentials):
+			if exchanger.GrantTypeClientCredentialsSupported() {
+				ClientCredentialsExchange(w, r, exchanger)
 				return
 			}
 		case "":

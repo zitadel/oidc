@@ -35,6 +35,7 @@ type Configuration interface {
 	GrantTypeRefreshTokenSupported() bool
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
+	GrantTypeClientCredentialsSupported() bool
 	IntrospectionAuthMethodPrivateKeyJWTSupported() bool
 	IntrospectionEndpointSigningAlgorithmsSupported() []string
 	RevocationAuthMethodPrivateKeyJWTSupported() bool

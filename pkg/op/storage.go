@@ -28,6 +28,11 @@ type AuthStorage interface {
 	KeySet(context.Context) ([]Key, error)
 }
 
+type ClientCredentialsStorage interface {
+	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
+	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
+}
+
 type OPStorage interface {
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
