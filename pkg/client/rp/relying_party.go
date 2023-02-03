@@ -255,7 +255,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
-//deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
+// deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
@@ -304,7 +304,7 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 
 // Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
 //
-//deprecated: use client.Discover
+// deprecated: use client.Discover
 func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	req, err := http.NewRequest("GET", wellKnown, nil)
@@ -323,7 +323,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 }
 
 // AuthURL returns the auth request url
-//(wrapping the oauth2 `AuthCodeURL`)
+// (wrapping the oauth2 `AuthCodeURL`)
 func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
@@ -333,8 +333,10 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 }
 
 // AuthURLHandler extends the `AuthURL` method with a http redirect handler
-// including handling setting cookie for secure `state` transfer
-func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
+// including handling setting cookie for secure `state` transfer.
+// Prompts can optionally be set to inform the authentication server of
+// any messages that need to be prompted back to the user.
+func AuthURLHandler(stateFn func() string, rp RelyingParty, prompts ...string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := make([]AuthURLOpt, 0)
 		state := stateFn()
@@ -350,6 +352,10 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 			}
 			opts = append(opts, WithCodeChallenge(codeChallenge))
 		}
+		if len(prompts) > 0 {
+			opts = append(opts, WithPrompt(prompts...))
+		}
+
 		http.Redirect(w, r, AuthURL(state, rp, opts...), http.StatusFound)
 	}
 }

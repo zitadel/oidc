@@ -75,7 +75,7 @@ func TestRelyingPartySession(t *testing.T) {
 	state := "state-" + strconv.FormatInt(seed.Int63(), 25)
 	capturedW := httptest.NewRecorder()
 	get := httptest.NewRequest("GET", localURL.String(), nil)
-	rp.AuthURLHandler(func() string { return state }, provider)(capturedW, get)
+	rp.AuthURLHandler(func() string { return state }, provider, "Hello, World!", "Goodbye, World!")(capturedW, get)
 
 	defer func() {
 		if t.Failed() {
@@ -84,6 +84,7 @@ func TestRelyingPartySession(t *testing.T) {
 	}()
 	require.GreaterOrEqual(t, capturedW.Code, 200, "captured response code")
 	require.Less(t, capturedW.Code, 400, "captured response code")
+	require.Contains(t, capturedW.Body.String(), `prompt=Hello%2C+World%21+Goodbye%2C+World%21`)
 
 	//nolint:bodyclose
 	resp := capturedW.Result()
