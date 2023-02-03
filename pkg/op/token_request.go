@@ -129,8 +129,8 @@ func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchang
 	return client, nil
 }
 
-//ValidateGrantType ensures that the requested grant_type is allowed by the Client
-func ValidateGrantType(client Client, grantType oidc.GrantType) bool {
+//ValidateGrantType ensures that the requested grant_type is allowed by the client
+func ValidateGrantType(client interface{ GrantTypes() []oidc.GrantType }, grantType oidc.GrantType) bool {
 	if client == nil {
 		return false
 	}

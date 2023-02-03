@@ -53,21 +53,40 @@ func ParseJWTProfileGrantRequest(r *http.Request, decoder httphelper.Decoder) (*
 	return tokenReq, nil
 }
 
-//CreateJWTTokenResponse creates
+type JWTProfileTokenStorage interface {
+	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
+}
+
+// CreateJWTTokenResponse creates an access_token response for a JWT Profile Grant request
+// by default the access_token is an opaque string, but can be specified by implementing the JWTProfileTokenStorage interface
 func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
-	id, exp, err := creator.Storage().CreateAccessToken(ctx, tokenRequest)
-	if err != nil {
-		return nil, err
-	}
-	accessToken, err := CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
-	if err != nil {
-		return nil, err
+	// return an opaque token as default to not break current implementations
+	tokenType := AccessTokenTypeBearer
+
+	// the current CreateAccessToken function, esp. CreateJWT requires an implementation of an AccessTokenClient
+	client := &jwtProfileClient{
+		id: tokenRequest.GetSubject(),
 	}
 
+	// by implementing the JWTProfileTokenStorage the storage can specify the AccessTokenType to be returned
+	tokenStorage, ok := creator.Storage().(JWTProfileTokenStorage)
+	if ok {
+		var err error
+		tokenType, err = tokenStorage.JWTProfileTokenType(ctx, tokenRequest)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, tokenType, creator, client, "")
+	if err != nil {
+		return nil, err
+	}
+	exp := uint64(validity.Seconds())
 	return &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
 		TokenType:   oidc.BearerToken,
-		ExpiresIn:   uint64(exp.Sub(time.Now().UTC()).Seconds()),
+		ExpiresIn:   exp,
 	}, nil
 }
 
@@ -76,4 +95,28 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 //deprecated: use ParseJWTProfileGrantRequest
 func ParseJWTProfileRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.JWTProfileGrantRequest, error) {
 	return ParseJWTProfileGrantRequest(r, decoder)
+}
+
+type jwtProfileClient struct {
+	id string
+}
+
+func (j *jwtProfileClient) GetID() string {
+	return j.id
+}
+
+func (j *jwtProfileClient) ClockSkew() time.Duration {
+	return 0
+}
+
+func (j *jwtProfileClient) RestrictAdditionalAccessTokenScopes() func(scopes []string) []string {
+	return func(scopes []string) []string {
+		return scopes
+	}
+}
+
+func (j *jwtProfileClient) GrantTypes() []oidc.GrantType {
+	return []oidc.GrantType{
+		oidc.GrantTypeBearer,
+	}
 }

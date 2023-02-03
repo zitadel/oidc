@@ -20,6 +20,13 @@ type TokenRequest interface {
 	GetScopes() []string
 }
 
+type AccessTokenClient interface {
+	GetID() string
+	ClockSkew() time.Duration
+	RestrictAdditionalAccessTokenScopes() func(scopes []string) []string
+	GrantTypes() []oidc.GrantType
+}
+
 func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
 	var accessToken, newRefreshToken string
 	var validity time.Duration
@@ -55,7 +62,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 	}, nil
 }
 
-func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client Client) (id, newRefreshToken string, exp time.Time, err error) {
+func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, err error) {
 	if needsRefreshToken(tokenRequest, client) {
 		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}
@@ -63,7 +70,7 @@ func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storag
 	return
 }
 
-func needsRefreshToken(tokenRequest TokenRequest, client Client) bool {
+func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool {
 	switch req := tokenRequest.(type) {
 	case AuthRequest:
 		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
@@ -74,7 +81,7 @@ func needsRefreshToken(tokenRequest TokenRequest, client Client) bool {
 	}
 }
 
-func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client Client, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
+func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
 	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
 	if err != nil {
 		return "", "", 0, err
@@ -96,7 +103,7 @@ func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
 	return crypto.Encrypt(tokenID + ":" + subject)
 }
 
-func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client Client, storage Storage) (string, error) {
+func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client AccessTokenClient, storage Storage) (string, error) {
 	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
