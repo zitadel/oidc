@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
@@ -49,6 +50,17 @@ type AuthStorage interface {
 	GetSigningKey(context.Context, chan<- jose.SigningKey)
 	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
 }
+
+// CanRefreshTokenInfo is an optional additional interface that Storage can support.
+// Supporting CanRefreshTokenInfo is required to be able to (revoke) a refresh token that
+// is neither an encrypted string of <tokenID>:<userID> nor a JWT.
+type CanRefreshTokenInfo interface {
+	// GetRefreshTokenInfo must return ErrInvalidRefreshToken when presented
+	// with a token that is not a refresh token.
+	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
+}
+
+var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 
 type ClientCredentialsStorage interface {
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
