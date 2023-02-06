@@ -90,8 +90,9 @@ Versions that also build are marked with :warning:.
 | <1.16   | :x:                |
 | 1.16    | :warning:          |
 | 1.17    | :warning:          |
-| 1.18    | :white_check_mark: |
+| 1.18    | :warning:          |
 | 1.19    | :white_check_mark: |
+| 1.20    | :white_check_mark: |
 
 ## Why another library
 
