@@ -44,6 +44,12 @@ type OPStorage interface {
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
 }
 
+// JWTProfileTokenStorage is an additional, optional storage to implement
+// implementing it, allows specifying the [AccessTokenType] of the access_token returned form the JWT Profile TokenRequest
+type JWTProfileTokenStorage interface {
+	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
+}
+
 type Storage interface {
 	AuthStorage
 	OPStorage
