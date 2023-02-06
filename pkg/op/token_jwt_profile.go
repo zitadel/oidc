@@ -53,10 +53,6 @@ func ParseJWTProfileGrantRequest(r *http.Request, decoder httphelper.Decoder) (*
 	return tokenReq, nil
 }
 
-type JWTProfileTokenStorage interface {
-	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
-}
-
 // CreateJWTTokenResponse creates an access_token response for a JWT Profile Grant request
 // by default the access_token is an opaque string, but can be specified by implementing the JWTProfileTokenStorage interface
 func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
