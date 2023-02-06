@@ -3,7 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -92,8 +92,7 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		// TODO: switch to io.ReadAll when go1.15 support is retired
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -139,8 +138,7 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 	// "The content of the response body is ignored by the client as all
 	// necessary information is conveyed in the response code."
 	if resp.StatusCode != 200 {
-		// TODO: switch to io.ReadAll when go1.15 support is retired
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err == nil {
 			return fmt.Errorf("revoke returned status %d and text: %s", resp.StatusCode, string(body))
 		} else {

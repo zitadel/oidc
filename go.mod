@@ -1,6 +1,6 @@
 module github.com/zitadel/oidc
 
-go 1.15
+go 1.16
 
 require (
 	github.com/golang/mock v1.6.0

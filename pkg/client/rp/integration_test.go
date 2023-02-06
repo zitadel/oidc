@@ -3,6 +3,7 @@ package rp_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -209,8 +210,7 @@ func getRedirect(t *testing.T, desc string, httpClient *http.Client, uri *url.UR
 
 	defer func() {
 		if t.Failed() {
-			// TODO: switch to io.ReadAll when go1.15 support is dropped
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			t.Logf("%s: GET %s: body: %s", desc, uri, string(body))
 		}
 	}()
@@ -233,8 +233,7 @@ func getForm(t *testing.T, desc string, httpClient *http.Client, uri *url.URL) [
 	require.NoErrorf(t, err, "%s: GET %s", desc, uri)
 	//nolint:errcheck
 	defer resp.Body.Close()
-	// TODO: switch to io.ReadAll when go1.15 support is dropped
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err, "%s: read GET %s", desc, uri)
 	return body
 }
@@ -256,8 +255,7 @@ func fillForm(t *testing.T, desc string, httpClient *http.Client, body []byte, u
 	defer resp.Body.Close()
 	defer func() {
 		if t.Failed() {
-			// TODO: switch to io.ReadAll when go1.15 support is dropped
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			t.Logf("%s: GET %s: body: %s", desc, uri, string(body))
 		}
 	}()
