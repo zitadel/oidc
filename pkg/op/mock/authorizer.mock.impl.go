@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/schema"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {
@@ -20,7 +20,7 @@ func NewAuthorizerExpectValid(t *testing.T, wantErr bool) op.Authorizer {
 	m := NewAuthorizer(t)
 	ExpectDecoder(m)
 	ExpectEncoder(m)
-	ExpectSigner(m, t)
+	//ExpectSigner(m, t)
 	ExpectStorage(m, t)
 	ExpectVerifier(m, t)
 	// ExpectErrorHandler(m, t, wantErr)
@@ -47,17 +47,18 @@ func ExpectEncoder(a op.Authorizer) {
 	mockA.EXPECT().Encoder().AnyTimes().Return(schema.NewEncoder())
 }
 
-func ExpectSigner(a op.Authorizer, t *testing.T) {
-	mockA := a.(*MockAuthorizer)
-	mockA.EXPECT().Signer().DoAndReturn(
-		func() op.Signer {
-			return &Sig{}
-		})
-}
+//
+//func ExpectSigner(a op.Authorizer, t *testing.T) {
+//	mockA := a.(*MockAuthorizer)
+//	mockA.EXPECT().Signer().DoAndReturn(
+//		func() op.Signer {
+//			return &Sig{}
+//		})
+//}
 
 func ExpectVerifier(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
-	mockA.EXPECT().IDTokenHintVerifier().DoAndReturn(
+	mockA.EXPECT().IDTokenHintVerifier(gomock.Any()).DoAndReturn(
 		func() op.IDTokenHintVerifier {
 			return op.NewIDTokenHintVerifier("", nil)
 		})

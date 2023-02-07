@@ -5,15 +5,13 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type Exchanger interface {
-	Issuer() string
 	Storage() Storage
 	Decoder() httphelper.Decoder
-	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
@@ -25,7 +23,36 @@ type Exchanger interface {
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		Exchange(w, r, exchanger)
+		grantType := r.FormValue("grant_type")
+		switch grantType {
+		case string(oidc.GrantTypeCode):
+			CodeExchange(w, r, exchanger)
+			return
+		case string(oidc.GrantTypeRefreshToken):
+			if exchanger.GrantTypeRefreshTokenSupported() {
+				RefreshTokenExchange(w, r, exchanger)
+				return
+			}
+		case string(oidc.GrantTypeBearer):
+			if ex, ok := exchanger.(JWTAuthorizationGrantExchanger); ok && exchanger.GrantTypeJWTAuthorizationSupported() {
+				JWTProfile(w, r, ex)
+				return
+			}
+		case string(oidc.GrantTypeTokenExchange):
+			if exchanger.GrantTypeTokenExchangeSupported() {
+				TokenExchange(w, r, exchanger)
+				return
+			}
+		case string(oidc.GrantTypeClientCredentials):
+			if exchanger.GrantTypeClientCredentialsSupported() {
+				ClientCredentialsExchange(w, r, exchanger)
+				return
+			}
+		case "":
+			RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
+			return
+		}
+		RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType))
 	}
 }
 
@@ -122,7 +149,7 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.C
 // AuthorizePrivateJWTKey authorizes a client by validating the client_assertion's signature with a previously
 // registered public key (JWT Profile)
 func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchanger JWTAuthorizationGrantExchanger) (Client, error) {
-	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier())
+	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +163,8 @@ func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchang
 	return client, nil
 }
 
-// ValidateGrantType ensures that the requested grant_type is allowed by the Client
-func ValidateGrantType(client Client, grantType oidc.GrantType) bool {
+// ValidateGrantType ensures that the requested grant_type is allowed by the client
+func ValidateGrantType(client interface{ GrantTypes() []oidc.GrantType }, grantType oidc.GrantType) bool {
 	if client == nil {
 		return false
 	}

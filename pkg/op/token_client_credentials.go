@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 // ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including
@@ -63,15 +63,15 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 	return request, nil
 }
 
-// ValidateClientCredentialsRequest validates the refresh_token request parameters including authorization check of the client
-// and returns the data representing the original auth request corresponding to the refresh_token
+// ValidateClientCredentialsRequest validates the client_credentials request parameters including authorization check of the client
+// and returns a TokenRequest and Client implementation to be used in the client_credentials response, resp. creation of the corresponding access_token.
 func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (TokenRequest, Client, error) {
 	storage, ok := exchanger.Storage().(ClientCredentialsStorage)
 	if !ok {
 		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
 	}
 
-	client, err := AuthorizeClientCredentialsClient(ctx, request, exchanger)
+	client, err := AuthorizeClientCredentialsClient(ctx, request, storage)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,12 +84,8 @@ func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientC
 	return tokenRequest, client, nil
 }
 
-func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (Client, error) {
-	if err := AuthorizeClientIDSecret(ctx, request.ClientID, request.ClientSecret, exchanger.Storage()); err != nil {
-		return nil, err
-	}
-
-	client, err := exchanger.Storage().GetClientByClientID(ctx, request.ClientID)
+func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientCredentialsRequest, storage ClientCredentialsStorage) (Client, error) {
+	client, err := storage.ClientCredentials(ctx, request.ClientID, request.ClientSecret)
 	if err != nil {
 		return nil, oidc.ErrInvalidClient().WithParent(err)
 	}
@@ -102,7 +98,7 @@ func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientC
 }
 
 func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
-	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, AccessTokenTypeJWT, creator, client, "")
+	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
 	if err != nil {
 		return nil, err
 	}

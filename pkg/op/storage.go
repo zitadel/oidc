@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type AuthStorage interface {
@@ -47,8 +47,14 @@ type AuthStorage interface {
 	// tokenOrTokenID will be the refresh token, not its ID.
 	RevokeToken(ctx context.Context, tokenOrTokenID string, userID string, clientID string) *oidc.Error
 
-	GetSigningKey(context.Context, chan<- jose.SigningKey)
-	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
+	SigningKey(context.Context) (SigningKey, error)
+	SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error)
+	KeySet(context.Context) ([]Key, error)
+}
+
+type ClientCredentialsStorage interface {
+	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
+	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
 }
 
 // CanRefreshTokenInfo is an optional additional interface that Storage can support.
@@ -62,10 +68,6 @@ type CanRefreshTokenInfo interface {
 
 var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 
-type ClientCredentialsStorage interface {
-	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
-}
-
 type OPStorage interface {
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
@@ -78,6 +80,12 @@ type OPStorage interface {
 	// it passes the clientID.
 	GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
+}
+
+// JWTProfileTokenStorage is an additional, optional storage to implement
+// implementing it, allows specifying the [AccessTokenType] of the access_token returned form the JWT Profile TokenRequest
+type JWTProfileTokenStorage interface {
+	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
 }
 
 // Storage is a required parameter for NewOpenIDProvider(). In addition to the

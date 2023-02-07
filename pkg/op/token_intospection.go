@@ -1,24 +1,25 @@
 package op
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type Introspector interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier() AccessTokenVerifier
+	AccessTokenVerifier(context.Context) AccessTokenVerifier
 }
 
 type IntrospectorJWTProfile interface {
 	Introspector
-	JWTProfileVerifier() JWTProfileVerifier
+	JWTProfileVerifier(context.Context) JWTProfileVerifier
 }
 
 func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *http.Request) {
@@ -62,7 +63,7 @@ func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) 
 		return "", "", errors.New("unable to parse request")
 	}
 	if introspectorJWTProfile, ok := introspector.(IntrospectorJWTProfile); ok && req.ClientAssertion != "" {
-		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, introspectorJWTProfile.JWTProfileVerifier())
+		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, introspectorJWTProfile.JWTProfileVerifier(r.Context()))
 		if err == nil {
 			return req.Token, profile.Issuer, nil
 		}

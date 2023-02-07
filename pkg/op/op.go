@@ -12,8 +12,8 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 const (
@@ -29,78 +29,79 @@ const (
 	defaultKeysEndpoint          = "keys"
 )
 
-var DefaultEndpoints = &endpoints{
-	Authorization: NewEndpoint(defaultAuthorizationEndpoint),
-	Token:         NewEndpoint(defaultTokenEndpoint),
-	Introspection: NewEndpoint(defaultIntrospectEndpoint),
-	Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
-	Revocation:    NewEndpoint(defaultRevocationEndpoint),
-	EndSession:    NewEndpoint(defaultEndSessionEndpoint),
-	JwksURI:       NewEndpoint(defaultKeysEndpoint),
-}
+var (
+	DefaultEndpoints = &endpoints{
+		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
+		Token:         NewEndpoint(defaultTokenEndpoint),
+		Introspection: NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:    NewEndpoint(defaultRevocationEndpoint),
+		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:       NewEndpoint(defaultKeysEndpoint),
+	}
+
+	defaultCORSOptions = cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders: []string{
+			"Origin",
+			"Accept",
+			"Accept-Language",
+			"Authorization",
+			"Content-Type",
+			"X-Requested-With",
+		},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodPost,
+		},
+		ExposedHeaders: []string{
+			"Location",
+			"Content-Length",
+		},
+		AllowOriginFunc: func(_ string) bool {
+			return true
+		},
+	}
+)
 
 type OpenIDProvider interface {
 	Configuration
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier() IDTokenHintVerifier
-	AccessTokenVerifier() AccessTokenVerifier
+	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
-	Signer() Signer
 	Probes() []ProbesFn
 	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
 
-var defaultCORSOptions = cors.Options{
-	AllowCredentials: true,
-	AllowedHeaders: []string{
-		"Origin",
-		"Accept",
-		"Accept-Language",
-		"Authorization",
-		"Content-Type",
-		"X-Requested-With",
-	},
-	AllowedMethods: []string{
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodPost,
-	},
-	ExposedHeaders: []string{
-		"Location",
-		"Content-Length",
-	},
-	AllowOriginFunc: func(_ string) bool {
-		return true
-	},
-}
-
 func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router {
-	intercept := buildInterceptor(interceptors...)
 	router := mux.NewRouter()
 	router.Use(cors.New(defaultCORSOptions).Handler)
+	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
-	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Signer()))
-	router.Handle(o.AuthorizationEndpoint().Relative(), intercept(authorizeHandler(o)))
-	router.NewRoute().Path(authCallbackPath(o)).Queries("id", "{id}").Handler(intercept(authorizeCallbackHandler(o)))
-	router.Handle(o.TokenEndpoint().Relative(), intercept(tokenHandler(o)))
+	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Storage()))
+	router.HandleFunc(o.AuthorizationEndpoint().Relative(), authorizeHandler(o))
+	router.NewRoute().Path(authCallbackPath(o)).Queries("id", "{id}").HandlerFunc(authorizeCallbackHandler(o))
+	router.HandleFunc(o.TokenEndpoint().Relative(), tokenHandler(o))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
 	router.HandleFunc(o.RevocationEndpoint().Relative(), revocationHandler(o))
-	router.Handle(o.EndSessionEndpoint().Relative(), intercept(endSessionHandler(o)))
+	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	return router
 }
 
 // AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
-func AuthCallbackURL(o OpenIDProvider) func(string) string {
-	return func(requestID string) string {
-		return o.AuthorizationEndpoint().Absolute(o.Issuer()) + authCallbackPathSuffix + "?id=" + requestID
+func AuthCallbackURL(o OpenIDProvider) func(context.Context, string) string {
+	return func(ctx context.Context, requestID string) string {
+		return o.AuthorizationEndpoint().Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + requestID
 	}
 }
 
@@ -109,7 +110,6 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	Issuer                   string
 	CryptoKey                [32]byte
 	DefaultLogoutRedirectURI string
 	CodeMethodS256           bool
@@ -133,29 +133,34 @@ type endpoints struct {
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
 // a http.Router that handles a suite of endpoints (some paths can be overridden):
-//  /healthz
-//  /ready
-//  /.well-known/openid-configuration
-//  /oauth/token
-//  /oauth/introspect
-//  /callback
-//  /authorize
-//  /userinfo
-//  /revoke
-//  /end_session
-//  /keys
+//
+//	/healthz
+//	/ready
+//	/.well-known/openid-configuration
+//	/oauth/token
+//	/oauth/introspect
+//	/callback
+//	/authorize
+//	/userinfo
+//	/revoke
+//	/end_session
+//	/keys
+//
 // This does not include login. Login is handled with a redirect that includes the
 // request ID. The redirect for logins is specified per-client by Client.LoginURL().
 // Successful logins should mark the request as authorized and redirect back to to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opOpts ...Option) (OpenIDProvider, error) {
-	err := ValidateIssuer(config.Issuer)
-	if err != nil {
-		return nil, err
-	}
+func NewOpenIDProvider(ctx context.Context, issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
+	return newProvider(ctx, config, storage, StaticIssuer(issuer), opOpts...)
+}
 
-	o := &openidProvider{
+func NewDynamicOpenIDProvider(ctx context.Context, path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
+	return newProvider(ctx, config, storage, IssuerFromHost(path), opOpts...)
+}
+
+func newProvider(ctx context.Context, config *Config, storage Storage, issuer func(bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
+	o := &Provider{
 		config:    config,
 		storage:   storage,
 		endpoints: DefaultEndpoints,
@@ -168,9 +173,10 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 		}
 	}
 
-	keyCh := make(chan jose.SigningKey)
-	go storage.GetSigningKey(ctx, keyCh)
-	o.signer = NewSigner(ctx, storage, keyCh)
+	o.issuer, err = issuer(o.insecure)
+	if err != nil {
+		return nil, err
+	}
 
 	o.httpHandler = CreateRouter(o, o.interceptors...)
 
@@ -182,22 +188,17 @@ func NewOpenIDProvider(ctx context.Context, config *Config, storage Storage, opO
 	o.crypto = NewAESCrypto(config.CryptoKey)
 
 	// Avoid potential race conditions by calling these early
-	_ = o.AccessTokenVerifier() // sets accessTokenVerifier
-	_ = o.IDTokenHintVerifier() // sets idTokenHintVerifier
-	_ = o.JWTProfileVerifier()  // sets jwtProfileVerifier
-	_ = o.openIDKeySet()        // sets keySet
+	_ = o.openIDKeySet() // sets keySet
 
 	return o, nil
 }
 
-type openidProvider struct {
+type Provider struct {
 	config                  *Config
+	issuer                  IssuerFromRequest
+	insecure                bool
 	endpoints               *endpoints
 	storage                 Storage
-	signer                  Signer
-	idTokenHintVerifier     IDTokenHintVerifier
-	jwtProfileVerifier      JWTProfileVerifier
-	accessTokenVerifier     AccessTokenVerifier
 	keySet                  *openIDKeySet
 	crypto                  Crypto
 	httpHandler             http.Handler
@@ -209,159 +210,149 @@ type openidProvider struct {
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 }
 
-func (o *openidProvider) Issuer() string {
-	return o.config.Issuer
+func (o *Provider) IssuerFromRequest(r *http.Request) string {
+	return o.issuer(r)
 }
 
-func (o *openidProvider) AuthorizationEndpoint() Endpoint {
+func (o *Provider) Insecure() bool {
+	return o.insecure
+}
+
+func (o *Provider) AuthorizationEndpoint() Endpoint {
 	return o.endpoints.Authorization
 }
 
-func (o *openidProvider) TokenEndpoint() Endpoint {
+func (o *Provider) TokenEndpoint() Endpoint {
 	return o.endpoints.Token
 }
 
-func (o *openidProvider) IntrospectionEndpoint() Endpoint {
+func (o *Provider) IntrospectionEndpoint() Endpoint {
 	return o.endpoints.Introspection
 }
 
-func (o *openidProvider) UserinfoEndpoint() Endpoint {
+func (o *Provider) UserinfoEndpoint() Endpoint {
 	return o.endpoints.Userinfo
 }
 
-func (o *openidProvider) RevocationEndpoint() Endpoint {
+func (o *Provider) RevocationEndpoint() Endpoint {
 	return o.endpoints.Revocation
 }
 
-func (o *openidProvider) EndSessionEndpoint() Endpoint {
+func (o *Provider) EndSessionEndpoint() Endpoint {
 	return o.endpoints.EndSession
 }
 
-func (o *openidProvider) KeysEndpoint() Endpoint {
+func (o *Provider) KeysEndpoint() Endpoint {
 	return o.endpoints.JwksURI
 }
 
-func (o *openidProvider) AuthMethodPostSupported() bool {
+func (o *Provider) AuthMethodPostSupported() bool {
 	return o.config.AuthMethodPost
 }
 
-func (o *openidProvider) CodeMethodS256Supported() bool {
+func (o *Provider) CodeMethodS256Supported() bool {
 	return o.config.CodeMethodS256
 }
 
-func (o *openidProvider) AuthMethodPrivateKeyJWTSupported() bool {
+func (o *Provider) AuthMethodPrivateKeyJWTSupported() bool {
 	return o.config.AuthMethodPrivateKeyJWT
 }
 
-func (o *openidProvider) TokenEndpointSigningAlgorithmsSupported() []string {
+func (o *Provider) TokenEndpointSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
-func (o *openidProvider) GrantTypeRefreshTokenSupported() bool {
+func (o *Provider) GrantTypeRefreshTokenSupported() bool {
 	return o.config.GrantTypeRefreshToken
 }
 
-func (o *openidProvider) GrantTypeTokenExchangeSupported() bool {
+func (o *Provider) GrantTypeTokenExchangeSupported() bool {
 	return false
 }
 
-func (o *openidProvider) GrantTypeJWTAuthorizationSupported() bool {
+func (o *Provider) GrantTypeJWTAuthorizationSupported() bool {
 	return true
 }
 
-func (o *openidProvider) GrantTypeClientCredentialsSupported() bool {
+func (o *Provider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
+	return true
+}
+
+func (o *Provider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
+	return []string{"RS256"}
+}
+
+func (o *Provider) GrantTypeClientCredentialsSupported() bool {
 	_, ok := o.storage.(ClientCredentialsStorage)
 	return ok
 }
 
-func (o *openidProvider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
+func (o *Provider) RevocationAuthMethodPrivateKeyJWTSupported() bool {
 	return true
 }
 
-func (o *openidProvider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
+func (o *Provider) RevocationEndpointSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
-func (o *openidProvider) RevocationAuthMethodPrivateKeyJWTSupported() bool {
-	return true
-}
-
-func (o *openidProvider) RevocationEndpointSigningAlgorithmsSupported() []string {
-	return []string{"RS256"}
-}
-
-func (o *openidProvider) RequestObjectSupported() bool {
+func (o *Provider) RequestObjectSupported() bool {
 	return o.config.RequestObjectSupported
 }
 
-func (o *openidProvider) RequestObjectSigningAlgorithmsSupported() []string {
+func (o *Provider) RequestObjectSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
-func (o *openidProvider) SupportedUILocales() []language.Tag {
+func (o *Provider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
 }
 
-func (o *openidProvider) Storage() Storage {
+func (o *Provider) Storage() Storage {
 	return o.storage
 }
 
-func (o *openidProvider) Decoder() httphelper.Decoder {
+func (o *Provider) Decoder() httphelper.Decoder {
 	return o.decoder
 }
 
-func (o *openidProvider) Encoder() httphelper.Encoder {
+func (o *Provider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 
-func (o *openidProvider) IDTokenHintVerifier() IDTokenHintVerifier {
-	if o.idTokenHintVerifier == nil {
-		o.idTokenHintVerifier = NewIDTokenHintVerifier(o.Issuer(), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
-	}
-	return o.idTokenHintVerifier
+func (o *Provider) IDTokenHintVerifier(ctx context.Context) IDTokenHintVerifier {
+	return NewIDTokenHintVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 }
 
-func (o *openidProvider) JWTProfileVerifier() JWTProfileVerifier {
-	if o.jwtProfileVerifier == nil {
-		o.jwtProfileVerifier = NewJWTProfileVerifier(o.Storage(), o.Issuer(), 1*time.Hour, time.Second)
-	}
-	return o.jwtProfileVerifier
+func (o *Provider) JWTProfileVerifier(ctx context.Context) JWTProfileVerifier {
+	return NewJWTProfileVerifier(o.Storage(), IssuerFromContext(ctx), 1*time.Hour, time.Second)
 }
 
-func (o *openidProvider) AccessTokenVerifier() AccessTokenVerifier {
-	if o.accessTokenVerifier == nil {
-		o.accessTokenVerifier = NewAccessTokenVerifier(o.Issuer(), o.openIDKeySet(), o.accessTokenVerifierOpts...)
-	}
-	return o.accessTokenVerifier
+func (o *Provider) AccessTokenVerifier(ctx context.Context) AccessTokenVerifier {
+	return NewAccessTokenVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 }
 
-func (o *openidProvider) openIDKeySet() oidc.KeySet {
+func (o *Provider) openIDKeySet() oidc.KeySet {
 	if o.keySet == nil {
 		o.keySet = &openIDKeySet{o.Storage()}
 	}
 	return o.keySet
 }
 
-func (o *openidProvider) Crypto() Crypto {
+func (o *Provider) Crypto() Crypto {
 	return o.crypto
 }
 
-func (o *openidProvider) DefaultLogoutRedirectURI() string {
+func (o *Provider) DefaultLogoutRedirectURI() string {
 	return o.config.DefaultLogoutRedirectURI
 }
 
-func (o *openidProvider) Signer() Signer {
-	return o.signer
-}
-
-func (o *openidProvider) Probes() []ProbesFn {
+func (o *Provider) Probes() []ProbesFn {
 	return []ProbesFn{
-		ReadySigner(o.Signer()),
 		ReadyStorage(o.Storage()),
 	}
 }
 
-func (o *openidProvider) HttpHandler() http.Handler {
+func (o *Provider) HttpHandler() http.Handler {
 	return o.httpHandler
 }
 
@@ -372,22 +363,31 @@ type openIDKeySet struct {
 // VerifySignature implements the oidc.KeySet interface
 // providing an implementation for the keys stored in the OP Storage interface
 func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
-	keySet, err := o.Storage.GetKeySet(ctx)
+	keySet, err := o.Storage.KeySet(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
 	keyID, alg := oidc.GetKeyIDAndAlg(jws)
-	key, err := oidc.FindMatchingKey(keyID, oidc.KeyUseSignature, alg, keySet.Keys...)
+	key, err := oidc.FindMatchingKey(keyID, oidc.KeyUseSignature, alg, jsonWebKeySet(keySet).Keys...)
 	if err != nil {
 		return nil, fmt.Errorf("invalid signature: %w", err)
 	}
 	return jws.Verify(&key)
 }
 
-type Option func(o *openidProvider) error
+type Option func(o *Provider) error
+
+// WithAllowInsecure allows the use of http (instead of https) for issuers
+// this is not recommended for production use and violates the OIDC specification
+func WithAllowInsecure() Option {
+	return func(o *Provider) error {
+		o.insecure = true
+		return nil
+	}
+}
 
 func WithCustomAuthEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -397,7 +397,7 @@ func WithCustomAuthEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomTokenEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -407,7 +407,7 @@ func WithCustomTokenEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -417,7 +417,7 @@ func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -427,7 +427,7 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -437,7 +437,7 @@ func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -447,7 +447,7 @@ func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomKeysEndpoint(endpoint Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
 		}
@@ -457,7 +457,7 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 }
 
 func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		o.endpoints.Authorization = auth
 		o.endpoints.Token = token
 		o.endpoints.Userinfo = userInfo
@@ -469,38 +469,32 @@ func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys End
 }
 
 func WithHttpInterceptors(interceptors ...HttpInterceptor) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		o.interceptors = append(o.interceptors, interceptors...)
 		return nil
 	}
 }
 
 func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		o.accessTokenVerifierOpts = opts
 		return nil
 	}
 }
 
 func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
-	return func(o *openidProvider) error {
+	return func(o *Provider) error {
 		o.idTokenHintVerifierOpts = opts
 		return nil
 	}
 }
 
-func buildInterceptor(interceptors ...HttpInterceptor) func(http.HandlerFunc) http.Handler {
-	return func(handlerFunc http.HandlerFunc) http.Handler {
-		handler := handlerFuncToHandler(handlerFunc)
+func intercept(i IssuerFromRequest, interceptors ...HttpInterceptor) func(handler http.Handler) http.Handler {
+	issuerInterceptor := NewIssuerInterceptor(i)
+	return func(handler http.Handler) http.Handler {
 		for i := len(interceptors) - 1; i >= 0; i-- {
 			handler = interceptors[i](handler)
 		}
-		return handler
+		return cors.New(defaultCORSOptions).Handler(issuerInterceptor.Handler(handler))
 	}
-}
-
-func handlerFuncToHandler(handlerFunc http.HandlerFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlerFunc(w, r)
-	})
 }

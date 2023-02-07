@@ -1,4 +1,4 @@
-module github.com/zitadel/oidc
+module github.com/zitadel/oidc/v2
 
 go 1.16
 
@@ -15,7 +15,6 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
-	github.com/zitadel/logging v0.3.4
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	golang.org/x/text v0.5.0
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
