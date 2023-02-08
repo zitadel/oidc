@@ -82,25 +82,6 @@ func ExpectValidClientID(s op.Storage) {
 		})
 }
 
-//
-//func ExpectSigningKeyInvalid(s op.Storage) {
-//	mockS := s.(*MockStorage)
-//	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
-//		func(_ context.Context, keyCh chan<- jose.SigningKey) {
-//			keyCh <- jose.SigningKey{}
-//		},
-//	)
-//}
-//
-//func ExpectSigningKey(s op.Storage) {
-//	mockS := s.(*MockStorage)
-//	mockS.EXPECT().GetSigningKey(gomock.Any(), gomock.Any()).DoAndReturn(
-//		func(_ context.Context, keyCh chan<- jose.SigningKey) {
-//			keyCh <- jose.SigningKey{Algorithm: jose.HS256, Key: []byte("key")}
-//		},
-//	)
-//}
-
 type ConfClient struct {
 	id              string
 	appType         op.ApplicationType

@@ -27,16 +27,6 @@ func NewAuthorizerExpectValid(t *testing.T, wantErr bool) op.Authorizer {
 	return m
 }
 
-// func NewAuthorizerExpectDecoderFails(t *testing.T) op.Authorizer {
-// 	m := NewAuthorizer(t)
-// 	ExpectDecoderFails(m)
-// 	ExpectEncoder(m)
-// 	ExpectSigner(m, t)
-// 	ExpectStorage(m, t)
-// 	ExpectErrorHandler(m, t)
-// 	return m
-// }
-
 func ExpectDecoder(a op.Authorizer) {
 	mockA := a.(*MockAuthorizer)
 	mockA.EXPECT().Decoder().AnyTimes().Return(schema.NewDecoder())
