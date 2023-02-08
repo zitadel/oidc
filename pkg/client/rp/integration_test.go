@@ -108,7 +108,7 @@ func TestRelyingPartySession(t *testing.T) {
 
 	t.Log("------- post to login form, get redirect to OP ------")
 	postLoginRedirectURL := fillForm(t, "fill login form", httpClient, form, loginPageURL,
-		gosubmit.Set("username", "test-user"),
+		gosubmit.Set("username", "test-user@local-site"),
 		gosubmit.Set("password", "verysecure"))
 	t.Logf("Get redirect from %s", postLoginRedirectURL)
 
