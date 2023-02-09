@@ -214,8 +214,10 @@ type TokenExchangeRequest struct {
 }
 
 type ClientCredentialsRequest struct {
-	GrantType    GrantType           `schema:"grant_type"`
-	Scope        SpaceDelimitedArray `schema:"scope"`
-	ClientID     string              `schema:"client_id"`
-	ClientSecret string              `schema:"client_secret"`
+	GrantType           GrantType           `schema:"grant_type"`
+	Scope               SpaceDelimitedArray `schema:"scope"`
+	ClientID            string              `schema:"client_id"`
+	ClientSecret        string              `schema:"client_secret"`
+	ClientAssertion     string              `schema:"client_assertion"`
+	ClientAssertionType string              `schema:"client_assertion_type"`
 }

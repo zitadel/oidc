@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
-	"github.com/zitadel/oidc/pkg/op/mock"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/op/mock"
 )
 
 //

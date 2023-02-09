@@ -34,7 +34,7 @@ The most important packages of the library:
     /client/app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
     /client/github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
     /client/service    demonstration of JWT Profile Authorization Grant
-    /server            example of an OpenID Provider implementation including some very basic login UI
+    /server            examples of an OpenID Provider implementations (including dynamic) with some very basic login UI
 </pre>
 
 ## How To Use It
@@ -44,15 +44,26 @@ Check the `/example` folder where example code for different scenarios is locate
 ```bash
 # start oidc op server
 # oidc discovery http://localhost:9998/.well-known/openid-configuration
-go run github.com/zitadel/oidc/example/server
+go run github.com/zitadel/oidc/v2/example/server
 # start oidc web client (in a new terminal)
 CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998 SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/example/client/app
 ```
 
 - open http://localhost:9999/login in your browser
 - you will be redirected to op server and the login UI 
-- login with user `test-user` and password `verysecure`
+- login with user `test-user@localhost` and password `verysecure`
 - the OP will redirect you to the client app, which displays the user info
+
+for the dynamic issuer, just start it with:
+```bash
+go run github.com/zitadel/oidc/v2/example/server/dynamic
+``` 
+the oidc web client above will still work, but if you add `oidc.local` (pointing to 127.0.0.1) in your hosts file you can also start it with:
+```bash
+CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/v2/example/client/app
+```
+
+> Note: Usernames are suffixed with the hostname (`test-user@localhost` or `test-user@oidc.local`)
 
 ## Features
 

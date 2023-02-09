@@ -1,18 +1,19 @@
 package op_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
-	"github.com/zitadel/oidc/pkg/op/mock"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/op/mock"
 )
 
 func TestDiscover(t *testing.T) {
@@ -47,8 +48,9 @@ func TestDiscover(t *testing.T) {
 
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
-		c op.Configuration
-		s op.Signer
+		request *http.Request
+		c       op.Configuration
+		s       op.DiscoverStorage
 	}
 	tests := []struct {
 		name string
@@ -59,9 +61,8 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.CreateDiscoveryConfig(tt.args.c, tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CreateDiscoveryConfig() = %v, want %v", got, tt.want)
-			}
+			got := op.CreateDiscoveryConfig(tt.args.request, tt.args.c, tt.args.s)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -83,9 +84,8 @@ func Test_scopes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.Scopes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("scopes() = %v, want %v", got, tt.want)
-			}
+			got := op.Scopes(tt.args.c)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -99,13 +99,16 @@ func Test_ResponseTypes(t *testing.T) {
 		args args
 		want []string
 	}{
-		// TODO: Add test cases.
+		{
+			"code and implicit flow",
+			args{},
+			[]string{"code", "id_token", "id_token token"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.ResponseTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("responseTypes() = %v, want %v", got, tt.want)
-			}
+			got := op.ResponseTypes(tt.args.c)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -117,63 +120,51 @@ func Test_GrantTypes(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := op.GrantTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("grantTypes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSupportedClaims(t *testing.T) {
-	type args struct {
-		c op.Configuration
-	}
-	tests := []struct {
-		name string
-		args args
-		want []string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := op.SupportedClaims(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SupportedClaims() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_SigAlgorithms(t *testing.T) {
-	m := mock.NewMockSigner(gomock.NewController(t))
-	type args struct {
-		s op.Signer
-	}
-	tests := []struct {
-		name string
-		args args
-		want []string
+		want []oidc.GrantType
 	}{
 		{
-			"",
-			args{func() op.Signer {
-				m.EXPECT().SignatureAlgorithm().Return(jose.RS256)
-				return m
-			}()},
-			[]string{"RS256"},
+			"code and implicit flow",
+			args{
+				func() op.Configuration {
+					c := mock.NewMockConfiguration(gomock.NewController(t))
+					c.EXPECT().GrantTypeRefreshTokenSupported().Return(false)
+					c.EXPECT().GrantTypeTokenExchangeSupported().Return(false)
+					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(false)
+					c.EXPECT().GrantTypeClientCredentialsSupported().Return(false)
+					return c
+				}(),
+			},
+			[]oidc.GrantType{
+				oidc.GrantTypeCode,
+				oidc.GrantTypeImplicit,
+			},
+		},
+		{
+			"code, implicit flow, refresh token, token exchange, jwt profile, client_credentials",
+			args{
+				func() op.Configuration {
+					c := mock.NewMockConfiguration(gomock.NewController(t))
+					c.EXPECT().GrantTypeRefreshTokenSupported().Return(true)
+					c.EXPECT().GrantTypeTokenExchangeSupported().Return(true)
+					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(true)
+					c.EXPECT().GrantTypeClientCredentialsSupported().Return(true)
+					return c
+				}(),
+			},
+			[]oidc.GrantType{
+				oidc.GrantTypeCode,
+				oidc.GrantTypeImplicit,
+				oidc.GrantTypeRefreshToken,
+				oidc.GrantTypeClientCredentials,
+				oidc.GrantTypeTokenExchange,
+				oidc.GrantTypeBearer,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.SigAlgorithms(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sigAlgorithms() = %v, want %v", got, tt.want)
-			}
+			got := op.GrantTypes(tt.args.c)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -195,9 +186,80 @@ func Test_SubjectTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.SubjectTypes(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("subjectTypes() = %v, want %v", got, tt.want)
-			}
+			got := op.SubjectTypes(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_SigAlgorithms(t *testing.T) {
+	m := mock.NewMockDiscoverStorage(gomock.NewController(t))
+	type args struct {
+		s op.DiscoverStorage
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"",
+			args{func() op.DiscoverStorage {
+				m.EXPECT().SignatureAlgorithms(gomock.Any()).Return([]jose.SignatureAlgorithm{jose.RS256}, nil)
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.SigAlgorithms(context.Background(), tt.args.s)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_RequestObjectSigAlgorithms(t *testing.T) {
+	m := mock.NewMockConfiguration(gomock.NewController(t))
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"not supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().RequestObjectSupported().Return(false)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().RequestObjectSupported().Return(true)
+				m.EXPECT().RequestObjectSigningAlgorithmsSupported().Return(nil)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, list",
+			args{func() op.Configuration {
+				m.EXPECT().RequestObjectSupported().Return(true)
+				m.EXPECT().RequestObjectSigningAlgorithmsSupported().Return([]string{"RS256"})
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.RequestObjectSigAlgorithms(tt.args.c)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -244,9 +306,311 @@ func Test_AuthMethodsTokenEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := op.AuthMethodsTokenEndpoint(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("authMethods() = %v, want %v", got, tt.want)
-			}
+			got := op.AuthMethodsTokenEndpoint(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_TokenSigAlgorithms(t *testing.T) {
+	m := mock.NewMockConfiguration(gomock.NewController(t))
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"not supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().TokenEndpointSigningAlgorithmsSupported().Return(nil)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, list",
+			args{func() op.Configuration {
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().TokenEndpointSigningAlgorithmsSupported().Return([]string{"RS256"})
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.TokenSigAlgorithms(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_IntrospectionSigAlgorithms(t *testing.T) {
+	m := mock.NewMockConfiguration(gomock.NewController(t))
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"not supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().IntrospectionAuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().IntrospectionAuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().IntrospectionEndpointSigningAlgorithmsSupported().Return(nil)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, list",
+			args{func() op.Configuration {
+				m.EXPECT().IntrospectionAuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().IntrospectionEndpointSigningAlgorithmsSupported().Return([]string{"RS256"})
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.IntrospectionSigAlgorithms(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_AuthMethodsIntrospectionEndpoint(t *testing.T) {
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []oidc.AuthMethod
+	}{
+		{
+			"basic only",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodBasic},
+		},
+		{
+			"basic and private_key_jwt",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(true)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodBasic, oidc.AuthMethodPrivateKeyJWT},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.AuthMethodsIntrospectionEndpoint(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_RevocationSigAlgorithms(t *testing.T) {
+	m := mock.NewMockConfiguration(gomock.NewController(t))
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"not supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().RevocationAuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, empty",
+			args{func() op.Configuration {
+				m.EXPECT().RevocationAuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().RevocationEndpointSigningAlgorithmsSupported().Return(nil)
+				return m
+			}()},
+			nil,
+		},
+		{
+			"supported, list",
+			args{func() op.Configuration {
+				m.EXPECT().RevocationAuthMethodPrivateKeyJWTSupported().Return(true)
+				m.EXPECT().RevocationEndpointSigningAlgorithmsSupported().Return([]string{"RS256"})
+				return m
+			}()},
+			[]string{"RS256"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.RevocationSigAlgorithms(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_AuthMethodsRevocationEndpoint(t *testing.T) {
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []oidc.AuthMethod
+	}{
+		{
+			"none and basic",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPostSupported().Return(false)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic},
+		},
+		{
+			"none, basic and post",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPostSupported().Return(true)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(false)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic, oidc.AuthMethodPost},
+		},
+		{
+			"none, basic, post and private_key_jwt",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().AuthMethodPostSupported().Return(true)
+				m.EXPECT().AuthMethodPrivateKeyJWTSupported().Return(true)
+				return m
+			}()},
+			[]oidc.AuthMethod{oidc.AuthMethodNone, oidc.AuthMethodBasic, oidc.AuthMethodPost, oidc.AuthMethodPrivateKeyJWT},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.AuthMethodsRevocationEndpoint(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestSupportedClaims(t *testing.T) {
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			"scopes",
+			args{},
+			[]string{
+				"sub",
+				"aud",
+				"exp",
+				"iat",
+				"iss",
+				"auth_time",
+				"nonce",
+				"acr",
+				"amr",
+				"c_hash",
+				"at_hash",
+				"act",
+				"scopes",
+				"client_id",
+				"azp",
+				"preferred_username",
+				"name",
+				"family_name",
+				"given_name",
+				"locale",
+				"email",
+				"email_verified",
+				"phone_number",
+				"phone_number_verified",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.SupportedClaims(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_CodeChallengeMethods(t *testing.T) {
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want []oidc.CodeChallengeMethod
+	}{
+		{
+			"not supported",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().CodeMethodS256Supported().Return(false)
+				return m
+			}()},
+			[]oidc.CodeChallengeMethod{},
+		},
+		{
+			"S256",
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().CodeMethodS256Supported().Return(true)
+				return m
+			}()},
+			[]oidc.CodeChallengeMethod{oidc.CodeChallengeMethodS256},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.CodeChallengeMethods(tt.args.c)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

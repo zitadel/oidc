@@ -14,9 +14,9 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/client"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 const (
@@ -255,7 +255,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
-//deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
+// deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
@@ -304,7 +304,7 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 
 // Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
 //
-//deprecated: use client.Discover
+// deprecated: use client.Discover
 func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	req, err := http.NewRequest("GET", wellKnown, nil)
@@ -323,7 +323,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 }
 
 // AuthURL returns the auth request url
-//(wrapping the oauth2 `AuthCodeURL`)
+// (wrapping the oauth2 `AuthCodeURL`)
 func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {

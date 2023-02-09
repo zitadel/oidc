@@ -15,28 +15,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zitadel/oidc/example/server/exampleop"
-	"github.com/zitadel/oidc/example/server/storage"
-
 	"github.com/jeremija/gosubmit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/pkg/client/rp"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/example/server/exampleop"
+	"github.com/zitadel/oidc/v2/example/server/storage"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 func TestRelyingPartySession(t *testing.T) {
 	t.Log("------- start example OP ------")
 	ctx := context.Background()
-	exampleStorage := storage.NewStorage(storage.NewUserStore())
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
 	var dh deferredHandler
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
 	dh.Handler = exampleop.SetupServer(ctx, opServer.URL, exampleStorage)
 
-	targetURL := "http://local-site"
 	localURL, err := url.Parse(targetURL + "/login?requestID=1234")
 	require.NoError(t, err, "local url")
 
@@ -109,7 +108,7 @@ func TestRelyingPartySession(t *testing.T) {
 
 	t.Log("------- post to login form, get redirect to OP ------")
 	postLoginRedirectURL := fillForm(t, "fill login form", httpClient, form, loginPageURL,
-		gosubmit.Set("username", "test-user"),
+		gosubmit.Set("username", "test-user@local-site"),
 		gosubmit.Set("password", "verysecure"))
 	t.Logf("Get redirect from %s", postLoginRedirectURL)
 

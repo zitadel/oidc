@@ -11,9 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
-	str "github.com/zitadel/oidc/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	str "github.com/zitadel/oidc/v2/pkg/strings"
 )
 
 type AuthRequest interface {
@@ -38,10 +38,8 @@ type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	Signer() Signer
-	IDTokenHintVerifier() IDTokenHintVerifier
+	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
 	Crypto() Crypto
-	Issuer() string
 	RequestObjectSupported() bool
 }
 
@@ -72,8 +70,9 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
 	}
+	ctx := r.Context()
 	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
-		authReq, err = ParseRequestObject(r.Context(), authReq, authorizer.Storage(), authorizer.Issuer())
+		authReq, err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
 		if err != nil {
 			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 			return
@@ -91,7 +90,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
-	userID, err := validation(r.Context(), authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier())
+	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
 		return
@@ -100,12 +99,12 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer.Encoder())
 		return
 	}
-	req, err := authorizer.Storage().CreateAuthRequest(r.Context(), authReq, userID)
+	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer.Encoder())
 		return
 	}
-	client, err := authorizer.Storage().GetClientByClientID(r.Context(), req.GetClientID())
+	client, err := authorizer.Storage().GetClientByClientID(ctx, req.GetClientID())
 	if err != nil {
 		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer.Encoder())
 		return

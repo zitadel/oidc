@@ -7,22 +7,22 @@ import (
 	"net/url"
 	"strings"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type Revoker interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier() AccessTokenVerifier
+	AccessTokenVerifier(context.Context) AccessTokenVerifier
 	AuthMethodPrivateKeyJWTSupported() bool
 	AuthMethodPostSupported() bool
 }
 
 type RevokerJWTProfile interface {
 	Revoker
-	JWTProfileVerifier() JWTProfileVerifier
+	JWTProfileVerifier(context.Context) JWTProfileVerifier
 }
 
 func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request) {
@@ -87,7 +87,7 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 		if !ok || !revoker.AuthMethodPrivateKeyJWTSupported() {
 			return "", "", "", oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
 		}
-		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, revokerJWTProfile.JWTProfileVerifier())
+		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, revokerJWTProfile.JWTProfileVerifier(r.Context()))
 		if err == nil {
 			return req.Token, req.TokenTypeHint, profile.Issuer, nil
 		}
@@ -151,7 +151,7 @@ func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider Use
 		}
 		return splitToken[0], splitToken[1], true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
+	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", false
 	}

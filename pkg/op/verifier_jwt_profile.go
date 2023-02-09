@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type JWTProfileVerifier interface {

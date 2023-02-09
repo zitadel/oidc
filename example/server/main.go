@@ -2,23 +2,28 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
-	"github.com/zitadel/oidc/example/server/exampleop"
-	"github.com/zitadel/oidc/example/server/storage"
+	"github.com/zitadel/oidc/v2/example/server/exampleop"
+	"github.com/zitadel/oidc/v2/example/server/storage"
 )
 
 func main() {
 	ctx := context.Background()
 
+	//we will run on :9998
+	port := "9998"
+	//which gives us the issuer: //http://localhost:9998/
+	issuer := fmt.Sprintf("http://localhost:%s/", port)
+
 	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
 	// this might be the layer for accessing your database
 	// in this example it will be handled in-memory
-	storage := storage.NewStorage(storage.NewUserStore())
+	storage := storage.NewStorage(storage.NewUserStore(issuer))
 
-	port := "9998"
-	router := exampleop.SetupServer(ctx, "http://localhost:"+port, storage)
+	router := exampleop.SetupServer(ctx, issuer, storage)
 
 	server := &http.Server{
 		Addr:    ":" + port,
