@@ -75,7 +75,10 @@ func TestRelyingPartySession(t *testing.T) {
 	state := "state-" + strconv.FormatInt(seed.Int63(), 25)
 	capturedW := httptest.NewRecorder()
 	get := httptest.NewRequest("GET", localURL.String(), nil)
-	rp.AuthURLHandler(func() string { return state }, provider)(capturedW, get)
+	rp.AuthURLHandler(func() string { return state }, provider,
+		rp.WithPromptURLParam("Hello, World!", "Goodbye, World!"),
+		rp.WithURLParam("custom", "param"),
+	)(capturedW, get)
 
 	defer func() {
 		if t.Failed() {
@@ -84,6 +87,8 @@ func TestRelyingPartySession(t *testing.T) {
 	}()
 	require.GreaterOrEqual(t, capturedW.Code, 200, "captured response code")
 	require.Less(t, capturedW.Code, 400, "captured response code")
+	require.Contains(t, capturedW.Body.String(), `prompt=Hello%2C+World%21+Goodbye%2C+World%21`)
+	require.Contains(t, capturedW.Body.String(), `custom=param`)
 
 	//nolint:bodyclose
 	resp := capturedW.Result()
@@ -140,7 +145,7 @@ func TestRelyingPartySession(t *testing.T) {
 		email = info.GetEmail()
 		http.Redirect(w, r, targetURL, 302)
 	}
-	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider)(capturedW, get)
+	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider, rp.WithURLParam("custom", "param"))(capturedW, get)
 
 	defer func() {
 		if t.Failed() {
@@ -150,6 +155,7 @@ func TestRelyingPartySession(t *testing.T) {
 	}()
 	require.Less(t, capturedW.Code, 400, "token exchange response code")
 	require.Less(t, capturedW.Code, 400, "token exchange response code")
+	// TODO: how to check the custom header was sent to the server?
 
 	//nolint:bodyclose
 	resp = capturedW.Result()
@@ -193,6 +199,13 @@ func TestRelyingPartySession(t *testing.T) {
 		_, err = rp.RefreshAccessToken(provider, newTokens.RefreshToken, "", "")
 		assert.Errorf(t, err, "refresh with replacement")
 	}
+
+	t.Run("WithPrompt", func(t *testing.T) {
+		opts := rp.WithPrompt("foo", "bar")()
+		url := provider.OAuthConfig().AuthCodeURL("some", opts...)
+
+		require.Contains(t, url, "prompt=foo+bar")
+	})
 }
 
 type deferredHandler struct {

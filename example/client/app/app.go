@@ -54,10 +54,12 @@ func main() {
 		return uuid.New().String()
 	}
 
-	// register the AuthURLHandler at your preferred path
-	// the AuthURLHandler creates the auth request and redirects the user to the auth server
-	// including state handling with secure cookie and the possibility to use PKCE
-	http.Handle("/login", rp.AuthURLHandler(state, provider))
+	// register the AuthURLHandler at your preferred path.
+	// the AuthURLHandler creates the auth request and redirects the user to the auth server.
+	// including state handling with secure cookie and the possibility to use PKCE.
+	// Prompts can optionally be set to inform the server of
+	// any messages that need to be prompted back to the user.
+	http.Handle("/login", rp.AuthURLHandler(state, provider, rp.WithPromptURLParam("Welcome back!")))
 
 	// for demonstration purposes the returned userinfo response is written as JSON object onto response
 	marshalUserinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info oidc.UserInfo) {

@@ -255,7 +255,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
-//deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
+// deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
@@ -304,7 +304,7 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 
 // Discover calls the discovery endpoint of the provided issuer and returns the found endpoints
 //
-//deprecated: use client.Discover
+// deprecated: use client.Discover
 func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
 	req, err := http.NewRequest("GET", wellKnown, nil)
@@ -323,7 +323,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 }
 
 // AuthURL returns the auth request url
-//(wrapping the oauth2 `AuthCodeURL`)
+// (wrapping the oauth2 `AuthCodeURL`)
 func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
@@ -333,10 +333,15 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 }
 
 // AuthURLHandler extends the `AuthURL` method with a http redirect handler
-// including handling setting cookie for secure `state` transfer
-func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
+// including handling setting cookie for secure `state` transfer.
+// Custom paramaters can optionally be set to the redirect URL.
+func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		opts := make([]AuthURLOpt, 0)
+		opts := make([]AuthURLOpt, len(urlParam))
+		for i, p := range urlParam {
+			opts[i] = AuthURLOpt(p)
+		}
+
 		state := stateFn()
 		if err := trySetStateCookie(w, state, rp); err != nil {
 			http.Error(w, "failed to create state cookie: "+err.Error(), http.StatusUnauthorized)
@@ -350,6 +355,7 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty) http.HandlerFunc {
 			}
 			opts = append(opts, WithCodeChallenge(codeChallenge))
 		}
+
 		http.Redirect(w, r, AuthURL(state, rp, opts...), http.StatusFound)
 	}
 }
@@ -398,8 +404,9 @@ type CodeExchangeCallback func(w http.ResponseWriter, r *http.Request, tokens *o
 
 // CodeExchangeHandler extends the `CodeExchange` method with a http handler
 // including cookie handling for secure `state` transfer
-// and optional PKCE code verifier checking
-func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.HandlerFunc {
+// and optional PKCE code verifier checking.
+// Custom paramaters can optionally be set to the token URL.
+func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)
 		if err != nil {
@@ -411,7 +418,11 @@ func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.Ha
 			rp.ErrorHandler()(w, r, params.Get("error"), params.Get("error_description"), state)
 			return
 		}
-		codeOpts := make([]CodeExchangeOpt, 0)
+		codeOpts := make([]CodeExchangeOpt, len(urlParam))
+		for i, p := range urlParam {
+			codeOpts[i] = CodeExchangeOpt(p)
+		}
+
 		if rp.IsPKCE() {
 			codeVerifier, err := rp.CookieHandler().CheckCookie(r, pkceCode)
 			if err != nil {
@@ -517,6 +528,37 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 	}
 }
 
+// withURLParam sets custom url paramaters.
+// This is the generalized, unexported, function used by both
+// URLParamOpt and AuthURLOpt.
+func withURLParam(key, value string) func() []oauth2.AuthCodeOption {
+	return func() []oauth2.AuthCodeOption {
+		return []oauth2.AuthCodeOption{
+			oauth2.SetAuthURLParam(key, value),
+		}
+	}
+}
+
+// withPrompt sets the `prompt` params in the auth request
+// This is the generalized, unexported, function used by both
+// URLParamOpt and AuthURLOpt.
+func withPrompt(prompt ...string) func() []oauth2.AuthCodeOption {
+	return withURLParam("prompt", oidc.SpaceDelimitedArray(prompt).Encode())
+}
+
+type URLParamOpt func() []oauth2.AuthCodeOption
+
+// WithURLParam allows setting custom key-vale pairs
+// to an OAuth2 URL.
+func WithURLParam(key, value string) URLParamOpt {
+	return withURLParam(key, value)
+}
+
+// WithPromptURLParam sets the `prompt` parameter in a URL.
+func WithPromptURLParam(prompt ...string) URLParamOpt {
+	return withPrompt(prompt...)
+}
+
 type AuthURLOpt func() []oauth2.AuthCodeOption
 
 // WithCodeChallenge sets the `code_challenge` params in the auth request
@@ -531,11 +573,7 @@ func WithCodeChallenge(codeChallenge string) AuthURLOpt {
 
 // WithPrompt sets the `prompt` params in the auth request
 func WithPrompt(prompt ...string) AuthURLOpt {
-	return func() []oauth2.AuthCodeOption {
-		return []oauth2.AuthCodeOption{
-			oauth2.SetAuthURLParam("prompt", oidc.SpaceDelimitedArray(prompt).Encode()),
-		}
-	}
+	return withPrompt(prompt...)
 }
 
 type CodeExchangeOpt func() []oauth2.AuthCodeOption
