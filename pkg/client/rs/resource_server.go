@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/zitadel/oidc/pkg/client"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type ResourceServer interface {

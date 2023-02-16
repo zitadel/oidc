@@ -2,6 +2,7 @@ package storage
 
 import (
 	"crypto/rsa"
+	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -34,12 +35,13 @@ type userStore struct {
 	users map[string]*User
 }
 
-func NewUserStore() UserStore {
+func NewUserStore(issuer string) UserStore {
+	hostname := strings.Split(strings.Split(issuer, "://")[1], ":")[0]
 	return userStore{
 		users: map[string]*User{
 			"id1": {
 				ID:                "id1",
-				Username:          "test-user",
+				Username:          "test-user@" + hostname,
 				Password:          "verysecure",
 				FirstName:         "Test",
 				LastName:          "User",

@@ -1,4 +1,4 @@
-package exampleop
+package main
 
 import (
 	"context"
@@ -7,13 +7,16 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 const (
 	queryAuthRequestID = "authRequestID"
 )
 
-var loginTmpl, _ = template.New("login").Parse(`
+var (
+	loginTmpl, _ = template.New("login").Parse(`
 	<!DOCTYPE html>
 	<html>
 		<head>
@@ -22,25 +25,21 @@ var loginTmpl, _ = template.New("login").Parse(`
 		</head>
 		<body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
 			<form method="POST" action="/login/username" style="height: 200px; width: 200px;">
-
 				<input type="hidden" name="id" value="{{.ID}}">
-
 				<div>
 					<label for="username">Username:</label>
 					<input id="username" name="username" style="width: 100%">
 				</div>
-
 				<div>
 					<label for="password">Password:</label>
 					<input id="password" name="password" style="width: 100%">
 				</div>
-
 				<p style="color:red; min-height: 1rem;">{{.Error}}</p>
-
 				<button type="submit">Login</button>
 			</form>
 		</body>
 	</html>`)
+)
 
 type login struct {
 	authenticate authenticate
@@ -48,23 +47,23 @@ type login struct {
 	callback     func(context.Context, string) string
 }
 
-func NewLogin(authenticate authenticate, callback func(context.Context, string) string) *login {
+func NewLogin(authenticate authenticate, callback func(context.Context, string) string, issuerInterceptor *op.IssuerInterceptor) *login {
 	l := &login{
 		authenticate: authenticate,
 		callback:     callback,
 	}
-	l.createRouter()
+	l.createRouter(issuerInterceptor)
 	return l
 }
 
-func (l *login) createRouter() {
+func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
 	l.router = mux.NewRouter()
 	l.router.Path("/username").Methods("GET").HandlerFunc(l.loginHandler)
-	l.router.Path("/username").Methods("POST").HandlerFunc(l.checkLoginHandler)
+	l.router.Path("/username").Methods("POST").HandlerFunc(issuerInterceptor.HandlerFunc(l.checkLoginHandler))
 }
 
 type authenticate interface {
-	CheckUsernamePassword(username, password, id string) error
+	CheckUsernamePassword(ctx context.Context, username, password, id string) error
 }
 
 func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,8 +72,8 @@ func (l *login) loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cannot parse form:%s", err), http.StatusInternalServerError)
 		return
 	}
-	// the oidc package will pass the id of the auth request as query parameter
-	// we will use this id through the login process and therefore pass it to the  login page
+	//the oidc package will pass the id of the auth request as query parameter
+	//we will use this id through the login process and therefore pass it to the  login page
 	renderLogin(w, r.FormValue(queryAuthRequestID), nil)
 }
 
@@ -105,7 +104,7 @@ func (l *login) checkLoginHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	id := r.FormValue("id")
-	err = l.authenticate.CheckUsernamePassword(username, password, id)
+	err = l.authenticate.CheckUsernamePassword(r.Context(), username, password, id)
 	if err != nil {
 		renderLogin(w, id, err)
 		return

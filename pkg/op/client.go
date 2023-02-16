@@ -3,7 +3,7 @@ package op
 import (
 	"time"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 //go:generate go get github.com/dmarkham/enumer

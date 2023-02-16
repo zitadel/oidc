@@ -5,15 +5,13 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type Exchanger interface {
-	Issuer() string
 	Storage() Storage
 	Decoder() httphelper.Decoder
-	Signer() Signer
 	Crypto() Crypto
 	AuthMethodPostSupported() bool
 	AuthMethodPrivateKeyJWTSupported() bool
@@ -124,7 +122,7 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.C
 // AuthorizePrivateJWTKey authorizes a client by validating the client_assertion's signature with a previously
 // registered public key (JWT Profile)
 func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchanger JWTAuthorizationGrantExchanger) (Client, error) {
-	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier())
+	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -138,8 +136,8 @@ func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchang
 	return client, nil
 }
 
-// ValidateGrantType ensures that the requested grant_type is allowed by the Client
-func ValidateGrantType(client Client, grantType oidc.GrantType) bool {
+// ValidateGrantType ensures that the requested grant_type is allowed by the client
+func ValidateGrantType(client interface{ GrantTypes() []oidc.GrantType }, grantType oidc.GrantType) bool {
 	if client == nil {
 		return false
 	}

@@ -3,8 +3,8 @@ package storage
 import (
 	"time"
 
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 var (
@@ -141,7 +141,7 @@ func RegisterClients(registerClients ...*Client) {
 // user-defined redirectURIs may include:
 // - http://localhost without port specification (e.g. http://localhost/auth/callback)
 // - custom protocol (e.g. custom://auth/callback)
-//(the examples will be used as default, if none is provided)
+// (the examples will be used as default, if none is provided)
 func NativeClient(id string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
@@ -168,7 +168,7 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 // WebClient will create a client of type web, which will always use Basic Auth and allow the use of refresh tokens
 // user-defined redirectURIs may include:
 // - http://localhost with port specification (e.g. http://localhost:9999/auth/callback)
-//(the example will be used as default, if none is provided)
+// (the example will be used as default, if none is provided)
 func WebClient(id, secret string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{

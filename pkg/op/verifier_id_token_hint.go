@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type IDTokenHintVerifier interface {
@@ -73,7 +73,7 @@ func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHi
 }
 
 // VerifyIDTokenHint validates the id token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier) (oidc.IDTokenClaims, error) {
 	claims := oidc.EmptyIDTokenClaims()
 

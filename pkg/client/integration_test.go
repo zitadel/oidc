@@ -3,6 +3,7 @@ package client_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -14,23 +15,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zitadel/oidc/example/server/exampleop"
-	"github.com/zitadel/oidc/example/server/storage"
-
 	"github.com/jeremija/gosubmit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/pkg/client/rp"
-	"github.com/zitadel/oidc/pkg/client/rs"
-	"github.com/zitadel/oidc/pkg/client/tokenexchange"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+
+	"github.com/zitadel/oidc/v2/example/server/exampleop"
+	"github.com/zitadel/oidc/v2/example/server/storage"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	"github.com/zitadel/oidc/v2/pkg/client/rs"
+	"github.com/zitadel/oidc/v2/pkg/client/tokenexchange"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 func TestRelyingPartySession(t *testing.T) {
 	t.Log("------- start example OP ------")
 	ctx := context.Background()
-	exampleStorage := storage.NewStorage(storage.NewUserStore())
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
 	var dh deferredHandler
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
@@ -218,7 +220,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 
 	t.Log("------- post to login form, get redirect to OP ------")
 	postLoginRedirectURL := fillForm(t, "fill login form", httpClient, form, loginPageURL,
-		gosubmit.Set("username", "test-user"),
+		gosubmit.Set("username", "test-user@local-site"),
 		gosubmit.Set("password", "verysecure"))
 	t.Logf("Get redirect from %s", postLoginRedirectURL)
 
@@ -290,8 +292,7 @@ func getRedirect(t *testing.T, desc string, httpClient *http.Client, uri *url.UR
 
 	defer func() {
 		if t.Failed() {
-			// TODO: switch to io.ReadAll when go1.15 support is dropped
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			t.Logf("%s: GET %s: body: %s", desc, uri, string(body))
 		}
 	}()
@@ -314,8 +315,7 @@ func getForm(t *testing.T, desc string, httpClient *http.Client, uri *url.URL) [
 	require.NoErrorf(t, err, "%s: GET %s", desc, uri)
 	//nolint:errcheck
 	defer resp.Body.Close()
-	// TODO: switch to io.ReadAll when go1.15 support is dropped
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err, "%s: read GET %s", desc, uri)
 	return body
 }
@@ -337,8 +337,7 @@ func fillForm(t *testing.T, desc string, httpClient *http.Client, body []byte, u
 	defer resp.Body.Close()
 	defer func() {
 		if t.Failed() {
-			// TODO: switch to io.ReadAll when go1.15 support is dropped
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			t.Logf("%s: GET %s: body: %s", desc, uri, string(body))
 		}
 	}()

@@ -167,6 +167,9 @@ func (u *userinfo) IsPhoneNumberVerified() bool {
 }
 
 func (u *userinfo) GetAddress() UserInfoAddress {
+	if u.Address == nil {
+		return &userInfoAddress{}
+	}
 	return u.Address
 }
 
@@ -389,7 +392,11 @@ func (u *userinfo) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
 	}
-	u.Address = a.Address
+
+	if a.Address != nil {
+		u.Address = a.Address
+	}
+
 	u.UpdatedAt = Time(time.Unix(a.UpdatedAt, 0).UTC())
 
 	if err := json.Unmarshal(data, &u.claims); err != nil {

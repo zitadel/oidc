@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type IDTokenVerifier interface {
@@ -20,7 +20,7 @@ type IDTokenVerifier interface {
 }
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
-//https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
+// https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
 func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
 	idToken, err := VerifyIDToken(ctx, idTokenString, v)
 	if err != nil {
@@ -33,7 +33,7 @@ func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTo
 }
 
 // VerifyIDToken validates the id token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
 	claims := oidc.EmptyIDTokenClaims()
 
@@ -89,7 +89,7 @@ func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.I
 }
 
 // VerifyAccessToken validates the access token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
+// https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
 	if atHash == "" {
 		return nil

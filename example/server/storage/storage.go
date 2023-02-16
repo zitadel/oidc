@@ -14,8 +14,8 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 // serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant
@@ -47,9 +47,41 @@ type Storage struct {
 }
 
 type signingKey struct {
-	ID        string
-	Algorithm string
-	Key       *rsa.PrivateKey
+	id        string
+	algorithm jose.SignatureAlgorithm
+	key       *rsa.PrivateKey
+}
+
+func (s *signingKey) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return s.algorithm
+}
+
+func (s *signingKey) Key() interface{} {
+	return s.key
+}
+
+func (s *signingKey) ID() string {
+	return s.id
+}
+
+type publicKey struct {
+	signingKey
+}
+
+func (s *publicKey) ID() string {
+	return s.id
+}
+
+func (s *publicKey) Algorithm() jose.SignatureAlgorithm {
+	return s.algorithm
+}
+
+func (s *publicKey) Use() string {
+	return "sig"
+}
+
+func (s *publicKey) Key() interface{} {
+	return &s.key.PublicKey
 }
 
 func NewStorage(userStore UserStore) *Storage {
@@ -69,9 +101,9 @@ func NewStorage(userStore UserStore) *Storage {
 			},
 		},
 		signingKey: signingKey{
-			ID:        "id",
-			Algorithm: "RS256",
-			Key:       key,
+			id:        uuid.NewString(),
+			algorithm: jose.RS256,
+			key:       key,
 		},
 	}
 }
@@ -316,41 +348,29 @@ func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID
 	return nil
 }
 
-// GetSigningKey implements the op.Storage interface
+// SigningKey implements the op.Storage interface
 // it will be called when creating the OpenID Provider
-func (s *Storage) GetSigningKey(ctx context.Context, keyCh chan<- jose.SigningKey) {
+func (s *Storage) SigningKey(ctx context.Context) (op.SigningKey, error) {
 	// in this example the signing key is a static rsa.PrivateKey and the algorithm used is RS256
 	// you would obviously have a more complex implementation and store / retrieve the key from your database as well
-	//
-	// the idea of the signing key channel is, that you can (with what ever mechanism) rotate your signing key and
-	// switch the key of the signer via this channel
-	keyCh <- jose.SigningKey{
-		Algorithm: jose.SignatureAlgorithm(s.signingKey.Algorithm), // always tell the signer with algorithm to use
-		Key: jose.JSONWebKey{
-			KeyID: s.signingKey.ID, // always give the key an id so, that it will include it in the token header as `kid` claim
-			Key:   s.signingKey.Key,
-		},
-	}
+	return &s.signingKey, nil
 }
 
-// GetKeySet implements the op.Storage interface
+// SignatureAlgorithms implements the op.Storage interface
+// it will be called to get the sign
+func (s *Storage) SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error) {
+	return []jose.SignatureAlgorithm{s.signingKey.algorithm}, nil
+}
+
+// KeySet implements the op.Storage interface
 // it will be called to get the current (public) keys, among others for the keys_endpoint or for validating access_tokens on the userinfo_endpoint, ...
-func (s *Storage) GetKeySet(ctx context.Context) (*jose.JSONWebKeySet, error) {
+func (s *Storage) KeySet(ctx context.Context) ([]op.Key, error) {
 	// as mentioned above, this example only has a single signing key without key rotation,
 	// so it will directly use its public key
 	//
 	// when using key rotation you typically would store the public keys alongside the private keys in your database
-	// and give both of them an expiration date, with the public key having a longer lifetime (e.g. rotate private key every
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{
-				KeyID:     s.signingKey.ID,
-				Algorithm: s.signingKey.Algorithm,
-				Use:       oidc.KeyUseSignature,
-				Key:       &s.signingKey.Key.PublicKey,
-			},
-		},
-	}, nil
+	//and give both of them an expiration date, with the public key having a longer lifetime
+	return []op.Key{&publicKey{s.signingKey}}, nil
 }
 
 // GetClientByClientID implements the op.Storage interface
