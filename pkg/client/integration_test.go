@@ -80,7 +80,8 @@ func TestRelyingPartySession(t *testing.T) {
 func TestResourceServerTokenExchange(t *testing.T) {
 	t.Log("------- start example OP ------")
 	ctx := context.Background()
-	exampleStorage := storage.NewStorage(storage.NewUserStore())
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
 	var dh deferredHandler
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()

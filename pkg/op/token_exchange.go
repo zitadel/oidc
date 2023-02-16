@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type TokenExchangeRequest interface {
@@ -291,7 +291,7 @@ func GetTokenIDAndSubjectFromToken(
 
 		tokenIDOrToken, subject, ok = token, refreshTokenRequest.GetSubject(), true
 	case oidc.IDTokenType:
-		idTokenClaims, err := VerifyIDTokenHint(ctx, token, exchanger.IDTokenHintVerifier())
+		idTokenClaims, err := VerifyIDTokenHint(ctx, token, exchanger.IDTokenHintVerifier(ctx))
 		if err != nil {
 			break
 		}
@@ -355,7 +355,7 @@ func CreateTokenExchangeResponse(
 
 		tokenType = oidc.BearerToken
 	case oidc.IDTokenType:
-		token, err = CreateIDToken(ctx, creator.Issuer(), tokenExchangeRequest, client.IDTokenLifetime(), "", "", creator.Storage(), creator.Signer(), client)
+		token, err = CreateIDToken(ctx, IssuerFromContext(ctx), tokenExchangeRequest, client.IDTokenLifetime(), "", "", creator.Storage(), client)
 		if err != nil {
 			return nil, err
 		}
@@ -390,7 +390,7 @@ func getTokenIDAndClaims(ctx context.Context, userinfoProvider UserinfoProvider,
 
 		return splitToken[0], splitToken[1], nil, true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
+	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", nil, false
 	}
