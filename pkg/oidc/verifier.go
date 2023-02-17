@@ -32,6 +32,12 @@ type ClaimsSignature interface {
 	SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm)
 }
 
+type IDClaims interface {
+	Claims
+	GetSignatureAlgorithm() jose.SignatureAlgorithm
+	GetAccessTokenHash() string
+}
+
 var (
 	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")

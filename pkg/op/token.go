@@ -129,7 +129,7 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 		if err != nil {
 			return "", err
 		}
-		claims.SetPrivateClaims(privateClaims)
+		claims.Claims = privateClaims
 	}
 	signingKey, err := storage.SigningKey(ctx)
 	if err != nil {
@@ -169,7 +169,7 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		if err != nil {
 			return "", err
 		}
-		claims.SetAccessTokenHash(atHash)
+		claims.AccessTokenHash = atHash
 		if !client.IDTokenUserinfoClaimsAssertion() {
 			scopes = removeUserinfoScopes(scopes)
 		}
@@ -178,26 +178,26 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 	tokenExchangeRequest, okReq := request.(TokenExchangeRequest)
 	teStorage, okStorage := storage.(TokenExchangeStorage)
 	if okReq && okStorage {
-		userInfo := oidc.NewUserInfo()
+		userInfo := new(oidc.UserInfo)
 		err := teStorage.SetUserinfoFromTokenExchangeRequest(ctx, userInfo, tokenExchangeRequest)
 		if err != nil {
 			return "", err
 		}
-		claims.SetUserinfo(userInfo)
+		claims.SetUserInfo(userInfo)
 	} else if len(scopes) > 0 {
-		userInfo := oidc.NewUserInfo()
+		userInfo := new(oidc.UserInfo)
 		err := storage.SetUserinfoFromScopes(ctx, userInfo, request.GetSubject(), request.GetClientID(), scopes)
 		if err != nil {
 			return "", err
 		}
-		claims.SetUserinfo(userInfo)
+		claims.SetUserInfo(userInfo)
 	}
 	if code != "" {
 		codeHash, err := oidc.ClaimHash(code, signingKey.SignatureAlgorithm())
 		if err != nil {
 			return "", err
 		}
-		claims.SetCodeHash(codeHash)
+		claims.CodeHash = codeHash
 	}
 	signer, err := SignerFromKey(signingKey)
 	if err != nil {

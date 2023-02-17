@@ -98,9 +98,7 @@ Versions that also build are marked with :warning:.
 
 | Version | Supported          |
 |---------|--------------------|
-| <1.16   | :x:                |
-| 1.16    | :warning:          |
-| 1.17    | :warning:          |
+| <1.18   | :x:                |
 | 1.18    | :warning:          |
 | 1.19    | :white_check_mark: |
 | 1.20    | :white_check_mark: |

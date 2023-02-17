@@ -59,7 +59,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 		RedirectURI: ender.DefaultLogoutRedirectURI(),
 	}
 	if req.IdTokenHint != "" {
-		claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
+		claims, err := VerifyIDTokenHint[*oidc.TokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
 		if err != nil {
 			return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
 		}

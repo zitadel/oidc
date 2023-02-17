@@ -176,8 +176,8 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 		Issuer:    clientID,
 		Subject:   clientID,
 		Audience:  audience,
-		ExpiresAt: oidc.Time(exp),
-		IssuedAt:  oidc.Time(iat),
+		ExpiresAt: oidc.FromTime(exp),
+		IssuedAt:  oidc.FromTime(iat),
 	}, signer)
 }
 

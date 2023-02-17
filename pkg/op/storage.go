@@ -96,7 +96,7 @@ type TokenExchangeStorage interface {
 
 	// SetUserinfoFromTokenExchangeRequest will be called during id token creation.
 	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
-	SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request TokenExchangeRequest) error
+	SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo *oidc.UserInfo, request TokenExchangeRequest) error
 }
 
 // TokenExchangeTokensVerifierStorage is an optional interface used in token exchange process to verify tokens
@@ -111,9 +111,9 @@ var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 type OPStorage interface {
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
-	SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error
-	SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error
-	SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error
+	SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error
+	SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error
+	SetIntrospectionFromToken(ctx context.Context, userinfo *oidc.IntrospectionResponse, tokenID, subject, clientID string) error
 	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]interface{}, error)
 	GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)

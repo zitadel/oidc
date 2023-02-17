@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 )
 
@@ -109,6 +110,117 @@ func TestDisplay_UnmarshalText(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLocale_Tag(t *testing.T) {
+	tests := []struct {
+		name string
+		l    *Locale
+		want language.Tag
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: language.Und,
+		},
+		{
+			name: "Und",
+			l:    NewLocale(language.Und),
+			want: language.Und,
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: language.Afrikaans,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.l.Tag())
+		})
+	}
+}
+
+func TestLocale_String(t *testing.T) {
+	tests := []struct {
+		name string
+		l    *Locale
+		want language.Tag
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: language.Und,
+		},
+		{
+			name: "Und",
+			l:    NewLocale(language.Und),
+			want: language.Und,
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: language.Afrikaans,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want.String(), tt.l.String())
+		})
+	}
+}
+
+func TestLocale_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		l       *Locale
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: "null",
+		},
+		{
+			name: "und",
+			l:    NewLocale(language.Und),
+			want: "null",
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: `"af"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(tt.l)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func TestLocale_UnmarshalJSON(t *testing.T) {
+	type a struct {
+		Locale *Locale `json:"locale,omitempty"`
+	}
+	want := a{
+		Locale: NewLocale(language.Afrikaans),
+	}
+
+	const input = `{"locale": "af"}`
+	var got a
+
+	require.NoError(t,
+		json.Unmarshal([]byte(input), &got),
+	)
+	assert.Equal(t, want, got)
 }
 
 func TestLocales_UnmarshalText(t *testing.T) {

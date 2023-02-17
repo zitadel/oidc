@@ -28,7 +28,7 @@ func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *
 }
 
 func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspector) {
-	response := oidc.NewIntrospectionResponse()
+	response := new(oidc.IntrospectionResponse)
 	token, clientID, err := ParseTokenIntrospectionRequest(r, introspector)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -44,7 +44,7 @@ func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspecto
 		httphelper.MarshalJSON(w, response)
 		return
 	}
-	response.SetActive(true)
+	response.Active = true
 	httphelper.MarshalJSON(w, response)
 }
 

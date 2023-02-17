@@ -429,13 +429,13 @@ func (s *Storage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientS
 
 // SetUserinfoFromScopes implements the op.Storage interface
 // it will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
-func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error {
+func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
 	return s.setUserinfo(ctx, userinfo, userID, clientID, scopes)
 }
 
 // SetUserinfoFromToken implements the op.Storage interface
 // it will be called for the userinfo endpoint, so we read the token and pass the information from that to the private function
-func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {
+func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error {
 	token, ok := func() (*Token, bool) {
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -463,7 +463,7 @@ func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserIn
 
 // SetIntrospectionFromToken implements the op.Storage interface
 // it will be called for the introspection endpoint, so we read the token and pass the information from that to the private function
-func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
 	token, ok := func() (*Token, bool) {
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -480,14 +480,17 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection o
 			// this will automatically be done by the library if you don't return an error
 			// you can also return further information about the user / associated token
 			// e.g. the userinfo (equivalent to userinfo endpoint)
-			err := s.setUserinfo(ctx, introspection, subject, clientID, token.Scopes)
+
+			userInfo := new(oidc.UserInfo)
+			err := s.setUserinfo(ctx, userInfo, subject, clientID, token.Scopes)
 			if err != nil {
 				return err
 			}
+			introspection.SetUserInfo(userInfo)
 			//...and also the requested scopes...
-			introspection.SetScopes(token.Scopes)
+			introspection.Scope = token.Scopes
 			//...and the client the token was issued to
-			introspection.SetClientID(token.ApplicationID)
+			introspection.ClientID = token.ApplicationID
 			return nil
 		}
 	}
@@ -608,7 +611,7 @@ func (s *Storage) accessToken(applicationID, refreshTokenID, subject string, aud
 }
 
 // setUserinfo sets the info based on the user, scopes and if necessary the clientID
-func (s *Storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter, userID, clientID string, scopes []string) (err error) {
+func (s *Storage) setUserinfo(ctx context.Context, userInfo *oidc.UserInfo, userID, clientID string, scopes []string) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	user := s.userStore.GetUserByID(userID)
@@ -618,17 +621,20 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter,
 	for _, scope := range scopes {
 		switch scope {
 		case oidc.ScopeOpenID:
-			userInfo.SetSubject(user.ID)
+			userInfo.Subject = user.ID
 		case oidc.ScopeEmail:
-			userInfo.SetEmail(user.Email, user.EmailVerified)
+			userInfo.Email = user.Email
+			userInfo.EmailVerified = oidc.Bool(user.EmailVerified)
+			//user.Email, user.EmailVerified
 		case oidc.ScopeProfile:
-			userInfo.SetPreferredUsername(user.Username)
-			userInfo.SetName(user.FirstName + " " + user.LastName)
-			userInfo.SetFamilyName(user.LastName)
-			userInfo.SetGivenName(user.FirstName)
-			userInfo.SetLocale(user.PreferredLanguage)
+			userInfo.PreferredUsername = user.Username
+			userInfo.Name = user.FirstName + " " + user.LastName
+			userInfo.FamilyName = user.LastName
+			userInfo.GivenName = user.FirstName
+			userInfo.Locale = oidc.NewLocale(user.PreferredLanguage)
 		case oidc.ScopePhone:
-			userInfo.SetPhone(user.Phone, user.PhoneVerified)
+			userInfo.PhoneNumber = user.Phone
+			userInfo.PhoneNumberVerified = user.PhoneVerified
 		case CustomScope:
 			// you can also have a custom scope and assert public or custom claims based on that
 			userInfo.AppendClaims(CustomClaim, customClaim(clientID))
@@ -698,7 +704,7 @@ func (s *Storage) GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, 
 // SetUserinfoFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
 // it will be called for the creation of an id_token - we are using the same private function as for other flows,
 // plus adding token exchange specific claims related to delegation or impersonation
-func (s *Storage) SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request op.TokenExchangeRequest) error {
+func (s *Storage) SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo *oidc.UserInfo, request op.TokenExchangeRequest) error {
 	err := s.setUserinfo(ctx, userinfo, request.GetSubject(), request.GetClientID(), request.GetScopes())
 	if err != nil {
 		return err

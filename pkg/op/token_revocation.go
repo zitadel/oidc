@@ -151,9 +151,9 @@ func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider Use
 		}
 		return splitToken[0], splitToken[1], true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
+	accessTokenClaims, err := VerifyAccessToken[*oidc.AccessTokenClaims](ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", false
 	}
-	return accessTokenClaims.GetTokenID(), accessTokenClaims.GetSubject(), true
+	return accessTokenClaims.JWTID, accessTokenClaims.Subject, true
 }

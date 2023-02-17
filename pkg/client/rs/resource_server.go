@@ -112,7 +112,7 @@ func WithStaticEndpoints(tokenURL, introspectURL string) Option {
 	}
 }
 
-func Introspect(ctx context.Context, rp ResourceServer, token string) (oidc.IntrospectionResponse, error) {
+func Introspect(ctx context.Context, rp ResourceServer, token string) (*oidc.IntrospectionResponse, error) {
 	authFn, err := rp.AuthFn()
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func Introspect(ctx context.Context, rp ResourceServer, token string) (oidc.Intr
 	if err != nil {
 		return nil, err
 	}
-	resp := oidc.NewIntrospectionResponse()
+	resp := new(oidc.IntrospectionResponse)
 	if err := httphelper.HttpRequest(rp.HttpClient(), req, resp); err != nil {
 		return nil, err
 	}

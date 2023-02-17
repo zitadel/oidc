@@ -238,19 +238,19 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}
 
 	var email string
-	redirect := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info oidc.UserInfo) {
+	redirect := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info *oidc.UserInfo) {
 		require.NotNil(t, tokens, "tokens")
 		require.NotNil(t, info, "info")
 		t.Log("access token", tokens.AccessToken)
 		t.Log("refresh token", tokens.RefreshToken)
 		t.Log("id token", tokens.IDToken)
-		t.Log("email", info.GetEmail())
+		t.Log("email", info.Email)
 
 		accessToken = tokens.AccessToken
 		refreshToken = tokens.RefreshToken
 		idToken = tokens.IDToken
-		email = info.GetEmail()
-		http.Redirect(w, r, targetURL, http.StatusFound)
+		email = info.Email
+		http.Redirect(w, r, targetURL, 302)
 	}
 	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider)(capturedW, get)
 
@@ -260,7 +260,6 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 			require.GreaterOrEqual(t, capturedW.Code, 200, "captured response code")
 		}
 	}()
-	require.Less(t, capturedW.Code, 400, "token exchange response code")
 	require.Less(t, capturedW.Code, 400, "token exchange response code")
 
 	//nolint:bodyclose

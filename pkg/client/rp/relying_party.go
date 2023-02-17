@@ -394,7 +394,7 @@ func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...Cod
 		return nil, errors.New("id_token missing")
 	}
 
-	idToken, err := VerifyTokens(ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
+	idToken, err := VerifyTokens[*oidc.IDTokenClaims](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
 	if err != nil {
 		return nil, err
 	}
@@ -445,14 +445,14 @@ func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.Ha
 	}
 }
 
-type CodeExchangeUserinfoCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, provider RelyingParty, info oidc.UserInfo)
+type CodeExchangeUserinfoCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, provider RelyingParty, info *oidc.UserInfo)
 
 // UserinfoCallback wraps the callback function of the CodeExchangeHandler
 // and calls the userinfo endpoint with the access token
 // on success it will pass the userinfo into its callback function as well
 func UserinfoCallback(f CodeExchangeUserinfoCallback) CodeExchangeCallback {
 	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp RelyingParty) {
-		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
+		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.Subject, rp)
 		if err != nil {
 			http.Error(w, "userinfo failed: "+err.Error(), http.StatusUnauthorized)
 			return
@@ -462,17 +462,17 @@ func UserinfoCallback(f CodeExchangeUserinfoCallback) CodeExchangeCallback {
 }
 
 // Userinfo will call the OIDC Userinfo Endpoint with the provided token
-func Userinfo(token, tokenType, subject string, rp RelyingParty) (oidc.UserInfo, error) {
+func Userinfo(token, tokenType, subject string, rp RelyingParty) (*oidc.UserInfo, error) {
 	req, err := http.NewRequest("GET", rp.UserinfoEndpoint(), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("authorization", tokenType+" "+token)
-	userinfo := oidc.NewUserInfo()
+	userinfo := new(oidc.UserInfo)
 	if err := httphelper.HttpRequest(rp.HttpClient(), req, &userinfo); err != nil {
 		return nil, err
 	}
-	if userinfo.GetSubject() != subject {
+	if userinfo.Subject != subject {
 		return nil, ErrUserInfoSubNotMatching
 	}
 	return userinfo, nil
