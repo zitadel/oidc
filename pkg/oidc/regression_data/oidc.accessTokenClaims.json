@@ -1,0 +1,29 @@
+{
+	"iss": "zitadel",
+	"sub": "hello@me.com",
+	"aud": [
+		"foo",
+		"bar"
+	],
+	"jti": "900",
+	"azp": "just@me.com",
+	"nonce": "6969",
+	"c_hash": "hashhash",
+	"acr": "something",
+	"amr": [
+		"some",
+		"methods"
+	],
+	"sid": "666",
+	"scope": [
+		"email",
+		"phone"
+	],
+	"client_id": "777",
+	"at_use_nbr": 22,
+	"exp": 12345,
+	"iat": 12000,
+	"nbf": 12000,
+	"auth_time": 12000,
+	"foo": "bar"
+}
