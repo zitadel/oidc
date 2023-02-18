@@ -208,15 +208,15 @@ func ValidateTokenExchangeRequest(
 		return nil, nil, err
 	}
 
-	if oidcTokenExchangeRequest.RequestedTokenType != "" && !oidcTokenExchangeRequest.RequestedTokenType.IsValid() {
+	if oidcTokenExchangeRequest.RequestedTokenType != "" && !oidcTokenExchangeRequest.RequestedTokenType.IsSupported() {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("requested_token_type is not supported")
 	}
 
-	if !oidcTokenExchangeRequest.SubjectTokenType.IsValid() {
+	if !oidcTokenExchangeRequest.SubjectTokenType.IsSupported() {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("subject_token_type is not supported")
 	}
 
-	if oidcTokenExchangeRequest.ActorTokenType != "" && !oidcTokenExchangeRequest.ActorTokenType.IsValid() {
+	if oidcTokenExchangeRequest.ActorTokenType != "" && !oidcTokenExchangeRequest.ActorTokenType.IsSupported() {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("actor_token_type is not supported")
 	}
 

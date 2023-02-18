@@ -114,8 +114,11 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 			privateClaims map[string]interface{}
 			err           error
 		)
-		if tokenExchangeRequest, ok := tokenRequest.(TokenExchangeRequest); ok {
-			privateClaims, err = storage.(TokenExchangeStorage).GetPrivateClaimsFromTokenExchangeRequest(
+
+		tokenExchangeRequest, okReq := tokenRequest.(TokenExchangeRequest)
+		teStorage, okStorage := storage.(TokenExchangeStorage)
+		if okReq && okStorage {
+			privateClaims, err = teStorage.GetPrivateClaimsFromTokenExchangeRequest(
 				ctx,
 				tokenExchangeRequest,
 			)
@@ -172,9 +175,10 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		}
 	}
 
-	if tokenExchangeRequest, ok := request.(TokenExchangeRequest); ok {
+	tokenExchangeRequest, okReq := request.(TokenExchangeRequest)
+	teStorage, okStorage := storage.(TokenExchangeStorage)
+	if okReq && okStorage {
 		userInfo := oidc.NewUserInfo()
-		teStorage := storage.(TokenExchangeStorage)
 		err := teStorage.SetUserinfoFromTokenExchangeRequest(ctx, userInfo, tokenExchangeRequest)
 		if err != nil {
 			return "", err

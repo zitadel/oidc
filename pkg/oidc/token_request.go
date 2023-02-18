@@ -53,7 +53,7 @@ var AllTokenTypes = []TokenType{
 
 type TokenType string
 
-func (t TokenType) IsValid() bool {
+func (t TokenType) IsSupported() bool {
 	for _, tt := range AllTokenTypes {
 		if t == tt {
 			return true

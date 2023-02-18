@@ -152,10 +152,6 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 }
 
 func CallTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
-	return callTokenExchangeEndpoint(request, authFn, caller)
-}
-
-func callTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
 	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
