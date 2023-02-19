@@ -25,6 +25,8 @@ type AuthStorage interface {
 	//
 	// * *oidc.JWTTokenRequest from a JWT that is the assertion value of a JWT Profile
 	//   Grant: https://datatracker.ietf.org/doc/html/rfc7523#section-2.1
+	//
+	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
 	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, err error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
@@ -36,6 +38,8 @@ type AuthStorage interface {
 	// * AuthRequest as by returned by the AuthRequestByID or AuthRequestByCode (above).
 	//   Used for the authorization code flow which requested offline_access scope and
 	//   registered the refresh_token grant type in advance
+	//
+	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
 	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
 	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
@@ -55,6 +59,45 @@ type AuthStorage interface {
 type ClientCredentialsStorage interface {
 	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
+}
+
+type TokenExchangeStorage interface {
+	// ValidateTokenExchangeRequest will be called to validate parsed (including tokens) Token Exchange Grant request.
+	//
+	// Important validations can include:
+	// - permissions
+	// - set requested token type to some default value if it is empty (rfc 8693 allows it) using SetRequestedTokenType method.
+	//   Depending on RequestedTokenType - the following tokens will be issued:
+	//   - RefreshTokenType - both access and refresh tokens
+	//   - AccessTokenType - only access token
+	//   - IDTokenType - only id token
+	// - validation of subject's token type on possibility to be exchanged to the requested token type (according to your requirements)
+	// - scopes (and update them using SetCurrentScopes method)
+	// - set new subject if it differs from exchange subject (impersonation flow)
+	//
+	// Request will include subject's and/or actor's token claims if correspinding tokens are access/id_token issued by op
+	// or third party tokens parsed by TokenExchangeTokensVerifierStorage interface methods.
+	ValidateTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) error
+
+	// CreateTokenExchangeRequest will be called after parsing and validating token exchange request.
+	// Stored request is not accessed later by op - so it is up to implementer to decide
+	// should this method actually store the request or not (common use case - store for it for audit purposes)
+	CreateTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) error
+
+	// GetPrivateClaimsFromTokenExchangeRequest will be called during access token creation.
+	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
+	GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) (claims map[string]interface{}, err error)
+
+	// SetUserinfoFromTokenExchangeRequest will be called during id token creation.
+	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
+	SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request TokenExchangeRequest) error
+}
+
+// TokenExchangeTokensVerifierStorage is an optional interface used in token exchange process to verify tokens
+// issued by third-party applications. If interface is not implemented - only tokens issued by op will be exchanged.
+type TokenExchangeTokensVerifierStorage interface {
+	VerifyExchangeSubjectToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, subject string, tokenClaims map[string]interface{}, err error)
+	VerifyExchangeActorToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, actor string, tokenClaims map[string]interface{}, err error)
 }
 
 // CanRefreshTokenInfo is an optional additional interface that Storage can support.

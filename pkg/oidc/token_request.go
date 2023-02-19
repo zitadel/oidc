@@ -40,6 +40,29 @@ var AllGrantTypes = []GrantType{
 
 type GrantType string
 
+const (
+	AccessTokenType  TokenType = "urn:ietf:params:oauth:token-type:access_token"
+	RefreshTokenType TokenType = "urn:ietf:params:oauth:token-type:refresh_token"
+	IDTokenType      TokenType = "urn:ietf:params:oauth:token-type:id_token"
+	JWTTokenType     TokenType = "urn:ietf:params:oauth:token-type:jwt"
+)
+
+var AllTokenTypes = []TokenType{
+	AccessTokenType, RefreshTokenType, IDTokenType, JWTTokenType,
+}
+
+type TokenType string
+
+func (t TokenType) IsSupported() bool {
+	for _, tt := range AllTokenTypes {
+		if t == tt {
+			return true
+		}
+	}
+
+	return false
+}
+
 type TokenRequest interface {
 	// GrantType GrantType `schema:"grant_type"`
 	GrantType() GrantType
@@ -203,14 +226,15 @@ func (j *JWTTokenRequest) GetScopes() []string {
 }
 
 type TokenExchangeRequest struct {
-	subjectToken       string              `schema:"subject_token"`
-	subjectTokenType   string              `schema:"subject_token_type"`
-	actorToken         string              `schema:"actor_token"`
-	actorTokenType     string              `schema:"actor_token_type"`
-	resource           []string            `schema:"resource"`
-	audience           Audience            `schema:"audience"`
-	Scope              SpaceDelimitedArray `schema:"scope"`
-	requestedTokenType string              `schema:"requested_token_type"`
+	GrantType          GrantType           `schema:"grant_type"`
+	SubjectToken       string              `schema:"subject_token"`
+	SubjectTokenType   TokenType           `schema:"subject_token_type"`
+	ActorToken         string              `schema:"actor_token"`
+	ActorTokenType     TokenType           `schema:"actor_token_type"`
+	Resource           []string            `schema:"resource"`
+	Audience           Audience            `schema:"audience"`
+	Scopes             SpaceDelimitedArray `schema:"scope"`
+	RequestedTokenType TokenType           `schema:"requested_token_type"`
 }
 
 type ClientCredentialsRequest struct {

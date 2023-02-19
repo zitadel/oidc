@@ -267,7 +267,8 @@ func (o *Provider) GrantTypeRefreshTokenSupported() bool {
 }
 
 func (o *Provider) GrantTypeTokenExchangeSupported() bool {
-	return false
+	_, ok := o.storage.(TokenExchangeStorage)
+	return ok
 }
 
 func (o *Provider) GrantTypeJWTAuthorizationSupported() bool {
