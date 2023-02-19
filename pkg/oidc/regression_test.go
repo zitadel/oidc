@@ -149,7 +149,7 @@ var (
 			"foo": "bar",
 		},
 	}
-	jwtProfileAssertionRegressData = &jwtProfileAssertion{
+	jwtProfileAssertionRegressData = &JWTProfileAssertionClaims{
 		PrivateKeyID: "8888",
 		PrivateKey:   []byte("qwerty"),
 		Issuer:       "zitadel",
@@ -157,7 +157,7 @@ var (
 		Audience:     Audience{"foo", "bar"},
 		Expiration:   12345,
 		IssuedAt:     12000,
-		customClaims: map[string]interface{}{
+		Claims: map[string]interface{}{
 			"foo": "bar",
 		},
 	}
