@@ -2,26 +2,27 @@ package op
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type Revoker interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier() AccessTokenVerifier
+	AccessTokenVerifier(context.Context) AccessTokenVerifier
 	AuthMethodPrivateKeyJWTSupported() bool
 	AuthMethodPostSupported() bool
 }
 
 type RevokerJWTProfile interface {
 	Revoker
-	JWTProfileVerifier() JWTProfileVerifier
+	JWTProfileVerifier(context.Context) JWTProfileVerifier
 }
 
 func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request) {
@@ -31,14 +32,33 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 }
 
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
-	token, _, clientID, err := ParseTokenRevocationRequest(r, revoker)
+	token, tokenTypeHint, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
 		RevocationRequestError(w, r, err)
 		return
 	}
-	tokenID, subject, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
-	if ok {
-		token = tokenID
+	var subject string
+	doDecrypt := true
+	if canRefreshInfo, ok := revoker.Storage().(CanRefreshTokenInfo); ok && tokenTypeHint != "access_token" {
+		userID, tokenID, err := canRefreshInfo.GetRefreshTokenInfo(r.Context(), clientID, token)
+		if err != nil {
+			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
+			if !errors.Is(err, ErrInvalidRefreshToken) {
+				RevocationRequestError(w, r, oidc.ErrServerError().WithParent(err))
+				return
+			}
+		} else {
+			token = tokenID
+			subject = userID
+			doDecrypt = false
+		}
+	}
+	if doDecrypt {
+		tokenID, userID, ok := getTokenIDAndSubjectForRevocation(r.Context(), revoker, token)
+		if ok {
+			token = tokenID
+			subject = userID
+		}
 	}
 	if err := revoker.Storage().RevokeToken(r.Context(), token, subject, clientID); err != nil {
 		RevocationRequestError(w, r, err)
@@ -67,7 +87,7 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 		if !ok || !revoker.AuthMethodPrivateKeyJWTSupported() {
 			return "", "", "", oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
 		}
-		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, revokerJWTProfile.JWTProfileVerifier())
+		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, revokerJWTProfile.JWTProfileVerifier(r.Context()))
 		if err == nil {
 			return req.Token, req.TokenTypeHint, profile.Issuer, nil
 		}
@@ -131,7 +151,7 @@ func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider Use
 		}
 		return splitToken[0], splitToken[1], true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier())
+	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", false
 	}

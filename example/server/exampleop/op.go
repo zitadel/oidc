@@ -5,14 +5,13 @@ import (
 	"crypto/sha256"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/example/server/storage"
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
+	"github.com/zitadel/oidc/v2/example/server/storage"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 const (
@@ -36,9 +35,6 @@ type Storage interface {
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
 func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Router {
-	// this will allow us to use an issuer with http:// instead of https://
-	os.Setenv(op.OidcDevMode, "true")
-
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
@@ -81,34 +77,35 @@ func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Route
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
 func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
-	config := op.NewConfig()
-	config.Issuer = issuer
-	config.CryptoKey = key
+	config := &op.Config{
+		CryptoKey: key,
 
-	config.SupportedScopes = []string{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}
+		SupportedScopes: []string{oidc.ScopeOpenID, oidc.ScopeOfflineAccess},
 
-	// will be used if the end_session endpoint is called without a post_logout_redirect_uri
-	config.DefaultLogoutRedirectURI = pathLoggedOut
+		// will be used if the end_session endpoint is called without a post_logout_redirect_uri
+		DefaultLogoutRedirectURI: pathLoggedOut,
 
-	// enables code_challenge_method S256 for PKCE (and therefore PKCE in general)
-	config.CodeMethodS256 = true
+		// enables code_challenge_method S256 for PKCE (and therefore PKCE in general)
+		CodeMethodS256: true,
 
-	// enables additional client_id/client_secret authentication by form post (not only HTTP Basic Auth)
-	config.AuthMethodPost = true
+		// enables additional client_id/client_secret authentication by form post (not only HTTP Basic Auth)
+		AuthMethodPost: true,
 
-	// enables additional authentication by using private_key_jwt
-	config.AuthMethodPrivateKeyJWT = true
+		// enables additional authentication by using private_key_jwt
+		AuthMethodPrivateKeyJWT: true,
 
-	// enables refresh_token grant use
-	config.GrantTypeRefreshToken = true
+		// enables refresh_token grant use
+		GrantTypeRefreshToken: true,
 
-	// enables use of the `request` Object parameter
-	config.RequestObjectSupported = true
+		// enables use of the `request` Object parameter
+		RequestObjectSupported: true,
 
-	// this example has only static texts (in English), so we'll set the here accordingly
-	config.SupportedUILocales = []language.Tag{language.English}
-
-	handler, err := op.NewOpenIDProvider(ctx, config, storage,
+		// this example has only static texts (in English), so we'll set the here accordingly
+		SupportedUILocales: []language.Tag{language.English},
+	}
+	handler, err := op.NewOpenIDProvider(ctx, issuer, config, storage,
+		//we must explicitly allow the use of the http issuer
+		op.WithAllowInsecure(),
 		// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
 	)

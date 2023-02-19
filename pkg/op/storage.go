@@ -2,11 +2,12 @@ package op
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type AuthStorage interface {
@@ -24,6 +25,8 @@ type AuthStorage interface {
 	//
 	// * *oidc.JWTTokenRequest from a JWT that is the assertion value of a JWT Profile
 	//   Grant: https://datatracker.ietf.org/doc/html/rfc7523#section-2.1
+	//
+	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
 	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, err error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
@@ -35,6 +38,8 @@ type AuthStorage interface {
 	// * AuthRequest as by returned by the AuthRequestByID or AuthRequestByCode (above).
 	//   Used for the authorization code flow which requested offline_access scope and
 	//   registered the refresh_token grant type in advance
+	//
+	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
 	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
 	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
@@ -46,13 +51,65 @@ type AuthStorage interface {
 	// tokenOrTokenID will be the refresh token, not its ID.
 	RevokeToken(ctx context.Context, tokenOrTokenID string, userID string, clientID string) *oidc.Error
 
-	GetSigningKey(context.Context, chan<- jose.SigningKey)
-	GetKeySet(context.Context) (*jose.JSONWebKeySet, error)
+	SigningKey(context.Context) (SigningKey, error)
+	SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error)
+	KeySet(context.Context) ([]Key, error)
 }
 
 type ClientCredentialsStorage interface {
+	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
 }
+
+type TokenExchangeStorage interface {
+	// ValidateTokenExchangeRequest will be called to validate parsed (including tokens) Token Exchange Grant request.
+	//
+	// Important validations can include:
+	// - permissions
+	// - set requested token type to some default value if it is empty (rfc 8693 allows it) using SetRequestedTokenType method.
+	//   Depending on RequestedTokenType - the following tokens will be issued:
+	//   - RefreshTokenType - both access and refresh tokens
+	//   - AccessTokenType - only access token
+	//   - IDTokenType - only id token
+	// - validation of subject's token type on possibility to be exchanged to the requested token type (according to your requirements)
+	// - scopes (and update them using SetCurrentScopes method)
+	// - set new subject if it differs from exchange subject (impersonation flow)
+	//
+	// Request will include subject's and/or actor's token claims if correspinding tokens are access/id_token issued by op
+	// or third party tokens parsed by TokenExchangeTokensVerifierStorage interface methods.
+	ValidateTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) error
+
+	// CreateTokenExchangeRequest will be called after parsing and validating token exchange request.
+	// Stored request is not accessed later by op - so it is up to implementer to decide
+	// should this method actually store the request or not (common use case - store for it for audit purposes)
+	CreateTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) error
+
+	// GetPrivateClaimsFromTokenExchangeRequest will be called during access token creation.
+	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
+	GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) (claims map[string]interface{}, err error)
+
+	// SetUserinfoFromTokenExchangeRequest will be called during id token creation.
+	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
+	SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request TokenExchangeRequest) error
+}
+
+// TokenExchangeTokensVerifierStorage is an optional interface used in token exchange process to verify tokens
+// issued by third-party applications. If interface is not implemented - only tokens issued by op will be exchanged.
+type TokenExchangeTokensVerifierStorage interface {
+	VerifyExchangeSubjectToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, subject string, tokenClaims map[string]interface{}, err error)
+	VerifyExchangeActorToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, actor string, tokenClaims map[string]interface{}, err error)
+}
+
+// CanRefreshTokenInfo is an optional additional interface that Storage can support.
+// Supporting CanRefreshTokenInfo is required to be able to (revoke) a refresh token that
+// is neither an encrypted string of <tokenID>:<userID> nor a JWT.
+type CanRefreshTokenInfo interface {
+	// GetRefreshTokenInfo must return ErrInvalidRefreshToken when presented
+	// with a token that is not a refresh token.
+	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
+}
+
+var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 
 type OPStorage interface {
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
@@ -66,6 +123,12 @@ type OPStorage interface {
 	// it passes the clientID.
 	GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
+}
+
+// JWTProfileTokenStorage is an additional, optional storage to implement
+// implementing it, allows specifying the [AccessTokenType] of the access_token returned form the JWT Profile TokenRequest
+type JWTProfileTokenStorage interface {
+	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
 }
 
 // Storage is a required parameter for NewOpenIDProvider(). In addition to the

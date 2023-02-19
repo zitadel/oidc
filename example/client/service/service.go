@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/pkg/client/profile"
+	"github.com/zitadel/oidc/v2/pkg/client/profile"
 )
 
 var client = http.DefaultClient
@@ -71,7 +71,7 @@ func main() {
 			}
 			defer file.Close()
 
-			key, err := ioutil.ReadAll(file)
+			key, err := io.ReadAll(file)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -161,7 +161,7 @@ func callExampleEndpoint(client *http.Client, testURL string) (interface{}, erro
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

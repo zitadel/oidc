@@ -9,8 +9,8 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/crypto"
-	"github.com/zitadel/oidc/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/crypto"
+	"github.com/zitadel/oidc/v2/pkg/http"
 )
 
 const (
@@ -31,6 +31,7 @@ type AccessTokenClaims interface {
 	GetSubject() string
 	GetTokenID() string
 	SetPrivateClaims(map[string]interface{})
+	GetClaims() map[string]interface{}
 }
 
 type IDTokenClaims interface {
@@ -149,6 +150,11 @@ func (a *accessTokenClaims) GetTokenID() string {
 // SetPrivateClaims implements the AccessTokenClaims interface
 func (a *accessTokenClaims) SetPrivateClaims(claims map[string]interface{}) {
 	a.claims = claims
+}
+
+// GetClaims implements the AccessTokenClaims interface
+func (a *accessTokenClaims) GetClaims() map[string]interface{} {
+	return a.claims
 }
 
 func (a *accessTokenClaims) MarshalJSON() ([]byte, error) {
@@ -611,4 +617,13 @@ func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error
 		return "", err
 	}
 	return signedAssertion.CompactSerialize()
+}
+
+type TokenExchangeResponse struct {
+	AccessToken     string              `json:"access_token"` // Can be access token or ID token
+	IssuedTokenType TokenType           `json:"issued_token_type"`
+	TokenType       string              `json:"token_type"`
+	ExpiresIn       uint64              `json:"expires_in,omitempty"`
+	Scopes          SpaceDelimitedArray `json:"scope,omitempty"`
+	RefreshToken    string              `json:"refresh_token,omitempty"`
 }

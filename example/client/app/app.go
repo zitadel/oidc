@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/zitadel/oidc/pkg/client/rp"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 var (
@@ -80,6 +80,31 @@ func main() {
 	//	w.Write(data)
 	//}
 
+	// you can also try token exchange flow
+	//
+	// requestTokenExchange := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info oidc.UserInfo) {
+	// 	data := make(url.Values)
+	// 	data.Set("grant_type", string(oidc.GrantTypeTokenExchange))
+	// 	data.Set("requested_token_type", string(oidc.IDTokenType))
+	// 	data.Set("subject_token", tokens.RefreshToken)
+	// 	data.Set("subject_token_type", string(oidc.RefreshTokenType))
+	// 	data.Add("scope", "profile custom_scope:impersonate:id2")
+
+	// 	client := &http.Client{}
+	// 	r2, _ := http.NewRequest(http.MethodPost, issuer+"/oauth/token", strings.NewReader(data.Encode()))
+	// 	// r2.Header.Add("Authorization", "Basic "+"d2ViOnNlY3JldA==")
+	// 	r2.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	// 	r2.SetBasicAuth("web", "secret")
+
+	// 	resp, _ := client.Do(r2)
+	// 	fmt.Println(resp.Status)
+
+	// 	b, _ := io.ReadAll(resp.Body)
+	// 	resp.Body.Close()
+
+	// 	w.Write(b)
+	// }
+
 	// register the CodeExchangeHandler at the callbackPath
 	// the CodeExchangeHandler handles the auth response, creates the token request and calls the callback function
 	// with the returned tokens from the token endpoint
@@ -93,5 +118,6 @@ func main() {
 
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
 	logrus.Infof("listening on http://%s/", lis)
+	logrus.Info("press ctrl+c to stop")
 	logrus.Fatal(http.ListenAndServe(lis, nil))
 }

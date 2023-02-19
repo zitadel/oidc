@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/zitadel/oidc/pkg/client"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type ResourceServer interface {
 	IntrospectionURL() string
+	TokenEndpoint() string
 	HttpClient() *http.Client
 	AuthFn() (interface{}, error)
 }
@@ -27,6 +28,10 @@ type resourceServer struct {
 
 func (r *resourceServer) IntrospectionURL() string {
 	return r.introspectURL
+}
+
+func (r *resourceServer) TokenEndpoint() string {
+	return r.tokenURL
 }
 
 func (r *resourceServer) HttpClient() *http.Client {

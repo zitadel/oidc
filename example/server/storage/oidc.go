@@ -5,9 +5,8 @@ import (
 
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/pkg/op"
-
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 const (
@@ -17,6 +16,9 @@ const (
 
 	// CustomClaim is an example for how to return custom claims with this library
 	CustomClaim = "custom_claim"
+
+	// CustomScopeImpersonatePrefix is an example scope prefix for passing user id to impersonate using token exchage
+	CustomScopeImpersonatePrefix = "custom_scope:impersonate:"
 )
 
 type AuthRequest struct {

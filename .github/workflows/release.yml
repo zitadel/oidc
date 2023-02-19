@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        go: ['1.15', '1.16', '1.17', '1.18', '1.19']
+        go: ['1.16', '1.17', '1.18', '1.19', '1.20']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v3
@@ -38,9 +38,9 @@ jobs:
     - name: Source checkout
       uses: actions/checkout@v3
     - name: Semantic Release
-      uses: cycjimmy/semantic-release-action@v2
+      uses: cycjimmy/semantic-release-action@v3
       with:
         dry_run: false
-        semantic_version: 17.0.4
+        semantic_version: 18.0.1
         extra_plugins: |
-          @semantic-release/exec@5.0.0
+          @semantic-release/exec@6.0.3
