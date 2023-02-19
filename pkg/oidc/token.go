@@ -66,38 +66,32 @@ func (c *TokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 	c.SignatureAlg = algorithm
 }
 
-type RegisteredAccessTokenClaims struct {
+type AccessTokenClaims struct {
 	TokenClaims
 	NotBefore            Time     `json:"nbf,omitempty"`
 	CodeHash             string   `json:"c_hash,omitempty"`
 	SessionID            string   `json:"sid,omitempty"`
 	Scopes               []string `json:"scope,omitempty"`
 	AccessTokenUseNumber int      `json:"at_use_nbr,omitempty"`
-}
-
-type AccessTokenClaims struct {
-	RegisteredAccessTokenClaims
 
 	Claims map[string]any `json:"-"`
 }
 
-func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string, skew time.Duration) *AccessTokenClaims {
+func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, jwtid, clientID string, skew time.Duration) *AccessTokenClaims {
 	now := time.Now().UTC().Add(-skew)
 	if len(audience) == 0 {
 		audience = append(audience, clientID)
 	}
 	return &AccessTokenClaims{
-		RegisteredAccessTokenClaims: RegisteredAccessTokenClaims{
-			TokenClaims: TokenClaims{
-				Issuer:     issuer,
-				Subject:    subject,
-				Audience:   audience,
-				Expiration: FromTime(expiration),
-				IssuedAt:   FromTime(now),
-				JWTID:      id,
-			},
-			NotBefore: FromTime(now),
+		TokenClaims: TokenClaims{
+			Issuer:     issuer,
+			Subject:    subject,
+			Audience:   audience,
+			Expiration: FromTime(expiration),
+			IssuedAt:   FromTime(now),
+			JWTID:      jwtid,
 		},
+		NotBefore: FromTime(now),
 	}
 }
 
@@ -111,7 +105,7 @@ func (a *AccessTokenClaims) UnmarshalJSON(data []byte) error {
 	return unmarshalJSONMulti(data, (*atcAlias)(a), &a.Claims)
 }
 
-type RegisteredIDTokenClaims struct {
+type IDTokenClaims struct {
 	TokenClaims
 	NotBefore       Time   `json:"nbf,omitempty"`
 	AccessTokenHash string `json:"at_hash,omitempty"`
@@ -120,14 +114,15 @@ type RegisteredIDTokenClaims struct {
 	UserInfoEmail
 	UserInfoPhone
 	Address UserInfoAddress `json:"address,omitempty"`
+	Claims  map[string]any  `json:"-"`
 }
 
 // GetAccessTokenHash implements the IDTokenClaims interface
-func (t *RegisteredIDTokenClaims) GetAccessTokenHash() string {
+func (t *IDTokenClaims) GetAccessTokenHash() string {
 	return t.AccessTokenHash
 }
 
-func (t *RegisteredIDTokenClaims) SetUserInfo(i *UserInfo) {
+func (t *IDTokenClaims) SetUserInfo(i *UserInfo) {
 	t.Subject = i.Subject
 	t.UserInfoProfile = i.UserInfoProfile
 	t.UserInfoEmail = i.UserInfoEmail
@@ -135,27 +130,20 @@ func (t *RegisteredIDTokenClaims) SetUserInfo(i *UserInfo) {
 	t.Address = i.Address
 }
 
-type IDTokenClaims struct {
-	RegisteredIDTokenClaims
-	Claims map[string]any `json:"-"`
-}
-
 func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string, skew time.Duration) *IDTokenClaims {
 	audience = AppendClientIDToAudience(clientID, audience)
 	return &IDTokenClaims{
-		RegisteredIDTokenClaims: RegisteredIDTokenClaims{
-			TokenClaims: TokenClaims{
-				Issuer:                              issuer,
-				Subject:                             subject,
-				Audience:                            audience,
-				Expiration:                          FromTime(expiration),
-				IssuedAt:                            FromTime(time.Now().Add(-skew)),
-				AuthTime:                            FromTime(authTime.Add(-skew)),
-				Nonce:                               nonce,
-				AuthenticationContextClassReference: acr,
-				AuthenticationMethodsReferences:     amr,
-				AuthorizedParty:                     clientID,
-			},
+		TokenClaims: TokenClaims{
+			Issuer:                              issuer,
+			Subject:                             subject,
+			Audience:                            audience,
+			Expiration:                          FromTime(expiration),
+			IssuedAt:                            FromTime(time.Now().Add(-skew)),
+			AuthTime:                            FromTime(authTime.Add(-skew)),
+			Nonce:                               nonce,
+			AuthenticationContextClassReference: acr,
+			AuthenticationMethodsReferences:     amr,
+			AuthorizedParty:                     clientID,
 		},
 	}
 }
