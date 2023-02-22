@@ -27,17 +27,21 @@ const (
 	defaultRevocationEndpoint    = "revoke"
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
+	defaultDeviceAuthzEndpoint   = "/device_authorization"
+	defaultUserCodeFormEndpoint  = "/device"
 )
 
 var (
 	DefaultEndpoints = &endpoints{
-		Authorization: NewEndpoint(defaultAuthorizationEndpoint),
-		Token:         NewEndpoint(defaultTokenEndpoint),
-		Introspection: NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:      NewEndpoint(defaultUserinfoEndpoint),
-		Revocation:    NewEndpoint(defaultRevocationEndpoint),
-		EndSession:    NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:       NewEndpoint(defaultKeysEndpoint),
+		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
+		Token:               NewEndpoint(defaultTokenEndpoint),
+		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:            NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:          NewEndpoint(defaultRevocationEndpoint),
+		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:             NewEndpoint(defaultKeysEndpoint),
+		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
+		UserCodeForm:        NewEndpoint(defaultUserCodeFormEndpoint),
 	}
 
 	defaultCORSOptions = cors.Options{
@@ -95,6 +99,8 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(o.RevocationEndpoint().Relative(), revocationHandler(o))
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
+	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), deviceAuthorizationHandler(o))
+	router.HandleFunc(o.UserCodeFormEndpoint().Relative(), userCodeFormHandler(o))
 	return router
 }
 
@@ -121,14 +127,16 @@ type Config struct {
 }
 
 type endpoints struct {
-	Authorization      Endpoint
-	Token              Endpoint
-	Introspection      Endpoint
-	Userinfo           Endpoint
-	Revocation         Endpoint
-	EndSession         Endpoint
-	CheckSessionIframe Endpoint
-	JwksURI            Endpoint
+	Authorization       Endpoint
+	Token               Endpoint
+	Introspection       Endpoint
+	Userinfo            Endpoint
+	Revocation          Endpoint
+	EndSession          Endpoint
+	CheckSessionIframe  Endpoint
+	JwksURI             Endpoint
+	DeviceAuthorization Endpoint
+	UserCodeForm        Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -242,6 +250,14 @@ func (o *Provider) EndSessionEndpoint() Endpoint {
 	return o.endpoints.EndSession
 }
 
+func (o *Provider) DeviceAuthorizationEndpoint() Endpoint {
+	return o.endpoints.DeviceAuthorization
+}
+
+func (o *Provider) UserCodeFormEndpoint() Endpoint {
+	return o.endpoints.UserCodeForm
+}
+
 func (o *Provider) KeysEndpoint() Endpoint {
 	return o.endpoints.JwksURI
 }
@@ -272,6 +288,10 @@ func (o *Provider) GrantTypeTokenExchangeSupported() bool {
 }
 
 func (o *Provider) GrantTypeJWTAuthorizationSupported() bool {
+	return true
+}
+
+func (o *Provider) GrantTypeDeviceCodeSupported() bool {
 	return true
 }
 
@@ -306,6 +326,10 @@ func (o *Provider) RequestObjectSigningAlgorithmsSupported() []string {
 
 func (o *Provider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
+}
+
+func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
+	return DeviceAuthorizationConfig{}
 }
 
 func (o *Provider) Storage() Storage {

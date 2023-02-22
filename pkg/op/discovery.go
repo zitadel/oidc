@@ -44,6 +44,7 @@ func CreateDiscoveryConfig(r *http.Request, config Configuration, storage Discov
 		RevocationEndpoint:                         config.RevocationEndpoint().Absolute(issuer),
 		EndSessionEndpoint:                         config.EndSessionEndpoint().Absolute(issuer),
 		JwksURI:                                    config.KeysEndpoint().Absolute(issuer),
+		DeviceAuthorizationEndpoint:                config.DeviceAuthorizationEndpoint().Absolute(issuer),
 		ScopesSupported:                            Scopes(config),
 		ResponseTypesSupported:                     ResponseTypes(config),
 		GrantTypesSupported:                        GrantTypes(config),
@@ -91,6 +92,9 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 	}
 	if c.GrantTypeJWTAuthorizationSupported() {
 		grantTypes = append(grantTypes, oidc.GrantTypeBearer)
+	}
+	if c.GrantTypeDeviceCodeSupported() {
+		grantTypes = append(grantTypes, oidc.GrantTypeDeviceCode)
 	}
 	return grantTypes
 }

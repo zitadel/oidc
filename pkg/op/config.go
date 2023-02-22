@@ -27,6 +27,8 @@ type Configuration interface {
 	RevocationEndpoint() Endpoint
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
+	DeviceAuthorizationEndpoint() Endpoint
+	UserCodeFormEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
@@ -36,6 +38,7 @@ type Configuration interface {
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 	GrantTypeClientCredentialsSupported() bool
+	GrantTypeDeviceCodeSupported() bool
 	IntrospectionAuthMethodPrivateKeyJWTSupported() bool
 	IntrospectionEndpointSigningAlgorithmsSupported() []string
 	RevocationAuthMethodPrivateKeyJWTSupported() bool
@@ -44,6 +47,7 @@ type Configuration interface {
 	RequestObjectSigningAlgorithmsSupported() []string
 
 	SupportedUILocales() []language.Tag
+	DeviceAuthorization() DeviceAuthorizationConfig
 }
 
 type IssuerFromRequest func(r *http.Request) string

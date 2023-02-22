@@ -186,3 +186,20 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 		IssuedAt:  oidc.Time(iat),
 	}, signer)
 }
+
+type DeviceAuthorizationCaller interface {
+	GetDeviceCodeEndpoint() string
+	HttpClient() *http.Client
+}
+
+func CallDeviceAuthorizationEndpoint(request interface{}, caller DeviceAuthorizationCaller) (*oidc.DeviceAuthorizationResponse, error) {
+	req, err := httphelper.FormRequest(caller.GetDeviceCodeEndpoint(), request, Encoder, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp := new(oidc.DeviceAuthorizationResponse)
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}

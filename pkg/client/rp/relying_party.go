@@ -59,6 +59,8 @@ type RelyingParty interface {
 	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
+	GetDeviceCodeEndpoint() string
+
 	// IDTokenVerifier returns the verifier interface used for oidc id_token verification
 	IDTokenVerifier() IDTokenVerifier
 	// ErrorHandler returns the handler used for callback errors
@@ -119,6 +121,10 @@ func (rp *relyingParty) Signer() jose.Signer {
 
 func (rp *relyingParty) UserinfoEndpoint() string {
 	return rp.endpoints.UserinfoURL
+}
+
+func (rp *relyingParty) GetDeviceCodeEndpoint() string {
+	return rp.endpoints.DeviceCodeURL
 }
 
 func (rp *relyingParty) GetEndSessionEndpoint() string {
@@ -500,6 +506,7 @@ type Endpoints struct {
 	JKWsURL       string
 	EndSessionURL string
 	RevokeURL     string
+	DeviceCodeURL string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -514,6 +521,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 		JKWsURL:       discoveryConfig.JwksURI,
 		EndSessionURL: discoveryConfig.EndSessionEndpoint,
 		RevokeURL:     discoveryConfig.RevocationEndpoint,
+		DeviceCodeURL: discoveryConfig.DeviceAuthorizationEndpoint,
 	}
 }
 

@@ -151,3 +151,35 @@ type EndSessionRequest struct {
 	ClientID    string
 	RedirectURI string
 }
+
+var ErrDuplicateUserCode = errors.New("user code already exists")
+
+type DeviceCodeStorage interface {
+	// StoreDeviceAuthorizationRequest stores a new device authorization request in the database.
+	// User code will be used by the user to complete the login flow and must be unique.
+	// ErrDuplicateUserCode signals the caller should try again with a new code.
+	//
+	// Note that user codes are low entropy keys and when many exist in the
+	// database, the change for collisions increases. Therefore implementers
+	// of this interface must make sure that user codes of completed or expired
+	// authentication flows are deleted.
+	StoreDeviceAuthorizationRequest(ctx context.Context, req *oidc.DeviceAuthorizationRequest, deviceCode, userCode string) error
+
+	// DeviceAccessPoll is called by the device untill the authorization flow is
+	// completed or expired.
+	//
+	// The following errors are defined for the Device Authorization workflow,
+	// that can be returned by this method:
+	// - oidc.ErrAuthorizationPending should be returned on each poll, while the flow is not completed by the user.
+	// - oidc.ErrSlowDown signals to the device that the polling interval is to be increased by 5 seconds.
+	// - oidc.ErrAccessDenied when the authorization request is denied.
+	// - oidc.ErrExpiredToken when the device code has expired.
+	//
+	// A token should be returned once the authorization flow is completed
+	// by the user.
+	DeviceAccessPoll(ctx context.Context, deviceCode string) (Client, error)
+
+	// ReleaseDeviceAccessToken releases DeviceAccessPoll to return the Access Token,
+	// destined for a user code.
+	ReleaseDeviceAccessToken(ctx context.Context, userCode string) error
+}
