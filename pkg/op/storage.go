@@ -154,32 +154,42 @@ type EndSessionRequest struct {
 
 var ErrDuplicateUserCode = errors.New("user code already exists")
 
-type DeviceCodeStorage interface {
+type DeviceAuthorizationState struct {
+	Scopes    []string
+	Expires   time.Time
+	Completed bool
+	Subject   string
+	Denied    bool
+}
+
+type DeviceAuthorizationStorage interface {
 	// StoreDeviceAuthorizationRequest stores a new device authorization request in the database.
 	// User code will be used by the user to complete the login flow and must be unique.
 	// ErrDuplicateUserCode signals the caller should try again with a new code.
 	//
 	// Note that user codes are low entropy keys and when many exist in the
 	// database, the change for collisions increases. Therefore implementers
-	// of this interface must make sure that user codes of completed or expired
-	// authentication flows are deleted.
-	StoreDeviceAuthorizationRequest(ctx context.Context, req *oidc.DeviceAuthorizationRequest, deviceCode, userCode string) error
+	// of this interface must make sure that user codes of expired authentication flows are purged,
+	// after some time.
+	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, scopes []string) error
 
-	// DeviceAccessPoll is called by the device untill the authorization flow is
-	// completed or expired.
-	//
-	// The following errors are defined for the Device Authorization workflow,
-	// that can be returned by this method:
-	// - oidc.ErrAuthorizationPending should be returned on each poll, while the flow is not completed by the user.
-	// - oidc.ErrSlowDown signals to the device that the polling interval is to be increased by 5 seconds.
-	// - oidc.ErrAccessDenied when the authorization request is denied.
-	// - oidc.ErrExpiredToken when the device code has expired.
-	//
-	// A token should be returned once the authorization flow is completed
-	// by the user.
-	DeviceAccessPoll(ctx context.Context, deviceCode string) (Client, error)
+	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
+	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.
+	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
 
-	// ReleaseDeviceAccessToken releases DeviceAccessPoll to return the Access Token,
-	// destined for a user code.
-	ReleaseDeviceAccessToken(ctx context.Context, userCode string) error
+	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
+	// identified by userCode. The Subject is added to the state, so that
+	// GetDeviceAuthorizatonState can use it to create a new Access Token.
+	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
+
+	// DenyDeviceAuthorization marks a device authorization entry as Denied.
+	DenyDeviceAuthorization(ctx context.Context, userCode string) error
+}
+
+func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
+	storage, ok := s.(DeviceAuthorizationStorage)
+	if !ok {
+		return nil, oidc.ErrUnsupportedGrantType().WithDescription("device_code grant not supported")
+	}
+	return storage, nil
 }

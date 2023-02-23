@@ -105,7 +105,7 @@ var (
 			Description: "The authorization request was denied.",
 		}
 	}
-	ErrExpiredToken = func() *Error {
+	ErrExpiredDeviceCode = func() *Error {
 		return &Error{
 			ErrorType:   ExpiredToken,
 			Description: "The \"device_code\" has expired.",
