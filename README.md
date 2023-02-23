@@ -78,7 +78,7 @@ For your convenience you can find the relevant standards linked below.
 - [OAuth 2.0 Token Exchange](https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-19)
 - [OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://tools.ietf.org/html/draft-ietf-oauth-mtls-17)
 - [JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants](https://tools.ietf.org/html/rfc7523)
-- [OIDC/OAuth Flow in Zitadel (using this library)](https://docs.zitadel.com/docs/guides/integrate/login-users)
+- [OIDC/OAuth Flow in Zitadel (using this library)](https://zitadel.com/docs/guides/integrate/login-users)
 
 ## Supported Go Versions
 
