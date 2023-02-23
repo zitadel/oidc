@@ -131,6 +131,7 @@ func Test_GrantTypes(t *testing.T) {
 					c.EXPECT().GrantTypeTokenExchangeSupported().Return(false)
 					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(false)
 					c.EXPECT().GrantTypeClientCredentialsSupported().Return(false)
+					c.EXPECT().GrantTypeDeviceCodeSupported().Return(false)
 					return c
 				}(),
 			},
@@ -148,6 +149,7 @@ func Test_GrantTypes(t *testing.T) {
 					c.EXPECT().GrantTypeTokenExchangeSupported().Return(true)
 					c.EXPECT().GrantTypeJWTAuthorizationSupported().Return(true)
 					c.EXPECT().GrantTypeClientCredentialsSupported().Return(true)
+					c.EXPECT().GrantTypeDeviceCodeSupported().Return(false)
 					return c
 				}(),
 			},
