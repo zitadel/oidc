@@ -263,7 +263,7 @@ func UserCodeForm(w http.ResponseWriter, r *http.Request, o OpenIDProvider) {
 	}
 
 	ctx := r.Context()
-	token, err := VerifyAccessToken[*oidc.AccessTokenClaims](ctx, data.AccesssToken, o.AccessTokenVerifier(ctx))
+	token, err := VerifyAccessToken(ctx, data.AccesssToken, o.AccessTokenVerifier(ctx))
 	if err != nil {
 		if se := storage.DenyDeviceAuthorization(ctx, data.UserCode); se != nil {
 			err = se
@@ -272,7 +272,7 @@ func UserCodeForm(w http.ResponseWriter, r *http.Request, o OpenIDProvider) {
 		return
 	}
 
-	if err := storage.CompleteDeviceAuthorization(ctx, data.UserCode, token.Subject); err != nil {
+	if err := storage.CompleteDeviceAuthorization(ctx, data.UserCode, token.GetSubject()); err != nil {
 		RequestError(w, r, err)
 		return
 	}
