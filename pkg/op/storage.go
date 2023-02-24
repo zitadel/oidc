@@ -171,7 +171,7 @@ type DeviceAuthorizationStorage interface {
 	// database, the change for collisions increases. Therefore implementers
 	// of this interface must make sure that user codes of expired authentication flows are purged,
 	// after some time.
-	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, scopes []string) error
+	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error
 
 	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
 	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.

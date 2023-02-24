@@ -28,7 +28,7 @@ const (
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 	defaultDeviceAuthzEndpoint   = "/device_authorization"
-	defaultUserCodeFormEndpoint  = "/device"
+	defaultUserCodeFormEndpoint  = "/submit_user_code"
 )
 
 var (
@@ -124,6 +124,7 @@ type Config struct {
 	GrantTypeRefreshToken    bool
 	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
+	DeviceAuthorization      DeviceAuthorizationConfig
 }
 
 type endpoints struct {
@@ -153,6 +154,7 @@ type endpoints struct {
 //	/revoke
 //	/end_session
 //	/keys
+//	/device_authorization
 //
 // This does not include login. Login is handled with a redirect that includes the
 // request ID. The redirect for logins is specified per-client by Client.LoginURL().
@@ -292,7 +294,8 @@ func (o *Provider) GrantTypeJWTAuthorizationSupported() bool {
 }
 
 func (o *Provider) GrantTypeDeviceCodeSupported() bool {
-	return true
+	_, ok := o.storage.(DeviceAuthorizationStorage)
+	return ok
 }
 
 func (o *Provider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
@@ -329,7 +332,7 @@ func (o *Provider) SupportedUILocales() []language.Tag {
 }
 
 func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
-	return DeviceAuthorizationConfig{}
+	return o.config.DeviceAuthorization
 }
 
 func (o *Provider) Storage() Storage {

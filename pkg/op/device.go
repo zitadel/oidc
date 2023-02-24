@@ -77,7 +77,9 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 		RequestError(w, r, err)
 		return
 	}
-	err = storage.StoreDeviceAuthorization(r.Context(), req.ClientID, deviceCode, userCode, req.Scopes)
+
+	expires := time.Now().Add(time.Duration(config.Lifetime) * time.Second)
+	err = storage.StoreDeviceAuthorization(r.Context(), req.ClientID, deviceCode, userCode, expires, req.Scopes)
 	if err != nil {
 		RequestError(w, r, err)
 		return
