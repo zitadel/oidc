@@ -48,41 +48,38 @@ var (
 
 func deviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		DeviceAuthorization(w, r, o)
+		if err := DeviceAuthorization(w, r, o); err != nil {
+			RequestError(w, r, err)
+		}
 	}
 }
 
-func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvider) {
+func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
 	storage, err := assertDeviceStorage(o.Storage())
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
 
-	req, err := ParseDeviceCodeRequest(r, o.Decoder())
+	req, err := ParseDeviceCodeRequest(r, o)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
 
 	config := o.DeviceAuthorization()
 
 	deviceCode, err := NewDeviceCode(RecommendedDeviceCodeBytes)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
 	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.CharAmount)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
 
 	expires := time.Now().Add(time.Duration(config.Lifetime) * time.Second)
 	err = storage.StoreDeviceAuthorization(r.Context(), req.ClientID, deviceCode, userCode, expires, req.Scopes)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
 
 	response := &oidc.DeviceAuthorizationResponse{
@@ -95,19 +92,22 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 	response.VerificationURIComplete = fmt.Sprintf("%s?user_code=%s", endpoint, userCode)
 
 	httphelper.MarshalJSON(w, response)
+	return nil
 }
 
-func ParseDeviceCodeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.DeviceAuthorizationRequest, error) {
-	if err := r.ParseForm(); err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
+func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuthorizationRequest, error) {
+	clientID, _, err := ClientIDFromRequest(r, o)
+	if err != nil {
+		return nil, err
 	}
 
-	devReq := new(oidc.DeviceAuthorizationRequest)
-	if err := decoder.Decode(devReq, r.Form); err != nil {
+	req := new(oidc.DeviceAuthorizationRequest)
+	if err := o.Decoder().Decode(req, r.Form); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse device authentication request").WithParent(err)
 	}
+	req.ClientID = clientID
 
-	return devReq, nil
+	return req, nil
 }
 
 // 16 bytes gives 128 bit of entropy.
@@ -167,35 +167,54 @@ func (r *deviceAccessTokenRequest) GetScopes() []string {
 }
 
 func DeviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	req := new(oidc.DeviceAccessTokenRequest)
-	if err := exchanger.Decoder().Decode(req, r.PostForm); err != nil {
+	if err := deviceAccessToken(w, r, exchanger); err != nil {
 		RequestError(w, r, err)
-		return
 	}
+}
 
+func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchanger) error {
 	// use a limited context timeout shorter as the default
 	// poll interval of 5 seconds.
 	ctx, cancel := context.WithTimeout(r.Context(), 4*time.Second)
 	defer cancel()
+	r = r.WithContext(ctx)
 
+	client, err := ClientFromRequest(r, exchanger)
+	if err != nil {
+		return err
+	}
+	req, err := ParseDeviceAccessTokenRequest(r, exchanger)
+	if err != nil {
+		return err
+	}
 	state, err := CheckDeviceAuthorizationState(ctx, req, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
-
 	tokenRequest := &deviceAccessTokenRequest{
 		subject:  state.Subject,
 		audience: []string{req.ClientID},
 		scopes:   state.Scopes,
 	}
-
-	resp, err := CreateDeviceTokenResponse(r.Context(), tokenRequest, exchanger, &jwtProfileClient{id: req.ClientID})
+	resp, err := CreateDeviceTokenResponse(r.Context(), tokenRequest, exchanger, client)
 	if err != nil {
-		RequestError(w, r, err)
-		return
+		return err
 	}
+
 	httphelper.MarshalJSON(w, resp)
+	return nil
+}
+
+func ParseDeviceAccessTokenRequest(r *http.Request, exchanger Exchanger) (*oidc.DeviceAccessTokenRequest, error) {
+	req := new(struct {
+		oidc.DeviceAccessTokenRequest
+	})
+	err := exchanger.Decoder().Decode(req, r.PostForm)
+	if err != nil {
+		return nil, err
+	}
+
+	return &req.DeviceAccessTokenRequest, err
 }
 
 func CheckDeviceAuthorizationState(ctx context.Context, req *oidc.DeviceAccessTokenRequest, exchanger Exchanger) (*DeviceAuthorizationState, error) {
