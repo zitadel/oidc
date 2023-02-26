@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -156,6 +155,7 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	return data.ClientID, false, nil
 }
 
+/*
 // ClientFromRequest wraps ClientIDFromRequest and obtains the Client from storage.
 // If the client id was not authenticated, the client from storage does not have
 // oidc.AuthMethodNone set, an error is returned.
@@ -179,3 +179,4 @@ func ClientFromRequest(r *http.Request, p ClientProvider) (Client, error) {
 
 	return client, err
 }
+*/
