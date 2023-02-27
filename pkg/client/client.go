@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -188,18 +190,92 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 }
 
 type DeviceAuthorizationCaller interface {
-	GetDeviceCodeEndpoint() string
+	GetDeviceAuthorizationEndpoint() string
 	HttpClient() *http.Client
 }
 
-func CallDeviceAuthorizationEndpoint(request interface{}, caller DeviceAuthorizationCaller) (*oidc.DeviceAuthorizationResponse, error) {
-	req, err := httphelper.FormRequest(caller.GetDeviceCodeEndpoint(), request, Encoder, nil)
+func CallDeviceAuthorizationEndpoint(request *oidc.ClientCredentialsRequest, caller DeviceAuthorizationCaller) (*oidc.DeviceAuthorizationResponse, error) {
+	req, err := httphelper.FormRequest(caller.GetDeviceAuthorizationEndpoint(), request, Encoder, nil)
 	if err != nil {
 		return nil, err
 	}
+	if request.ClientSecret != "" {
+		req.SetBasicAuth(request.ClientID, request.ClientSecret)
+	}
+
 	resp := new(oidc.DeviceAuthorizationResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
 		return nil, err
 	}
 	return resp, nil
+}
+
+type DeviceAccessTokenRequest struct {
+	*oidc.ClientCredentialsRequest
+	oidc.DeviceAccessTokenRequest
+}
+
+func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, nil)
+	if err != nil {
+		return nil, err
+	}
+	if request.ClientSecret != "" {
+		req.SetBasicAuth(request.ClientID, request.ClientSecret)
+	}
+
+	httpResp, err := caller.HttpClient().Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer httpResp.Body.Close()
+
+	resp := new(struct {
+		*oidc.AccessTokenResponse
+		*oidc.Error
+	})
+	if err = json.NewDecoder(httpResp.Body).Decode(resp); err != nil {
+		return nil, err
+	}
+
+	if httpResp.StatusCode == http.StatusOK {
+		return resp.AccessTokenResponse, nil
+	}
+
+	return nil, resp.Error
+}
+
+func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	for {
+		timer := time.After(interval)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer:
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, interval)
+		defer cancel()
+
+		resp, err := CallDeviceAccessTokenEndpoint(ctx, request, caller)
+		if err == nil {
+			return resp, nil
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			interval += 5 * time.Second
+		}
+		var target *oidc.Error
+		if !errors.As(err, &target) {
+			return nil, err
+		}
+		switch target.ErrorType {
+		case oidc.AuthorizationPending:
+			continue
+		case oidc.SlowDown:
+			interval += 5 * time.Second
+			continue
+		default:
+			return nil, err
+		}
+	}
 }
