@@ -400,18 +400,18 @@ func (mr *MockConfigurationMockRecorder) TokenEndpointSigningAlgorithmsSupported
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenEndpointSigningAlgorithmsSupported", reflect.TypeOf((*MockConfiguration)(nil).TokenEndpointSigningAlgorithmsSupported))
 }
 
-// UserCodeFormEndpoint mocks base method.
-func (m *MockConfiguration) UserCodeFormEndpoint() op.Endpoint {
+// UserCodeVerificationEndpoint mocks base method.
+func (m *MockConfiguration) UserCodeVerificationEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UserCodeFormEndpoint")
+	ret := m.ctrl.Call(m, "UserCodeVerificationEndpoint")
 	ret0, _ := ret[0].(op.Endpoint)
 	return ret0
 }
 
-// UserCodeFormEndpoint indicates an expected call of UserCodeFormEndpoint.
-func (mr *MockConfigurationMockRecorder) UserCodeFormEndpoint() *gomock.Call {
+// UserCodeVerificationEndpoint indicates an expected call of UserCodeVerificationEndpoint.
+func (mr *MockConfigurationMockRecorder) UserCodeVerificationEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserCodeFormEndpoint", reflect.TypeOf((*MockConfiguration)(nil).UserCodeFormEndpoint))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserCodeVerificationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).UserCodeVerificationEndpoint))
 }
 
 // UserinfoEndpoint mocks base method.
