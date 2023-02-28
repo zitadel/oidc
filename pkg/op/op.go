@@ -28,7 +28,6 @@ const (
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 	defaultDeviceAuthzEndpoint   = "/device_authorization"
-	defaultUserCodeFormEndpoint  = "/submit_user_code"
 )
 
 var (
@@ -41,7 +40,6 @@ var (
 		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:             NewEndpoint(defaultKeysEndpoint),
 		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
-		UserCodeForm:        NewEndpoint(defaultUserCodeFormEndpoint),
 	}
 
 	defaultCORSOptions = cors.Options{
@@ -100,7 +98,6 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), deviceAuthorizationHandler(o))
-	router.HandleFunc(o.UserCodeFormEndpoint().Relative(), userCodeFormHandler(o))
 	return router
 }
 
@@ -137,7 +134,6 @@ type endpoints struct {
 	CheckSessionIframe  Endpoint
 	JwksURI             Endpoint
 	DeviceAuthorization Endpoint
-	UserCodeForm        Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -254,10 +250,6 @@ func (o *Provider) EndSessionEndpoint() Endpoint {
 
 func (o *Provider) DeviceAuthorizationEndpoint() Endpoint {
 	return o.endpoints.DeviceAuthorization
-}
-
-func (o *Provider) UserCodeFormEndpoint() Endpoint {
-	return o.endpoints.UserCodeForm
 }
 
 func (o *Provider) KeysEndpoint() Endpoint {

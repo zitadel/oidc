@@ -18,7 +18,7 @@ import (
 type DeviceAuthorizationConfig struct {
 	Lifetime     int
 	PollInterval int
-	UserFormURL  string
+	UserFormURL  string // the URL where the user must go to authorize the device
 	UserCode     UserCodeConfig
 }
 
@@ -88,8 +88,7 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 		VerificationURI: config.UserFormURL,
 	}
 
-	endpoint := o.UserCodeFormEndpoint().Absolute(IssuerFromContext(r.Context()))
-	response.VerificationURIComplete = fmt.Sprintf("%s?user_code=%s", endpoint, userCode)
+	response.VerificationURIComplete = fmt.Sprintf("%s?user_code=%s", config.UserFormURL, userCode)
 
 	httphelper.MarshalJSON(w, response)
 	return nil
@@ -179,7 +178,7 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	defer cancel()
 	r = r.WithContext(ctx)
 
-	clientID, authenticated, err := ClientIDFromRequest(r, exchanger)
+	clientID, clientAuthenticated, err := ClientIDFromRequest(r, exchanger)
 	if err != nil {
 		return err
 	}
@@ -197,7 +196,7 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
-	if !authenticated {
+	if !clientAuthenticated {
 		if m := client.AuthMethod(); m != oidc.AuthMethodNone { // Livio: Does this mean "public" client?
 			return oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials).
 				WithDescription(fmt.Sprintf("required client auth method: %s", m))
@@ -252,9 +251,7 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client AccessTokenClient) (*oidc.AccessTokenResponse, error) {
-	tokenType := AccessTokenTypeBearer // not sure if this is the correct type?
-
-	accessToken, refreshToken, validity, err := CreateAccessToken(ctx, tokenRequest, tokenType, creator, client, "")
+	accessToken, refreshToken, validity, err := CreateAccessToken(ctx, tokenRequest, AccessTokenTypeBearer, creator, client, "")
 	if err != nil {
 		return nil, err
 	}
@@ -265,70 +262,4 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    uint64(validity.Seconds()),
 	}, nil
-}
-
-func userCodeFormHandler(o OpenIDProvider) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		UserCodeForm(w, r, o)
-	}
-}
-
-type UserCodeFormData struct {
-	AccesssToken string `schema:"access_token"`
-	UserCode     string `schema:"user_code"`
-	RedirectURL  string `schema:"redirect_url"`
-}
-
-func UserCodeForm(w http.ResponseWriter, r *http.Request, o OpenIDProvider) {
-	data, err := ParseUserCodeFormData(r, o.Decoder())
-	if err != nil {
-		RequestError(w, r, err)
-		return
-	}
-
-	storage, err := assertDeviceStorage(o.Storage())
-	if err != nil {
-		RequestError(w, r, err)
-		return
-	}
-
-	ctx := r.Context()
-	token, err := VerifyAccessToken(ctx, data.AccesssToken, o.AccessTokenVerifier(ctx))
-	if err != nil {
-		if se := storage.DenyDeviceAuthorization(ctx, data.UserCode); se != nil {
-			err = se
-		}
-		RequestError(w, r, err)
-		return
-	}
-
-	if err := storage.CompleteDeviceAuthorization(ctx, data.UserCode, token.GetSubject()); err != nil {
-		RequestError(w, r, err)
-		return
-	}
-
-	if data.RedirectURL != "" {
-		http.Redirect(w, r, data.RedirectURL, http.StatusSeeOther)
-	}
-
-	fmt.Fprintln(w, "Authorization successfull, please return to your device")
-}
-
-func ParseUserCodeFormData(r *http.Request, decoder httphelper.Decoder) (*UserCodeFormData, error) {
-	if err := r.ParseForm(); err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
-	}
-
-	req := new(UserCodeFormData)
-	if err := decoder.Decode(req, r.Form); err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse user code form").WithParent(err)
-	}
-	if req.AccesssToken == "" {
-		return nil, oidc.ErrInvalidRequest().WithDescription("access_token missing in form")
-	}
-	if req.UserCode == "" {
-		return nil, oidc.ErrInvalidRequest().WithDescription("user_code missing in form")
-	}
-
-	return req, nil
 }

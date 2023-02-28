@@ -28,7 +28,6 @@ type Configuration interface {
 	EndSessionEndpoint() Endpoint
 	KeysEndpoint() Endpoint
 	DeviceAuthorizationEndpoint() Endpoint
-	UserCodeFormEndpoint() Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
