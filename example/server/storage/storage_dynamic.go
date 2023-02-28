@@ -126,6 +126,16 @@ func (s *multiStorage) TerminateSession(ctx context.Context, userID string, clie
 	return storage.TerminateSession(ctx, userID, clientID)
 }
 
+// GetRefreshTokenInfo looks up a refresh token and returns the token id and user id.
+// If given something that is not a refresh token, it must return error.
+func (s *multiStorage) GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error) {
+	storage, err := s.storageFromContext(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	return storage.GetRefreshTokenInfo(ctx, clientID, token)
+}
+
 // RevokeToken implements the op.Storage interface
 // it will be called after parsing and validation of the token revocation request
 func (s *multiStorage) RevokeToken(ctx context.Context, token string, userID string, clientID string) *oidc.Error {

@@ -327,6 +327,16 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 	return nil
 }
 
+// GetRefreshTokenInfo looks up a refresh token and returns the token id and user id.
+// If given something that is not a refresh token, it must return error.
+func (s *Storage) GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error) {
+	refreshToken, ok := s.refreshTokens[token]
+	if !ok {
+		return "", "", op.ErrInvalidRefreshToken
+	}
+	return refreshToken.UserID, refreshToken.ID, nil
+}
+
 // RevokeToken implements the op.Storage interface
 // it will be called after parsing and validation of the token revocation request
 func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID string, clientID string) *oidc.Error {
@@ -384,7 +394,7 @@ func (s *Storage) KeySet(ctx context.Context) ([]op.Key, error) {
 	// so it will directly use its public key
 	//
 	// when using key rotation you typically would store the public keys alongside the private keys in your database
-	//and give both of them an expiration date, with the public key having a longer lifetime
+	// and give both of them an expiration date, with the public key having a longer lifetime
 	return []op.Key{&publicKey{s.signingKey}}, nil
 }
 
