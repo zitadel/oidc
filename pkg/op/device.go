@@ -86,6 +86,8 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 		DeviceCode:      deviceCode,
 		UserCode:        userCode,
 		VerificationURI: config.UserFormURL,
+		ExpiresIn:       int(config.Lifetime / time.Second),
+		Interval:        int(config.PollInterval / time.Second),
 	}
 
 	response.VerificationURIComplete = fmt.Sprintf("%s?user_code=%s", config.UserFormURL, userCode)
@@ -239,7 +241,7 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 	if state.Denied {
 		return state, oidc.ErrAccessDenied()
 	}
-	if state.Completed {
+	if state.Done {
 		return state, nil
 	}
 	if time.Now().After(state.Expires) {

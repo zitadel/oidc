@@ -44,6 +44,8 @@ type Storage struct {
 	services      map[string]Service
 	refreshTokens map[string]*RefreshToken
 	signingKey    signingKey
+	deviceCodes   map[string]deviceAuthorizationEntry
+	userCodes     map[string]string
 }
 
 type signingKey struct {
@@ -105,6 +107,8 @@ func NewStorage(userStore UserStore) *Storage {
 			algorithm: jose.RS256,
 			key:       key,
 		},
+		deviceCodes: make(map[string]deviceAuthorizationEntry),
+		userCodes:   make(map[string]string),
 	}
 }
 
@@ -130,6 +134,17 @@ func (s *Storage) CheckUsernamePassword(username, password, id string) error {
 		// in this example we'll simply check the username / password and set a boolean to true
 		// therefore we will also just check this boolean if the request / login has been finished
 		request.passwordChecked = true
+		return nil
+	}
+	return fmt.Errorf("username or password wrong")
+}
+
+func (s *Storage) CheckUsernamePasswordSimple(username, password string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	user := s.userStore.GetUserByUsername(username)
+	if user != nil && user.Password == password {
 		return nil
 	}
 	return fmt.Errorf("username or password wrong")
@@ -734,4 +749,82 @@ func appendClaim(claims map[string]interface{}, claim string, value interface{})
 	}
 	claims[claim] = value
 	return claims
+}
+
+type deviceAuthorizationEntry struct {
+	deviceCode string
+	userCode   string
+	state      *op.DeviceAuthorizationState
+}
+
+func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if _, ok := s.clients[clientID]; !ok {
+		return errors.New("client not found")
+	}
+
+	if _, ok := s.userCodes[userCode]; ok {
+		return op.ErrDuplicateUserCode
+	}
+
+	s.deviceCodes[deviceCode] = deviceAuthorizationEntry{
+		deviceCode: deviceCode,
+		userCode:   userCode,
+		state: &op.DeviceAuthorizationState{
+			ClientID: clientID,
+			Scopes:   scopes,
+			Expires:  expires,
+		},
+	}
+
+	s.userCodes[userCode] = deviceCode
+	return nil
+}
+
+func (s *Storage) GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*op.DeviceAuthorizationState, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[deviceCode]
+	if !ok || entry.state.ClientID != clientID {
+		return nil, errors.New("device code not found for client") // is there a standard not found error in the framework?
+	}
+
+	return entry.state, nil
+}
+
+func (s *Storage) GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[s.userCodes[userCode]]
+	if !ok {
+		return nil, errors.New("user code not found")
+	}
+
+	return entry.state, nil
+}
+
+func (s *Storage) CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[s.userCodes[userCode]]
+	if !ok {
+		return errors.New("user code not found")
+	}
+
+	entry.state.Subject = subject
+	entry.state.Done = true
+	return nil
+}
+
+func (s *Storage) DenyDeviceAuthorization(ctx context.Context, userCode string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.deviceCodes[s.userCodes[userCode]].state.Denied = true
+	return nil
 }

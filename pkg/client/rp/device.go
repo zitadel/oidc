@@ -2,7 +2,6 @@ package rp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -47,10 +46,6 @@ func DeviceAuthorization(scopes []string, rp RelyingParty) (*oidc.DeviceAuthoriz
 // by means of polling as defined in RFC, section 3.3 and 3.4:
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.4
 func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Duration, rp RelyingParty) (resp *oidc.AccessTokenResponse, err error) {
-	caller, ok := rp.(client.TokenEndpointCaller)
-	if !ok {
-		return nil, errors.New("rp does not implement TokenEndPointCaller")
-	}
 	req := &client.DeviceAccessTokenRequest{
 		DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{
 			GrantType:  oidc.GrantTypeDeviceCode,
@@ -63,5 +58,5 @@ func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Dur
 		return nil, err
 	}
 
-	return client.PollDeviceAccessTokenEndpoint(ctx, interval, req, caller)
+	return client.PollDeviceAccessTokenEndpoint(ctx, interval, req, tokenEndpointCaller{rp})
 }

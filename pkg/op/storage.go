@@ -155,11 +155,12 @@ type EndSessionRequest struct {
 var ErrDuplicateUserCode = errors.New("user code already exists")
 
 type DeviceAuthorizationState struct {
-	Scopes    []string
-	Expires   time.Time
-	Completed bool
-	Subject   string
-	Denied    bool
+	ClientID string
+	Scopes   []string
+	Expires  time.Time
+	Done     bool
+	Subject  string
+	Denied   bool
 }
 
 type DeviceAuthorizationStorage interface {
@@ -176,6 +177,10 @@ type DeviceAuthorizationStorage interface {
 	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
 	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
+
+	// GetDeviceAuthorizationByUserCode resturn the current state of the device authorization flow,
+	// identified by the user code.
+	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*DeviceAuthorizationState, error)
 
 	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
 	// identified by userCode. The Subject is added to the state, so that
