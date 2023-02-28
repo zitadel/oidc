@@ -189,6 +189,22 @@ func (mr *MockStorageMockRecorder) GetPrivateClaimsFromScopes(arg0, arg1, arg2, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateClaimsFromScopes", reflect.TypeOf((*MockStorage)(nil).GetPrivateClaimsFromScopes), arg0, arg1, arg2, arg3)
 }
 
+// GetRefreshTokenInfo mocks base method.
+func (m *MockStorage) GetRefreshTokenInfo(arg0 context.Context, arg1, arg2 string) (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRefreshTokenInfo", arg0, arg1, arg2)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetRefreshTokenInfo indicates an expected call of GetRefreshTokenInfo.
+func (mr *MockStorageMockRecorder) GetRefreshTokenInfo(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefreshTokenInfo", reflect.TypeOf((*MockStorage)(nil).GetRefreshTokenInfo), arg0, arg1, arg2)
+}
+
 // Health mocks base method.
 func (m *MockStorage) Health(arg0 context.Context) error {
 	m.ctrl.T.Helper()

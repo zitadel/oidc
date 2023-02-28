@@ -3,6 +3,7 @@ module github.com/zitadel/oidc/v2
 go 1.16
 
 require (
+	github.com/dmarkham/enumer v1.5.7 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/go-github/v31 v31.0.0

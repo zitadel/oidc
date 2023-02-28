@@ -48,8 +48,14 @@ type AuthStorage interface {
 	// RevokeToken should revoke a token. In the situation that the original request was to
 	// revoke an access token, then tokenOrTokenID will be a tokenID and userID will be set
 	// but if the original request was for a refresh token, then userID will be empty and
-	// tokenOrTokenID will be the refresh token, not its ID.
+	// tokenOrTokenID will be the refresh token, not its ID.  RevokeToken depends upon GetRefreshTokenInfo
+	// to get information from refresh tokens that are not either "<tokenID>:<userID>" strings
+	// nor JWTs.
 	RevokeToken(ctx context.Context, tokenOrTokenID string, userID string, clientID string) *oidc.Error
+
+	// GetRefreshTokenInfo must return ErrInvalidRefreshToken when presented
+	// with a token that is not a refresh token.
+	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
 
 	SigningKey(context.Context) (SigningKey, error)
 	SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error)
@@ -98,15 +104,6 @@ type TokenExchangeStorage interface {
 type TokenExchangeTokensVerifierStorage interface {
 	VerifyExchangeSubjectToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, subject string, tokenClaims map[string]interface{}, err error)
 	VerifyExchangeActorToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, actor string, tokenClaims map[string]interface{}, err error)
-}
-
-// CanRefreshTokenInfo is an optional additional interface that Storage can support.
-// Supporting CanRefreshTokenInfo is required to be able to (revoke) a refresh token that
-// is neither an encrypted string of <tokenID>:<userID> nor a JWT.
-type CanRefreshTokenInfo interface {
-	// GetRefreshTokenInfo must return ErrInvalidRefreshToken when presented
-	// with a token that is not a refresh token.
-	GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error)
 }
 
 var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")

@@ -39,8 +39,8 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 	}
 	var subject string
 	doDecrypt := true
-	if canRefreshInfo, ok := revoker.Storage().(CanRefreshTokenInfo); ok && tokenTypeHint != "access_token" {
-		userID, tokenID, err := canRefreshInfo.GetRefreshTokenInfo(r.Context(), clientID, token)
+	if tokenTypeHint != "access_token" {
+		userID, tokenID, err := revoker.Storage().GetRefreshTokenInfo(r.Context(), clientID, token)
 		if err != nil {
 			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
 			if !errors.Is(err, ErrInvalidRefreshToken) {
