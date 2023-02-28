@@ -784,6 +784,10 @@ func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, device
 }
 
 func (s *Storage) GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*op.DeviceAuthorizationState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

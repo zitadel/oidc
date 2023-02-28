@@ -46,7 +46,7 @@ var (
 	}
 )
 
-func deviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
+func DeviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := DeviceAuthorization(w, r, o); err != nil {
 			RequestError(w, r, err)
@@ -198,7 +198,7 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
-	if !clientAuthenticated && !IsConfidentialType(client) {
+	if clientAuthenticated != IsConfidentialType(client) {
 		return oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials).
 			WithDescription("confidential client requires authentication")
 	}
@@ -236,7 +236,7 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 		return nil, oidc.ErrSlowDown().WithParent(err)
 	}
 	if err != nil {
-		return nil, err
+		return nil, oidc.ErrAccessDenied().WithParent(err)
 	}
 	if state.Denied {
 		return state, oidc.ErrAccessDenied()

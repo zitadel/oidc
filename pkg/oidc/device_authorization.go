@@ -24,6 +24,6 @@ type DeviceAuthorizationResponse struct {
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.4,
 // Device Access Token Request.
 type DeviceAccessTokenRequest struct {
-	GrantType  GrantType `json:"grant_type"`
-	DeviceCode string    `json:"device_code"`
+	GrantType  GrantType `json:"grant_type" schema:"grant_type"`
+	DeviceCode string    `json:"device_code" schema:"device_code"`
 }

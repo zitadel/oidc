@@ -97,7 +97,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(o.RevocationEndpoint().Relative(), revocationHandler(o))
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
-	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), deviceAuthorizationHandler(o))
+	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
 	return router
 }
 
