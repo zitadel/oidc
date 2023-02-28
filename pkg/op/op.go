@@ -17,31 +17,31 @@ import (
 )
 
 const (
-	healthEndpoint                      = "/healthz"
-	readinessEndpoint                   = "/ready"
-	authCallbackPathSuffix              = "/callback"
-	defaultAuthorizationEndpoint        = "authorize"
-	defaultTokenEndpoint                = "oauth/token"
-	defaultIntrospectEndpoint           = "oauth/introspect"
-	defaultUserinfoEndpoint             = "userinfo"
-	defaultRevocationEndpoint           = "revoke"
-	defaultEndSessionEndpoint           = "end_session"
-	defaultKeysEndpoint                 = "keys"
-	defaultDeviceAuthzEndpoint          = "/device_authorization"
-	defaultUserCodeVerificationEndpoint = "/user_code"
+	healthEndpoint               = "/healthz"
+	readinessEndpoint            = "/ready"
+	authCallbackPathSuffix       = "/callback"
+	defaultAuthorizationEndpoint = "authorize"
+	defaultTokenEndpoint         = "oauth/token"
+	defaultIntrospectEndpoint    = "oauth/introspect"
+	defaultUserinfoEndpoint      = "userinfo"
+	defaultRevocationEndpoint    = "revoke"
+	defaultEndSessionEndpoint    = "end_session"
+	defaultKeysEndpoint          = "keys"
+	defaultDeviceAuthzEndpoint   = "/device_authorization"
+	defaultUserCodeFormEndpoint  = "/submit_user_code"
 )
 
 var (
 	DefaultEndpoints = &endpoints{
-		Authorization:        NewEndpoint(defaultAuthorizationEndpoint),
-		Token:                NewEndpoint(defaultTokenEndpoint),
-		Introspection:        NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:             NewEndpoint(defaultUserinfoEndpoint),
-		Revocation:           NewEndpoint(defaultRevocationEndpoint),
-		EndSession:           NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:              NewEndpoint(defaultKeysEndpoint),
-		DeviceAuthorization:  NewEndpoint(defaultDeviceAuthzEndpoint),
-		UserCodeVerification: NewEndpoint(defaultUserCodeVerificationEndpoint),
+		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
+		Token:               NewEndpoint(defaultTokenEndpoint),
+		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:            NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:          NewEndpoint(defaultRevocationEndpoint),
+		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:             NewEndpoint(defaultKeysEndpoint),
+		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
+		UserCodeForm:        NewEndpoint(defaultUserCodeFormEndpoint),
 	}
 
 	defaultCORSOptions = cors.Options{
@@ -100,7 +100,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), deviceAuthorizationHandler(o))
-	router.HandleFunc(o.UserCodeVerificationEndpoint().Relative(), userCodeVerificationHandler(o))
+	router.HandleFunc(o.UserCodeFormEndpoint().Relative(), userCodeFormHandler(o))
 	return router
 }
 
@@ -128,16 +128,16 @@ type Config struct {
 }
 
 type endpoints struct {
-	Authorization        Endpoint
-	Token                Endpoint
-	Introspection        Endpoint
-	Userinfo             Endpoint
-	Revocation           Endpoint
-	EndSession           Endpoint
-	CheckSessionIframe   Endpoint
-	JwksURI              Endpoint
-	DeviceAuthorization  Endpoint
-	UserCodeVerification Endpoint
+	Authorization       Endpoint
+	Token               Endpoint
+	Introspection       Endpoint
+	Userinfo            Endpoint
+	Revocation          Endpoint
+	EndSession          Endpoint
+	CheckSessionIframe  Endpoint
+	JwksURI             Endpoint
+	DeviceAuthorization Endpoint
+	UserCodeForm        Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -256,8 +256,8 @@ func (o *Provider) DeviceAuthorizationEndpoint() Endpoint {
 	return o.endpoints.DeviceAuthorization
 }
 
-func (o *Provider) UserCodeVerificationEndpoint() Endpoint {
-	return o.endpoints.UserCodeVerification
+func (o *Provider) UserCodeFormEndpoint() Endpoint {
+	return o.endpoints.UserCodeForm
 }
 
 func (o *Provider) KeysEndpoint() Endpoint {
