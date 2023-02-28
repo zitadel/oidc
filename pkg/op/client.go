@@ -154,29 +154,3 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 	return data.ClientID, false, nil
 }
-
-/*
-// ClientFromRequest wraps ClientIDFromRequest and obtains the Client from storage.
-// If the client id was not authenticated, the client from storage does not have
-// oidc.AuthMethodNone set, an error is returned.
-func ClientFromRequest(r *http.Request, p ClientProvider) (Client, error) {
-	clientID, authenticated, err := ClientIDFromRequest(r, p)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := p.Storage().GetClientByClientID(r.Context(), clientID)
-	if err != nil {
-		return nil, err
-	}
-
-	if !authenticated {
-		if m := client.AuthMethod(); m != oidc.AuthMethodNone { // Livio: Does this mean "public" client?
-			return nil, oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials).
-				WithDescription(fmt.Sprintf("required client auth method: %s", m))
-		}
-	}
-
-	return client, err
-}
-*/

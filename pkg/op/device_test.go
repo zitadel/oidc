@@ -36,7 +36,7 @@ func TestNewDeviceCode(t *testing.T) {
 		})
 	})
 
-	t.Run("dirrent lengths, rand reader", func(t *testing.T) {
+	t.Run("different lengths, rand reader", func(t *testing.T) {
 		for i := 1; i <= 32; i++ {
 			got, err := NewDeviceCode(i)
 			require.NoError(t, err)

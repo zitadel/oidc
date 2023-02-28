@@ -16,8 +16,8 @@ import (
 )
 
 type DeviceAuthorizationConfig struct {
-	Lifetime     int
-	PollInterval int
+	Lifetime     time.Duration
+	PollInterval time.Duration
 	UserFormURL  string // the URL where the user must go to authorize the device
 	UserCode     UserCodeConfig
 }
@@ -71,12 +71,12 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 	if err != nil {
 		return err
 	}
-	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.CharAmount)
+	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.DashInterval)
 	if err != nil {
 		return err
 	}
 
-	expires := time.Now().Add(time.Duration(config.Lifetime) * time.Second)
+	expires := time.Now().Add(config.Lifetime)
 	err = storage.StoreDeviceAuthorization(r.Context(), req.ClientID, deviceCode, userCode, expires, req.Scopes)
 	if err != nil {
 		return err
@@ -196,11 +196,9 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
-	if !clientAuthenticated {
-		if m := client.AuthMethod(); m != oidc.AuthMethodNone { // Livio: Does this mean "public" client?
-			return oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials).
-				WithDescription(fmt.Sprintf("required client auth method: %s", m))
-		}
+	if !clientAuthenticated && !IsConfidentialType(client) {
+		return oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials).
+			WithDescription("confidential client requires authentication")
 	}
 
 	tokenRequest := &deviceAccessTokenRequest{
