@@ -54,7 +54,7 @@ type RelyingParty interface {
 	GetEndSessionEndpoint() string
 
 	// GetRevokeEndpoint returns the endpoint to revoke a specific token
-	// "GetRevokeEndpoint() string" will be added in a future release
+	GetRevokeEndpoint() string
 
 	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
