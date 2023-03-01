@@ -19,6 +19,7 @@ type Exchanger interface {
 	GrantTypeTokenExchangeSupported() bool
 	GrantTypeJWTAuthorizationSupported() bool
 	GrantTypeClientCredentialsSupported() bool
+	GrantTypeDeviceCodeSupported() bool
 	AccessTokenVerifier(context.Context) AccessTokenVerifier
 	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
 }
@@ -54,6 +55,11 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	case string(oidc.GrantTypeClientCredentials):
 		if exchanger.GrantTypeClientCredentialsSupported() {
 			ClientCredentialsExchange(w, r, exchanger)
+			return
+		}
+	case string(oidc.GrantTypeDeviceCode):
+		if exchanger.GrantTypeDeviceCodeSupported() {
+			DeviceAccessToken(w, r, exchanger)
 			return
 		}
 	case "":

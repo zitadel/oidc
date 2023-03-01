@@ -59,6 +59,10 @@ type RelyingParty interface {
 	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
+	// GetDeviceAuthorizationEndpoint returns the enpoint which can
+	// be used to start a DeviceAuthorization flow.
+	GetDeviceAuthorizationEndpoint() string
+
 	// IDTokenVerifier returns the verifier interface used for oidc id_token verification
 	IDTokenVerifier() IDTokenVerifier
 	// ErrorHandler returns the handler used for callback errors
@@ -119,6 +123,10 @@ func (rp *relyingParty) Signer() jose.Signer {
 
 func (rp *relyingParty) UserinfoEndpoint() string {
 	return rp.endpoints.UserinfoURL
+}
+
+func (rp *relyingParty) GetDeviceAuthorizationEndpoint() string {
+	return rp.endpoints.DeviceAuthorizationURL
 }
 
 func (rp *relyingParty) GetEndSessionEndpoint() string {
@@ -495,11 +503,12 @@ type OptionFunc func(RelyingParty)
 
 type Endpoints struct {
 	oauth2.Endpoint
-	IntrospectURL string
-	UserinfoURL   string
-	JKWsURL       string
-	EndSessionURL string
-	RevokeURL     string
+	IntrospectURL          string
+	UserinfoURL            string
+	JKWsURL                string
+	EndSessionURL          string
+	RevokeURL              string
+	DeviceAuthorizationURL string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -509,11 +518,12 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 			AuthStyle: oauth2.AuthStyleAutoDetect,
 			TokenURL:  discoveryConfig.TokenEndpoint,
 		},
-		IntrospectURL: discoveryConfig.IntrospectionEndpoint,
-		UserinfoURL:   discoveryConfig.UserinfoEndpoint,
-		JKWsURL:       discoveryConfig.JwksURI,
-		EndSessionURL: discoveryConfig.EndSessionEndpoint,
-		RevokeURL:     discoveryConfig.RevocationEndpoint,
+		IntrospectURL:          discoveryConfig.IntrospectionEndpoint,
+		UserinfoURL:            discoveryConfig.UserinfoEndpoint,
+		JKWsURL:                discoveryConfig.JwksURI,
+		EndSessionURL:          discoveryConfig.EndSessionEndpoint,
+		RevokeURL:              discoveryConfig.RevocationEndpoint,
+		DeviceAuthorizationURL: discoveryConfig.DeviceAuthorizationEndpoint,
 	}
 }
 

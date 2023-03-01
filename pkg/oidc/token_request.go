@@ -27,6 +27,9 @@ const (
 	// GrantTypeImplicit defines the grant type `implicit` used for implicit flows that skip the generation and exchange of an Authorization Code
 	GrantTypeImplicit GrantType = "implicit"
 
+	// GrantTypeDeviceCode
+	GrantTypeDeviceCode GrantType = "urn:ietf:params:oauth:grant-type:device_code"
+
 	// ClientAssertionTypeJWTAssertion defines the client_assertion_type `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
 	// used for the OAuth JWT Profile Client Authentication
 	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -35,7 +38,7 @@ const (
 var AllGrantTypes = []GrantType{
 	GrantTypeCode, GrantTypeRefreshToken, GrantTypeClientCredentials,
 	GrantTypeBearer, GrantTypeTokenExchange, GrantTypeImplicit,
-	ClientAssertionTypeJWTAssertion,
+	GrantTypeDeviceCode, ClientAssertionTypeJWTAssertion,
 }
 
 type GrantType string

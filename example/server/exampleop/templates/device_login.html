@@ -1,0 +1,29 @@
+{{ define "device_login" -}}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Login</title>
+    </head>
+    <body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+        <form method="POST" action="/device/login" style="height: 200px; width: 200px;">
+
+            <input type="hidden" name="user_code" value="{{.UserCode}}">
+
+            <div>
+                <label for="username">Username:</label>
+                <input id="username" name="username" style="width: 100%">
+            </div>
+
+            <div>
+                <label for="password">Password:</label>
+                <input id="password" name="password" style="width: 100%">
+            </div>
+
+            <p style="color:red; min-height: 1rem;">{{.Error}}</p>
+
+            <button type="submit">Login</button>
+        </form>
+    </body>
+</html>
+{{- end }}

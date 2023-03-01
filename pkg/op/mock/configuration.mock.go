@@ -92,6 +92,34 @@ func (mr *MockConfigurationMockRecorder) CodeMethodS256Supported() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeMethodS256Supported", reflect.TypeOf((*MockConfiguration)(nil).CodeMethodS256Supported))
 }
 
+// DeviceAuthorization mocks base method.
+func (m *MockConfiguration) DeviceAuthorization() op.DeviceAuthorizationConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeviceAuthorization")
+	ret0, _ := ret[0].(op.DeviceAuthorizationConfig)
+	return ret0
+}
+
+// DeviceAuthorization indicates an expected call of DeviceAuthorization.
+func (mr *MockConfigurationMockRecorder) DeviceAuthorization() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeviceAuthorization", reflect.TypeOf((*MockConfiguration)(nil).DeviceAuthorization))
+}
+
+// DeviceAuthorizationEndpoint mocks base method.
+func (m *MockConfiguration) DeviceAuthorizationEndpoint() op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeviceAuthorizationEndpoint")
+	ret0, _ := ret[0].(op.Endpoint)
+	return ret0
+}
+
+// DeviceAuthorizationEndpoint indicates an expected call of DeviceAuthorizationEndpoint.
+func (mr *MockConfigurationMockRecorder) DeviceAuthorizationEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeviceAuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).DeviceAuthorizationEndpoint))
+}
+
 // EndSessionEndpoint mocks base method.
 func (m *MockConfiguration) EndSessionEndpoint() op.Endpoint {
 	m.ctrl.T.Helper()
@@ -118,6 +146,20 @@ func (m *MockConfiguration) GrantTypeClientCredentialsSupported() bool {
 func (mr *MockConfigurationMockRecorder) GrantTypeClientCredentialsSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeClientCredentialsSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeClientCredentialsSupported))
+}
+
+// GrantTypeDeviceCodeSupported mocks base method.
+func (m *MockConfiguration) GrantTypeDeviceCodeSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GrantTypeDeviceCodeSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GrantTypeDeviceCodeSupported indicates an expected call of GrantTypeDeviceCodeSupported.
+func (mr *MockConfigurationMockRecorder) GrantTypeDeviceCodeSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GrantTypeDeviceCodeSupported", reflect.TypeOf((*MockConfiguration)(nil).GrantTypeDeviceCodeSupported))
 }
 
 // GrantTypeJWTAuthorizationSupported mocks base method.
@@ -356,6 +398,20 @@ func (m *MockConfiguration) TokenEndpointSigningAlgorithmsSupported() []string {
 func (mr *MockConfigurationMockRecorder) TokenEndpointSigningAlgorithmsSupported() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenEndpointSigningAlgorithmsSupported", reflect.TypeOf((*MockConfiguration)(nil).TokenEndpointSigningAlgorithmsSupported))
+}
+
+// UserCodeFormEndpoint mocks base method.
+func (m *MockConfiguration) UserCodeFormEndpoint() op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UserCodeFormEndpoint")
+	ret0, _ := ret[0].(op.Endpoint)
+	return ret0
+}
+
+// UserCodeFormEndpoint indicates an expected call of UserCodeFormEndpoint.
+func (mr *MockConfigurationMockRecorder) UserCodeFormEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserCodeFormEndpoint", reflect.TypeOf((*MockConfiguration)(nil).UserCodeFormEndpoint))
 }
 
 // UserinfoEndpoint mocks base method.

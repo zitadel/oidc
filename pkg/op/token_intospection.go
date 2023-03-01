@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
 
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
@@ -50,38 +49,19 @@ func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspecto
 }
 
 func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) (token, clientID string, err error) {
-	err = r.ParseForm()
+	clientID, authenticated, err := ClientIDFromRequest(r, introspector)
 	if err != nil {
-		return "", "", errors.New("unable to parse request")
+		return "", "", err
 	}
-	req := new(struct {
-		oidc.IntrospectionRequest
-		oidc.ClientAssertionParams
-	})
+	if !authenticated {
+		return "", "", oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials)
+	}
+
+	req := new(oidc.IntrospectionRequest)
 	err = introspector.Decoder().Decode(req, r.Form)
 	if err != nil {
 		return "", "", errors.New("unable to parse request")
 	}
-	if introspectorJWTProfile, ok := introspector.(IntrospectorJWTProfile); ok && req.ClientAssertion != "" {
-		profile, err := VerifyJWTAssertion(r.Context(), req.ClientAssertion, introspectorJWTProfile.JWTProfileVerifier(r.Context()))
-		if err == nil {
-			return req.Token, profile.Issuer, nil
-		}
-	}
-	clientID, clientSecret, ok := r.BasicAuth()
-	if ok {
-		clientID, err = url.QueryUnescape(clientID)
-		if err != nil {
-			return "", "", errors.New("invalid basic auth header")
-		}
-		clientSecret, err = url.QueryUnescape(clientSecret)
-		if err != nil {
-			return "", "", errors.New("invalid basic auth header")
-		}
-		if err := introspector.Storage().AuthorizeClientIDSecret(r.Context(), clientID, clientSecret); err != nil {
-			return "", "", err
-		}
-		return req.Token, clientID, nil
-	}
-	return "", "", errors.New("invalid authorization")
+
+	return req.Token, clientID, nil
 }

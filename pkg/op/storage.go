@@ -151,3 +151,50 @@ type EndSessionRequest struct {
 	ClientID    string
 	RedirectURI string
 }
+
+var ErrDuplicateUserCode = errors.New("user code already exists")
+
+type DeviceAuthorizationState struct {
+	ClientID string
+	Scopes   []string
+	Expires  time.Time
+	Done     bool
+	Subject  string
+	Denied   bool
+}
+
+type DeviceAuthorizationStorage interface {
+	// StoreDeviceAuthorizationRequest stores a new device authorization request in the database.
+	// User code will be used by the user to complete the login flow and must be unique.
+	// ErrDuplicateUserCode signals the caller should try again with a new code.
+	//
+	// Note that user codes are low entropy keys and when many exist in the
+	// database, the change for collisions increases. Therefore implementers
+	// of this interface must make sure that user codes of expired authentication flows are purged,
+	// after some time.
+	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error
+
+	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
+	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.
+	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
+
+	// GetDeviceAuthorizationByUserCode resturn the current state of the device authorization flow,
+	// identified by the user code.
+	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*DeviceAuthorizationState, error)
+
+	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
+	// identified by userCode. The Subject is added to the state, so that
+	// GetDeviceAuthorizatonState can use it to create a new Access Token.
+	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
+
+	// DenyDeviceAuthorization marks a device authorization entry as Denied.
+	DenyDeviceAuthorization(ctx context.Context, userCode string) error
+}
+
+func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
+	storage, ok := s.(DeviceAuthorizationStorage)
+	if !ok {
+		return nil, oidc.ErrUnsupportedGrantType().WithDescription("device_code grant not supported")
+	}
+	return storage, nil
+}

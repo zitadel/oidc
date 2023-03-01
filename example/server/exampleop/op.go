@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
@@ -27,7 +28,8 @@ func init() {
 
 type Storage interface {
 	op.Storage
-	CheckUsernamePassword(username, password, id string) error
+	authenticate
+	deviceAuthenticate
 }
 
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
@@ -61,6 +63,9 @@ func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Route
 	// regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	// so we will direct all calls to /login to the login UI
 	router.PathPrefix("/login/").Handler(http.StripPrefix("/login", l.router))
+
+	router.PathPrefix("/device").Subrouter()
+	registerDeviceAuth(storage, router.PathPrefix("/device").Subrouter())
 
 	// we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
 	// is served on the correct path
@@ -99,6 +104,13 @@ func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte)
 
 		// this example has only static texts (in English), so we'll set the here accordingly
 		SupportedUILocales: []language.Tag{language.English},
+
+		DeviceAuthorization: op.DeviceAuthorizationConfig{
+			Lifetime:     5 * time.Minute,
+			PollInterval: 5 * time.Second,
+			UserFormURL:  issuer + "device",
+			UserCode:     op.UserCodeBase20,
+		},
 	}
 	handler, err := op.NewOpenIDProvider(ctx, issuer, config, storage,
 		//we must explicitly allow the use of the http issuer
