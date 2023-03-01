@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobwas/glob"
 	"github.com/gorilla/mux"
 
 	httphelper "github.com/zitadel/oidc/pkg/http"
@@ -283,7 +282,7 @@ func checkURIAginstRedirects(client Client, uri string) error {
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.RedirectURIGlobs() {
-			matcher, err := glob.Compile(uriGlob)
+			matcher, err := CompileGlob(uriGlob)
 			if err != nil {
 				return oidc.ErrServerError().WithParent(err)
 			}
