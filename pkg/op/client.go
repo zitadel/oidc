@@ -13,6 +13,7 @@ import (
 
 //go:generate go get github.com/dmarkham/enumer
 //go:generate go run github.com/dmarkham/enumer -linecomment -sql -json -text -yaml -gqlgen -type=ApplicationType,AccessTokenType
+//go:generate go mod tidy
 
 const (
 	ApplicationTypeWeb       ApplicationType = iota // web
