@@ -159,19 +159,19 @@ func (mr *MockStorageMockRecorder) GetClientByClientID(arg0, arg1 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClientByClientID", reflect.TypeOf((*MockStorage)(nil).GetClientByClientID), arg0, arg1)
 }
 
-// GetKeyByIDAndUserID mocks base method.
-func (m *MockStorage) GetKeyByIDAndUserID(arg0 context.Context, arg1, arg2 string) (*jose.JSONWebKey, error) {
+// GetKeyByIDAndClientID mocks base method.
+func (m *MockStorage) GetKeyByIDAndClientID(arg0 context.Context, arg1, arg2 string) (*jose.JSONWebKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKeyByIDAndUserID", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetKeyByIDAndClientID", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*jose.JSONWebKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetKeyByIDAndUserID indicates an expected call of GetKeyByIDAndUserID.
-func (mr *MockStorageMockRecorder) GetKeyByIDAndUserID(arg0, arg1, arg2 interface{}) *gomock.Call {
+// GetKeyByIDAndClientID indicates an expected call of GetKeyByIDAndClientID.
+func (mr *MockStorageMockRecorder) GetKeyByIDAndClientID(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyByIDAndUserID", reflect.TypeOf((*MockStorage)(nil).GetKeyByIDAndUserID), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyByIDAndClientID", reflect.TypeOf((*MockStorage)(nil).GetKeyByIDAndClientID), arg0, arg1, arg2)
 }
 
 // GetPrivateClaimsFromScopes mocks base method.

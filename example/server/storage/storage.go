@@ -495,9 +495,9 @@ func (s *Storage) getPrivateClaimsFromScopes(ctx context.Context, userID, client
 	return claims, nil
 }
 
-// GetKeyByIDAndUserID implements the op.Storage interface
+// GetKeyByIDAndClientID implements the op.Storage interface
 // it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
-func (s *Storage) GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
+func (s *Storage) GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	service, ok := s.services[clientID]

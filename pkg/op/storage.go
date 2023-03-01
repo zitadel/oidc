@@ -115,10 +115,7 @@ type OPStorage interface {
 	SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error
 	SetIntrospectionFromToken(ctx context.Context, userinfo oidc.IntrospectionResponse, tokenID, subject, clientID string) error
 	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]interface{}, error)
-
-	// GetKeyByIDAndUserID is mis-named.  It does not pass userID.  Instead
-	// it passes the clientID.
-	GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
+	GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
 }
 
