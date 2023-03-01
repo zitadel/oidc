@@ -4,9 +4,11 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
+	"github.com/gorilla/schema"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 )
@@ -123,6 +125,16 @@ func (s *SpaceDelimitedArray) Scan(src interface{}) error {
 
 func (s SpaceDelimitedArray) Value() (driver.Value, error) {
 	return strings.Join(s, " "), nil
+}
+
+// NewEncoder returns a schema Encoder with
+// a registered encoder for SpaceDelimitedArray.
+func NewEncoder() *schema.Encoder {
+	e := schema.NewEncoder()
+	e.RegisterEncoder(SpaceDelimitedArray{}, func(value reflect.Value) string {
+		return value.Interface().(SpaceDelimitedArray).Encode()
+	})
+	return e
 }
 
 type Time time.Time

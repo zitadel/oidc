@@ -8,11 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
-	"github.com/gorilla/schema"
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
@@ -21,13 +19,7 @@ import (
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
-var Encoder = func() httphelper.Encoder {
-	e := schema.NewEncoder()
-	e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
-		return value.Interface().(oidc.SpaceDelimitedArray).Encode()
-	})
-	return e
-}()
+var Encoder = httphelper.Encoder(oidc.NewEncoder())
 
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
