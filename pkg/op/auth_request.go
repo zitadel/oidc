@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gobwas/glob"
 	"github.com/gorilla/mux"
 
 	httphelper "github.com/zitadel/oidc/pkg/http"
@@ -274,6 +275,28 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	return scopes, nil
 }
 
+// checkURIAginstRedirects just checks aginst the valid redirect URIs and ignores
+// other factors.
+func checkURIAginstRedirects(client Client, uri string) error {
+	if str.Contains(client.RedirectURIs(), uri) {
+		return nil
+	}
+	if globClient, ok := client.(HasRedirectGlobs); ok {
+		for _, uriGlob := range globClient.RedirectURIGlobs() {
+			matcher, err := glob.Compile(uriGlob)
+			if err != nil {
+				return oidc.ErrServerError().WithParent(err)
+			}
+			if matcher.Match(uri) {
+				return nil
+			}
+		}
+	}
+	return oidc.ErrInvalidRequestRedirectURI().
+		WithDescription("The requested redirect_uri is missing in the client configuration. " +
+			"If you have any questions, you may contact the administrator of the application.")
+}
+
 // ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
 func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
 	if uri == "" {
@@ -281,19 +304,13 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
-		if !str.Contains(client.RedirectURIs(), uri) {
-			return oidc.ErrInvalidRequestRedirectURI().
-				WithDescription("The requested redirect_uri is missing in the client configuration. " +
-					"If you have any questions, you may contact the administrator of the application.")
-		}
-		return nil
+		return checkURIAginstRedirects(client, uri)
 	}
 	if client.ApplicationType() == ApplicationTypeNative {
 		return validateAuthReqRedirectURINative(client, uri, responseType)
 	}
-	if !str.Contains(client.RedirectURIs(), uri) {
-		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration. " +
-			"If you have any questions, you may contact the administrator of the application.")
+	if err := checkURIAginstRedirects(client, uri); err != nil {
+		return err
 	}
 	if strings.HasPrefix(uri, "http://") {
 		if client.DevMode() {
@@ -313,10 +330,11 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
-	if str.Contains(client.RedirectURIs(), uri) {
+	if err := checkURIAginstRedirects(client, uri); err == nil {
 		if client.DevMode() {
 			return nil
 		}
+		// The RedirectURIs are only valid for native clients when localhost or non-"http://"
 		if isLoopback || isCustomSchema {
 			return nil
 		}

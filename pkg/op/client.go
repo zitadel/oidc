@@ -45,6 +45,16 @@ type Client interface {
 	ClockSkew() time.Duration
 }
 
+// HasRedirectGlobs is an optional interface that can be implemented by implementors of
+// Client. See https://pkg.go.dev/github.com/gobwas/glob#Compile for glob
+// interpretation. Redirect URIs that match either the non-glob version or the
+// glob version will be accepted. Glob URIs are only partially supported for native
+// clients: "http://" is not allowed except for loopback or in dev mode.
+type HasRedirectGlobs interface {
+	RedirectURIGlobs() []string
+	PostLogoutRedirectURIGlobs() []string
+}
+
 func ContainsResponseType(types []oidc.ResponseType, responseType oidc.ResponseType) bool {
 	for _, t := range types {
 		if t == responseType {

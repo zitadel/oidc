@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gobwas/glob"
+
 	httphelper "github.com/zitadel/oidc/pkg/http"
 	"github.com/zitadel/oidc/pkg/oidc"
 )
@@ -96,6 +98,17 @@ func ValidateEndSessionPostLogoutRedirectURI(postLogoutRedirectURI string, clien
 	for _, uri := range client.PostLogoutRedirectURIs() {
 		if uri == postLogoutRedirectURI {
 			return nil
+		}
+	}
+	if globClient, ok := client.(HasRedirectGlobs); ok {
+		for _, uriGlob := range globClient.PostLogoutRedirectURIGlobs() {
+			matcher, err := glob.Compile(uriGlob)
+			if err != nil {
+				return oidc.ErrServerError().WithParent(err)
+			}
+			if matcher.Match(postLogoutRedirectURI) {
+				return nil
+			}
 		}
 	}
 	return oidc.ErrInvalidRequest().WithDescription("post_logout_redirect_uri invalid")
