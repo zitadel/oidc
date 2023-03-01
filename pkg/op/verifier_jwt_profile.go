@@ -104,7 +104,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerif
 }
 
 type jwtProfileKeyStorage interface {
-	GetKeyByIDAndUserID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
+	GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
 }
 
 func SubjectIsIssuer(request *oidc.JWTTokenRequest) error {
@@ -122,7 +122,7 @@ type jwtProfileKeySet struct {
 // VerifySignature implements oidc.KeySet by getting the public key from Storage implementation
 func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
 	keyID, _ := oidc.GetKeyIDAndAlg(jws)
-	key, err := k.storage.GetKeyByIDAndUserID(ctx, keyID, k.clientID)
+	key, err := k.storage.GetKeyByIDAndClientID(ctx, keyID, k.clientID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching keys: %w", err)
 	}
