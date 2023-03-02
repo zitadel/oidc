@@ -18,6 +18,15 @@ func (u *UserInfo) AppendClaims(k string, v any) {
 	u.Claims[k] = v
 }
 
+// GetAddress is a safe getter that takes
+// care of a possible nil value.
+func (u *UserInfo) GetAddress() *UserInfoAddress {
+	if u.Address == nil {
+		return new(UserInfoAddress)
+	}
+	return u.Address
+}
+
 type uiAlias UserInfo
 
 func (u *UserInfo) MarshalJSON() ([]byte, error) {

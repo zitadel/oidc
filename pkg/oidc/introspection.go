@@ -35,7 +35,7 @@ type IntrospectionResponse struct {
 // GetUserInfo copies all user related fields into a new UserInfo.
 func (i *IntrospectionResponse) GetUserInfo() *UserInfo {
 	return &UserInfo{
-		Address:         i.Address,
+		Address:         gu.PtrCopy(i.Address),
 		Subject:         i.Subject,
 		UserInfoProfile: i.UserInfoProfile,
 		UserInfoEmail:   i.UserInfoEmail,
@@ -49,7 +49,7 @@ func (i *IntrospectionResponse) GetUserInfo() *UserInfo {
 func (i *IntrospectionResponse) SetUserInfo(u *UserInfo) {
 	i.Subject = u.Subject
 	i.Username = u.PreferredUsername
-	i.Address = u.Address
+	i.Address = gu.PtrCopy(u.Address)
 	i.UserInfoProfile = u.UserInfoProfile
 	i.UserInfoEmail = u.UserInfoEmail
 	i.UserInfoPhone = u.UserInfoPhone
@@ -58,6 +58,15 @@ func (i *IntrospectionResponse) SetUserInfo(u *UserInfo) {
 	} else {
 		gu.MapMerge(u.Claims, i.Claims)
 	}
+}
+
+// GetAddress is a safe getter that takes
+// care of a possible nil value.
+func (i *IntrospectionResponse) GetAddress() *UserInfoAddress {
+	if i.Address == nil {
+		return new(UserInfoAddress)
+	}
+	return i.Address
 }
 
 // introspectionResponseAlias prevents loops on the JSON methods

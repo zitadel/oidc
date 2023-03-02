@@ -63,6 +63,15 @@ func TestIntrospectionResponse_SetUserInfo(t *testing.T) {
 	}
 }
 
+func TestIntrospectionResponse_GetAddress(t *testing.T) {
+	// nil address
+	i := new(IntrospectionResponse)
+	assert.Equal(t, &UserInfoAddress{}, i.GetAddress())
+
+	i.Address = &UserInfoAddress{PostalCode: "1234"}
+	assert.Equal(t, i.Address, i.GetAddress())
+}
+
 func TestIntrospectionResponse_MarshalJSON(t *testing.T) {
 	got, err := json.Marshal(&IntrospectionResponse{
 		UserInfoProfile: UserInfoProfile{

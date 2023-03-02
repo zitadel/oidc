@@ -7,6 +7,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestUserInfo_AppendClaims(t *testing.T) {
+	u := new(UserInfo)
+	u.AppendClaims("a", "b")
+	want := map[string]any{"a": "b"}
+	assert.Equal(t, want, u.Claims)
+
+	u.AppendClaims("d", "e")
+	want["d"] = "e"
+	assert.Equal(t, want, u.Claims)
+}
+
+func TestUserInfo_GetAddress(t *testing.T) {
+	// nil address
+	u := new(UserInfo)
+	assert.Equal(t, &UserInfoAddress{}, u.GetAddress())
+
+	u.Address = &UserInfoAddress{PostalCode: "1234"}
+	assert.Equal(t, u.Address, u.GetAddress())
+}
+
 func TestUserInfoMarshal(t *testing.T) {
 	userinfo := &UserInfo{
 		Subject: "test",
