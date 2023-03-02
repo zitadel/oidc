@@ -96,7 +96,7 @@ var (
 			PhoneNumber:         "+1234567890",
 			PhoneNumberVerified: true,
 		},
-		Address: UserInfoAddress{
+		Address: &UserInfoAddress{
 			Formatted:     "Sesame street 666\n666-666, Smallvile\nMoon",
 			StreetAddress: "Sesame street 666",
 			Locality:      "Smallvile",

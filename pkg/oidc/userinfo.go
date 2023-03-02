@@ -5,7 +5,7 @@ type UserInfo struct {
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone
-	Address UserInfoAddress `json:"address,omitempty"`
+	Address *UserInfoAddress `json:"address,omitempty"`
 
 	Claims map[string]any `json:"-"`
 }

@@ -1,5 +1,7 @@
 package oidc
 
+import "github.com/muhlemmer/gu"
+
 type IntrospectionRequest struct {
 	Token string `schema:"token"`
 }
@@ -26,8 +28,8 @@ type IntrospectionResponse struct {
 	UserInfoEmail
 	UserInfoPhone
 
-	Address UserInfoAddress `json:"address,omitempty"`
-	Claims  map[string]any  `json:"-"`
+	Address *UserInfoAddress `json:"address,omitempty"`
+	Claims  map[string]any   `json:"-"`
 }
 
 // GetUserInfo copies all user related fields into a new UserInfo.
@@ -38,6 +40,7 @@ func (i *IntrospectionResponse) GetUserInfo() *UserInfo {
 		UserInfoProfile: i.UserInfoProfile,
 		UserInfoEmail:   i.UserInfoEmail,
 		UserInfoPhone:   i.UserInfoPhone,
+		Claims:          gu.MapCopy(i.Claims),
 	}
 }
 
@@ -45,20 +48,25 @@ func (i *IntrospectionResponse) GetUserInfo() *UserInfo {
 // into the IntroSpectionResponse.
 func (i *IntrospectionResponse) SetUserInfo(u *UserInfo) {
 	i.Subject = u.Subject
-	i.Username = i.PreferredUsername
+	i.Username = u.PreferredUsername
 	i.Address = u.Address
 	i.UserInfoProfile = u.UserInfoProfile
 	i.UserInfoEmail = u.UserInfoEmail
 	i.UserInfoPhone = u.UserInfoPhone
+	if i.Claims == nil {
+		i.Claims = gu.MapCopy(u.Claims)
+	} else {
+		gu.MapMerge(u.Claims, i.Claims)
+	}
 }
 
 // introspectionResponseAlias prevents loops on the JSON methods
 type introspectionResponseAlias IntrospectionResponse
 
 func (i *IntrospectionResponse) MarshalJSON() ([]byte, error) {
-	//TODO: set the username directly where the IntrospectionResponse is created
-	// a.Username = i.PreferredUsername
-
+	if i.Username == "" {
+		i.Username = i.PreferredUsername
+	}
 	return mergeAndMarshalClaims((*introspectionResponseAlias)(i), i.Claims)
 }
 

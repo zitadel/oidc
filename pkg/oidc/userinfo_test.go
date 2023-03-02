@@ -10,7 +10,7 @@ import (
 func TestUserInfoMarshal(t *testing.T) {
 	userinfo := &UserInfo{
 		Subject: "test",
-		Address: UserInfoAddress{
+		Address: &UserInfoAddress{
 			StreetAddress: "Test 789\nPostfach 2",
 		},
 		UserInfoEmail: UserInfoEmail{
@@ -55,7 +55,7 @@ func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
 		}, uie)
 	})
 
-	t.Run("unmarsha email_verified from json string true", func(t *testing.T) {
+	t.Run("unmarshal email_verified from json string true", func(t *testing.T) {
 		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "true"}`)
 
 		var uie UserInfoEmail
@@ -68,7 +68,7 @@ func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
 		}, uie)
 	})
 
-	t.Run("unmarsha email_verified from json bool false", func(t *testing.T) {
+	t.Run("unmarshal email_verified from json bool false", func(t *testing.T) {
 		jsonBool := []byte(`{"email": "my@email.com", "email_verified": false}`)
 
 		var uie UserInfoEmail
@@ -81,7 +81,7 @@ func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
 		}, uie)
 	})
 
-	t.Run("unmarsha email_verified from json string false", func(t *testing.T) {
+	t.Run("unmarshal email_verified from json string false", func(t *testing.T) {
 		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "false"}`)
 
 		var uie UserInfoEmail

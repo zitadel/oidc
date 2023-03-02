@@ -113,8 +113,8 @@ type IDTokenClaims struct {
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone
-	Address UserInfoAddress `json:"address,omitempty"`
-	Claims  map[string]any  `json:"-"`
+	Address *UserInfoAddress `json:"address,omitempty"`
+	Claims  map[string]any   `json:"-"`
 }
 
 // GetAccessTokenHash implements the IDTokenClaims interface
