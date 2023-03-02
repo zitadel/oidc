@@ -3,10 +3,12 @@ package oidc
 import (
 	"bytes"
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/language"
 )
@@ -334,4 +336,21 @@ func TestSpaceDelimitatedArray_ValuerNil(t *testing.T) {
 	if assert.NoError(t, err, "Scan nil") {
 		assert.Equal(t, SpaceDelimitedArray(nil), reversed, "scan nil")
 	}
+}
+
+func TestNewEncoder(t *testing.T) {
+	type request struct {
+		Scopes SpaceDelimitedArray `schema:"scope"`
+	}
+	a := request{
+		Scopes: SpaceDelimitedArray{"foo", "bar"},
+	}
+
+	values := make(url.Values)
+	NewEncoder().Encode(a, values)
+	assert.Equal(t, url.Values{"scope": []string{"foo bar"}}, values)
+
+	var b request
+	schema.NewDecoder().Decode(&b, values)
+	assert.Equal(t, a, b)
 }

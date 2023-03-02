@@ -189,7 +189,7 @@ func newProvider(ctx context.Context, config *Config, storage Storage, issuer fu
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
 
-	o.encoder = schema.NewEncoder()
+	o.encoder = oidc.NewEncoder()
 
 	o.crypto = NewAESCrypto(config.CryptoKey)
 

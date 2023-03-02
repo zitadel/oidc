@@ -98,8 +98,6 @@ func TestParseDeviceCodeRequest(t *testing.T) {
 			name:    "empty request",
 			wantErr: true,
 		},
-		/* decoding a SpaceDelimitedArray is broken
-		https://github.com/zitadel/oidc/issues/295
 		{
 			name: "success",
 			req: &oidc.DeviceAuthorizationRequest{
@@ -107,7 +105,6 @@ func TestParseDeviceCodeRequest(t *testing.T) {
 				ClientID: "web",
 			},
 		},
-		*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
