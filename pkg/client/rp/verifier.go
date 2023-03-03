@@ -21,17 +21,17 @@ type IDTokenVerifier interface {
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
 // https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (claims C, err error) {
+func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v IDTokenVerifier) (claims C, err error) {
 	var nilClaims C
 
-	idToken, err := VerifyIDToken[C](ctx, idTokenString, v)
+	claims, err = VerifyIDToken[C](ctx, idToken, v)
 	if err != nil {
 		return nilClaims, err
 	}
-	if err := VerifyAccessToken(accessToken, idToken.GetAccessTokenHash(), idToken.GetSignatureAlgorithm()); err != nil {
+	if err := VerifyAccessToken(accessToken, claims.GetAccessTokenHash(), claims.GetSignatureAlgorithm()); err != nil {
 		return nilClaims, err
 	}
-	return idToken, nil
+	return claims, nil
 }
 
 // VerifyIDToken validates the id token according to
@@ -114,7 +114,7 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 		issuer:   issuer,
 		clientID: clientID,
 		keySet:   keySet,
-		offset:   1 * time.Second,
+		offset:   time.Second,
 		nonce: func(_ context.Context) string {
 			return ""
 		},

@@ -18,8 +18,6 @@ type accessTokenVerifier struct {
 	maxAgeIAT         time.Duration
 	offset            time.Duration
 	supportedSignAlgs []string
-	maxAge            time.Duration
-	acr               oidc.ACRVerifier
 	keySet            oidc.KeySet
 }
 

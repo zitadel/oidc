@@ -196,6 +196,7 @@ func TestNewIDTokenClaims(t *testing.T) {
 			AuthenticationContextClassReference: "something",
 			AuthenticationMethodsReferences:     []string{"some", "methods"},
 			AuthorizedParty:                     "just@me.com",
+			ClientID:                            "just@me.com",
 		},
 	}
 

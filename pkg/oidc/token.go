@@ -144,6 +144,7 @@ func NewIDTokenClaims(issuer, subject string, audience []string, expiration, aut
 			AuthenticationContextClassReference: acr,
 			AuthenticationMethodsReferences:     amr,
 			AuthorizedParty:                     clientID,
+			ClientID:                            clientID,
 		},
 	}
 }
