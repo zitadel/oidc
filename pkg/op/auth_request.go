@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -282,11 +283,11 @@ func checkURIAginstRedirects(client Client, uri string) error {
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.RedirectURIGlobs() {
-			matcher, err := CompileGlob(uriGlob)
+			isMatch, err := path.Match(uriGlob, uri)
 			if err != nil {
 				return oidc.ErrServerError().WithParent(err)
 			}
-			if matcher.Match(uri) {
+			if isMatch {
 				return nil
 			}
 		}
