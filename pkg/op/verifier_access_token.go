@@ -65,7 +65,7 @@ func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTok
 	return verifier
 }
 
-// VerifyAccessToken validates the access token (issuer, signature and expiration)
+// VerifyAccessToken validates the access token (issuer, signature and expiration).
 func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v AccessTokenVerifier) (claims C, err error) {
 	var nilClaims C
 
