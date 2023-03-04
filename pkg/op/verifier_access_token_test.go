@@ -9,11 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v2/internal/testutil"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestNewAccessTokenVerifier(t *testing.T) {
-	keySet := tu.NewKeySet()
 	type args struct {
 		issuer string
 		keySet oidc.KeySet
@@ -28,25 +26,25 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 			name: "simple",
 			args: args{
 				issuer: tu.ValidIssuer,
-				keySet: keySet,
+				keySet: tu.KeySet{},
 			},
 			want: &accessTokenVerifier{
 				issuer: tu.ValidIssuer,
-				keySet: keySet,
+				keySet: tu.KeySet{},
 			},
 		},
 		{
 			name: "with signature algorithm",
 			args: args{
 				issuer: tu.ValidIssuer,
-				keySet: keySet,
+				keySet: tu.KeySet{},
 				opts: []AccessTokenVerifierOpt{
 					WithSupportedAccessTokenSigningAlgorithms("ABC", "DEF"),
 				},
 			},
 			want: &accessTokenVerifier{
 				issuer:            tu.ValidIssuer,
-				keySet:            keySet,
+				keySet:            tu.KeySet{},
 				supportedSignAlgs: []string{"ABC", "DEF"},
 			},
 		},
@@ -60,13 +58,12 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 }
 
 func TestVerifyAccessToken(t *testing.T) {
-	keySet := tu.NewKeySet()
 	verifier := &accessTokenVerifier{
 		issuer:            tu.ValidIssuer,
 		maxAgeIAT:         2 * time.Minute,
 		offset:            time.Second,
-		supportedSignAlgs: []string{string(jose.PS512)},
-		keySet:            keySet,
+		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		keySet:            tu.KeySet{},
 	}
 
 	tests := []struct {
@@ -76,7 +73,7 @@ func TestVerifyAccessToken(t *testing.T) {
 	}{
 		{
 			name:        "success",
-			tokenClaims: keySet.ValidAccessToken,
+			tokenClaims: tu.ValidAccessToken,
 		},
 		{
 			name:        "parse err",
@@ -91,7 +88,7 @@ func TestVerifyAccessToken(t *testing.T) {
 		{
 			name: "wrong issuer",
 			tokenClaims: func() (string, *oidc.AccessTokenClaims) {
-				return keySet.NewAccessToken(
+				return tu.NewAccessToken(
 					"foo", tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidJWTID, tu.ValidClientID,
 					tu.ValidSkew,
@@ -102,7 +99,7 @@ func TestVerifyAccessToken(t *testing.T) {
 		{
 			name: "expired",
 			tokenClaims: func() (string, *oidc.AccessTokenClaims) {
-				return keySet.NewAccessToken(
+				return tu.NewAccessToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration.Add(-time.Hour), tu.ValidJWTID, tu.ValidClientID,
 					tu.ValidSkew,

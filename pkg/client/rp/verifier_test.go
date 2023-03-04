@@ -13,19 +13,18 @@ import (
 )
 
 func TestVerifyTokens(t *testing.T) {
-	keySet := tu.NewKeySet()
 	verifier := &idTokenVerifier{
 		issuer:            tu.ValidIssuer,
 		maxAgeIAT:         2 * time.Minute,
 		offset:            time.Second,
-		supportedSignAlgs: []string{string(jose.PS512)},
-		keySet:            keySet,
+		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		keySet:            tu.KeySet{},
 		maxAge:            2 * time.Minute,
 		acr:               tu.ACRVerify,
 		nonce:             func(context.Context) string { return tu.ValidNonce },
 		clientID:          tu.ValidClientID,
 	}
-	accessToken, _ := keySet.ValidAccessToken()
+	accessToken, _ := tu.ValidAccessToken()
 	atHash, err := oidc.ClaimHash(accessToken, tu.SignatureAlgorithm)
 	require.NoError(t, err)
 
@@ -37,13 +36,13 @@ func TestVerifyTokens(t *testing.T) {
 	}{
 		{
 			name:          "without access token",
-			idTokenClaims: keySet.ValidIDToken,
+			idTokenClaims: tu.ValidIDToken,
 		},
 		{
 			name:        "with access token",
 			accessToken: accessToken,
 			idTokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, atHash,
@@ -54,7 +53,7 @@ func TestVerifyTokens(t *testing.T) {
 			name:        "expired id token",
 			accessToken: accessToken,
 			idTokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration.Add(-time.Hour), tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, atHash,
@@ -66,7 +65,7 @@ func TestVerifyTokens(t *testing.T) {
 			name:        "wronf access token",
 			accessToken: accessToken,
 			idTokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "~~~",
@@ -92,13 +91,12 @@ func TestVerifyTokens(t *testing.T) {
 }
 
 func TestVerifyIDToken(t *testing.T) {
-	keySet := tu.NewKeySet()
 	verifier := &idTokenVerifier{
 		issuer:            tu.ValidIssuer,
 		maxAgeIAT:         2 * time.Minute,
 		offset:            time.Second,
-		supportedSignAlgs: []string{string(jose.PS512)},
-		keySet:            keySet,
+		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		keySet:            tu.KeySet{},
 		maxAge:            2 * time.Minute,
 		acr:               tu.ACRVerify,
 		nonce:             func(context.Context) string { return tu.ValidNonce },
@@ -113,7 +111,7 @@ func TestVerifyIDToken(t *testing.T) {
 		{
 			name:        "success",
 			clientID:    tu.ValidClientID,
-			tokenClaims: keySet.ValidIDToken,
+			tokenClaims: tu.ValidIDToken,
 		},
 		{
 			name:        "parse err",
@@ -131,7 +129,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "empty subject",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, "", tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -143,7 +141,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "wrong issuer",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					"foo", tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -154,14 +152,14 @@ func TestVerifyIDToken(t *testing.T) {
 		{
 			name:        "wrong clientID",
 			clientID:    "foo",
-			tokenClaims: keySet.ValidIDToken,
+			tokenClaims: tu.ValidIDToken,
 			wantErr:     true,
 		},
 		{
 			name:     "expired",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration.Add(-time.Hour), tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -173,7 +171,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "wrong IAT",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, -time.Hour, "",
@@ -185,7 +183,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "wrong acr",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
 					"else", tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -197,7 +195,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "expired auth",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime.Add(-time.Hour), tu.ValidNonce,
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -209,7 +207,7 @@ func TestVerifyIDToken(t *testing.T) {
 			name:     "wrong nonce",
 			clientID: tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) {
-				return keySet.NewIDToken(
+				return tu.NewIDToken(
 					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
 					tu.ValidExpiration, tu.ValidAuthTime, "foo",
 					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
@@ -236,8 +234,7 @@ func TestVerifyIDToken(t *testing.T) {
 }
 
 func TestVerifyAccessToken(t *testing.T) {
-	keySet := tu.NewKeySet()
-	token, _ := keySet.ValidAccessToken()
+	token, _ := tu.ValidAccessToken()
 	hash, err := oidc.ClaimHash(token, tu.SignatureAlgorithm)
 	require.NoError(t, err)
 
@@ -294,7 +291,6 @@ func TestVerifyAccessToken(t *testing.T) {
 }
 
 func TestNewIDTokenVerifier(t *testing.T) {
-	keySet := tu.NewKeySet()
 	type args struct {
 		issuer   string
 		clientID string
@@ -311,7 +307,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 			args: args{
 				issuer:   tu.ValidIssuer,
 				clientID: tu.ValidClientID,
-				keySet:   keySet,
+				keySet:   tu.KeySet{},
 				options: []VerifierOption{
 					WithIssuedAtOffset(time.Minute),
 					//WithIssuedAtMaxAge(time.Hour),
@@ -326,7 +322,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 				offset: time.Minute,
 				//maxAgeIAT:         time.Hour, // Maybe BUG?
 				clientID:          tu.ValidClientID,
-				keySet:            keySet,
+				keySet:            tu.KeySet{},
 				nonce:             nil,
 				acr:               nil,
 				maxAge:            2 * time.Hour,
