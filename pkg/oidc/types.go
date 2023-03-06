@@ -184,6 +184,30 @@ func NowTime() Time {
 	return FromTime(time.Now())
 }
 
+func (ts *Time) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("oidc.Time: %w", err)
+	}
+	switch x := v.(type) {
+	case float64:
+		*ts = Time(x)
+	case string:
+		// Compatibility with Auth0:
+		// https://github.com/zitadel/oidc/issues/292
+		tt, err := time.Parse(time.RFC3339, x)
+		if err != nil {
+			return fmt.Errorf("oidc.Time: %w", err)
+		}
+		*ts = FromTime(tt)
+	case nil:
+		*ts = 0
+	default:
+		return fmt.Errorf("oidc.Time: unable to parse type %T with value %v", x, x)
+	}
+	return nil
+}
+
 type RequestObject struct {
 	Issuer   string   `json:"iss"`
 	Audience Audience `json:"aud"`
