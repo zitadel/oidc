@@ -310,7 +310,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 				keySet:   tu.KeySet{},
 				options: []VerifierOption{
 					WithIssuedAtOffset(time.Minute),
-					//WithIssuedAtMaxAge(time.Hour),
+					WithIssuedAtMaxAge(time.Hour),
 					WithNonce(nil), // otherwise assert.Equal will fail on the function
 					WithACRVerifier(nil),
 					WithAuthTimeMaxAge(2 * time.Hour),
@@ -318,9 +318,9 @@ func TestNewIDTokenVerifier(t *testing.T) {
 				},
 			},
 			want: &idTokenVerifier{
-				issuer: tu.ValidIssuer,
-				offset: time.Minute,
-				//maxAgeIAT:         time.Hour, // Maybe BUG?
+				issuer:            tu.ValidIssuer,
+				offset:            time.Minute,
+				maxAgeIAT:         time.Hour,
 				clientID:          tu.ValidClientID,
 				keySet:            tu.KeySet{},
 				nonce:             nil,

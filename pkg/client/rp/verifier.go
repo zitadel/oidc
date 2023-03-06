@@ -141,7 +141,7 @@ func WithIssuedAtOffset(offset time.Duration) func(*idTokenVerifier) {
 // WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
 func WithIssuedAtMaxAge(maxAge time.Duration) func(*idTokenVerifier) {
 	return func(v *idTokenVerifier) {
-		v.maxAge = maxAge
+		v.maxAgeIAT = maxAge
 	}
 }
 
