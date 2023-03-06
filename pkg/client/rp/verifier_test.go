@@ -62,7 +62,7 @@ func TestVerifyTokens(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:        "wronf access token",
+			name:        "wrong access token",
 			accessToken: accessToken,
 			idTokenClaims: func() (string, *oidc.IDTokenClaims) {
 				return tu.NewIDToken(
