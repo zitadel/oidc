@@ -11,6 +11,10 @@ type ClientAssertionParams struct {
 	ClientAssertionType string `schema:"client_assertion_type"`
 }
 
+// IntrospectionResponse implements RFC 7662, section 2.2 and
+// OpenID Connect Core 1.0, section 5.1 (UserInfo).
+// https://www.rfc-editor.org/rfc/rfc7662.html#section-2.2.
+// https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type IntrospectionResponse struct {
 	Active     bool                `json:"active"`
 	Scope      SpaceDelimitedArray `json:"scope,omitempty"`

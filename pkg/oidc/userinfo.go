@@ -1,5 +1,7 @@
 package oidc
 
+// UserInfo implements OpenID Connect Core 1.0, section 5.1.
+// https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type UserInfo struct {
 	Subject string `json:"sub,omitempty"`
 	UserInfoProfile

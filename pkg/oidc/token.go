@@ -105,6 +105,10 @@ func (a *AccessTokenClaims) UnmarshalJSON(data []byte) error {
 	return unmarshalJSONMulti(data, (*atcAlias)(a), &a.Claims)
 }
 
+// IDTokenClaims extends TokenClaims by further implementing
+// OpenID Connect Core 1.0, sections 3.1.3.6 (Code flow),
+// 3.2.2.10 (implicit), 3.3.2.11 (Hybrid) and 5.1 (UserInfo).
+// https://openid.net/specs/openid-connect-core-1_0.html#toc
 type IDTokenClaims struct {
 	TokenClaims
 	NotBefore       Time   `json:"nbf,omitempty"`
