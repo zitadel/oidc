@@ -60,7 +60,7 @@ func main() {
 	http.Handle("/login", rp.AuthURLHandler(state, provider))
 
 	// for demonstration purposes the returned userinfo response is written as JSON object onto response
-	marshalUserinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info *oidc.UserInfo) {
+	marshalUserinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
 		data, err := json.Marshal(info)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

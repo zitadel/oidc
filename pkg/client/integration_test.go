@@ -238,7 +238,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}
 
 	var email string
-	redirect := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty, info *oidc.UserInfo) {
+	redirect := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
 		require.NotNil(t, tokens, "tokens")
 		require.NotNil(t, info, "info")
 		t.Log("access token", tokens.AccessToken)

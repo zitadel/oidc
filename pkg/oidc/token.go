@@ -18,9 +18,9 @@ const (
 	PrefixBearer = BearerToken + " "
 )
 
-type Tokens struct {
+type Tokens[C IDClaims] struct {
 	*oauth2.Token
-	IDTokenClaims *IDTokenClaims
+	IDTokenClaims C
 	IDToken       string
 }
 

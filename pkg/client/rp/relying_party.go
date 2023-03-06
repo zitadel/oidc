@@ -373,7 +373,7 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 
 // CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
 // returning it parsed together with the oauth2 tokens (access, refresh)
-func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens, err error) {
+func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens[C], err error) {
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
@@ -386,7 +386,7 @@ func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...Cod
 	}
 
 	if rp.IsOAuth2Only() {
-		return &oidc.Tokens{Token: token}, nil
+		return &oidc.Tokens[C]{Token: token}, nil
 	}
 
 	idTokenString, ok := token.Extra(idTokenKey).(string)
@@ -394,20 +394,20 @@ func CodeExchange(ctx context.Context, code string, rp RelyingParty, opts ...Cod
 		return nil, errors.New("id_token missing")
 	}
 
-	idToken, err := VerifyTokens[*oidc.IDTokenClaims](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
+	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
 	if err != nil {
 		return nil, err
 	}
 
-	return &oidc.Tokens{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
+	return &oidc.Tokens[C]{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
 }
 
-type CodeExchangeCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp RelyingParty)
+type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty)
 
 // CodeExchangeHandler extends the `CodeExchange` method with a http handler
 // including cookie handling for secure `state` transfer
 // and optional PKCE code verifier checking
-func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.HandlerFunc {
+func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp RelyingParty) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)
 		if err != nil {
@@ -436,7 +436,7 @@ func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.Ha
 			}
 			codeOpts = append(codeOpts, WithClientAssertionJWT(assertion))
 		}
-		tokens, err := CodeExchange(r.Context(), params.Get("code"), rp, codeOpts...)
+		tokens, err := CodeExchange[C](r.Context(), params.Get("code"), rp, codeOpts...)
 		if err != nil {
 			http.Error(w, "failed to exchange token: "+err.Error(), http.StatusUnauthorized)
 			return
@@ -445,14 +445,14 @@ func CodeExchangeHandler(callback CodeExchangeCallback, rp RelyingParty) http.Ha
 	}
 }
 
-type CodeExchangeUserinfoCallback func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, provider RelyingParty, info *oidc.UserInfo)
+type CodeExchangeUserinfoCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, provider RelyingParty, info *oidc.UserInfo)
 
 // UserinfoCallback wraps the callback function of the CodeExchangeHandler
 // and calls the userinfo endpoint with the access token
 // on success it will pass the userinfo into its callback function as well
-func UserinfoCallback(f CodeExchangeUserinfoCallback) CodeExchangeCallback {
-	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp RelyingParty) {
-		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.Subject, rp)
+func UserinfoCallback[C oidc.IDClaims](f CodeExchangeUserinfoCallback[C]) CodeExchangeCallback[C] {
+	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty) {
+		info, err := Userinfo(tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
 		if err != nil {
 			http.Error(w, "userinfo failed: "+err.Error(), http.StatusUnauthorized)
 			return
