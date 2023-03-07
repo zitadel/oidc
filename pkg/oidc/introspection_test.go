@@ -8,11 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntrospectionResponse_GetUserInfo(t *testing.T) {
-	got := introspectionResponseData.GetUserInfo()
-	assert.Equal(t, userInfoData, got)
-}
-
 func TestIntrospectionResponse_SetUserInfo(t *testing.T) {
 	tests := []struct {
 		name  string

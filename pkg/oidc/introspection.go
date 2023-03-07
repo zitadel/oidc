@@ -36,18 +36,6 @@ type IntrospectionResponse struct {
 	Claims  map[string]any   `json:"-"`
 }
 
-// GetUserInfo copies all user related fields into a new UserInfo.
-func (i *IntrospectionResponse) GetUserInfo() *UserInfo {
-	return &UserInfo{
-		Address:         gu.PtrCopy(i.Address),
-		Subject:         i.Subject,
-		UserInfoProfile: i.UserInfoProfile,
-		UserInfoEmail:   i.UserInfoEmail,
-		UserInfoPhone:   i.UserInfoPhone,
-		Claims:          gu.MapCopy(i.Claims),
-	}
-}
-
 // SetUserInfo copies all relevant fields from UserInfo
 // into the IntroSpectionResponse.
 func (i *IntrospectionResponse) SetUserInfo(u *UserInfo) {
