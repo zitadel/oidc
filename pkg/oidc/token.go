@@ -39,6 +39,7 @@ type TokenClaims struct {
 	Expiration                          Time     `json:"exp,omitempty"`
 	IssuedAt                            Time     `json:"iat,omitempty"`
 	AuthTime                            Time     `json:"auth_time,omitempty"`
+	NotBefore                           Time     `json:"nbf,omitempty"`
 	Nonce                               string   `json:"nonce,omitempty"`
 	AuthenticationContextClassReference string   `json:"acr,omitempty"`
 	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
@@ -68,12 +69,7 @@ func (c *TokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 
 type AccessTokenClaims struct {
 	TokenClaims
-	NotBefore            Time     `json:"nbf,omitempty"`
-	CodeHash             string   `json:"c_hash,omitempty"`
-	SessionID            string   `json:"sid,omitempty"`
-	Scopes               []string `json:"scope,omitempty"`
-	AccessTokenUseNumber int      `json:"at_use_nbr,omitempty"`
-
+	Scopes []string       `json:"scope,omitempty"`
 	Claims map[string]any `json:"-"`
 }
 
@@ -89,9 +85,9 @@ func NewAccessTokenClaims(issuer, subject string, audience []string, expiration 
 			Audience:   audience,
 			Expiration: FromTime(expiration),
 			IssuedAt:   FromTime(now),
+			NotBefore:  FromTime(now),
 			JWTID:      jwtid,
 		},
-		NotBefore: FromTime(now),
 	}
 }
 
@@ -114,6 +110,7 @@ type IDTokenClaims struct {
 	NotBefore       Time   `json:"nbf,omitempty"`
 	AccessTokenHash string `json:"at_hash,omitempty"`
 	CodeHash        string `json:"c_hash,omitempty"`
+	SessionID       string `json:"sid,omitempty"` // IDToken - session management spec
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone
