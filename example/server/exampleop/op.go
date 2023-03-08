@@ -1,7 +1,6 @@
 package exampleop
 
 import (
-	"context"
 	"crypto/sha256"
 	"log"
 	"net/http"
@@ -35,7 +34,7 @@ type Storage interface {
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
-func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Router {
+func SetupServer(issuer string, storage Storage) *mux.Router {
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
@@ -51,7 +50,7 @@ func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Route
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newOP(ctx, storage, issuer, key)
+	provider, err := newOP(storage, issuer, key)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +79,7 @@ func SetupServer(ctx context.Context, issuer string, storage Storage) *mux.Route
 // newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
+func newOP(storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
 	config := &op.Config{
 		CryptoKey: key,
 
@@ -112,7 +111,7 @@ func newOP(ctx context.Context, storage op.Storage, issuer string, key [32]byte)
 			UserCode:     op.UserCodeBase20,
 		},
 	}
-	handler, err := op.NewOpenIDProvider(ctx, issuer, config, storage,
+	handler, err := op.NewOpenIDProvider(issuer, config, storage,
 		//we must explicitly allow the use of the http issuer
 		op.WithAllowInsecure(),
 		// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,8 +10,6 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-
 	//we will run on :9998
 	port := "9998"
 	//which gives us the issuer: http://localhost:9998/
@@ -23,7 +20,7 @@ func main() {
 	// in this example it will be handled in-memory
 	storage := storage.NewStorage(storage.NewUserStore(issuer))
 
-	router := exampleop.SetupServer(ctx, issuer, storage)
+	router := exampleop.SetupServer(issuer, storage)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -35,5 +32,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	<-ctx.Done()
 }
