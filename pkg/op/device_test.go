@@ -54,7 +54,7 @@ func init() {
 	)
 
 	var err error
-	testProvider, err = op.NewOpenIDProvider(context.TODO(), testIssuer, config,
+	testProvider, err = op.NewOpenIDProvider(testIssuer, config,
 		storage.NewStorage(storage.NewUserStore(testIssuer)), op.WithAllowInsecure(),
 	)
 	if err != nil {

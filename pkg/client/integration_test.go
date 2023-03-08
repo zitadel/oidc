@@ -2,7 +2,6 @@ package client_test
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -30,14 +29,13 @@ import (
 
 func TestRelyingPartySession(t *testing.T) {
 	t.Log("------- start example OP ------")
-	ctx := context.Background()
 	targetURL := "http://local-site"
 	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
 	var dh deferredHandler
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(ctx, opServer.URL, exampleStorage)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
@@ -79,14 +77,13 @@ func TestRelyingPartySession(t *testing.T) {
 
 func TestResourceServerTokenExchange(t *testing.T) {
 	t.Log("------- start example OP ------")
-	ctx := context.Background()
 	targetURL := "http://local-site"
 	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
 	var dh deferredHandler
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(ctx, opServer.URL, exampleStorage)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)

@@ -125,7 +125,7 @@ func newDynamicOP(ctx context.Context, storage op.Storage, key [32]byte) (*op.Pr
 		//this example has only static texts (in English), so we'll set the here accordingly
 		SupportedUILocales: []language.Tag{language.English},
 	}
-	handler, err := op.NewDynamicOpenIDProvider(ctx, "/", config, storage,
+	handler, err := op.NewDynamicOpenIDProvider("/", config, storage,
 		//we must explicitly allow the use of the http issuer
 		op.WithAllowInsecure(),
 		//as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth

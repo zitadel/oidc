@@ -157,15 +157,15 @@ type endpoints struct {
 // Successful logins should mark the request as authorized and redirect back to to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-func NewOpenIDProvider(ctx context.Context, issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return newProvider(ctx, config, storage, StaticIssuer(issuer), opOpts...)
+func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
+	return newProvider(config, storage, StaticIssuer(issuer), opOpts...)
 }
 
-func NewDynamicOpenIDProvider(ctx context.Context, path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return newProvider(ctx, config, storage, IssuerFromHost(path), opOpts...)
+func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
+	return newProvider(config, storage, IssuerFromHost(path), opOpts...)
 }
 
-func newProvider(ctx context.Context, config *Config, storage Storage, issuer func(bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
+func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
 	o := &Provider{
 		config:    config,
 		storage:   storage,
