@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/schema v1.2.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/jeremija/gosubmit v0.2.7
-	github.com/muhlemmer/gu v0.3.0
+	github.com/muhlemmer/gu v0.3.1
 	github.com/rs/cors v1.8.3
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1

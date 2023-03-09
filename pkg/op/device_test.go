@@ -3,7 +3,6 @@ package op_test
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"io"
 	mr "math/rand"
@@ -16,51 +15,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v2/example/server/storage"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
-	"golang.org/x/text/language"
 )
-
-var testProvider op.OpenIDProvider
-
-const (
-	testIssuer    = "https://localhost:9998/"
-	pathLoggedOut = "/logged-out"
-)
-
-func init() {
-	config := &op.Config{
-		CryptoKey:                sha256.Sum256([]byte("test")),
-		DefaultLogoutRedirectURI: pathLoggedOut,
-		CodeMethodS256:           true,
-		AuthMethodPost:           true,
-		AuthMethodPrivateKeyJWT:  true,
-		GrantTypeRefreshToken:    true,
-		RequestObjectSupported:   true,
-		SupportedUILocales:       []language.Tag{language.English},
-		DeviceAuthorization: op.DeviceAuthorizationConfig{
-			Lifetime:     5 * time.Minute,
-			PollInterval: 5 * time.Second,
-			UserFormURL:  testIssuer + "device",
-			UserCode:     op.UserCodeBase20,
-		},
-	}
-
-	storage.RegisterClients(
-		storage.NativeClient("native"),
-		storage.WebClient("web", "secret"),
-		storage.WebClient("api", "secret"),
-	)
-
-	var err error
-	testProvider, err = op.NewOpenIDProvider(testIssuer, config,
-		storage.NewStorage(storage.NewUserStore(testIssuer)), op.WithAllowInsecure(),
-	)
-	if err != nil {
-		panic(err)
-	}
-}
 
 func Test_deviceAuthorizationHandler(t *testing.T) {
 	req := &oidc.DeviceAuthorizationRequest{
