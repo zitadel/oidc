@@ -69,23 +69,23 @@ func NewAccessTokenClaims(issuer, subject string, audience []string, expiration 
 }
 
 type accessTokenClaims struct {
-	Issuer                              string   `json:"iss,omitempty"`
-	Subject                             string   `json:"sub,omitempty"`
-	Audience                            Audience `json:"aud,omitempty"`
-	Expiration                          Time     `json:"exp,omitempty"`
-	IssuedAt                            Time     `json:"iat,omitempty"`
-	NotBefore                           Time     `json:"nbf,omitempty"`
-	JWTID                               string   `json:"jti,omitempty"`
-	AuthorizedParty                     string   `json:"azp,omitempty"`
-	Nonce                               string   `json:"nonce,omitempty"`
-	AuthTime                            Time     `json:"auth_time,omitempty"`
-	CodeHash                            string   `json:"c_hash,omitempty"`
-	AuthenticationContextClassReference string   `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
-	SessionID                           string   `json:"sid,omitempty"`
-	Scopes                              []string `json:"scope,omitempty"`
-	ClientID                            string   `json:"client_id,omitempty"`
-	AccessTokenUseNumber                int      `json:"at_use_nbr,omitempty"`
+	Issuer                              string              `json:"iss,omitempty"`
+	Subject                             string              `json:"sub,omitempty"`
+	Audience                            Audience            `json:"aud,omitempty"`
+	Expiration                          Time                `json:"exp,omitempty"`
+	IssuedAt                            Time                `json:"iat,omitempty"`
+	NotBefore                           Time                `json:"nbf,omitempty"`
+	JWTID                               string              `json:"jti,omitempty"`
+	AuthorizedParty                     string              `json:"azp,omitempty"`
+	Nonce                               string              `json:"nonce,omitempty"`
+	AuthTime                            Time                `json:"auth_time,omitempty"`
+	CodeHash                            string              `json:"c_hash,omitempty"`
+	AuthenticationContextClassReference string              `json:"acr,omitempty"`
+	AuthenticationMethodsReferences     []string            `json:"amr,omitempty"`
+	SessionID                           string              `json:"sid,omitempty"`
+	Scopes                              SpaceDelimitedArray `json:"scope,omitempty"`
+	ClientID                            string              `json:"client_id,omitempty"`
+	AccessTokenUseNumber                int                 `json:"at_use_nbr,omitempty"`
 
 	claims       map[string]interface{}  `json:"-"`
 	signatureAlg jose.SignatureAlgorithm `json:"-"`
