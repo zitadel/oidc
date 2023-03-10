@@ -198,7 +198,7 @@ func (s *multiStorage) AuthorizeClientIDSecret(ctx context.Context, clientID, cl
 
 // SetUserinfoFromScopes implements the op.Storage interface
 // it will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
-func (s *multiStorage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error {
+func (s *multiStorage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (s *multiStorage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.
 
 // SetUserinfoFromToken implements the op.Storage interface
 // it will be called for the userinfo endpoint, so we read the token and pass the information from that to the private function
-func (s *multiStorage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {
+func (s *multiStorage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return err
@@ -218,7 +218,7 @@ func (s *multiStorage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.U
 
 // SetIntrospectionFromToken implements the op.Storage interface
 // it will be called for the introspection endpoint, so we read the token and pass the information from that to the private function
-func (s *multiStorage) SetIntrospectionFromToken(ctx context.Context, introspection oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+func (s *multiStorage) SetIntrospectionFromToken(ctx context.Context, introspection *oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return err

@@ -76,7 +76,7 @@ func main() {
 		params := mux.Vars(r)
 		requestedClaim := params["claim"]
 		requestedValue := params["value"]
-		value, ok := resp.GetClaim(requestedClaim).(string)
+		value, ok := resp.Claims[requestedClaim].(string)
 		if !ok || value == "" || value != requestedValue {
 			http.Error(w, "claim does not match", http.StatusForbidden)
 			return

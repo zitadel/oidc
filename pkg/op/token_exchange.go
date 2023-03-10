@@ -280,9 +280,9 @@ func GetTokenIDAndSubjectFromToken(
 ) (tokenIDOrToken, subject string, claims map[string]interface{}, ok bool) {
 	switch tokenType {
 	case oidc.AccessTokenType:
-		var accessTokenClaims oidc.AccessTokenClaims
+		var accessTokenClaims *oidc.AccessTokenClaims
 		tokenIDOrToken, subject, accessTokenClaims, ok = getTokenIDAndClaims(ctx, exchanger, token)
-		claims = accessTokenClaims.GetClaims()
+		claims = accessTokenClaims.Claims
 	case oidc.RefreshTokenType:
 		refreshTokenRequest, err := exchanger.Storage().TokenRequestByRefreshToken(ctx, token)
 		if err != nil {
@@ -291,12 +291,12 @@ func GetTokenIDAndSubjectFromToken(
 
 		tokenIDOrToken, subject, ok = token, refreshTokenRequest.GetSubject(), true
 	case oidc.IDTokenType:
-		idTokenClaims, err := VerifyIDTokenHint(ctx, token, exchanger.IDTokenHintVerifier(ctx))
+		idTokenClaims, err := VerifyIDTokenHint[*oidc.IDTokenClaims](ctx, token, exchanger.IDTokenHintVerifier(ctx))
 		if err != nil {
 			break
 		}
 
-		tokenIDOrToken, subject, claims, ok = token, idTokenClaims.GetSubject(), idTokenClaims.GetClaims(), true
+		tokenIDOrToken, subject, claims, ok = token, idTokenClaims.Subject, idTokenClaims.Claims, true
 	}
 
 	if !ok {
@@ -380,7 +380,7 @@ func CreateTokenExchangeResponse(
 	}, nil
 }
 
-func getTokenIDAndClaims(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, oidc.AccessTokenClaims, bool) {
+func getTokenIDAndClaims(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, *oidc.AccessTokenClaims, bool) {
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err == nil {
 		splitToken := strings.Split(tokenIDSubject, ":")
@@ -390,10 +390,10 @@ func getTokenIDAndClaims(ctx context.Context, userinfoProvider UserinfoProvider,
 
 		return splitToken[0], splitToken[1], nil, true
 	}
-	accessTokenClaims, err := VerifyAccessToken(ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
+	accessTokenClaims, err := VerifyAccessToken[*oidc.AccessTokenClaims](ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
 		return "", "", nil, false
 	}
 
-	return accessTokenClaims.GetTokenID(), accessTokenClaims.GetSubject(), accessTokenClaims, true
+	return accessTokenClaims.JWTID, accessTokenClaims.Subject, accessTokenClaims, true
 }

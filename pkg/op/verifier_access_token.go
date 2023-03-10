@@ -18,8 +18,6 @@ type accessTokenVerifier struct {
 	maxAgeIAT         time.Duration
 	offset            time.Duration
 	supportedSignAlgs []string
-	maxAge            time.Duration
-	acr               oidc.ACRVerifier
 	keySet            oidc.KeySet
 }
 
@@ -67,29 +65,29 @@ func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTok
 	return verifier
 }
 
-// VerifyAccessToken validates the access token (issuer, signature and expiration)
-func VerifyAccessToken(ctx context.Context, token string, v AccessTokenVerifier) (oidc.AccessTokenClaims, error) {
-	claims := oidc.EmptyAccessTokenClaims()
+// VerifyAccessToken validates the access token (issuer, signature and expiration).
+func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v AccessTokenVerifier) (claims C, err error) {
+	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
-	payload, err := oidc.ParseToken(decrypted, claims)
+	payload, err := oidc.ParseToken(decrypted, &claims)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	return claims, nil
