@@ -360,6 +360,12 @@ func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserI
 	return s.setUserinfo(ctx, userinfo, userID, clientID, scopes)
 }
 
+// SetUserinfoFromRequest is an optional addon to op.Storage for setting user information
+// using the request.
+func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request op.IDTokenRequest, scopes []string) error {
+	return nil
+}
+
 // SetUserinfoFromToken implements the op.Storage interface
 // it will be called for the userinfo endpoint, so we read the token and pass the information from that to the private function
 func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {

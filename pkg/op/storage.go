@@ -82,6 +82,13 @@ type OPStorage interface {
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
 }
 
+// CanSetUserinfoFromRequest is an optional additional interface that may be implemented by
+// implementors of Storage.  It allows additional data to be set in id_tokens based on the
+// request.
+type CanSetUserinfoFromRequest interface {
+	SetUserinfoFromRequest(ctx context.Context, userinfo oidc.UserInfoSetter, request IDTokenRequest, scopes []string) error
+}
+
 // Storage is a required parameter for NewOpenIDProvider(). In addition to the
 // embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
 // then the grant type "client_credentials" will be supported. In that case, the access
