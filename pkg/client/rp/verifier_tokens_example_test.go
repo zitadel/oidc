@@ -10,9 +10,8 @@ import (
 )
 
 // MyCustomClaims extends the TokenClaims base,
-// so it implments the oidc.Claims interface.
-// Instead of carying a map, we add needed fields
-// to the struct for type safe access.
+// so it implmeents the oidc.Claims interface.
+// Instead of carrying a map, we add needed fields// to the struct for type safe access.
 type MyCustomClaims struct {
 	oidc.TokenClaims
 	NotBefore       oidc.Time `json:"nbf,omitempty"`
@@ -34,7 +33,7 @@ type Nested struct {
 }
 
 /*
-idToken caries the following claims. foo and bar are custom claims
+idToken carries the following claims. foo and bar are custom claims
 
 	{
 		"acr": "something",

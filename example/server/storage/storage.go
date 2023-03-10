@@ -625,7 +625,6 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo *oidc.UserInfo, user
 		case oidc.ScopeEmail:
 			userInfo.Email = user.Email
 			userInfo.EmailVerified = oidc.Bool(user.EmailVerified)
-			//user.Email, user.EmailVerified
 		case oidc.ScopeProfile:
 			userInfo.PreferredUsername = user.Username
 			userInfo.Name = user.FirstName + " " + user.LastName

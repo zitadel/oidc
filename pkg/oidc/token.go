@@ -51,18 +51,46 @@ type TokenClaims struct {
 	SignatureAlg jose.SignatureAlgorithm `json:"-"`
 }
 
-func (c *TokenClaims) GetIssuer() string                              { return c.Issuer }
-func (c *TokenClaims) GetSubject() string                             { return c.Subject }
-func (c *TokenClaims) GetAudience() []string                          { return c.Audience }
-func (c *TokenClaims) GetExpiration() time.Time                       { return c.Expiration.AsTime() }
-func (c *TokenClaims) GetIssuedAt() time.Time                         { return c.IssuedAt.AsTime() }
-func (c *TokenClaims) GetNonce() string                               { return c.Nonce }
-func (c *TokenClaims) GetAuthTime() time.Time                         { return c.AuthTime.AsTime() }
-func (c *TokenClaims) GetAuthorizedParty() string                     { return c.AuthorizedParty }
-func (c *TokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm { return c.SignatureAlg }
+func (c *TokenClaims) GetIssuer() string {
+	return c.Issuer
+}
+
+func (c *TokenClaims) GetSubject() string {
+	return c.Subject
+}
+
+func (c *TokenClaims) GetAudience() []string {
+	return c.Audience
+}
+
+func (c *TokenClaims) GetExpiration() time.Time {
+	return c.Expiration.AsTime()
+}
+
+func (c *TokenClaims) GetIssuedAt() time.Time {
+	return c.IssuedAt.AsTime()
+}
+
+func (c *TokenClaims) GetNonce() string {
+	return c.Nonce
+}
+
+func (c *TokenClaims) GetAuthTime() time.Time {
+	return c.AuthTime.AsTime()
+}
+
+func (c *TokenClaims) GetAuthorizedParty() string {
+	return c.AuthorizedParty
+}
+
+func (c *TokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm {
+	return c.SignatureAlg
+}
+
 func (c *TokenClaims) GetAuthenticationContextClassReference() string {
 	return c.AuthenticationContextClassReference
 }
+
 func (c *TokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 	c.SignatureAlg = algorithm
 }
@@ -110,7 +138,7 @@ type IDTokenClaims struct {
 	NotBefore       Time   `json:"nbf,omitempty"`
 	AccessTokenHash string `json:"at_hash,omitempty"`
 	CodeHash        string `json:"c_hash,omitempty"`
-	SessionID       string `json:"sid,omitempty"` // IDToken - session management spec
+	SessionID       string `json:"sid,omitempty"`
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone

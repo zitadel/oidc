@@ -154,6 +154,13 @@ func TestNewAccessTokenClaims(t *testing.T) {
 		want.Expiration.AsTime(), want.JWTID, "foo", time.Second,
 	)
 
+	// test if the dynamic timestamps are around now,
+	// allowing for a delta of 1, just in case we flip on
+	// either side of a second boundry.
+	nowMinusSkew := NowTime() - 1
+	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
+	assert.InDelta(t, int64(nowMinusSkew), int64(got.NotBefore), 1)
+
 	// Make equal not fail on dynamic timestamp
 	got.IssuedAt = 0
 	got.NotBefore = 0
@@ -206,6 +213,12 @@ func TestNewIDTokenClaims(t *testing.T) {
 		want.AuthenticationMethodsReferences, want.AuthorizedParty,
 		time.Second,
 	)
+
+	// test if the dynamic timestamp is around now,
+	// allowing for a delta of 1, just in case we flip on
+	// either side of a second boundry.
+	nowMinusSkew := NowTime() - 1
+	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
 
 	// Make equal not fail on dynamic timestamp
 	got.IssuedAt = 0
