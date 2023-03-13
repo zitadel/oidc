@@ -859,7 +859,7 @@ func (s *Storage) DenyDeviceAuthorization(ctx context.Context, userCode string) 
 	return nil
 }
 
-// AuthRequestDone is used by testing
+// AuthRequestDone is used by testing and is not required to implement op.Storage
 func (s *Storage) AuthRequestDone(id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
