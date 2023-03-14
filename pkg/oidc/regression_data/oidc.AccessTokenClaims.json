@@ -13,10 +13,7 @@
 		"some",
 		"methods"
 	],
-	"scope": [
-		"email",
-		"phone"
-	],
+	"scope": "email phone",
 	"client_id": "777",
 	"exp": 12345,
 	"iat": 12000,
