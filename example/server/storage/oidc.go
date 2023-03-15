@@ -37,8 +37,8 @@ type AuthRequest struct {
 	Nonce         string
 	CodeChallenge *OIDCCodeChallenge
 
-	passwordChecked bool
-	authTime        time.Time
+	done     bool
+	authTime time.Time
 }
 
 func (a *AuthRequest) GetID() string {
@@ -51,7 +51,7 @@ func (a *AuthRequest) GetACR() string {
 
 func (a *AuthRequest) GetAMR() []string {
 	// this example only uses password for authentication
-	if a.passwordChecked {
+	if a.done {
 		return []string{"pwd"}
 	}
 	return nil
@@ -102,7 +102,7 @@ func (a *AuthRequest) GetSubject() string {
 }
 
 func (a *AuthRequest) Done() bool {
-	return a.passwordChecked // this example only uses password for authentication
+	return a.done
 }
 
 func PromptToInternal(oidcPrompt oidc.SpaceDelimitedArray) []string {
