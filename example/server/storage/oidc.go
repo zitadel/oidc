@@ -5,9 +5,8 @@ import (
 
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/pkg/op"
-
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 const (
@@ -17,6 +16,9 @@ const (
 
 	// CustomClaim is an example for how to return custom claims with this library
 	CustomClaim = "custom_claim"
+
+	// CustomScopeImpersonatePrefix is an example scope prefix for passing user id to impersonate using token exchage
+	CustomScopeImpersonatePrefix = "custom_scope:impersonate:"
 )
 
 type AuthRequest struct {
@@ -35,8 +37,8 @@ type AuthRequest struct {
 	Nonce         string
 	CodeChallenge *OIDCCodeChallenge
 
-	passwordChecked bool
-	authTime        time.Time
+	done     bool
+	authTime time.Time
 }
 
 func (a *AuthRequest) GetID() string {
@@ -49,7 +51,7 @@ func (a *AuthRequest) GetACR() string {
 
 func (a *AuthRequest) GetAMR() []string {
 	// this example only uses password for authentication
-	if a.passwordChecked {
+	if a.done {
 		return []string{"pwd"}
 	}
 	return nil
@@ -100,7 +102,7 @@ func (a *AuthRequest) GetSubject() string {
 }
 
 func (a *AuthRequest) Done() bool {
-	return a.passwordChecked // this example only uses password for authentication
+	return a.done
 }
 
 func PromptToInternal(oidcPrompt oidc.SpaceDelimitedArray) []string {

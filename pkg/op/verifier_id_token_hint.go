@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type IDTokenHintVerifier interface {
@@ -73,41 +73,41 @@ func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHi
 }
 
 // VerifyIDTokenHint validates the id token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDTokenHint(ctx context.Context, token string, v IDTokenHintVerifier) (oidc.IDTokenClaims, error) {
-	claims := oidc.EmptyIDTokenClaims()
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v IDTokenHintVerifier) (claims C, err error) {
+	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
-	payload, err := oidc.ParseToken(decrypted, claims)
+	payload, err := oidc.ParseToken(decrypted, &claims)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT(), v.Offset()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAuthTime(claims, v.MaxAge()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 	return claims, nil
 }

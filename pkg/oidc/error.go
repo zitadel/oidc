@@ -18,6 +18,14 @@ const (
 	InteractionRequired  errorType = "interaction_required"
 	LoginRequired        errorType = "login_required"
 	RequestNotSupported  errorType = "request_not_supported"
+
+	// Additional error codes as defined in
+	// https://www.rfc-editor.org/rfc/rfc8628#section-3.5
+	// Device Access Token Response
+	AuthorizationPending errorType = "authorization_pending"
+	SlowDown             errorType = "slow_down"
+	AccessDenied         errorType = "access_denied"
+	ExpiredToken         errorType = "expired_token"
 )
 
 var (
@@ -75,6 +83,32 @@ var (
 	ErrRequestNotSupported = func() *Error {
 		return &Error{
 			ErrorType: RequestNotSupported,
+		}
+	}
+
+	// Device Access Token errors:
+	ErrAuthorizationPending = func() *Error {
+		return &Error{
+			ErrorType:   AuthorizationPending,
+			Description: "The client SHOULD repeat the access token request to the token endpoint, after interval from device authorization response.",
+		}
+	}
+	ErrSlowDown = func() *Error {
+		return &Error{
+			ErrorType:   SlowDown,
+			Description: "Polling should continue, but the interval MUST be increased by 5 seconds for this and all subsequent requests.",
+		}
+	}
+	ErrAccessDenied = func() *Error {
+		return &Error{
+			ErrorType:   AccessDenied,
+			Description: "The authorization request was denied.",
+		}
+	}
+	ErrExpiredDeviceCode = func() *Error {
+		return &Error{
+			ErrorType:   ExpiredToken,
+			Description: "The \"device_code\" has expired.",
 		}
 	}
 )

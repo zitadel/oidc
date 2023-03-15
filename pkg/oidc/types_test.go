@@ -3,11 +3,14 @@ package oidc
 import (
 	"bytes"
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 )
 
@@ -107,6 +110,117 @@ func TestDisplay_UnmarshalText(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLocale_Tag(t *testing.T) {
+	tests := []struct {
+		name string
+		l    *Locale
+		want language.Tag
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: language.Und,
+		},
+		{
+			name: "Und",
+			l:    NewLocale(language.Und),
+			want: language.Und,
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: language.Afrikaans,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.l.Tag())
+		})
+	}
+}
+
+func TestLocale_String(t *testing.T) {
+	tests := []struct {
+		name string
+		l    *Locale
+		want language.Tag
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: language.Und,
+		},
+		{
+			name: "Und",
+			l:    NewLocale(language.Und),
+			want: language.Und,
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: language.Afrikaans,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want.String(), tt.l.String())
+		})
+	}
+}
+
+func TestLocale_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		l       *Locale
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "nil",
+			l:    nil,
+			want: "null",
+		},
+		{
+			name: "und",
+			l:    NewLocale(language.Und),
+			want: "null",
+		},
+		{
+			name: "language",
+			l:    NewLocale(language.Afrikaans),
+			want: `"af"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(tt.l)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func TestLocale_UnmarshalJSON(t *testing.T) {
+	type a struct {
+		Locale *Locale `json:"locale,omitempty"`
+	}
+	want := a{
+		Locale: NewLocale(language.Afrikaans),
+	}
+
+	const input = `{"locale": "af"}`
+	var got a
+
+	require.NoError(t,
+		json.Unmarshal([]byte(input), &got),
+	)
+	assert.Equal(t, want, got)
 }
 
 func TestLocales_UnmarshalText(t *testing.T) {
@@ -334,4 +448,75 @@ func TestSpaceDelimitatedArray_ValuerNil(t *testing.T) {
 	if assert.NoError(t, err, "Scan nil") {
 		assert.Equal(t, SpaceDelimitedArray(nil), reversed, "scan nil")
 	}
+}
+
+func TestNewEncoder(t *testing.T) {
+	type request struct {
+		Scopes SpaceDelimitedArray `schema:"scope"`
+	}
+	a := request{
+		Scopes: SpaceDelimitedArray{"foo", "bar"},
+	}
+
+	values := make(url.Values)
+	NewEncoder().Encode(a, values)
+	assert.Equal(t, url.Values{"scope": []string{"foo bar"}}, values)
+
+	var b request
+	schema.NewDecoder().Decode(&b, values)
+	assert.Equal(t, a, b)
+}
+
+func TestTime_UnmarshalJSON(t *testing.T) {
+	type dst struct {
+		UpdatedAt Time `json:"updated_at"`
+	}
+	tests := []struct {
+		name    string
+		json    string
+		want    dst
+		wantErr bool
+	}{
+		{
+			name: "RFC3339", // https://github.com/zitadel/oidc/issues/292
+			json: `{"updated_at": "2021-05-11T21:13:25.566Z"}`,
+			want: dst{UpdatedAt: 1620767605},
+		},
+		{
+			name: "int",
+			json: `{"updated_at":1620767605}`,
+			want: dst{UpdatedAt: 1620767605},
+		},
+		{
+			name:    "time parse error",
+			json:    `{"updated_at":"foo"}`,
+			wantErr: true,
+		},
+		{
+			name: "null",
+			json: `{"updated_at":null}`,
+		},
+		{
+			name:    "invalid type",
+			json:    `{"updated_at":["foo","bar"]}`,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got dst
+			err := json.Unmarshal([]byte(tt.json), &got)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+	t.Run("syntax error", func(t *testing.T) {
+		var ts Time
+		err := ts.UnmarshalJSON([]byte{'~'})
+		assert.Error(t, err)
+	})
 }

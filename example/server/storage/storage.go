@@ -4,16 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
-	"github.com/zitadel/oidc/pkg/op"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 // serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant
@@ -26,8 +28,8 @@ var serviceKey1 = &rsa.PublicKey{
 	E: 65537,
 }
 
-// var _ op.Storage = &storage{}
-// var _ op.ClientCredentialsStorage = &storage{}
+var _ op.Storage = &Storage{}
+var _ op.ClientCredentialsStorage = &Storage{}
 
 // storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
@@ -42,12 +44,47 @@ type Storage struct {
 	services      map[string]Service
 	refreshTokens map[string]*RefreshToken
 	signingKey    signingKey
+	deviceCodes   map[string]deviceAuthorizationEntry
+	userCodes     map[string]string
+	serviceUsers  map[string]*Client
 }
 
 type signingKey struct {
-	ID        string
-	Algorithm string
-	Key       *rsa.PrivateKey
+	id        string
+	algorithm jose.SignatureAlgorithm
+	key       *rsa.PrivateKey
+}
+
+func (s *signingKey) SignatureAlgorithm() jose.SignatureAlgorithm {
+	return s.algorithm
+}
+
+func (s *signingKey) Key() interface{} {
+	return s.key
+}
+
+func (s *signingKey) ID() string {
+	return s.id
+}
+
+type publicKey struct {
+	signingKey
+}
+
+func (s *publicKey) ID() string {
+	return s.id
+}
+
+func (s *publicKey) Algorithm() jose.SignatureAlgorithm {
+	return s.algorithm
+}
+
+func (s *publicKey) Use() string {
+	return "sig"
+}
+
+func (s *publicKey) Key() interface{} {
+	return &s.key.PublicKey
 }
 
 func NewStorage(userStore UserStore) *Storage {
@@ -67,9 +104,21 @@ func NewStorage(userStore UserStore) *Storage {
 			},
 		},
 		signingKey: signingKey{
-			ID:        "id",
-			Algorithm: "RS256",
-			Key:       key,
+			id:        uuid.NewString(),
+			algorithm: jose.RS256,
+			key:       key,
+		},
+		deviceCodes: make(map[string]deviceAuthorizationEntry),
+		userCodes:   make(map[string]string),
+		serviceUsers: map[string]*Client{
+			"sid1": {
+				id:     "sid1",
+				secret: "verysecret",
+				grantTypes: []oidc.GrantType{
+					oidc.GrantTypeClientCredentials,
+				},
+				accessTokenType: op.AccessTokenTypeBearer,
+			},
 		},
 	}
 }
@@ -95,7 +144,18 @@ func (s *Storage) CheckUsernamePassword(username, password, id string) error {
 		// you will have to change some state on the request to guide the user through possible multiple steps of the login process
 		// in this example we'll simply check the username / password and set a boolean to true
 		// therefore we will also just check this boolean if the request / login has been finished
-		request.passwordChecked = true
+		request.done = true
+		return nil
+	}
+	return fmt.Errorf("username or password wrong")
+}
+
+func (s *Storage) CheckUsernamePasswordSimple(username, password string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	user := s.userStore.GetUserByUsername(username)
+	if user != nil && user.Password == password {
 		return nil
 	}
 	return fmt.Errorf("username or password wrong")
@@ -181,11 +241,14 @@ func (s *Storage) DeleteAuthRequest(ctx context.Context, id string) error {
 // it will be called for all requests able to return an access token (Authorization Code Flow, Implicit Flow, JWT Profile, ...)
 func (s *Storage) CreateAccessToken(ctx context.Context, request op.TokenRequest) (string, time.Time, error) {
 	var applicationID string
-	// if authenticated for an app (auth code / implicit flow) we must save the client_id to the token
-	authReq, ok := request.(*AuthRequest)
-	if ok {
-		applicationID = authReq.ApplicationID
+	switch req := request.(type) {
+	case *AuthRequest:
+		// if authenticated for an app (auth code / implicit flow) we must save the client_id to the token
+		applicationID = req.ApplicationID
+	case op.TokenExchangeRequest:
+		applicationID = req.GetClientID()
 	}
+
 	token, err := s.accessToken(applicationID, "", request.GetSubject(), request.GetAudience(), request.GetScopes())
 	if err != nil {
 		return "", time.Time{}, err
@@ -196,6 +259,11 @@ func (s *Storage) CreateAccessToken(ctx context.Context, request op.TokenRequest
 // CreateAccessAndRefreshTokens implements the op.Storage interface
 // it will be called for all requests able to return an access and refresh token (Authorization Code Flow, Refresh Token Request)
 func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
+	// generate tokens via token exchange flow if request is relevant
+	if teReq, ok := request.(op.TokenExchangeRequest); ok {
+		return s.exchangeRefreshToken(ctx, teReq)
+	}
+
 	// get the information depending on the request type / implementation
 	applicationID, authTime, amr := getInfoFromRequest(request)
 
@@ -226,6 +294,24 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 	return accessToken.ID, refreshToken, accessToken.Expiration, nil
 }
 
+func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExchangeRequest) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
+	applicationID := request.GetClientID()
+	authTime := request.GetAuthTime()
+
+	refreshTokenID := uuid.NewString()
+	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	refreshToken, err := s.createRefreshToken(accessToken, nil, authTime)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	return accessToken.ID, refreshToken, accessToken.Expiration, nil
+}
+
 // TokenRequestByRefreshToken implements the op.Storage interface
 // it will be called after parsing and validation of the refresh token request
 func (s *Storage) TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (op.RefreshTokenRequest, error) {
@@ -250,6 +336,16 @@ func (s *Storage) TerminateSession(ctx context.Context, userID string, clientID 
 		}
 	}
 	return nil
+}
+
+// GetRefreshTokenInfo looks up a refresh token and returns the token id and user id.
+// If given something that is not a refresh token, it must return error.
+func (s *Storage) GetRefreshTokenInfo(ctx context.Context, clientID string, token string) (userID string, tokenID string, err error) {
+	refreshToken, ok := s.refreshTokens[token]
+	if !ok {
+		return "", "", op.ErrInvalidRefreshToken
+	}
+	return refreshToken.UserID, refreshToken.ID, nil
 }
 
 // RevokeToken implements the op.Storage interface
@@ -288,41 +384,29 @@ func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID
 	return nil
 }
 
-// GetSigningKey implements the op.Storage interface
+// SigningKey implements the op.Storage interface
 // it will be called when creating the OpenID Provider
-func (s *Storage) GetSigningKey(ctx context.Context, keyCh chan<- jose.SigningKey) {
+func (s *Storage) SigningKey(ctx context.Context) (op.SigningKey, error) {
 	// in this example the signing key is a static rsa.PrivateKey and the algorithm used is RS256
 	// you would obviously have a more complex implementation and store / retrieve the key from your database as well
-	//
-	// the idea of the signing key channel is, that you can (with what ever mechanism) rotate your signing key and
-	// switch the key of the signer via this channel
-	keyCh <- jose.SigningKey{
-		Algorithm: jose.SignatureAlgorithm(s.signingKey.Algorithm), // always tell the signer with algorithm to use
-		Key: jose.JSONWebKey{
-			KeyID: s.signingKey.ID, // always give the key an id so, that it will include it in the token header as `kid` claim
-			Key:   s.signingKey.Key,
-		},
-	}
+	return &s.signingKey, nil
 }
 
-// GetKeySet implements the op.Storage interface
+// SignatureAlgorithms implements the op.Storage interface
+// it will be called to get the sign
+func (s *Storage) SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error) {
+	return []jose.SignatureAlgorithm{s.signingKey.algorithm}, nil
+}
+
+// KeySet implements the op.Storage interface
 // it will be called to get the current (public) keys, among others for the keys_endpoint or for validating access_tokens on the userinfo_endpoint, ...
-func (s *Storage) GetKeySet(ctx context.Context) (*jose.JSONWebKeySet, error) {
+func (s *Storage) KeySet(ctx context.Context) ([]op.Key, error) {
 	// as mentioned above, this example only has a single signing key without key rotation,
 	// so it will directly use its public key
 	//
 	// when using key rotation you typically would store the public keys alongside the private keys in your database
-	// and give both of them an expiration date, with the public key having a longer lifetime (e.g. rotate private key every
-	return &jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{
-				KeyID:     s.signingKey.ID,
-				Algorithm: s.signingKey.Algorithm,
-				Use:       oidc.KeyUseSignature,
-				Key:       &s.signingKey.Key.PublicKey,
-			},
-		},
-	}, nil
+	// and give both of them an expiration date, with the public key having a longer lifetime
+	return []op.Key{&publicKey{s.signingKey}}, nil
 }
 
 // GetClientByClientID implements the op.Storage interface
@@ -356,13 +440,13 @@ func (s *Storage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientS
 
 // SetUserinfoFromScopes implements the op.Storage interface
 // it will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
-func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo oidc.UserInfoSetter, userID, clientID string, scopes []string) error {
+func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
 	return s.setUserinfo(ctx, userinfo, userID, clientID, scopes)
 }
 
 // SetUserinfoFromToken implements the op.Storage interface
 // it will be called for the userinfo endpoint, so we read the token and pass the information from that to the private function
-func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserInfoSetter, tokenID, subject, origin string) error {
+func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error {
 	token, ok := func() (*Token, bool) {
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -390,7 +474,7 @@ func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo oidc.UserIn
 
 // SetIntrospectionFromToken implements the op.Storage interface
 // it will be called for the introspection endpoint, so we read the token and pass the information from that to the private function
-func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
+func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *oidc.IntrospectionResponse, tokenID, subject, clientID string) error {
 	token, ok := func() (*Token, bool) {
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -407,14 +491,17 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection o
 			// this will automatically be done by the library if you don't return an error
 			// you can also return further information about the user / associated token
 			// e.g. the userinfo (equivalent to userinfo endpoint)
-			err := s.setUserinfo(ctx, introspection, subject, clientID, token.Scopes)
+
+			userInfo := new(oidc.UserInfo)
+			err := s.setUserinfo(ctx, userInfo, subject, clientID, token.Scopes)
 			if err != nil {
 				return err
 			}
+			introspection.SetUserInfo(userInfo)
 			//...and also the requested scopes...
-			introspection.SetScopes(token.Scopes)
+			introspection.Scope = token.Scopes
 			//...and the client the token was issued to
-			introspection.SetClientID(token.ApplicationID)
+			introspection.ClientID = token.ApplicationID
 			return nil
 		}
 	}
@@ -424,6 +511,10 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection o
 // GetPrivateClaimsFromScopes implements the op.Storage interface
 // it will be called for the creation of a JWT access token to assert claims for custom scopes
 func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
+	return s.getPrivateClaimsFromScopes(ctx, userID, clientID, scopes)
+}
+
+func (s *Storage) getPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
 	for _, scope := range scopes {
 		switch scope {
 		case CustomScope:
@@ -433,9 +524,9 @@ func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, client
 	return claims, nil
 }
 
-// GetKeyByIDAndUserID implements the op.Storage interface
+// GetKeyByIDAndClientID implements the op.Storage interface
 // it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
-func (s *Storage) GetKeyByIDAndUserID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
+func (s *Storage) GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	service, ok := s.services[clientID]
@@ -531,7 +622,7 @@ func (s *Storage) accessToken(applicationID, refreshTokenID, subject string, aud
 }
 
 // setUserinfo sets the info based on the user, scopes and if necessary the clientID
-func (s *Storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter, userID, clientID string, scopes []string) (err error) {
+func (s *Storage) setUserinfo(ctx context.Context, userInfo *oidc.UserInfo, userID, clientID string, scopes []string) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	user := s.userStore.GetUserByID(userID)
@@ -541,23 +632,120 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo oidc.UserInfoSetter,
 	for _, scope := range scopes {
 		switch scope {
 		case oidc.ScopeOpenID:
-			userInfo.SetSubject(user.ID)
+			userInfo.Subject = user.ID
 		case oidc.ScopeEmail:
-			userInfo.SetEmail(user.Email, user.EmailVerified)
+			userInfo.Email = user.Email
+			userInfo.EmailVerified = oidc.Bool(user.EmailVerified)
 		case oidc.ScopeProfile:
-			userInfo.SetPreferredUsername(user.Username)
-			userInfo.SetName(user.FirstName + " " + user.LastName)
-			userInfo.SetFamilyName(user.LastName)
-			userInfo.SetGivenName(user.FirstName)
-			userInfo.SetLocale(user.PreferredLanguage)
+			userInfo.PreferredUsername = user.Username
+			userInfo.Name = user.FirstName + " " + user.LastName
+			userInfo.FamilyName = user.LastName
+			userInfo.GivenName = user.FirstName
+			userInfo.Locale = oidc.NewLocale(user.PreferredLanguage)
 		case oidc.ScopePhone:
-			userInfo.SetPhone(user.Phone, user.PhoneVerified)
+			userInfo.PhoneNumber = user.Phone
+			userInfo.PhoneNumberVerified = user.PhoneVerified
 		case CustomScope:
 			// you can also have a custom scope and assert public or custom claims based on that
 			userInfo.AppendClaims(CustomClaim, customClaim(clientID))
 		}
 	}
 	return nil
+}
+
+// ValidateTokenExchangeRequest implements the op.TokenExchangeStorage interface
+// it will be called to validate parsed Token Exchange Grant request
+func (s *Storage) ValidateTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) error {
+	if request.GetRequestedTokenType() == "" {
+		request.SetRequestedTokenType(oidc.RefreshTokenType)
+	}
+
+	// Just an example, some use cases might need this use case
+	if request.GetExchangeSubjectTokenType() == oidc.IDTokenType && request.GetRequestedTokenType() == oidc.RefreshTokenType {
+		return errors.New("exchanging id_token to refresh_token is not supported")
+	}
+
+	// Check impersonation permissions
+	if request.GetExchangeActor() == "" && !s.userStore.GetUserByID(request.GetExchangeSubject()).IsAdmin {
+		return errors.New("user doesn't have impersonation permission")
+	}
+
+	allowedScopes := make([]string, 0)
+	for _, scope := range request.GetScopes() {
+		if scope == oidc.ScopeAddress {
+			continue
+		}
+
+		if strings.HasPrefix(scope, CustomScopeImpersonatePrefix) {
+			subject := strings.TrimPrefix(scope, CustomScopeImpersonatePrefix)
+			request.SetSubject(subject)
+		}
+
+		allowedScopes = append(allowedScopes, scope)
+	}
+
+	request.SetCurrentScopes(allowedScopes)
+
+	return nil
+}
+
+// ValidateTokenExchangeRequest implements the op.TokenExchangeStorage interface
+// Common use case is to store request for audit purposes. For this example we skip the storing.
+func (s *Storage) CreateTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) error {
+	return nil
+}
+
+// GetPrivateClaimsFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
+// it will be called for the creation of an exchanged JWT access token to assert claims for custom scopes
+// plus adding token exchange specific claims related to delegation or impersonation
+func (s *Storage) GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}, err error) {
+	claims, err = s.getPrivateClaimsFromScopes(ctx, "", request.GetClientID(), request.GetScopes())
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range s.getTokenExchangeClaims(ctx, request) {
+		claims = appendClaim(claims, k, v)
+	}
+
+	return claims, nil
+}
+
+// SetUserinfoFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
+// it will be called for the creation of an id_token - we are using the same private function as for other flows,
+// plus adding token exchange specific claims related to delegation or impersonation
+func (s *Storage) SetUserinfoFromTokenExchangeRequest(ctx context.Context, userinfo *oidc.UserInfo, request op.TokenExchangeRequest) error {
+	err := s.setUserinfo(ctx, userinfo, request.GetSubject(), request.GetClientID(), request.GetScopes())
+	if err != nil {
+		return err
+	}
+
+	for k, v := range s.getTokenExchangeClaims(ctx, request) {
+		userinfo.AppendClaims(k, v)
+	}
+
+	return nil
+}
+
+func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}) {
+	for _, scope := range request.GetScopes() {
+		switch {
+		case strings.HasPrefix(scope, CustomScopeImpersonatePrefix) && request.GetExchangeActor() == "":
+			// Set actor subject claim for impersonation flow
+			claims = appendClaim(claims, "act", map[string]interface{}{
+				"sub": request.GetExchangeSubject(),
+			})
+		}
+	}
+
+	// Set actor subject claim for delegation flow
+	// if request.GetExchangeActor() != "" {
+	// 	claims = appendClaim(claims, "act", map[string]interface{}{
+	// 		"sub": request.GetExchangeActor(),
+	// 	})
+	// }
+
+	return claims
 }
 
 // getInfoFromRequest returns the clientID, authTime and amr depending on the op.TokenRequest type / implementation
@@ -587,4 +775,127 @@ func appendClaim(claims map[string]interface{}, claim string, value interface{})
 	}
 	claims[claim] = value
 	return claims
+}
+
+type deviceAuthorizationEntry struct {
+	deviceCode string
+	userCode   string
+	state      *op.DeviceAuthorizationState
+}
+
+func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if _, ok := s.clients[clientID]; !ok {
+		return errors.New("client not found")
+	}
+
+	if _, ok := s.userCodes[userCode]; ok {
+		return op.ErrDuplicateUserCode
+	}
+
+	s.deviceCodes[deviceCode] = deviceAuthorizationEntry{
+		deviceCode: deviceCode,
+		userCode:   userCode,
+		state: &op.DeviceAuthorizationState{
+			ClientID: clientID,
+			Scopes:   scopes,
+			Expires:  expires,
+		},
+	}
+
+	s.userCodes[userCode] = deviceCode
+	return nil
+}
+
+func (s *Storage) GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*op.DeviceAuthorizationState, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[deviceCode]
+	if !ok || entry.state.ClientID != clientID {
+		return nil, errors.New("device code not found for client") // is there a standard not found error in the framework?
+	}
+
+	return entry.state, nil
+}
+
+func (s *Storage) GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[s.userCodes[userCode]]
+	if !ok {
+		return nil, errors.New("user code not found")
+	}
+
+	return entry.state, nil
+}
+
+func (s *Storage) CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	entry, ok := s.deviceCodes[s.userCodes[userCode]]
+	if !ok {
+		return errors.New("user code not found")
+	}
+
+	entry.state.Subject = subject
+	entry.state.Done = true
+	return nil
+}
+
+func (s *Storage) DenyDeviceAuthorization(ctx context.Context, userCode string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.deviceCodes[s.userCodes[userCode]].state.Denied = true
+	return nil
+}
+
+// AuthRequestDone is used by testing and is not required to implement op.Storage
+func (s *Storage) AuthRequestDone(id string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if req, ok := s.authRequests[id]; ok {
+		req.done = true
+		return nil
+	}
+
+	return errors.New("request not found")
+}
+
+func (s *Storage) ClientCredentials(ctx context.Context, clientID, clientSecret string) (op.Client, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	client, ok := s.serviceUsers[clientID]
+	if !ok {
+		return nil, errors.New("wrong service user or password")
+	}
+	if client.secret != clientSecret {
+		return nil, errors.New("wrong service user or password")
+	}
+
+	return client, nil
+}
+
+func (s *Storage) ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (op.TokenRequest, error) {
+	client, ok := s.serviceUsers[clientID]
+	if !ok {
+		return nil, errors.New("wrong service user or password")
+	}
+
+	return &oidc.JWTTokenRequest{
+		Subject:  client.id,
+		Audience: []string{clientID},
+		Scopes:   scopes,
+	}, nil
 }

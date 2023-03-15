@@ -2,15 +2,13 @@ package oidc
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/crypto"
-	"github.com/zitadel/oidc/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/crypto"
 )
 
 const (
@@ -20,374 +18,174 @@ const (
 	PrefixBearer = BearerToken + " "
 )
 
-type Tokens struct {
+type Tokens[C IDClaims] struct {
 	*oauth2.Token
-	IDTokenClaims IDTokenClaims
+	IDTokenClaims C
 	IDToken       string
 }
 
-type AccessTokenClaims interface {
-	Claims
-	GetSubject() string
-	GetTokenID() string
-	SetPrivateClaims(map[string]interface{})
+// TokenClaims contains the base Claims used all tokens.
+// It implements OpenID Connect Core 1.0, section 2.
+// https://openid.net/specs/openid-connect-core-1_0.html#IDToken
+// And RFC 9068: JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens,
+// section 2.2. https://datatracker.ietf.org/doc/html/rfc9068#name-data-structure
+//
+// TokenClaims implements the Claims interface,
+// and can be used to extend larger claim types by embedding.
+type TokenClaims struct {
+	Issuer                              string   `json:"iss,omitempty"`
+	Subject                             string   `json:"sub,omitempty"`
+	Audience                            Audience `json:"aud,omitempty"`
+	Expiration                          Time     `json:"exp,omitempty"`
+	IssuedAt                            Time     `json:"iat,omitempty"`
+	AuthTime                            Time     `json:"auth_time,omitempty"`
+	NotBefore                           Time     `json:"nbf,omitempty"`
+	Nonce                               string   `json:"nonce,omitempty"`
+	AuthenticationContextClassReference string   `json:"acr,omitempty"`
+	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
+	AuthorizedParty                     string   `json:"azp,omitempty"`
+	ClientID                            string   `json:"client_id,omitempty"`
+	JWTID                               string   `json:"jti,omitempty"`
+
+	// Additional information set by this framework
+	SignatureAlg jose.SignatureAlgorithm `json:"-"`
 }
 
-type IDTokenClaims interface {
-	Claims
-	GetNotBefore() time.Time
-	GetJWTID() string
-	GetAccessTokenHash() string
-	GetCodeHash() string
-	GetAuthenticationMethodsReferences() []string
-	GetClientID() string
-	GetSignatureAlgorithm() jose.SignatureAlgorithm
-	SetAccessTokenHash(hash string)
-	SetUserinfo(userinfo UserInfo)
-	SetCodeHash(hash string)
-	UserInfo
+func (c *TokenClaims) GetIssuer() string {
+	return c.Issuer
 }
 
-func EmptyAccessTokenClaims() AccessTokenClaims {
-	return new(accessTokenClaims)
+func (c *TokenClaims) GetSubject() string {
+	return c.Subject
 }
 
-func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, id, clientID string, skew time.Duration) AccessTokenClaims {
+func (c *TokenClaims) GetAudience() []string {
+	return c.Audience
+}
+
+func (c *TokenClaims) GetExpiration() time.Time {
+	return c.Expiration.AsTime()
+}
+
+func (c *TokenClaims) GetIssuedAt() time.Time {
+	return c.IssuedAt.AsTime()
+}
+
+func (c *TokenClaims) GetNonce() string {
+	return c.Nonce
+}
+
+func (c *TokenClaims) GetAuthTime() time.Time {
+	return c.AuthTime.AsTime()
+}
+
+func (c *TokenClaims) GetAuthorizedParty() string {
+	return c.AuthorizedParty
+}
+
+func (c *TokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm {
+	return c.SignatureAlg
+}
+
+func (c *TokenClaims) GetAuthenticationContextClassReference() string {
+	return c.AuthenticationContextClassReference
+}
+
+func (c *TokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
+	c.SignatureAlg = algorithm
+}
+
+type AccessTokenClaims struct {
+	TokenClaims
+	Scopes SpaceDelimitedArray `json:"scope,omitempty"`
+	Claims map[string]any      `json:"-"`
+}
+
+func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, jwtid, clientID string, skew time.Duration) *AccessTokenClaims {
 	now := time.Now().UTC().Add(-skew)
 	if len(audience) == 0 {
 		audience = append(audience, clientID)
 	}
-	return &accessTokenClaims{
-		Issuer:     issuer,
-		Subject:    subject,
-		Audience:   audience,
-		Expiration: Time(expiration),
-		IssuedAt:   Time(now),
-		NotBefore:  Time(now),
-		JWTID:      id,
+	return &AccessTokenClaims{
+		TokenClaims: TokenClaims{
+			Issuer:     issuer,
+			Subject:    subject,
+			Audience:   audience,
+			Expiration: FromTime(expiration),
+			IssuedAt:   FromTime(now),
+			NotBefore:  FromTime(now),
+			JWTID:      jwtid,
+		},
 	}
 }
 
-type accessTokenClaims struct {
-	Issuer                              string              `json:"iss,omitempty"`
-	Subject                             string              `json:"sub,omitempty"`
-	Audience                            Audience            `json:"aud,omitempty"`
-	Expiration                          Time                `json:"exp,omitempty"`
-	IssuedAt                            Time                `json:"iat,omitempty"`
-	NotBefore                           Time                `json:"nbf,omitempty"`
-	JWTID                               string              `json:"jti,omitempty"`
-	AuthorizedParty                     string              `json:"azp,omitempty"`
-	Nonce                               string              `json:"nonce,omitempty"`
-	AuthTime                            Time                `json:"auth_time,omitempty"`
-	CodeHash                            string              `json:"c_hash,omitempty"`
-	AuthenticationContextClassReference string              `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string            `json:"amr,omitempty"`
-	SessionID                           string              `json:"sid,omitempty"`
-	Scopes                              SpaceDelimitedArray `json:"scope,omitempty"`
-	ClientID                            string              `json:"client_id,omitempty"`
-	AccessTokenUseNumber                int                 `json:"at_use_nbr,omitempty"`
+type atcAlias AccessTokenClaims
 
-	claims       map[string]interface{}  `json:"-"`
-	signatureAlg jose.SignatureAlgorithm `json:"-"`
+func (a *AccessTokenClaims) MarshalJSON() ([]byte, error) {
+	return mergeAndMarshalClaims((*atcAlias)(a), a.Claims)
 }
 
-// GetIssuer implements the Claims interface
-func (a *accessTokenClaims) GetIssuer() string {
-	return a.Issuer
+func (a *AccessTokenClaims) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONMulti(data, (*atcAlias)(a), &a.Claims)
 }
 
-// GetAudience implements the Claims interface
-func (a *accessTokenClaims) GetAudience() []string {
-	return a.Audience
-}
-
-// GetExpiration implements the Claims interface
-func (a *accessTokenClaims) GetExpiration() time.Time {
-	return time.Time(a.Expiration)
-}
-
-// GetIssuedAt implements the Claims interface
-func (a *accessTokenClaims) GetIssuedAt() time.Time {
-	return time.Time(a.IssuedAt)
-}
-
-// GetNonce implements the Claims interface
-func (a *accessTokenClaims) GetNonce() string {
-	return a.Nonce
-}
-
-// GetAuthenticationContextClassReference implements the Claims interface
-func (a *accessTokenClaims) GetAuthenticationContextClassReference() string {
-	return a.AuthenticationContextClassReference
-}
-
-// GetAuthTime implements the Claims interface
-func (a *accessTokenClaims) GetAuthTime() time.Time {
-	return time.Time(a.AuthTime)
-}
-
-// GetAuthorizedParty implements the Claims interface
-func (a *accessTokenClaims) GetAuthorizedParty() string {
-	return a.AuthorizedParty
-}
-
-// SetSignatureAlgorithm implements the Claims interface
-func (a *accessTokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
-	a.signatureAlg = algorithm
-}
-
-// GetSubject implements the AccessTokenClaims interface
-func (a *accessTokenClaims) GetSubject() string {
-	return a.Subject
-}
-
-// GetTokenID implements the AccessTokenClaims interface
-func (a *accessTokenClaims) GetTokenID() string {
-	return a.JWTID
-}
-
-// SetPrivateClaims implements the AccessTokenClaims interface
-func (a *accessTokenClaims) SetPrivateClaims(claims map[string]interface{}) {
-	a.claims = claims
-}
-
-func (a *accessTokenClaims) MarshalJSON() ([]byte, error) {
-	type Alias accessTokenClaims
-	s := &struct {
-		*Alias
-		Expiration int64 `json:"exp,omitempty"`
-		IssuedAt   int64 `json:"iat,omitempty"`
-		NotBefore  int64 `json:"nbf,omitempty"`
-		AuthTime   int64 `json:"auth_time,omitempty"`
-	}{
-		Alias: (*Alias)(a),
-	}
-	if !time.Time(a.Expiration).IsZero() {
-		s.Expiration = time.Time(a.Expiration).Unix()
-	}
-	if !time.Time(a.IssuedAt).IsZero() {
-		s.IssuedAt = time.Time(a.IssuedAt).Unix()
-	}
-	if !time.Time(a.NotBefore).IsZero() {
-		s.NotBefore = time.Time(a.NotBefore).Unix()
-	}
-	if !time.Time(a.AuthTime).IsZero() {
-		s.AuthTime = time.Time(a.AuthTime).Unix()
-	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	if a.claims == nil {
-		return b, nil
-	}
-	info, err := json.Marshal(a.claims)
-	if err != nil {
-		return nil, err
-	}
-	return http.ConcatenateJSON(b, info)
-}
-
-func (a *accessTokenClaims) UnmarshalJSON(data []byte) error {
-	type Alias accessTokenClaims
-	if err := json.Unmarshal(data, (*Alias)(a)); err != nil {
-		return err
-	}
-	claims := make(map[string]interface{})
-	if err := json.Unmarshal(data, &claims); err != nil {
-		return err
-	}
-	a.claims = claims
-
-	return nil
-}
-
-func EmptyIDTokenClaims() IDTokenClaims {
-	return new(idTokenClaims)
-}
-
-func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string, skew time.Duration) IDTokenClaims {
-	audience = AppendClientIDToAudience(clientID, audience)
-	return &idTokenClaims{
-		Issuer:                              issuer,
-		Audience:                            audience,
-		Expiration:                          Time(expiration),
-		IssuedAt:                            Time(time.Now().UTC().Add(-skew)),
-		AuthTime:                            Time(authTime.Add(-skew)),
-		Nonce:                               nonce,
-		AuthenticationContextClassReference: acr,
-		AuthenticationMethodsReferences:     amr,
-		AuthorizedParty:                     clientID,
-		UserInfo:                            &userinfo{Subject: subject},
-	}
-}
-
-type idTokenClaims struct {
-	Issuer                              string   `json:"iss,omitempty"`
-	Audience                            Audience `json:"aud,omitempty"`
-	Expiration                          Time     `json:"exp,omitempty"`
-	NotBefore                           Time     `json:"nbf,omitempty"`
-	IssuedAt                            Time     `json:"iat,omitempty"`
-	JWTID                               string   `json:"jti,omitempty"`
-	AuthorizedParty                     string   `json:"azp,omitempty"`
-	Nonce                               string   `json:"nonce,omitempty"`
-	AuthTime                            Time     `json:"auth_time,omitempty"`
-	AccessTokenHash                     string   `json:"at_hash,omitempty"`
-	CodeHash                            string   `json:"c_hash,omitempty"`
-	AuthenticationContextClassReference string   `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
-	ClientID                            string   `json:"client_id,omitempty"`
-	UserInfo                            `json:"-"`
-
-	signatureAlg jose.SignatureAlgorithm
-}
-
-// GetIssuer implements the Claims interface
-func (t *idTokenClaims) GetIssuer() string {
-	return t.Issuer
-}
-
-// GetAudience implements the Claims interface
-func (t *idTokenClaims) GetAudience() []string {
-	return t.Audience
-}
-
-// GetExpiration implements the Claims interface
-func (t *idTokenClaims) GetExpiration() time.Time {
-	return time.Time(t.Expiration)
-}
-
-// GetIssuedAt implements the Claims interface
-func (t *idTokenClaims) GetIssuedAt() time.Time {
-	return time.Time(t.IssuedAt)
-}
-
-// GetNonce implements the Claims interface
-func (t *idTokenClaims) GetNonce() string {
-	return t.Nonce
-}
-
-// GetAuthenticationContextClassReference implements the Claims interface
-func (t *idTokenClaims) GetAuthenticationContextClassReference() string {
-	return t.AuthenticationContextClassReference
-}
-
-// GetAuthTime implements the Claims interface
-func (t *idTokenClaims) GetAuthTime() time.Time {
-	return time.Time(t.AuthTime)
-}
-
-// GetAuthorizedParty implements the Claims interface
-func (t *idTokenClaims) GetAuthorizedParty() string {
-	return t.AuthorizedParty
-}
-
-// SetSignatureAlgorithm implements the Claims interface
-func (t *idTokenClaims) SetSignatureAlgorithm(alg jose.SignatureAlgorithm) {
-	t.signatureAlg = alg
-}
-
-// GetNotBefore implements the IDTokenClaims interface
-func (t *idTokenClaims) GetNotBefore() time.Time {
-	return time.Time(t.NotBefore)
-}
-
-// GetJWTID implements the IDTokenClaims interface
-func (t *idTokenClaims) GetJWTID() string {
-	return t.JWTID
+// IDTokenClaims extends TokenClaims by further implementing
+// OpenID Connect Core 1.0, sections 3.1.3.6 (Code flow),
+// 3.2.2.10 (implicit), 3.3.2.11 (Hybrid) and 5.1 (UserInfo).
+// https://openid.net/specs/openid-connect-core-1_0.html#toc
+type IDTokenClaims struct {
+	TokenClaims
+	NotBefore       Time   `json:"nbf,omitempty"`
+	AccessTokenHash string `json:"at_hash,omitempty"`
+	CodeHash        string `json:"c_hash,omitempty"`
+	SessionID       string `json:"sid,omitempty"`
+	UserInfoProfile
+	UserInfoEmail
+	UserInfoPhone
+	Address *UserInfoAddress `json:"address,omitempty"`
+	Claims  map[string]any   `json:"-"`
 }
 
 // GetAccessTokenHash implements the IDTokenClaims interface
-func (t *idTokenClaims) GetAccessTokenHash() string {
+func (t *IDTokenClaims) GetAccessTokenHash() string {
 	return t.AccessTokenHash
 }
 
-// GetCodeHash implements the IDTokenClaims interface
-func (t *idTokenClaims) GetCodeHash() string {
-	return t.CodeHash
+func (t *IDTokenClaims) SetUserInfo(i *UserInfo) {
+	t.Subject = i.Subject
+	t.UserInfoProfile = i.UserInfoProfile
+	t.UserInfoEmail = i.UserInfoEmail
+	t.UserInfoPhone = i.UserInfoPhone
+	t.Address = i.Address
 }
 
-// GetAuthenticationMethodsReferences implements the IDTokenClaims interface
-func (t *idTokenClaims) GetAuthenticationMethodsReferences() []string {
-	return t.AuthenticationMethodsReferences
+func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string, skew time.Duration) *IDTokenClaims {
+	audience = AppendClientIDToAudience(clientID, audience)
+	return &IDTokenClaims{
+		TokenClaims: TokenClaims{
+			Issuer:                              issuer,
+			Subject:                             subject,
+			Audience:                            audience,
+			Expiration:                          FromTime(expiration),
+			IssuedAt:                            FromTime(time.Now().Add(-skew)),
+			AuthTime:                            FromTime(authTime.Add(-skew)),
+			Nonce:                               nonce,
+			AuthenticationContextClassReference: acr,
+			AuthenticationMethodsReferences:     amr,
+			AuthorizedParty:                     clientID,
+			ClientID:                            clientID,
+		},
+	}
 }
 
-// GetClientID implements the IDTokenClaims interface
-func (t *idTokenClaims) GetClientID() string {
-	return t.ClientID
+type itcAlias IDTokenClaims
+
+func (i *IDTokenClaims) MarshalJSON() ([]byte, error) {
+	return mergeAndMarshalClaims((*itcAlias)(i), i.Claims)
 }
 
-// GetSignatureAlgorithm implements the IDTokenClaims interface
-func (t *idTokenClaims) GetSignatureAlgorithm() jose.SignatureAlgorithm {
-	return t.signatureAlg
-}
-
-// SetAccessTokenHash implements the IDTokenClaims interface
-func (t *idTokenClaims) SetAccessTokenHash(hash string) {
-	t.AccessTokenHash = hash
-}
-
-// SetUserinfo implements the IDTokenClaims interface
-func (t *idTokenClaims) SetUserinfo(info UserInfo) {
-	t.UserInfo = info
-}
-
-// SetCodeHash implements the IDTokenClaims interface
-func (t *idTokenClaims) SetCodeHash(hash string) {
-	t.CodeHash = hash
-}
-
-func (t *idTokenClaims) MarshalJSON() ([]byte, error) {
-	type Alias idTokenClaims
-	a := &struct {
-		*Alias
-		Expiration int64 `json:"exp,omitempty"`
-		IssuedAt   int64 `json:"iat,omitempty"`
-		NotBefore  int64 `json:"nbf,omitempty"`
-		AuthTime   int64 `json:"auth_time,omitempty"`
-	}{
-		Alias: (*Alias)(t),
-	}
-	if !time.Time(t.Expiration).IsZero() {
-		a.Expiration = time.Time(t.Expiration).Unix()
-	}
-	if !time.Time(t.IssuedAt).IsZero() {
-		a.IssuedAt = time.Time(t.IssuedAt).Unix()
-	}
-	if !time.Time(t.NotBefore).IsZero() {
-		a.NotBefore = time.Time(t.NotBefore).Unix()
-	}
-	if !time.Time(t.AuthTime).IsZero() {
-		a.AuthTime = time.Time(t.AuthTime).Unix()
-	}
-	b, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-
-	if t.UserInfo == nil {
-		return b, nil
-	}
-	info, err := json.Marshal(t.UserInfo)
-	if err != nil {
-		return nil, err
-	}
-	return http.ConcatenateJSON(b, info)
-}
-
-func (t *idTokenClaims) UnmarshalJSON(data []byte) error {
-	type Alias idTokenClaims
-	if err := json.Unmarshal(data, (*Alias)(t)); err != nil {
-		return err
-	}
-	userinfo := new(userinfo)
-	if err := json.Unmarshal(data, userinfo); err != nil {
-		return err
-	}
-	t.UserInfo = userinfo
-
-	return nil
+func (i *IDTokenClaims) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONMulti(data, (*itcAlias)(i), &i.Claims)
 }
 
 type AccessTokenResponse struct {
@@ -399,19 +197,7 @@ type AccessTokenResponse struct {
 	State        string `json:"state,omitempty" schema:"state,omitempty"`
 }
 
-type JWTProfileAssertionClaims interface {
-	GetKeyID() string
-	GetPrivateKey() []byte
-	GetIssuer() string
-	GetSubject() string
-	GetAudience() []string
-	GetExpiration() time.Time
-	GetIssuedAt() time.Time
-	SetCustomClaim(key string, value interface{})
-	GetCustomClaim(key string) interface{}
-}
-
-type jwtProfileAssertion struct {
+type JWTProfileAssertionClaims struct {
 	PrivateKeyID string   `json:"-"`
 	PrivateKey   []byte   `json:"-"`
 	Issuer       string   `json:"iss"`
@@ -420,91 +206,21 @@ type jwtProfileAssertion struct {
 	Expiration   Time     `json:"exp"`
 	IssuedAt     Time     `json:"iat"`
 
-	customClaims map[string]interface{}
+	Claims map[string]interface{} `json:"-"`
 }
 
-func (j *jwtProfileAssertion) MarshalJSON() ([]byte, error) {
-	type Alias jwtProfileAssertion
-	a := (*Alias)(j)
+type jpaAlias JWTProfileAssertionClaims
 
-	b, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(j.customClaims) == 0 {
-		return b, nil
-	}
-
-	err = json.Unmarshal(b, &j.customClaims)
-	if err != nil {
-		return nil, fmt.Errorf("jws: invalid map of custom claims %v", j.customClaims)
-	}
-
-	return json.Marshal(j.customClaims)
+func (j *JWTProfileAssertionClaims) MarshalJSON() ([]byte, error) {
+	return mergeAndMarshalClaims((*jpaAlias)(j), j.Claims)
 }
 
-func (j *jwtProfileAssertion) UnmarshalJSON(data []byte) error {
-	type Alias jwtProfileAssertion
-	a := (*Alias)(j)
-
-	err := json.Unmarshal(data, a)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(data, &j.customClaims)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (j *JWTProfileAssertionClaims) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONMulti(data, (*jpaAlias)(j), &j.Claims)
 }
 
-func (j *jwtProfileAssertion) GetKeyID() string {
-	return j.PrivateKeyID
-}
-
-func (j *jwtProfileAssertion) GetPrivateKey() []byte {
-	return j.PrivateKey
-}
-
-func (j *jwtProfileAssertion) SetCustomClaim(key string, value interface{}) {
-	if j.customClaims == nil {
-		j.customClaims = make(map[string]interface{})
-	}
-	j.customClaims[key] = value
-}
-
-func (j *jwtProfileAssertion) GetCustomClaim(key string) interface{} {
-	if j.customClaims == nil {
-		return nil
-	}
-	return j.customClaims[key]
-}
-
-func (j *jwtProfileAssertion) GetIssuer() string {
-	return j.Issuer
-}
-
-func (j *jwtProfileAssertion) GetSubject() string {
-	return j.Subject
-}
-
-func (j *jwtProfileAssertion) GetAudience() []string {
-	return j.Audience
-}
-
-func (j *jwtProfileAssertion) GetExpiration() time.Time {
-	return time.Time(j.Expiration)
-}
-
-func (j *jwtProfileAssertion) GetIssuedAt() time.Time {
-	return time.Time(j.IssuedAt)
-}
-
-func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string, opts ...AssertionOption) (JWTProfileAssertionClaims, error) {
-	data, err := ioutil.ReadFile(filename)
+func NewJWTProfileAssertionFromKeyJSON(filename string, audience []string, opts ...AssertionOption) (*JWTProfileAssertionClaims, error) {
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -524,19 +240,19 @@ func NewJWTProfileAssertionStringFromFileData(data []byte, audience []string, op
 	return GenerateJWTProfileToken(NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key), opts...))
 }
 
-func JWTProfileDelegatedSubject(sub string) func(*jwtProfileAssertion) {
-	return func(j *jwtProfileAssertion) {
+func JWTProfileDelegatedSubject(sub string) func(*JWTProfileAssertionClaims) {
+	return func(j *JWTProfileAssertionClaims) {
 		j.Subject = sub
 	}
 }
 
-func JWTProfileCustomClaim(key string, value interface{}) func(*jwtProfileAssertion) {
-	return func(j *jwtProfileAssertion) {
-		j.customClaims[key] = value
+func JWTProfileCustomClaim(key string, value interface{}) func(*JWTProfileAssertionClaims) {
+	return func(j *JWTProfileAssertionClaims) {
+		j.Claims[key] = value
 	}
 }
 
-func NewJWTProfileAssertionFromFileData(data []byte, audience []string, opts ...AssertionOption) (JWTProfileAssertionClaims, error) {
+func NewJWTProfileAssertionFromFileData(data []byte, audience []string, opts ...AssertionOption) (*JWTProfileAssertionClaims, error) {
 	keyData := new(struct {
 		KeyID  string `json:"keyId"`
 		Key    string `json:"key"`
@@ -549,18 +265,18 @@ func NewJWTProfileAssertionFromFileData(data []byte, audience []string, opts ...
 	return NewJWTProfileAssertion(keyData.UserID, keyData.KeyID, audience, []byte(keyData.Key), opts...), nil
 }
 
-type AssertionOption func(*jwtProfileAssertion)
+type AssertionOption func(*JWTProfileAssertionClaims)
 
-func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte, opts ...AssertionOption) JWTProfileAssertionClaims {
-	j := &jwtProfileAssertion{
+func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte, opts ...AssertionOption) *JWTProfileAssertionClaims {
+	j := &JWTProfileAssertionClaims{
 		PrivateKey:   key,
 		PrivateKeyID: keyID,
 		Issuer:       userID,
 		Subject:      userID,
-		IssuedAt:     Time(time.Now().UTC()),
-		Expiration:   Time(time.Now().Add(1 * time.Hour).UTC()),
+		IssuedAt:     FromTime(time.Now().UTC()),
+		Expiration:   FromTime(time.Now().Add(1 * time.Hour).UTC()),
 		Audience:     audience,
-		customClaims: make(map[string]interface{}),
+		Claims:       make(map[string]interface{}),
 	}
 
 	for _, opt := range opts {
@@ -588,14 +304,14 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 	return append(audience, clientID)
 }
 
-func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error) {
-	privateKey, err := crypto.BytesToPrivateKey(assertion.GetPrivateKey())
+func GenerateJWTProfileToken(assertion *JWTProfileAssertionClaims) (string, error) {
+	privateKey, err := crypto.BytesToPrivateKey(assertion.PrivateKey)
 	if err != nil {
 		return "", err
 	}
 	key := jose.SigningKey{
 		Algorithm: jose.RS256,
-		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.GetKeyID()},
+		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.PrivateKeyID},
 	}
 	signer, err := jose.NewSigner(key, &jose.SignerOptions{})
 	if err != nil {
@@ -611,4 +327,13 @@ func GenerateJWTProfileToken(assertion JWTProfileAssertionClaims) (string, error
 		return "", err
 	}
 	return signedAssertion.CompactSerialize()
+}
+
+type TokenExchangeResponse struct {
+	AccessToken     string              `json:"access_token"` // Can be access token or ID token
+	IssuedTokenType TokenType           `json:"issued_token_type"`
+	TokenType       string              `json:"token_type"`
+	ExpiresIn       uint64              `json:"expires_in,omitempty"`
+	Scopes          SpaceDelimitedArray `json:"scope,omitempty"`
+	RefreshToken    string              `json:"refresh_token,omitempty"`
 }

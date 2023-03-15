@@ -1,31 +1,25 @@
 package client
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
-	"github.com/gorilla/schema"
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/crypto"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/crypto"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
-var Encoder = func() httphelper.Encoder {
-	e := schema.NewEncoder()
-	e.RegisterEncoder(oidc.SpaceDelimitedArray{}, func(value reflect.Value) string {
-		return value.Interface().(oidc.SpaceDelimitedArray).Encode()
-	})
-	return e
-}()
+var Encoder = httphelper.Encoder(oidc.NewEncoder())
 
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
@@ -90,6 +84,9 @@ func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndS
 		return http.ErrUseLastResponse
 	}
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		body, err := io.ReadAll(resp.Body)
@@ -148,6 +145,18 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 	return nil
 }
 
+func CallTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
+	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
+	if err != nil {
+		return nil, err
+	}
+	tokenRes := new(oidc.TokenExchangeResponse)
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
+		return nil, err
+	}
+	return tokenRes, nil
+}
+
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
 	privateKey, err := crypto.BytesToPrivateKey(key)
 	if err != nil {
@@ -167,7 +176,98 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 		Issuer:    clientID,
 		Subject:   clientID,
 		Audience:  audience,
-		ExpiresAt: oidc.Time(exp),
-		IssuedAt:  oidc.Time(iat),
+		ExpiresAt: oidc.FromTime(exp),
+		IssuedAt:  oidc.FromTime(iat),
 	}, signer)
+}
+
+type DeviceAuthorizationCaller interface {
+	GetDeviceAuthorizationEndpoint() string
+	HttpClient() *http.Client
+}
+
+func CallDeviceAuthorizationEndpoint(request *oidc.ClientCredentialsRequest, caller DeviceAuthorizationCaller) (*oidc.DeviceAuthorizationResponse, error) {
+	req, err := httphelper.FormRequest(caller.GetDeviceAuthorizationEndpoint(), request, Encoder, nil)
+	if err != nil {
+		return nil, err
+	}
+	if request.ClientSecret != "" {
+		req.SetBasicAuth(request.ClientID, request.ClientSecret)
+	}
+
+	resp := new(oidc.DeviceAuthorizationResponse)
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+type DeviceAccessTokenRequest struct {
+	*oidc.ClientCredentialsRequest
+	oidc.DeviceAccessTokenRequest
+}
+
+func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, nil)
+	if err != nil {
+		return nil, err
+	}
+	if request.ClientSecret != "" {
+		req.SetBasicAuth(request.ClientID, request.ClientSecret)
+	}
+
+	httpResp, err := caller.HttpClient().Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer httpResp.Body.Close()
+
+	resp := new(struct {
+		*oidc.AccessTokenResponse
+		*oidc.Error
+	})
+	if err = json.NewDecoder(httpResp.Body).Decode(resp); err != nil {
+		return nil, err
+	}
+
+	if httpResp.StatusCode == http.StatusOK {
+		return resp.AccessTokenResponse, nil
+	}
+
+	return nil, resp.Error
+}
+
+func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	for {
+		timer := time.After(interval)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer:
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, interval)
+		defer cancel()
+
+		resp, err := CallDeviceAccessTokenEndpoint(ctx, request, caller)
+		if err == nil {
+			return resp, nil
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			interval += 5 * time.Second
+		}
+		var target *oidc.Error
+		if !errors.As(err, &target) {
+			return nil, err
+		}
+		switch target.ErrorType {
+		case oidc.AuthorizationPending:
+			continue
+		case oidc.SlowDown:
+			interval += 5 * time.Second
+			continue
+		default:
+			return nil, err
+		}
+	}
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"crypto/rsa"
+	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -17,6 +18,7 @@ type User struct {
 	Phone             string
 	PhoneVerified     bool
 	PreferredLanguage language.Tag
+	IsAdmin           bool
 }
 
 type Service struct {
@@ -33,12 +35,13 @@ type userStore struct {
 	users map[string]*User
 }
 
-func NewUserStore() UserStore {
+func NewUserStore(issuer string) UserStore {
+	hostname := strings.Split(strings.Split(issuer, "://")[1], ":")[0]
 	return userStore{
 		users: map[string]*User{
 			"id1": {
 				ID:                "id1",
-				Username:          "test-user",
+				Username:          "test-user@" + hostname,
 				Password:          "verysecure",
 				FirstName:         "Test",
 				LastName:          "User",
@@ -47,6 +50,20 @@ func NewUserStore() UserStore {
 				Phone:             "",
 				PhoneVerified:     false,
 				PreferredLanguage: language.German,
+				IsAdmin:           true,
+			},
+			"id2": {
+				ID:                "id2",
+				Username:          "test-user2",
+				Password:          "verysecure",
+				FirstName:         "Test",
+				LastName:          "User2",
+				Email:             "test-user2@zitadel.ch",
+				EmailVerified:     true,
+				Phone:             "",
+				PhoneVerified:     false,
+				PreferredLanguage: language.German,
+				IsAdmin:           false,
 			},
 		},
 	}

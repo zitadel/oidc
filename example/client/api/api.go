@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/zitadel/oidc/pkg/client/rs"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client/rs"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 const (
@@ -76,7 +76,7 @@ func main() {
 		params := mux.Vars(r)
 		requestedClaim := params["claim"]
 		requestedValue := params["value"]
-		value, ok := resp.GetClaim(requestedClaim).(string)
+		value, ok := resp.Claims[requestedClaim].(string)
 		if !ok || value == "" || value != requestedValue {
 			http.Error(w, "claim does not match", http.StatusForbidden)
 			return

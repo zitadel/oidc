@@ -30,6 +30,8 @@ type DiscoveryConfiguration struct {
 	// EndSessionEndpoint is a URL where the RP can perform a redirect to request that the End-User be logged out at the OP.
 	EndSessionEndpoint string `json:"end_session_endpoint,omitempty"`
 
+	DeviceAuthorizationEndpoint string `json:"device_authorization_endpoint,omitempty"`
+
 	// CheckSessionIframe is a URL where the OP provides an iframe that support cross-origin communications for session state information with the RP Client.
 	CheckSessionIframe string `json:"check_session_iframe,omitempty"`
 

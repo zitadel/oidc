@@ -6,14 +6,14 @@ import (
 	"net/url"
 	"path"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type SessionEnder interface {
 	Decoder() httphelper.Decoder
 	Storage() Storage
-	IDTokenHintVerifier() IDTokenHintVerifier
+	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
 }
 
@@ -60,7 +60,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 		RedirectURI: ender.DefaultLogoutRedirectURI(),
 	}
 	if req.IdTokenHint != "" {
-		claims, err := VerifyIDTokenHint(ctx, req.IdTokenHint, ender.IDTokenHintVerifier())
+		claims, err := VerifyIDTokenHint[*oidc.TokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
 		if err != nil {
 			return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
 		}

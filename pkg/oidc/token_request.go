@@ -27,6 +27,9 @@ const (
 	// GrantTypeImplicit defines the grant type `implicit` used for implicit flows that skip the generation and exchange of an Authorization Code
 	GrantTypeImplicit GrantType = "implicit"
 
+	// GrantTypeDeviceCode
+	GrantTypeDeviceCode GrantType = "urn:ietf:params:oauth:grant-type:device_code"
+
 	// ClientAssertionTypeJWTAssertion defines the client_assertion_type `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
 	// used for the OAuth JWT Profile Client Authentication
 	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -35,10 +38,33 @@ const (
 var AllGrantTypes = []GrantType{
 	GrantTypeCode, GrantTypeRefreshToken, GrantTypeClientCredentials,
 	GrantTypeBearer, GrantTypeTokenExchange, GrantTypeImplicit,
-	ClientAssertionTypeJWTAssertion,
+	GrantTypeDeviceCode, ClientAssertionTypeJWTAssertion,
 }
 
 type GrantType string
+
+const (
+	AccessTokenType  TokenType = "urn:ietf:params:oauth:token-type:access_token"
+	RefreshTokenType TokenType = "urn:ietf:params:oauth:token-type:refresh_token"
+	IDTokenType      TokenType = "urn:ietf:params:oauth:token-type:id_token"
+	JWTTokenType     TokenType = "urn:ietf:params:oauth:token-type:jwt"
+)
+
+var AllTokenTypes = []TokenType{
+	AccessTokenType, RefreshTokenType, IDTokenType, JWTTokenType,
+}
+
+type TokenType string
+
+func (t TokenType) IsSupported() bool {
+	for _, tt := range AllTokenTypes {
+		if t == tt {
+			return true
+		}
+	}
+
+	return false
+}
 
 type TokenRequest interface {
 	// GrantType GrantType `schema:"grant_type"`
@@ -161,12 +187,12 @@ func (j *JWTTokenRequest) GetAudience() []string {
 
 // GetExpiration implements the Claims interface
 func (j *JWTTokenRequest) GetExpiration() time.Time {
-	return time.Time(j.ExpiresAt)
+	return j.ExpiresAt.AsTime()
 }
 
 // GetIssuedAt implements the Claims interface
 func (j *JWTTokenRequest) GetIssuedAt() time.Time {
-	return time.Time(j.IssuedAt)
+	return j.ExpiresAt.AsTime()
 }
 
 // GetNonce implements the Claims interface
@@ -203,19 +229,22 @@ func (j *JWTTokenRequest) GetScopes() []string {
 }
 
 type TokenExchangeRequest struct {
-	subjectToken       string              `schema:"subject_token"`
-	subjectTokenType   string              `schema:"subject_token_type"`
-	actorToken         string              `schema:"actor_token"`
-	actorTokenType     string              `schema:"actor_token_type"`
-	resource           []string            `schema:"resource"`
-	audience           Audience            `schema:"audience"`
-	Scope              SpaceDelimitedArray `schema:"scope"`
-	requestedTokenType string              `schema:"requested_token_type"`
+	GrantType          GrantType           `schema:"grant_type"`
+	SubjectToken       string              `schema:"subject_token"`
+	SubjectTokenType   TokenType           `schema:"subject_token_type"`
+	ActorToken         string              `schema:"actor_token"`
+	ActorTokenType     TokenType           `schema:"actor_token_type"`
+	Resource           []string            `schema:"resource"`
+	Audience           Audience            `schema:"audience"`
+	Scopes             SpaceDelimitedArray `schema:"scope"`
+	RequestedTokenType TokenType           `schema:"requested_token_type"`
 }
 
 type ClientCredentialsRequest struct {
-	GrantType    GrantType           `schema:"grant_type"`
-	Scope        SpaceDelimitedArray `schema:"scope"`
-	ClientID     string              `schema:"client_id"`
-	ClientSecret string              `schema:"client_secret"`
+	GrantType           GrantType           `schema:"grant_type"`
+	Scope               SpaceDelimitedArray `schema:"scope"`
+	ClientID            string              `schema:"client_id"`
+	ClientSecret        string              `schema:"client_secret"`
+	ClientAssertion     string              `schema:"client_assertion"`
+	ClientAssertionType string              `schema:"client_assertion_type"`
 }
