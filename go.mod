@@ -3,10 +3,10 @@ module github.com/zitadel/oidc/v2
 go 1.18
 
 require (
+	github.com/go-chi/chi v1.5.4
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.3.0
-	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/jeremija/gosubmit v0.2.7
