@@ -97,8 +97,8 @@ func (c *TokenClaims) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 
 type AccessTokenClaims struct {
 	TokenClaims
-	Scopes []string       `json:"scope,omitempty"`
-	Claims map[string]any `json:"-"`
+	Scopes SpaceDelimitedArray `json:"scope,omitempty"`
+	Claims map[string]any      `json:"-"`
 }
 
 func NewAccessTokenClaims(issuer, subject string, audience []string, expiration time.Time, jwtid, clientID string, skew time.Duration) *AccessTokenClaims {
