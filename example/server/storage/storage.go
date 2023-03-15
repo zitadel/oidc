@@ -28,8 +28,8 @@ var serviceKey1 = &rsa.PublicKey{
 	E: 65537,
 }
 
-// var _ op.Storage = &storage{}
-// var _ op.ClientCredentialsStorage = &storage{}
+var _ op.Storage = &Storage{}
+var _ op.ClientCredentialsStorage = &Storage{}
 
 // storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
@@ -46,6 +46,7 @@ type Storage struct {
 	signingKey    signingKey
 	deviceCodes   map[string]deviceAuthorizationEntry
 	userCodes     map[string]string
+	serviceUsers  map[string]*Client
 }
 
 type signingKey struct {
@@ -109,6 +110,16 @@ func NewStorage(userStore UserStore) *Storage {
 		},
 		deviceCodes: make(map[string]deviceAuthorizationEntry),
 		userCodes:   make(map[string]string),
+		serviceUsers: map[string]*Client{
+			"sid1": {
+				id:     "sid1",
+				secret: "verysecret",
+				grantTypes: []oidc.GrantType{
+					oidc.GrantTypeClientCredentials,
+				},
+				accessTokenType: op.AccessTokenTypeBearer,
+			},
+		},
 	}
 }
 
@@ -133,7 +144,7 @@ func (s *Storage) CheckUsernamePassword(username, password, id string) error {
 		// you will have to change some state on the request to guide the user through possible multiple steps of the login process
 		// in this example we'll simply check the username / password and set a boolean to true
 		// therefore we will also just check this boolean if the request / login has been finished
-		request.passwordChecked = true
+		request.done = true
 		return nil
 	}
 	return fmt.Errorf("username or password wrong")
@@ -846,4 +857,45 @@ func (s *Storage) DenyDeviceAuthorization(ctx context.Context, userCode string) 
 
 	s.deviceCodes[s.userCodes[userCode]].state.Denied = true
 	return nil
+}
+
+// AuthRequestDone is used by testing and is not required to implement op.Storage
+func (s *Storage) AuthRequestDone(id string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if req, ok := s.authRequests[id]; ok {
+		req.done = true
+		return nil
+	}
+
+	return errors.New("request not found")
+}
+
+func (s *Storage) ClientCredentials(ctx context.Context, clientID, clientSecret string) (op.Client, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	client, ok := s.serviceUsers[clientID]
+	if !ok {
+		return nil, errors.New("wrong service user or password")
+	}
+	if client.secret != clientSecret {
+		return nil, errors.New("wrong service user or password")
+	}
+
+	return client, nil
+}
+
+func (s *Storage) ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (op.TokenRequest, error) {
+	client, ok := s.serviceUsers[clientID]
+	if !ok {
+		return nil, errors.New("wrong service user or password")
+	}
+
+	return &oidc.JWTTokenRequest{
+		Subject:  client.id,
+		Audience: []string{clientID},
+		Scopes:   scopes,
+	}, nil
 }
