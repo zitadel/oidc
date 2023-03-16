@@ -404,7 +404,7 @@ func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *
 
 // AuthorizeCallback handles the callback after authentication in the Login UI
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	id, err := parseAuthorizeCallbackRequest(r)
+	id, err := ParseAuthorizeCallbackRequest(r)
 	if err != nil {
 		AuthRequestError(w, r, nil, err, authorizer.Encoder())
 		return
@@ -423,7 +423,7 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 	AuthResponse(authReq, authorizer, w, r)
 }
 
-func parseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
+func ParseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
 	if err = r.ParseForm(); err != nil {
 		return "", fmt.Errorf("cannot parse form: %w", err)
 	}
