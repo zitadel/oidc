@@ -4,9 +4,11 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
+	"github.com/gorilla/schema"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 )
@@ -43,6 +45,39 @@ func (d *Display) UnmarshalText(text []byte) error {
 }
 
 type Gender string
+
+type Locale struct {
+	tag language.Tag
+}
+
+func NewLocale(tag language.Tag) *Locale {
+	return &Locale{tag: tag}
+}
+
+func (l *Locale) Tag() language.Tag {
+	if l == nil {
+		return language.Und
+	}
+
+	return l.tag
+}
+
+func (l *Locale) String() string {
+	return l.Tag().String()
+}
+
+func (l *Locale) MarshalJSON() ([]byte, error) {
+	tag := l.Tag()
+	if tag.IsRoot() {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal(tag)
+}
+
+func (l *Locale) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &l.tag)
+}
 
 type Locales []language.Tag
 
@@ -125,19 +160,52 @@ func (s SpaceDelimitedArray) Value() (driver.Value, error) {
 	return strings.Join(s, " "), nil
 }
 
-type Time time.Time
-
-func (t *Time) UnmarshalJSON(data []byte) error {
-	var i int64
-	if err := json.Unmarshal(data, &i); err != nil {
-		return err
-	}
-	*t = Time(time.Unix(i, 0).UTC())
-	return nil
+// NewEncoder returns a schema Encoder with
+// a registered encoder for SpaceDelimitedArray.
+func NewEncoder() *schema.Encoder {
+	e := schema.NewEncoder()
+	e.RegisterEncoder(SpaceDelimitedArray{}, func(value reflect.Value) string {
+		return value.Interface().(SpaceDelimitedArray).Encode()
+	})
+	return e
 }
 
-func (t *Time) MarshalJSON() ([]byte, error) {
-	return json.Marshal(time.Time(*t).UTC().Unix())
+type Time int64
+
+func (ts Time) AsTime() time.Time {
+	return time.Unix(int64(ts), 0)
+}
+
+func FromTime(tt time.Time) Time {
+	return Time(tt.Unix())
+}
+
+func NowTime() Time {
+	return FromTime(time.Now())
+}
+
+func (ts *Time) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("oidc.Time: %w", err)
+	}
+	switch x := v.(type) {
+	case float64:
+		*ts = Time(x)
+	case string:
+		// Compatibility with Auth0:
+		// https://github.com/zitadel/oidc/issues/292
+		tt, err := time.Parse(time.RFC3339, x)
+		if err != nil {
+			return fmt.Errorf("oidc.Time: %w", err)
+		}
+		*ts = FromTime(tt)
+	case nil:
+		*ts = 0
+	default:
+		return fmt.Errorf("oidc.Time: unable to parse type %T with value %v", x, x)
+	}
+	return nil
 }
 
 type RequestObject struct {
@@ -150,5 +218,4 @@ func (r *RequestObject) GetIssuer() string {
 	return r.Issuer
 }
 
-func (r *RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
-}
+func (*RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {}

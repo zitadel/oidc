@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	httphelper "github.com/zitadel/oidc/pkg/http"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 )
 
 type ProbesFn func(context.Context) error
@@ -29,15 +29,6 @@ func Readiness(w http.ResponseWriter, r *http.Request, probes ...ProbesFn) {
 		}
 	}
 	ok(w)
-}
-
-func ReadySigner(s Signer) ProbesFn {
-	return func(ctx context.Context) error {
-		if s == nil {
-			return errors.New("no signer")
-		}
-		return s.Health(ctx)
-	}
 }
 
 func ReadyStorage(s Storage) ProbesFn {

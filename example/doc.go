@@ -5,7 +5,6 @@ Package example contains some example of the various use of this library:
 /app        web app / RP demonstrating authorization code flow using various authentication methods (code, PKCE, JWT profile)
 /github     example of the extended OAuth2 library, providing an HTTP client with a reuse token source
 /service    demonstration of JWT Profile Authorization Grant
-/server		example of an OpenID Provider implementation including some very basic login UI
-
+/server		examples of an OpenID Provider implementations (including dynamic) with some very basic
 */
 package example

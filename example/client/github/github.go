@@ -10,9 +10,10 @@ import (
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
 
-	"github.com/zitadel/oidc/pkg/client/rp"
-	"github.com/zitadel/oidc/pkg/client/rp/cli"
-	"github.com/zitadel/oidc/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	"github.com/zitadel/oidc/v2/pkg/client/rp/cli"
+	"github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 var (
@@ -43,7 +44,7 @@ func main() {
 	state := func() string {
 		return uuid.New().String()
 	}
-	token := cli.CodeFlow(ctx, relyingParty, callbackPath, port, state)
+	token := cli.CodeFlow[*oidc.IDTokenClaims](ctx, relyingParty, callbackPath, port, state)
 
 	client := github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
 

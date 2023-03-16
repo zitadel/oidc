@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - next
     tags-ignore:
       - '**'
   pull_request:
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        go: ['1.16', '1.17', '1.18', '1.19', '1.20']
+        go: ['1.18', '1.19', '1.20']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v3
@@ -23,7 +24,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
-      - run: go test -race -v -coverprofile=profile.cov -coverpkg=github.com/zitadel/oidc/... ./pkg/...
+      - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
       - uses: codecov/codecov-action@v3.1.1
         with:
           file: ./profile.cov
@@ -31,7 +32,7 @@ jobs:
   release:
     runs-on: ubuntu-20.04
     needs: [test]
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

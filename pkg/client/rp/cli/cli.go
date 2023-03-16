@@ -4,22 +4,22 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/zitadel/oidc/pkg/client/rp"
-	httphelper "github.com/zitadel/oidc/pkg/http"
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 const (
 	loginPath = "/login"
 )
 
-func CodeFlow(ctx context.Context, relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens {
+func CodeFlow[C oidc.IDClaims](ctx context.Context, relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens[C] {
 	codeflowCtx, codeflowCancel := context.WithCancel(ctx)
 	defer codeflowCancel()
 
-	tokenChan := make(chan *oidc.Tokens, 1)
+	tokenChan := make(chan *oidc.Tokens[C], 1)
 
-	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens, state string, rp rp.RelyingParty) {
+	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp rp.RelyingParty) {
 		tokenChan <- tokens
 		msg := "<p><strong>Success!</strong></p>"
 		msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"

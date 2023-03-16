@@ -12,7 +12,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	str "github.com/zitadel/oidc/pkg/strings"
+	str "github.com/zitadel/oidc/v2/pkg/strings"
 )
 
 type Claims interface {
@@ -30,6 +30,12 @@ type Claims interface {
 
 type ClaimsSignature interface {
 	SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm)
+}
+
+type IDClaims interface {
+	Claims
+	GetSignatureAlgorithm() jose.SignatureAlgorithm
+	GetAccessTokenHash() string
 }
 
 var (

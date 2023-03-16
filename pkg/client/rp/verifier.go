@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 )
 
 type IDTokenVerifier interface {
@@ -20,76 +20,78 @@ type IDTokenVerifier interface {
 }
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
-//https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens(ctx context.Context, accessToken, idTokenString string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
-	idToken, err := VerifyIDToken(ctx, idTokenString, v)
+// https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
+func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v IDTokenVerifier) (claims C, err error) {
+	var nilClaims C
+
+	claims, err = VerifyIDToken[C](ctx, idToken, v)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
-	if err := VerifyAccessToken(accessToken, idToken.GetAccessTokenHash(), idToken.GetSignatureAlgorithm()); err != nil {
-		return nil, err
+	if err := VerifyAccessToken(accessToken, claims.GetAccessTokenHash(), claims.GetSignatureAlgorithm()); err != nil {
+		return nilClaims, err
 	}
-	return idToken, nil
+	return claims, nil
 }
 
 // VerifyIDToken validates the id token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken(ctx context.Context, token string, v IDTokenVerifier) (oidc.IDTokenClaims, error) {
-	claims := oidc.EmptyIDTokenClaims()
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v IDTokenVerifier) (claims C, err error) {
+	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
-	payload, err := oidc.ParseToken(decrypted, claims)
+	payload, err := oidc.ParseToken(decrypted, &claims)
 	if err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err := oidc.CheckSubject(claims); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckIssuer(claims, v.Issuer()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAudience(claims, v.ClientID()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAuthorizedParty(claims, v.ClientID()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT(), v.Offset()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckAuthTime(claims, v.MaxAge()); err != nil {
-		return nil, err
+		return nilClaims, err
 	}
 	return claims, nil
 }
 
 // VerifyAccessToken validates the access token according to
-//https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
+// https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
 	if atHash == "" {
 		return nil
@@ -112,7 +114,7 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 		issuer:   issuer,
 		clientID: clientID,
 		keySet:   keySet,
-		offset:   1 * time.Second,
+		offset:   time.Second,
 		nonce: func(_ context.Context) string {
 			return ""
 		},
@@ -139,7 +141,7 @@ func WithIssuedAtOffset(offset time.Duration) func(*idTokenVerifier) {
 // WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
 func WithIssuedAtMaxAge(maxAge time.Duration) func(*idTokenVerifier) {
 	return func(v *idTokenVerifier) {
-		v.maxAge = maxAge
+		v.maxAgeIAT = maxAge
 	}
 }
 

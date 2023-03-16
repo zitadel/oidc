@@ -1,0 +1,30 @@
+{
+	"address": {
+		"country": "Moon",
+		"formatted": "Sesame street 666\n666-666, Smallvile\nMoon",
+		"locality": "Smallvile",
+		"postal_code": "666-666",
+		"region": "Outer space",
+		"street_address": "Sesame street 666"
+	},
+	"birthdate": "1st of April",
+	"email": "tim@zitadel.com",
+	"email_verified": true,
+	"family_name": "Möhlmann",
+	"foo": "bar",
+	"gender": "male",
+	"given_name": "Tim",
+	"locale": "nl",
+	"middle_name": "Danger",
+	"name": "Tim Möhlmann",
+	"nickname": "muhlemmer",
+	"phone_number": "+1234567890",
+	"phone_number_verified": true,
+	"picture": "https://avatars.githubusercontent.com/u/5411563?v=4",
+	"preferred_username": "muhlemmer",
+	"profile": "https://github.com/muhlemmer",
+	"sub": "hello@me.com",
+	"updated_at": 1,
+	"website": "https://zitadel.com",
+	"zoneinfo": "Europe/Amsterdam"
+}
