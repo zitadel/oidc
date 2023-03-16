@@ -67,10 +67,31 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 
 ## Features
 
-|                  | Code Flow | Implicit Flow | Hybrid Flow | Discovery | PKCE | Token Exchange | mTLS    | JWT Profile | Refresh Token | Client Credentials |
-|------------------|-----------|---------------|-------------|-----------|------|----------------|---------|-------------|---------------|--------------------|
-| Relying Party    | yes       | no[^1]        | no          | yes       | yes  | partial        | not yet | yes         | yes           | not yet            |
-| OpenID Provider  | yes       | yes           | not yet     | yes       | yes  | not yet        | not yet | yes         | yes           | yes                |
+|                      | Relying party | OpenID Provider | Specification                             |
+| -------------------- | ------------- | --------------- | ----------------------------------------- |
+| Code Flow            | yes           | yes             | OpenID Connect Core 1.0, [Section 3.1][1] |
+| Implicit Flow        | no[^1]        | yes             | OpenID Connect Core 1.0, [Section 3.2][2] |
+| Hybrid Flow          | no            | not yet         | OpenID Connect Core 1.0, [Section 3.3][3] |
+| Client Credentials   | not yet       | yes             | OpenID Connect Core 1.0, [Section 9][4]   |
+| Refresh Token        | yes           | yes             | OpenID Connect Core 1.0, [Section 12][5]  |
+| Discovery            | yes           | yes             | OpenID Connect [Discovery][6] 1.0         |
+| JWT Profile          | yes           | yes             | [RFC 7523][7]                             |
+| PKCE                 | yes           | yes             | [RFC 7636][8]                             |
+| Token Exchange       | yes           | yes             | [RFC 8693][9]                             |
+| Device Authorization | yes           | yes             | [RFC 8628][10]                            |
+| mTLS                 | not yet       | not yet         | [RFC 8705][11]                            |
+
+[1]: <https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth> "3.1. Authentication using the Authorization Code Flow"
+[2]: <https://openid.net/specs/openid-connect-core-1_0.html#ImplicitFlowAuth> "3.2. Authentication using the Implicit Flow"
+[3]: <https://openid.net/specs/openid-connect-core-1_0.html#HybridFlowAuth> "3.3. Authentication using the Hybrid Flow"
+[4]: <https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication> "9. Client Authentication"
+[5]: <https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens> "12. Using Refresh Tokens"
+[6]: <https://openid.net/specs/openid-connect-discovery-1_0.html> "OpenID Connect Discovery 1.0 incorporating errata set 1"
+[7]: <https://www.rfc-editor.org/rfc/rfc7523.html> "JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"
+[8]: <https://www.rfc-editor.org/rfc/rfc7636.html> "Proof Key for Code Exchange by OAuth Public Clients"
+[9]: <https://www.rfc-editor.org/rfc/rfc8693.html> "OAuth 2.0 Token Exchange"
+[10]: <https://www.rfc-editor.org/rfc/rfc8628.html> "OAuth 2.0 Device Authorization Grant"
+[11]: <https://www.rfc-editor.org/rfc/rfc8705.html> "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"
 
 ## Contributors
 
@@ -82,13 +103,9 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ### Resources
 
-For your convenience you can find the relevant standards linked below.
+For your convenience you can find the relevant guides linked below.
 
 - [OpenID Connect Core 1.0 incorporating errata set 1](https://openid.net/specs/openid-connect-core-1_0.html)
-- [Proof Key for Code Exchange by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
-- [OAuth 2.0 Token Exchange](https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-19)
-- [OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens](https://tools.ietf.org/html/draft-ietf-oauth-mtls-17)
-- [JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants](https://tools.ietf.org/html/rfc7523)
 - [OIDC/OAuth Flow in Zitadel (using this library)](https://zitadel.com/docs/guides/integrate/login-users)
 
 ## Supported Go Versions
@@ -97,7 +114,7 @@ For security reasons, we only support and recommend the use of one of the latest
 Versions that also build are marked with :warning:.
 
 | Version | Supported          |
-|---------|--------------------|
+| ------- | ------------------ |
 | <1.18   | :x:                |
 | 1.18    | :warning:          |
 | 1.19    | :white_check_mark: |
