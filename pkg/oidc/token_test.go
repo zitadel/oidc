@@ -225,3 +225,8 @@ func TestNewIDTokenClaims(t *testing.T) {
 
 	assert.Equal(t, want, got)
 }
+
+func TestIDTokenClaims_GetUserInfo(t *testing.T) {
+	got := idTokenData.GetUserInfo()
+	assert.Equal(t, userInfoData, got)
+}
