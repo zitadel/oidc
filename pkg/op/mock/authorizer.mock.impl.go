@@ -49,7 +49,7 @@ func ExpectEncoder(a op.Authorizer) {
 func ExpectVerifier(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
 	mockA.EXPECT().IDTokenHintVerifier(gomock.Any()).DoAndReturn(
-		func() op.IDTokenHintVerifier {
+		func() *oidc.Verifier {
 			return op.NewIDTokenHintVerifier("", nil)
 		})
 }

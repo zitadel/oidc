@@ -22,7 +22,7 @@ import (
 
 type testClientJWTProfile struct{}
 
-func (testClientJWTProfile) JWTProfileVerifier(context.Context) op.JWTProfileVerifier { return nil }
+func (testClientJWTProfile) JWTProfileVerifier(context.Context) *op.JWTProfileVerifier { return nil }
 
 func TestClientJWTAuth(t *testing.T) {
 	type args struct {

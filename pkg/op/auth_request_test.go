@@ -146,7 +146,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
 		storage     op.Storage
-		verifier    op.IDTokenHintVerifier
+		verifier    *oidc.Verifier
 	}
 	tests := []struct {
 		name    string

@@ -15,14 +15,14 @@ type Revoker interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
+	AccessTokenVerifier(context.Context) *oidc.Verifier
 	AuthMethodPrivateKeyJWTSupported() bool
 	AuthMethodPostSupported() bool
 }
 
 type RevokerJWTProfile interface {
 	Revoker
-	JWTProfileVerifier(context.Context) JWTProfileVerifier
+	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
 func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request) {

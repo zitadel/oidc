@@ -61,10 +61,19 @@ var (
 	ErrAtHash                  = errors.New("at_hash does not correspond to access token")
 )
 
-type Verifier interface {
-	Issuer() string
-	MaxAgeIAT() time.Duration
-	Offset() time.Duration
+// Verifier caries configuration for the various token verification
+// functions. Use package specific constructor functions to know
+// which values need to be set.
+type Verifier struct {
+	Issuer            string
+	MaxAgeIAT         time.Duration
+	Offset            time.Duration
+	ClientID          string
+	SupportedSignAlgs []string
+	MaxAge            time.Duration
+	ACR               ACRVerifier
+	KeySet            KeySet
+	Nonce             func(ctx context.Context) string
 }
 
 // ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim

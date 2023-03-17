@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	http "github.com/zitadel/oidc/v3/pkg/http"
 	op "github.com/zitadel/oidc/v3/pkg/op"
+	oidc "github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.
@@ -79,10 +80,10 @@ func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 }
 
 // IDTokenHintVerifier mocks base method.
-func (m *MockAuthorizer) IDTokenHintVerifier(arg0 context.Context) op.IDTokenHintVerifier {
+func (m *MockAuthorizer) IDTokenHintVerifier(arg0 context.Context) *oidc.Verifier {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IDTokenHintVerifier", arg0)
-	ret0, _ := ret[0].(op.IDTokenHintVerifier)
+	ret0, _ := ret[0].(*oidc.Verifier)
 	return ret0
 }
 
