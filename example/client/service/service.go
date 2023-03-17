@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v2/pkg/client/profile"
+	"github.com/zitadel/oidc/v3/pkg/client/profile"
 )
 
 var client = http.DefaultClient

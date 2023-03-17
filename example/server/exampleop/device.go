@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/gorilla/securecookie"
 	"github.com/sirupsen/logrus"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 type deviceAuthenticate interface {
