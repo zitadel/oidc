@@ -365,7 +365,7 @@ func TestRoutes(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			testProvider.HttpHandler().ServeHTTP(rec, req)
+			testProvider.ServeHTTP(rec, req)
 
 			resp := rec.Result()
 			require.NoError(t, err)

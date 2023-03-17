@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 	"github.com/gorilla/securecookie"
 	"github.com/sirupsen/logrus"
 	"github.com/zitadel/oidc/v2/pkg/op"
@@ -23,14 +23,14 @@ type deviceLogin struct {
 	cookie  *securecookie.SecureCookie
 }
 
-func registerDeviceAuth(storage deviceAuthenticate, router *mux.Router) {
+func registerDeviceAuth(storage deviceAuthenticate, router chi.Router) {
 	l := &deviceLogin{
 		storage: storage,
 		cookie:  securecookie.New(securecookie.GenerateRandomKey(32), nil),
 	}
 
-	router.HandleFunc("", l.userCodeHandler)
-	router.Path("/login").Methods(http.MethodPost).HandlerFunc(l.loginHandler)
+	router.HandleFunc("/", l.userCodeHandler)
+	router.Post("/login", l.loginHandler)
 	router.HandleFunc("/confirm", l.confirmHandler)
 }
 

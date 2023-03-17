@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
@@ -966,4 +965,41 @@ func (m *mockEncoder) Encode(src interface{}, dst map[string][]string) error {
 		dst[s] = strings
 	}
 	return nil
+}
+
+func Test_parseAuthorizeCallbackRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		wantId  string
+		wantErr bool
+	}{
+		{
+			name:    "parse error",
+			url:     "/?id;=99",
+			wantErr: true,
+		},
+		{
+			name:    "missing id",
+			url:     "/",
+			wantErr: true,
+		},
+		{
+			name:   "ok",
+			url:    "/?id=99",
+			wantId: "99",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			gotId, err := op.ParseAuthorizeCallbackRequest(r)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantId, gotId)
+		})
+	}
 }

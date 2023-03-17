@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 
 	"github.com/zitadel/oidc/v2/pkg/client/rs"
@@ -32,7 +32,7 @@ func main() {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
 
-	router := mux.NewRouter()
+	router := chi.NewRouter()
 
 	// public url accessible without any authorization
 	// will print `OK` and current timestamp
@@ -73,9 +73,9 @@ func main() {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		params := mux.Vars(r)
-		requestedClaim := params["claim"]
-		requestedValue := params["value"]
+		requestedClaim := chi.URLParam(r, "claim")
+		requestedValue := chi.URLParam(r, "value")
+
 		value, ok := resp.Claims[requestedClaim].(string)
 		if !ok || value == "" || value != requestedValue {
 			http.Error(w, "claim does not match", http.StatusForbidden)
