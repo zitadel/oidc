@@ -13,7 +13,7 @@ import (
 )
 
 func TestVerifyTokens(t *testing.T) {
-	verifier := &oidc.Verifier{
+	verifier := &IDTokenVerifier{
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
@@ -91,7 +91,7 @@ func TestVerifyTokens(t *testing.T) {
 }
 
 func TestVerifyIDToken(t *testing.T) {
-	verifier := &oidc.Verifier{
+	verifier := &IDTokenVerifier{
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
@@ -300,7 +300,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *oidc.Verifier
+		want *IDTokenVerifier
 	}{
 		{
 			name: "nil nonce", // otherwise assert.Equal will fail on the function
@@ -317,7 +317,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 					WithSupportedSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &oidc.Verifier{
+			want: &IDTokenVerifier{
 				Issuer:            tu.ValidIssuer,
 				Offset:            time.Minute,
 				MaxAgeIAT:         time.Hour,

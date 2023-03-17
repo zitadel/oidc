@@ -73,8 +73,8 @@ type OpenIDProvider interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier(context.Context) *oidc.Verifier
-	AccessTokenVerifier(context.Context) *oidc.Verifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
@@ -342,7 +342,7 @@ func (o *Provider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 
-func (o *Provider) IDTokenHintVerifier(ctx context.Context) *oidc.Verifier {
+func (o *Provider) IDTokenHintVerifier(ctx context.Context) *IDTokenHintVerifier {
 	return NewIDTokenHintVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 }
 
@@ -350,7 +350,7 @@ func (o *Provider) JWTProfileVerifier(ctx context.Context) *JWTProfileVerifier {
 	return NewJWTProfileVerifier(o.Storage(), IssuerFromContext(ctx), 1*time.Hour, time.Second)
 }
 
-func (o *Provider) AccessTokenVerifier(ctx context.Context) *oidc.Verifier {
+func (o *Provider) AccessTokenVerifier(ctx context.Context) *AccessTokenVerifier {
 	return NewAccessTokenVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 }
 

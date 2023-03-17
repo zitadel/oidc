@@ -20,7 +20,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *oidc.Verifier
+		want *IDTokenHintVerifier
 	}{
 		{
 			name: "simple",
@@ -28,7 +28,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 				issuer: tu.ValidIssuer,
 				keySet: tu.KeySet{},
 			},
-			want: &oidc.Verifier{
+			want: &IDTokenHintVerifier{
 				Issuer: tu.ValidIssuer,
 				KeySet: tu.KeySet{},
 			},
@@ -42,7 +42,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 					WithSupportedIDTokenHintSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &oidc.Verifier{
+			want: &IDTokenHintVerifier{
 				Issuer:            tu.ValidIssuer,
 				KeySet:            tu.KeySet{},
 				SupportedSignAlgs: []string{"ABC", "DEF"},
@@ -58,7 +58,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 }
 
 func TestVerifyIDTokenHint(t *testing.T) {
-	verifier := &oidc.Verifier{
+	verifier := &IDTokenHintVerifier{
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,

@@ -20,7 +20,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *oidc.Verifier
+		want *AccessTokenVerifier
 	}{
 		{
 			name: "simple",
@@ -28,7 +28,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 				issuer: tu.ValidIssuer,
 				keySet: tu.KeySet{},
 			},
-			want: &oidc.Verifier{
+			want: &AccessTokenVerifier{
 				Issuer: tu.ValidIssuer,
 				KeySet: tu.KeySet{},
 			},
@@ -42,7 +42,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 					WithSupportedAccessTokenSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &oidc.Verifier{
+			want: &AccessTokenVerifier{
 				Issuer:            tu.ValidIssuer,
 				KeySet:            tu.KeySet{},
 				SupportedSignAlgs: []string{"ABC", "DEF"},
@@ -58,7 +58,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 }
 
 func TestVerifyAccessToken(t *testing.T) {
-	verifier := &oidc.Verifier{
+	verifier := &AccessTokenVerifier{
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,

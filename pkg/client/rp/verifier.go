@@ -11,7 +11,7 @@ import (
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
 // https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *oidc.Verifier) (claims C, err error) {
+func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier) (claims C, err error) {
 	var nilClaims C
 
 	claims, err = VerifyIDToken[C](ctx, idToken, v)
@@ -26,7 +26,7 @@ func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken str
 
 // VerifyIDToken validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *oidc.Verifier) (claims C, err error) {
+func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier) (claims C, err error) {
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)
@@ -80,6 +80,8 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *oidc.Ver
 	return claims, nil
 }
 
+type IDTokenVerifier oidc.Verifier
+
 // VerifyAccessToken validates the access token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowTokenValidation
 func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAlgorithm) error {
@@ -98,8 +100,8 @@ func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAl
 }
 
 // NewIDTokenVerifier returns a oidc.Verifier suitable for ID token verification.
-func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...VerifierOption) *oidc.Verifier {
-	v := &oidc.Verifier{
+func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...VerifierOption) *IDTokenVerifier {
+	v := &IDTokenVerifier{
 		Issuer:   issuer,
 		ClientID: clientID,
 		KeySet:   keySet,
@@ -117,47 +119,47 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 }
 
 // VerifierOption is the type for providing dynamic options to the IDTokenVerifier
-type VerifierOption func(*oidc.Verifier)
+type VerifierOption func(*IDTokenVerifier)
 
 // WithIssuedAtOffset mitigates the risk of iat to be in the future
 // because of clock skews with the ability to add an offset to the current time
-func WithIssuedAtOffset(offset time.Duration) func(*oidc.Verifier) {
-	return func(v *oidc.Verifier) {
+func WithIssuedAtOffset(offset time.Duration) VerifierOption {
+	return func(v *IDTokenVerifier) {
 		v.Offset = offset
 	}
 }
 
 // WithIssuedAtMaxAge provides the ability to define the maximum duration between iat and now
-func WithIssuedAtMaxAge(maxAge time.Duration) func(*oidc.Verifier) {
-	return func(v *oidc.Verifier) {
+func WithIssuedAtMaxAge(maxAge time.Duration) VerifierOption {
+	return func(v *IDTokenVerifier) {
 		v.MaxAgeIAT = maxAge
 	}
 }
 
 // WithNonce sets the function to check the nonce
 func WithNonce(nonce func(context.Context) string) VerifierOption {
-	return func(v *oidc.Verifier) {
+	return func(v *IDTokenVerifier) {
 		v.Nonce = nonce
 	}
 }
 
 // WithACRVerifier sets the verifier for the acr claim
 func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
-	return func(v *oidc.Verifier) {
+	return func(v *IDTokenVerifier) {
 		v.ACR = verifier
 	}
 }
 
 // WithAuthTimeMaxAge provides the ability to define the maximum duration between auth_time and now
 func WithAuthTimeMaxAge(maxAge time.Duration) VerifierOption {
-	return func(v *oidc.Verifier) {
+	return func(v *IDTokenVerifier) {
 		v.MaxAge = maxAge
 	}
 }
 
 // WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
 func WithSupportedSigningAlgorithms(algs ...string) VerifierOption {
-	return func(v *oidc.Verifier) {
+	return func(v *IDTokenVerifier) {
 		v.SupportedSignAlgs = algs
 	}
 }

@@ -14,7 +14,7 @@ type UserinfoProvider interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier(context.Context) *oidc.Verifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 }
 
 func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter, *http.Request) {

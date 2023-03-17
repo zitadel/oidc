@@ -6,17 +6,19 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-type AccessTokenVerifierOpt func(*oidc.Verifier)
+type AccessTokenVerifier oidc.Verifier
+
+type AccessTokenVerifierOpt func(*AccessTokenVerifier)
 
 func WithSupportedAccessTokenSigningAlgorithms(algs ...string) AccessTokenVerifierOpt {
-	return func(verifier *oidc.Verifier) {
+	return func(verifier *AccessTokenVerifier) {
 		verifier.SupportedSignAlgs = algs
 	}
 }
 
-// NewAccessTokenVerifier returns a oidc.Verifier suitable for access token verification.
-func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTokenVerifierOpt) *oidc.Verifier {
-	verifier := &oidc.Verifier{
+// NewAccessTokenVerifier returns a AccessTokenVerifier suitable for access token verification.
+func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTokenVerifierOpt) *AccessTokenVerifier {
+	verifier := &AccessTokenVerifier{
 		Issuer: issuer,
 		KeySet: keySet,
 	}
@@ -27,7 +29,7 @@ func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTok
 }
 
 // VerifyAccessToken validates the access token (issuer, signature and expiration).
-func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v *oidc.Verifier) (claims C, err error) {
+func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v *AccessTokenVerifier) (claims C, err error) {
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)

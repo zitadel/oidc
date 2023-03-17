@@ -38,7 +38,7 @@ type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier(context.Context) *oidc.Verifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
 }
@@ -47,7 +47,7 @@ type Authorizer interface {
 // implementing its own validation mechanism for the auth request
 type AuthorizeValidator interface {
 	Authorizer
-	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, *oidc.Verifier) (string, error)
+	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, *IDTokenHintVerifier) (string, error)
 }
 
 func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
@@ -204,7 +204,7 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 }
 
 // ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
-func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *oidc.Verifier) (sub string, err error) {
+func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return "", err
@@ -384,7 +384,7 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 
 // ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)
 // and returns the `sub` claim
-func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier *oidc.Verifier) (string, error) {
+func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier *IDTokenHintVerifier) (string, error) {
 	if idTokenHint == "" {
 		return "", nil
 	}

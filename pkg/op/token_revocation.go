@@ -15,7 +15,7 @@ type Revoker interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier(context.Context) *oidc.Verifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	AuthMethodPrivateKeyJWTSupported() bool
 	AuthMethodPostSupported() bool
 }

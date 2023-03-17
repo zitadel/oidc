@@ -6,16 +6,18 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-type IDTokenHintVerifierOpt func(*oidc.Verifier)
+type IDTokenHintVerifier oidc.Verifier
+
+type IDTokenHintVerifierOpt func(*IDTokenHintVerifier)
 
 func WithSupportedIDTokenHintSigningAlgorithms(algs ...string) IDTokenHintVerifierOpt {
-	return func(verifier *oidc.Verifier) {
+	return func(verifier *IDTokenHintVerifier) {
 		verifier.SupportedSignAlgs = algs
 	}
 }
 
-func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHintVerifierOpt) *oidc.Verifier {
-	verifier := &oidc.Verifier{
+func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHintVerifierOpt) *IDTokenHintVerifier {
+	verifier := &IDTokenHintVerifier{
 		Issuer: issuer,
 		KeySet: keySet,
 	}
@@ -27,7 +29,7 @@ func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHi
 
 // VerifyIDTokenHint validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v *oidc.Verifier) (claims C, err error) {
+func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v *IDTokenHintVerifier) (claims C, err error) {
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)

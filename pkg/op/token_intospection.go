@@ -13,7 +13,7 @@ type Introspector interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier(context.Context) *oidc.Verifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 }
 
 type IntrospectorJWTProfile interface {
