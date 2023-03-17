@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 )
 
 type KeyProvider interface {

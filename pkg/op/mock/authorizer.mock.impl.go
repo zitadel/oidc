@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/schema"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {

@@ -14,10 +14,10 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.com/zitadel/oidc/v2/pkg/op/mock"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op/mock"
 )
 
 type testClientJWTProfile struct{}

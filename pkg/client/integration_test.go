@@ -18,13 +18,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/zitadel/oidc/v2/example/server/exampleop"
-	"github.com/zitadel/oidc/v2/example/server/storage"
-	"github.com/zitadel/oidc/v2/pkg/client/rp"
-	"github.com/zitadel/oidc/v2/pkg/client/rs"
-	"github.com/zitadel/oidc/v2/pkg/client/tokenexchange"
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v3/example/server/exampleop"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
+	"github.com/zitadel/oidc/v3/pkg/client/rs"
+	"github.com/zitadel/oidc/v3/pkg/client/tokenexchange"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 func TestRelyingPartySession(t *testing.T) {

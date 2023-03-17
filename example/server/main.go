@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/zitadel/oidc/v2/example/server/exampleop"
-	"github.com/zitadel/oidc/v2/example/server/storage"
+	"github.com/zitadel/oidc/v3/example/server/exampleop"
+	"github.com/zitadel/oidc/v3/example/server/storage"
 )
 
 func main() {
