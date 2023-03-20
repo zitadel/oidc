@@ -159,6 +159,17 @@ func (t *IDTokenClaims) SetUserInfo(i *UserInfo) {
 	t.Address = i.Address
 }
 
+func (t *IDTokenClaims) GetUserInfo() *UserInfo {
+	return &UserInfo{
+		Subject:         t.Subject,
+		UserInfoProfile: t.UserInfoProfile,
+		UserInfoEmail:   t.UserInfoEmail,
+		UserInfoPhone:   t.UserInfoPhone,
+		Address:         t.Address,
+		Claims:          t.Claims,
+	}
+}
+
 func NewIDTokenClaims(issuer, subject string, audience []string, expiration, authTime time.Time, nonce string, acr string, amr []string, clientID string, skew time.Duration) *IDTokenClaims {
 	audience = AppendClientIDToAudience(clientID, audience)
 	return &IDTokenClaims{
