@@ -130,6 +130,11 @@ func CheckAudience(claims Claims, clientID string) error {
 	return nil
 }
 
+// CheckAuthorizedParty checks azp (authorized party) claim requirements.
+//
+// If the ID Token contains multiple audiences, the Client SHOULD verify that an azp Claim is present.
+// If an azp Claim is present, the Client SHOULD verify that its client_id is the Claim Value.
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func CheckAuthorizedParty(claims Claims, clientID string) error {
 	if len(claims.GetAudience()) > 1 {
 		if claims.GetAuthorizedParty() == "" {
@@ -176,26 +181,26 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 }
 
 func CheckExpiration(claims Claims, offset time.Duration) error {
-	expiration := claims.GetExpiration().Round(time.Second)
-	if !time.Now().UTC().Add(offset).Before(expiration) {
+	expiration := claims.GetExpiration()
+	if !time.Now().Add(offset).Before(expiration) {
 		return ErrExpired
 	}
 	return nil
 }
 
 func CheckIssuedAt(claims Claims, maxAgeIAT, offset time.Duration) error {
-	issuedAt := claims.GetIssuedAt().Round(time.Second)
+	issuedAt := claims.GetIssuedAt()
 	if issuedAt.IsZero() {
 		return ErrIatMissing
 	}
-	nowWithOffset := time.Now().UTC().Add(offset).Round(time.Second)
+	nowWithOffset := time.Now().Add(offset).Round(time.Second)
 	if issuedAt.After(nowWithOffset) {
 		return fmt.Errorf("%w: (iat: %v, now with offset: %v)", ErrIatInFuture, issuedAt, nowWithOffset)
 	}
 	if maxAgeIAT == 0 {
 		return nil
 	}
-	maxAge := time.Now().UTC().Add(-maxAgeIAT).Round(time.Second)
+	maxAge := time.Now().Add(-maxAgeIAT)
 	if issuedAt.Before(maxAge) {
 		return fmt.Errorf("%w: must not be older than %v, but was %v (%v to old)", ErrIatToOld, maxAge, issuedAt, maxAge.Sub(issuedAt))
 	}
@@ -225,8 +230,8 @@ func CheckAuthTime(claims Claims, maxAge time.Duration) error {
 	if claims.GetAuthTime().IsZero() {
 		return ErrAuthTimeNotPresent
 	}
-	authTime := claims.GetAuthTime().Round(time.Second)
-	maxAuthTime := time.Now().UTC().Add(-maxAge).Round(time.Second)
+	authTime := claims.GetAuthTime()
+	maxAuthTime := time.Now().Add(-maxAge).Round(time.Second)
 	if authTime.Before(maxAuthTime) {
 		return fmt.Errorf("%w: must not be older than %v, but was %v (%v to old)", ErrAuthTimeToOld, maxAge, authTime, maxAuthTime.Sub(authTime))
 	}
