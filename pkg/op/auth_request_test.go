@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
@@ -1000,6 +1001,37 @@ func Test_parseAuthorizeCallbackRequest(t *testing.T) {
 				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.wantId, gotId)
+		})
+	}
+}
+
+func TestValidateAuthReqIDTokenHint(t *testing.T) {
+	token, _ := tu.ValidIDToken()
+	tests := []struct {
+		name        string
+		idTokenHint string
+		want        string
+		wantErr     error
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name:        "verify err",
+			idTokenHint: "foo",
+			wantErr:     oidc.ErrLoginRequired(),
+		},
+		{
+			name:        "ok",
+			idTokenHint: token,
+			want:        tu.ValidSubject,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := op.ValidateAuthReqIDTokenHint(context.Background(), tt.idTokenHint, op.NewIDTokenHintVerifier(tu.ValidIssuer, tu.KeySet{}))
+			require.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
