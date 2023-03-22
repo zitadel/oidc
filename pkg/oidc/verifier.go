@@ -200,7 +200,7 @@ func CheckIssuedAt(claims Claims, maxAgeIAT, offset time.Duration) error {
 	if maxAgeIAT == 0 {
 		return nil
 	}
-	maxAge := time.Now().Add(-maxAgeIAT)
+	maxAge := time.Now().Add(-maxAgeIAT).Round(time.Second)
 	if issuedAt.Before(maxAge) {
 		return fmt.Errorf("%w: must not be older than %v, but was %v (%v to old)", ErrIatToOld, maxAge, issuedAt, maxAge.Sub(issuedAt))
 	}
