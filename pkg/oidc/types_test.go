@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 )
 
@@ -334,4 +336,58 @@ func TestSpaceDelimitatedArray_ValuerNil(t *testing.T) {
 	if assert.NoError(t, err, "Scan nil") {
 		assert.Equal(t, SpaceDelimitedArray(nil), reversed, "scan nil")
 	}
+}
+
+func TestTime_UnmarshalJSON(t *testing.T) {
+	type dst struct {
+		UpdatedAt Time `json:"updated_at"`
+	}
+	tests := []struct {
+		name    string
+		json    string
+		want    dst
+		wantErr bool
+	}{
+		{
+			name: "RFC3339", // https://github.com/zitadel/oidc/issues/292
+			json: `{"updated_at": "2021-05-11T21:13:25.566Z"}`,
+			want: dst{UpdatedAt: Time(time.Unix(1620767606, 0))},
+		},
+		{
+			name: "int",
+			json: `{"updated_at":1620767606}`,
+			want: dst{UpdatedAt: Time(time.Unix(1620767606, 0))},
+		},
+		{
+			name:    "time parse error",
+			json:    `{"updated_at":"foo"}`,
+			wantErr: true,
+		},
+		{
+			name: "null",
+			json: `{"updated_at":null}`,
+		},
+		{
+			name:    "invalid type",
+			json:    `{"updated_at":["foo","bar"]}`,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got dst
+			err := json.Unmarshal([]byte(tt.json), &got)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.WithinDuration(t, time.Time(tt.want.UpdatedAt), time.Time(got.UpdatedAt), 0)
+		})
+	}
+	t.Run("syntax error", func(t *testing.T) {
+		var ts Time
+		err := ts.UnmarshalJSON([]byte{'~'})
+		assert.Error(t, err)
+	})
 }

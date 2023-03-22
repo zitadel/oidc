@@ -127,12 +127,27 @@ func (s SpaceDelimitedArray) Value() (driver.Value, error) {
 
 type Time time.Time
 
-func (t *Time) UnmarshalJSON(data []byte) error {
-	var i int64
-	if err := json.Unmarshal(data, &i); err != nil {
-		return err
+func (ts *Time) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("oidc.Time: %w", err)
 	}
-	*t = Time(time.Unix(i, 0).UTC())
+	switch x := v.(type) {
+	case float64:
+		*ts = Time(time.Unix(int64(x), 0))
+	case string:
+		// Compatibility with Auth0:
+		// https://github.com/zitadel/oidc/issues/292
+		tt, err := time.Parse(time.RFC3339, x)
+		if err != nil {
+			return fmt.Errorf("oidc.Time: %w", err)
+		}
+		*ts = Time(tt.Round(time.Second))
+	case nil:
+		*ts = Time{}
+	default:
+		return fmt.Errorf("oidc.Time: unable to parse type %T with value %v", x, x)
+	}
 	return nil
 }
 
