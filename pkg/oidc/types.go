@@ -173,10 +173,16 @@ func NewEncoder() *schema.Encoder {
 type Time int64
 
 func (ts Time) AsTime() time.Time {
+	if ts == 0 {
+		return time.Time{}
+	}
 	return time.Unix(int64(ts), 0)
 }
 
 func FromTime(tt time.Time) Time {
+	if tt.IsZero() {
+		return 0
+	}
 	return Time(tt.Unix())
 }
 

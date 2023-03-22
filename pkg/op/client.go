@@ -81,7 +81,7 @@ var (
 )
 
 type ClientJWTProfile interface {
-	JWTProfileVerifier(context.Context) JWTProfileVerifier
+	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
 func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier ClientJWTProfile) (clientID string, err error) {

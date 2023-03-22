@@ -63,8 +63,8 @@ type RelyingParty interface {
 	// be used to start a DeviceAuthorization flow.
 	GetDeviceAuthorizationEndpoint() string
 
-	// IDTokenVerifier returns the verifier interface used for oidc id_token verification
-	IDTokenVerifier() IDTokenVerifier
+	// IDTokenVerifier returns the verifier used for oidc id_token verification
+	IDTokenVerifier() *IDTokenVerifier
 	// ErrorHandler returns the handler used for callback errors
 
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
@@ -88,7 +88,7 @@ type relyingParty struct {
 	cookieHandler *httphelper.CookieHandler
 
 	errorHandler    func(http.ResponseWriter, *http.Request, string, string, string)
-	idTokenVerifier IDTokenVerifier
+	idTokenVerifier *IDTokenVerifier
 	verifierOpts    []VerifierOption
 	signer          jose.Signer
 }
@@ -137,7 +137,7 @@ func (rp *relyingParty) GetRevokeEndpoint() string {
 	return rp.endpoints.RevokeURL
 }
 
-func (rp *relyingParty) IDTokenVerifier() IDTokenVerifier {
+func (rp *relyingParty) IDTokenVerifier() *IDTokenVerifier {
 	if rp.idTokenVerifier == nil {
 		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
 	}

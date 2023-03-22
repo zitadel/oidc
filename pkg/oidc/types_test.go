@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
@@ -465,6 +466,56 @@ func TestNewEncoder(t *testing.T) {
 	var b request
 	schema.NewDecoder().Decode(&b, values)
 	assert.Equal(t, a, b)
+}
+
+func TestTime_AsTime(t *testing.T) {
+	tests := []struct {
+		name string
+		ts   Time
+		want time.Time
+	}{
+		{
+			name: "unset",
+			ts:   0,
+			want: time.Time{},
+		},
+		{
+			name: "set",
+			ts:   1,
+			want: time.Unix(1, 0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.ts.AsTime()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTime_FromTime(t *testing.T) {
+	tests := []struct {
+		name string
+		tt   time.Time
+		want Time
+	}{
+		{
+			name: "zero",
+			tt:   time.Time{},
+			want: 0,
+		},
+		{
+			name: "set",
+			tt:   time.Unix(1, 0),
+			want: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FromTime(tt.tt)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func TestTime_UnmarshalJSON(t *testing.T) {

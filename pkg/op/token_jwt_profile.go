@@ -11,7 +11,7 @@ import (
 
 type JWTAuthorizationGrantExchanger interface {
 	Exchanger
-	JWTProfileVerifier(context.Context) JWTProfileVerifier
+	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
 // JWTProfile handles the OAuth 2.0 JWT Profile Authorization Grant https://tools.ietf.org/html/rfc7523#section-2.1

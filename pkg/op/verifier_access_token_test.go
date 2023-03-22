@@ -20,7 +20,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want AccessTokenVerifier
+		want *AccessTokenVerifier
 	}{
 		{
 			name: "simple",
@@ -28,9 +28,9 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 				issuer: tu.ValidIssuer,
 				keySet: tu.KeySet{},
 			},
-			want: &accessTokenVerifier{
-				issuer: tu.ValidIssuer,
-				keySet: tu.KeySet{},
+			want: &AccessTokenVerifier{
+				Issuer: tu.ValidIssuer,
+				KeySet: tu.KeySet{},
 			},
 		},
 		{
@@ -42,10 +42,10 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 					WithSupportedAccessTokenSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &accessTokenVerifier{
-				issuer:            tu.ValidIssuer,
-				keySet:            tu.KeySet{},
-				supportedSignAlgs: []string{"ABC", "DEF"},
+			want: &AccessTokenVerifier{
+				Issuer:            tu.ValidIssuer,
+				KeySet:            tu.KeySet{},
+				SupportedSignAlgs: []string{"ABC", "DEF"},
 			},
 		},
 	}
@@ -58,12 +58,12 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 }
 
 func TestVerifyAccessToken(t *testing.T) {
-	verifier := &accessTokenVerifier{
-		issuer:            tu.ValidIssuer,
-		maxAgeIAT:         2 * time.Minute,
-		offset:            time.Second,
-		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
-		keySet:            tu.KeySet{},
+	verifier := &AccessTokenVerifier{
+		Issuer:            tu.ValidIssuer,
+		MaxAgeIAT:         2 * time.Minute,
+		Offset:            time.Second,
+		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		KeySet:            tu.KeySet{},
 	}
 
 	tests := []struct {

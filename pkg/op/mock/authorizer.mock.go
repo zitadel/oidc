@@ -79,10 +79,10 @@ func (mr *MockAuthorizerMockRecorder) Encoder() *gomock.Call {
 }
 
 // IDTokenHintVerifier mocks base method.
-func (m *MockAuthorizer) IDTokenHintVerifier(arg0 context.Context) op.IDTokenHintVerifier {
+func (m *MockAuthorizer) IDTokenHintVerifier(arg0 context.Context) *op.IDTokenHintVerifier {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IDTokenHintVerifier", arg0)
-	ret0, _ := ret[0].(op.IDTokenHintVerifier)
+	ret0, _ := ret[0].(*op.IDTokenHintVerifier)
 	return ret0
 }
 

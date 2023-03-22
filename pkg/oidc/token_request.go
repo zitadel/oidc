@@ -192,7 +192,7 @@ func (j *JWTTokenRequest) GetExpiration() time.Time {
 
 // GetIssuedAt implements the Claims interface
 func (j *JWTTokenRequest) GetIssuedAt() time.Time {
-	return j.ExpiresAt.AsTime()
+	return j.IssuedAt.AsTime()
 }
 
 // GetNonce implements the Claims interface

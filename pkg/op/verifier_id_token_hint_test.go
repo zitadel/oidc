@@ -20,7 +20,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want IDTokenHintVerifier
+		want *IDTokenHintVerifier
 	}{
 		{
 			name: "simple",
@@ -28,9 +28,9 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 				issuer: tu.ValidIssuer,
 				keySet: tu.KeySet{},
 			},
-			want: &idTokenHintVerifier{
-				issuer: tu.ValidIssuer,
-				keySet: tu.KeySet{},
+			want: &IDTokenHintVerifier{
+				Issuer: tu.ValidIssuer,
+				KeySet: tu.KeySet{},
 			},
 		},
 		{
@@ -42,10 +42,10 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 					WithSupportedIDTokenHintSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &idTokenHintVerifier{
-				issuer:            tu.ValidIssuer,
-				keySet:            tu.KeySet{},
-				supportedSignAlgs: []string{"ABC", "DEF"},
+			want: &IDTokenHintVerifier{
+				Issuer:            tu.ValidIssuer,
+				KeySet:            tu.KeySet{},
+				SupportedSignAlgs: []string{"ABC", "DEF"},
 			},
 		},
 	}
@@ -58,14 +58,14 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 }
 
 func TestVerifyIDTokenHint(t *testing.T) {
-	verifier := &idTokenHintVerifier{
-		issuer:            tu.ValidIssuer,
-		maxAgeIAT:         2 * time.Minute,
-		offset:            time.Second,
-		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
-		maxAge:            2 * time.Minute,
-		acr:               tu.ACRVerify,
-		keySet:            tu.KeySet{},
+	verifier := &IDTokenHintVerifier{
+		Issuer:            tu.ValidIssuer,
+		MaxAgeIAT:         2 * time.Minute,
+		Offset:            time.Second,
+		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		MaxAge:            2 * time.Minute,
+		ACR:               tu.ACRVerify,
+		KeySet:            tu.KeySet{},
 	}
 
 	tests := []struct {

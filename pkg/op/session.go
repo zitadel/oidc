@@ -13,7 +13,7 @@ import (
 type SessionEnder interface {
 	Decoder() httphelper.Decoder
 	Storage() Storage
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
 }
 
