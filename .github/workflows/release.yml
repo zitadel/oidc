@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - 1.13.x
     tags-ignore:
       - '**'
   pull_request:
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        go: ['1.16', '1.17', '1.18', '1.19', '1.20']
+        go: ['1.18', '1.19', '1.20']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +32,7 @@ jobs:
   release:
     runs-on: ubuntu-20.04
     needs: [test]
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/v1' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
