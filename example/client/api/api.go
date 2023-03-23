@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -27,7 +28,7 @@ func main() {
 	port := os.Getenv("PORT")
 	issuer := os.Getenv("ISSUER")
 
-	provider, err := rs.NewResourceServerFromKeyFile(issuer, keyPath)
+	provider, err := rs.NewResourceServerFromKeyFile(context.TODO(), issuer, keyPath)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}

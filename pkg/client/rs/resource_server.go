@@ -42,14 +42,14 @@ func (r *resourceServer) AuthFn() (interface{}, error) {
 	return r.authFn()
 }
 
-func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, option ...Option) (ResourceServer, error) {
+func NewResourceServerClientCredentials(ctx context.Context, issuer, clientID, clientSecret string, option ...Option) (ResourceServer, error) {
 	authorizer := func() (interface{}, error) {
 		return httphelper.AuthorizeBasic(clientID, clientSecret), nil
 	}
-	return newResourceServer(issuer, authorizer, option...)
+	return newResourceServer(ctx, issuer, authorizer, option...)
 }
 
-func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, options ...Option) (ResourceServer, error) {
+func NewResourceServerJWTProfile(ctx context.Context, issuer, clientID, keyID string, key []byte, options ...Option) (ResourceServer, error) {
 	signer, err := client.NewSignerFromPrivateKeyByte(key, keyID)
 	if err != nil {
 		return nil, err
@@ -61,10 +61,10 @@ func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, opt
 		}
 		return client.ClientAssertionFormAuthorization(assertion), nil
 	}
-	return newResourceServer(issuer, authorizer, options...)
+	return newResourceServer(ctx, issuer, authorizer, options...)
 }
 
-func newResourceServer(issuer string, authorizer func() (interface{}, error), options ...Option) (*resourceServer, error) {
+func newResourceServer(ctx context.Context, issuer string, authorizer func() (interface{}, error), options ...Option) (*resourceServer, error) {
 	rs := &resourceServer{
 		issuer:     issuer,
 		httpClient: httphelper.DefaultHTTPClient,
@@ -73,7 +73,7 @@ func newResourceServer(issuer string, authorizer func() (interface{}, error), op
 		optFunc(rs)
 	}
 	if rs.introspectURL == "" || rs.tokenURL == "" {
-		config, err := client.Discover(rs.issuer, rs.httpClient)
+		config, err := client.Discover(ctx, rs.issuer, rs.httpClient)
 		if err != nil {
 			return nil, err
 		}
@@ -87,12 +87,12 @@ func newResourceServer(issuer string, authorizer func() (interface{}, error), op
 	return rs, nil
 }
 
-func NewResourceServerFromKeyFile(issuer, path string, options ...Option) (ResourceServer, error) {
+func NewResourceServerFromKeyFile(ctx context.Context, issuer, path string, options ...Option) (ResourceServer, error) {
 	c, err := client.ConfigFromKeyFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return NewResourceServerJWTProfile(issuer, c.ClientID, c.KeyID, []byte(c.Key), options...)
+	return NewResourceServerJWTProfile(ctx, issuer, c.ClientID, c.KeyID, []byte(c.Key), options...)
 }
 
 type Option func(*resourceServer)
@@ -117,7 +117,7 @@ func Introspect(ctx context.Context, rp ResourceServer, token string) (*oidc.Int
 	if err != nil {
 		return nil, err
 	}
-	req, err := httphelper.FormRequest(rp.IntrospectionURL(), &oidc.IntrospectionRequest{Token: token}, client.Encoder, authFn)
+	req, err := httphelper.FormRequest(ctx, rp.IntrospectionURL(), &oidc.IntrospectionRequest{Token: token}, client.Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
