@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -10,7 +11,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -26,6 +29,18 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
+
+var CTX context.Context
+
+func TestMain(m *testing.M) {
+	os.Exit(func() int {
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
+		defer cancel()
+		CTX, cancel = context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		return m.Run()
+	}())
+}
 
 func TestRelyingPartySession(t *testing.T) {
 	t.Log("------- start example OP ------")
@@ -45,7 +60,7 @@ func TestRelyingPartySession(t *testing.T) {
 
 	t.Log("------- refresh tokens  ------")
 
-	newTokens, err := rp.RefreshAccessToken(provider, refreshToken, "", "")
+	newTokens, err := rp.RefreshAccessToken(CTX, provider, refreshToken, "", "")
 	require.NoError(t, err, "refresh token")
 	assert.NotNil(t, newTokens, "access token")
 	t.Logf("new access token %s", newTokens.AccessToken)
@@ -56,7 +71,7 @@ func TestRelyingPartySession(t *testing.T) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(provider, idToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, idToken, "", "")
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -66,11 +81,11 @@ func TestRelyingPartySession(t *testing.T) {
 
 	t.Log("------ attempt refresh again (should fail) ------")
 	t.Log("trying original refresh token", refreshToken)
-	_, err = rp.RefreshAccessToken(provider, refreshToken, "", "")
+	_, err = rp.RefreshAccessToken(CTX, provider, refreshToken, "", "")
 	assert.Errorf(t, err, "refresh with original")
 	if newTokens.RefreshToken != "" {
 		t.Log("trying replacement refresh token", newTokens.RefreshToken)
-		_, err = rp.RefreshAccessToken(provider, newTokens.RefreshToken, "", "")
+		_, err = rp.RefreshAccessToken(CTX, provider, newTokens.RefreshToken, "", "")
 		assert.Errorf(t, err, "refresh with replacement")
 	}
 }
@@ -92,12 +107,13 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	t.Log("------- run authorization code flow ------")
 	provider, _, refreshToken, idToken := RunAuthorizationCodeFlow(t, opServer, clientID, clientSecret)
 
-	resourceServer, err := rs.NewResourceServerClientCredentials(opServer.URL, clientID, clientSecret)
+	resourceServer, err := rs.NewResourceServerClientCredentials(CTX, opServer.URL, clientID, clientSecret)
 	require.NoError(t, err, "new resource server")
 
 	t.Log("------- exchage refresh tokens (impersonation)  ------")
 
 	tokenExchangeResponse, err := tokenexchange.ExchangeToken(
+		CTX,
 		resourceServer,
 		refreshToken,
 		oidc.RefreshTokenType,
@@ -117,7 +133,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(provider, idToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, idToken, "", "")
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -128,6 +144,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	t.Log("------- attempt exchage again (should fail)  ------")
 
 	tokenExchangeResponse, err = tokenexchange.ExchangeToken(
+		CTX,
 		resourceServer,
 		refreshToken,
 		oidc.RefreshTokenType,
@@ -166,6 +183,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	key := []byte("test1234test1234")
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 	provider, err = rp.NewRelyingPartyOIDC(
+		CTX,
 		opServer.URL,
 		clientID,
 		clientSecret,

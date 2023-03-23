@@ -33,13 +33,13 @@ func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.
 // DeviceAuthorization starts a new Device Authorization flow as defined
 // in RFC 8628, section 3.1 and 3.2:
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.1
-func DeviceAuthorization(scopes []string, rp RelyingParty) (*oidc.DeviceAuthorizationResponse, error) {
+func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty) (*oidc.DeviceAuthorizationResponse, error) {
 	req, err := newDeviceClientCredentialsRequest(scopes, rp)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.CallDeviceAuthorizationEndpoint(req, rp)
+	return client.CallDeviceAuthorizationEndpoint(ctx, req, rp)
 }
 
 // DeviceAccessToken attempts to obtain tokens from a Device Authorization,
