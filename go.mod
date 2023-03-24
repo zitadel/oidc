@@ -7,13 +7,13 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.3.0
-	github.com/gorilla/schema v1.2.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/jeremija/gosubmit v0.2.7
 	github.com/muhlemmer/gu v0.3.1
 	github.com/rs/cors v1.8.3
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
+	github.com/zitadel/schema v1.3.0
 	golang.org/x/oauth2 v0.6.0
 	golang.org/x/text v0.8.0
 	gopkg.in/square/go-jose.v2 v2.6.0

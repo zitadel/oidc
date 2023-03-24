@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/schema"
+	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 )

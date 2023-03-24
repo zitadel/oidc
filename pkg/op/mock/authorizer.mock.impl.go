@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/schema"
+	"github.com/zitadel/schema"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"

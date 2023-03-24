@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/gorilla/schema"
 	"github.com/rs/cors"
+	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
