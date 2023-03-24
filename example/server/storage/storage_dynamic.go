@@ -196,14 +196,25 @@ func (s *multiStorage) AuthorizeClientIDSecret(ctx context.Context, clientID, cl
 	return storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
 }
 
-// SetUserinfoFromScopes implements the op.Storage interface
-// it will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
+// SetUserinfoFromScopes implements the op.Storage interface.
+// Provide an empty implementation and use SetUserinfoFromRequest instead.
 func (s *multiStorage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return err
 	}
 	return storage.SetUserinfoFromScopes(ctx, userinfo, userID, clientID, scopes)
+}
+
+// SetUserinfoFromRequests implements the op.CanSetUserinfoFromRequest interface.  In the
+// next major release, it will be required for op.Storage.
+// It will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
+func (s *multiStorage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, token op.IDTokenRequest, scopes []string) error {
+	storage, err := s.storageFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	return storage.SetUserinfoFromRequest(ctx, userinfo, token, scopes)
 }
 
 // SetUserinfoFromToken implements the op.Storage interface
