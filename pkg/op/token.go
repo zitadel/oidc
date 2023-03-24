@@ -190,6 +190,12 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		if err != nil {
 			return "", err
 		}
+		if fromRequest, ok := storage.(CanSetUserinfoFromRequest); ok {
+			err := fromRequest.SetUserinfoFromRequest(ctx, userInfo, request, scopes)
+			if err != nil {
+				return "", err
+			}
+		}
 		claims.SetUserInfo(userInfo)
 	}
 	if code != "" {
