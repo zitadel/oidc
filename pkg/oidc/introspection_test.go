@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +26,7 @@ func TestIntrospectionResponse_SetUserInfo(t *testing.T) {
 				UserInfoProfile: userInfoData.UserInfoProfile,
 				UserInfoEmail:   userInfoData.UserInfoEmail,
 				UserInfoPhone:   userInfoData.UserInfoPhone,
-				Claims:          userInfoData.Claims,
+				Claims:          gu.MapCopy(userInfoData.Claims),
 			},
 		},
 		{

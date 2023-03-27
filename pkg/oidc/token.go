@@ -158,7 +158,6 @@ func (t *IDTokenClaims) SetUserInfo(i *UserInfo) {
 	t.UserInfoEmail = i.UserInfoEmail
 	t.UserInfoPhone = i.UserInfoPhone
 	t.Address = i.Address
-
 	if t.Claims == nil {
 		t.Claims = make(map[string]any, len(t.Claims))
 	}
