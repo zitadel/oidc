@@ -9,7 +9,7 @@ import (
 // mergeAndMarshalClaims merges registered and the custom
 // claims map into a single JSON object.
 // Registered fields overwrite custom claims.
-func mergeAndMarshalClaims(registered any, claims map[string]any) ([]byte, error) {
+func mergeAndMarshalClaims(registered any, extraClaims map[string]any) ([]byte, error) {
 	// Use a buffer for memory re-use, instead off letting
 	// json allocate a new []byte for every step.
 	buf := new(bytes.Buffer)
@@ -19,16 +19,21 @@ func mergeAndMarshalClaims(registered any, claims map[string]any) ([]byte, error
 		return nil, fmt.Errorf("oidc registered claims: %w", err)
 	}
 
-	if len(claims) > 0 {
+	if len(extraClaims) > 0 {
+		merged := make(map[string]any)
+		for k, v := range extraClaims {
+			merged[k] = v
+		}
+
 		// Merge JSON data into custom claims.
 		// The full-read action by the decoder resets the buffer
 		// to zero len, while retaining underlaying cap.
-		if err := json.NewDecoder(buf).Decode(&claims); err != nil {
+		if err := json.NewDecoder(buf).Decode(&merged); err != nil {
 			return nil, fmt.Errorf("oidc registered claims: %w", err)
 		}
 
 		// Marshal the final result.
-		if err := json.NewEncoder(buf).Encode(claims); err != nil {
+		if err := json.NewEncoder(buf).Encode(merged); err != nil {
 			return nil, fmt.Errorf("oidc custom claims: %w", err)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -38,10 +39,12 @@ func Test_assert_regression(t *testing.T) {
 
 			assert.JSONEq(t, want, first)
 
+			target := reflect.New(reflect.TypeOf(obj).Elem()).Interface()
+
 			require.NoError(t,
-				json.Unmarshal([]byte(first), obj),
+				json.Unmarshal([]byte(first), target),
 			)
-			second, err := json.Marshal(obj)
+			second, err := json.Marshal(target)
 			require.NoError(t, err)
 
 			assert.JSONEq(t, want, string(second))
