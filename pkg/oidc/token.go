@@ -8,6 +8,7 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/muhlemmer/gu"
 	"github.com/zitadel/oidc/v2/pkg/crypto"
 )
 
@@ -157,6 +158,11 @@ func (t *IDTokenClaims) SetUserInfo(i *UserInfo) {
 	t.UserInfoEmail = i.UserInfoEmail
 	t.UserInfoPhone = i.UserInfoPhone
 	t.Address = i.Address
+
+	if t.Claims == nil {
+		t.Claims = make(map[string]any, len(t.Claims))
+	}
+	gu.MapMerge(i.Claims, t.Claims)
 }
 
 func (t *IDTokenClaims) GetUserInfo() *UserInfo {
@@ -166,7 +172,7 @@ func (t *IDTokenClaims) GetUserInfo() *UserInfo {
 		UserInfoEmail:   t.UserInfoEmail,
 		UserInfoPhone:   t.UserInfoPhone,
 		Address:         t.Address,
-		Claims:          t.Claims,
+		Claims:          gu.MapCopy(t.Claims),
 	}
 }
 
