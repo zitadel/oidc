@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
@@ -181,6 +182,7 @@ func TestIDTokenClaims_SetUserInfo(t *testing.T) {
 		UserInfoEmail:   userInfoData.UserInfoEmail,
 		UserInfoPhone:   userInfoData.UserInfoPhone,
 		Address:         userInfoData.Address,
+		Claims:          gu.MapCopy(userInfoData.Claims),
 	}
 
 	var got IDTokenClaims
