@@ -57,7 +57,7 @@ type Client interface {
 // glob version will be accepted. Glob URIs are only partially supported for native
 // clients: "http://" is not allowed except for loopback or in dev mode.
 //
-// Note that globbing / wildcards are not permitted by the oidc
+// Note that globbing / wildcards are not permitted by the OIDC
 // standard and implementing this interface can have security implications.
 // It is advised to only return a client of this type in rare cases,
 // such as DevMode for the client being enabled.
