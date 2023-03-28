@@ -418,7 +418,7 @@ func (s *Storage) GetClientByClientID(ctx context.Context, clientID string) (op.
 	if !ok {
 		return nil, fmt.Errorf("client not found")
 	}
-	return client, nil
+	return RedirectGlobsClient(client), nil
 }
 
 // AuthorizeClientIDSecret implements the op.Storage interface
