@@ -12,7 +12,6 @@ import (
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
 	confg := rp.OAuthConfig()
 	req := &oidc.ClientCredentialsRequest{
-		GrantType:    oidc.GrantTypeDeviceCode,
 		Scope:        scopes,
 		ClientID:     confg.ClientID,
 		ClientSecret: confg.ClientSecret,
