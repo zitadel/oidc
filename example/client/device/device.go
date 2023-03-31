@@ -45,7 +45,7 @@ func main() {
 	}
 
 	logrus.Info("starting device authorization flow")
-	resp, err := rp.DeviceAuthorization(ctx, scopes, provider)
+	resp, err := rp.DeviceAuthorization(ctx, scopes, provider, nil)
 	if err != nil {
 		logrus.Fatal(err)
 	}
