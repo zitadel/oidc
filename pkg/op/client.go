@@ -151,7 +151,7 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 
 	data := new(clientData)
-	if err = p.Decoder().Decode(data, r.PostForm); err != nil {
+	if err = p.Decoder().Decode(data, r.Form); err != nil {
 		return "", false, err
 	}
 
