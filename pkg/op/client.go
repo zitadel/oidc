@@ -156,16 +156,25 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 
 	JWTProfile, ok := p.(ClientJWTProfile)
-	if ok {
+	if ok && data.ClientAssertion != "" {
+		// if JWTProfile is supported and client sent an assertion, check it and use it as response
+		// regardless if it succeeded or failed
 		clientID, err = ClientJWTAuth(r.Context(), data.ClientAssertionParams, JWTProfile)
+		return clientID, err == nil, err
 	}
-	if !ok || errors.Is(err, ErrNoClientCredentials) {
-		clientID, err = ClientBasicAuth(r, p.Storage())
-	}
+	// try basic auth
+	clientID, err = ClientBasicAuth(r, p.Storage())
+	// if that succeeded, use it
 	if err == nil {
 		return clientID, true, nil
 	}
+	// if the client did not send a Basic Auth Header, ignore the `ErrNoClientCredentials`
+	// but return other errors immediately
+	if err != nil && !errors.Is(err, ErrNoClientCredentials) {
+		return "", false, err
+	}
 
+	// if the client did not authenticate (public clients) it must at least send a client_id
 	if data.ClientID == "" {
 		return "", false, oidc.ErrInvalidClient().WithParent(ErrMissingClientID)
 	}
