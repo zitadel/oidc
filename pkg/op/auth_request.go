@@ -68,7 +68,7 @@ func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, nil, err, authorizer.Encoder())
 		return
 	}
 	ctx := r.Context()
