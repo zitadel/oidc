@@ -20,10 +20,14 @@ type DeviceAuthorizationConfig struct {
 	Lifetime     time.Duration
 	PollInterval time.Duration
 
-	// Path on the current host, where the user must go to authorize the device.
-	// Hostname will the current issuer from the context.
+	// UserFormURL is the complete URL where the user must go to authorize the device.
+	// Deprecated: use UserFormPath instead.
 	UserFormURL string
-	UserCode    UserCodeConfig
+
+	// UserFormPath is the path where the user must go to authorize the device.
+	// The hostname for the URL is taken from the request by IssuerFromContext.
+	UserFormPath string
+	UserCode     UserCodeConfig
 }
 
 type UserCodeConfig struct {
@@ -86,11 +90,17 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 		return err
 	}
 
-	verification, err := url.Parse(IssuerFromContext(r.Context()))
-	if err != nil {
-		return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+	var verification *url.URL
+	if config.UserFormURL != "" {
+		if verification, err = url.Parse(config.UserFormURL); err != nil {
+			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for device user form")
+		}
+	} else {
+		if verification, err = url.Parse(IssuerFromContext(r.Context())); err != nil {
+			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+		}
+		verification.Path = config.UserFormPath
 	}
-	verification.Path = config.UserFormURL
 
 	response := &oidc.DeviceAuthorizationResponse{
 		DeviceCode:      deviceCode,
