@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,7 +19,14 @@ import (
 type DeviceAuthorizationConfig struct {
 	Lifetime     time.Duration
 	PollInterval time.Duration
-	UserFormURL  string // the URL where the user must go to authorize the device
+
+	// UserFormURL is the complete URL where the user must go to authorize the device.
+	// Deprecated: use UserFormPath instead.
+	UserFormURL string
+
+	// UserFormPath is the path where the user must go to authorize the device.
+	// The hostname for the URL is taken from the request by IssuerFromContext.
+	UserFormPath string
 	UserCode     UserCodeConfig
 }
 
@@ -82,15 +90,28 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 		return err
 	}
 
+	var verification *url.URL
+	if config.UserFormURL != "" {
+		if verification, err = url.Parse(config.UserFormURL); err != nil {
+			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for device user form")
+		}
+	} else {
+		if verification, err = url.Parse(IssuerFromContext(r.Context())); err != nil {
+			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+		}
+		verification.Path = config.UserFormPath
+	}
+
 	response := &oidc.DeviceAuthorizationResponse{
 		DeviceCode:      deviceCode,
 		UserCode:        userCode,
-		VerificationURI: config.UserFormURL,
+		VerificationURI: verification.String(),
 		ExpiresIn:       int(config.Lifetime / time.Second),
 		Interval:        int(config.PollInterval / time.Second),
 	}
 
-	response.VerificationURIComplete = fmt.Sprintf("%s?user_code=%s", config.UserFormURL, userCode)
+	verification.RawQuery = "user_code=" + userCode
+	response.VerificationURIComplete = verification.String()
 
 	httphelper.MarshalJSON(w, response)
 	return nil

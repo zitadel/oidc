@@ -20,15 +20,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-var testProvider op.OpenIDProvider
-
-const (
-	testIssuer    = "https://localhost:9998/"
-	pathLoggedOut = "/logged-out"
-)
-
-func init() {
-	config := &op.Config{
+var (
+	testProvider op.OpenIDProvider
+	testConfig   = &op.Config{
 		CryptoKey:                sha256.Sum256([]byte("test")),
 		DefaultLogoutRedirectURI: pathLoggedOut,
 		CodeMethodS256:           true,
@@ -40,24 +34,35 @@ func init() {
 		DeviceAuthorization: op.DeviceAuthorizationConfig{
 			Lifetime:     5 * time.Minute,
 			PollInterval: 5 * time.Second,
-			UserFormURL:  testIssuer + "device",
+			UserFormPath: "/device",
 			UserCode:     op.UserCodeBase20,
 		},
 	}
+)
 
+const (
+	testIssuer    = "https://localhost:9998/"
+	pathLoggedOut = "/logged-out"
+)
+
+func init() {
 	storage.RegisterClients(
 		storage.NativeClient("native"),
 		storage.WebClient("web", "secret", "https://example.com"),
 		storage.WebClient("api", "secret"),
 	)
 
-	var err error
-	testProvider, err = op.NewOpenIDProvider(testIssuer, config,
+	testProvider = newTestProvider(testConfig)
+}
+
+func newTestProvider(config *op.Config) op.OpenIDProvider {
+	provider, err := op.NewOpenIDProvider(testIssuer, config,
 		storage.NewStorage(storage.NewUserStore(testIssuer)), op.WithAllowInsecure(),
 	)
 	if err != nil {
 		panic(err)
 	}
+	return provider
 }
 
 type routesTestStorage interface {

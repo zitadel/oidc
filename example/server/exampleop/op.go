@@ -107,7 +107,7 @@ func newOP(storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, 
 		DeviceAuthorization: op.DeviceAuthorizationConfig{
 			Lifetime:     5 * time.Minute,
 			PollInterval: 5 * time.Second,
-			UserFormURL:  issuer + "device",
+			UserFormPath: "/device",
 			UserCode:     op.UserCodeBase20,
 		},
 	}
