@@ -30,6 +30,7 @@ func Test_deviceAuthorizationHandler(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/", body)
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r = r.WithContext(op.ContextWithIssuer(r.Context(), testIssuer))
 
 	w := httptest.NewRecorder()
 

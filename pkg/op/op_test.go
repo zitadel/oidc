@@ -40,7 +40,7 @@ func init() {
 		DeviceAuthorization: op.DeviceAuthorizationConfig{
 			Lifetime:     5 * time.Minute,
 			PollInterval: 5 * time.Second,
-			UserFormURL:  testIssuer + "device",
+			UserFormURL:  "/device",
 			UserCode:     op.UserCodeBase20,
 		},
 	}
