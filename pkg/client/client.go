@@ -61,12 +61,18 @@ func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndp
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
 		return nil, err
 	}
-	return &oauth2.Token{
+	token := &oauth2.Token{
 		AccessToken:  tokenRes.AccessToken,
 		TokenType:    tokenRes.TokenType,
 		RefreshToken: tokenRes.RefreshToken,
 		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
-	}, nil
+	}
+	if tokenRes.IDToken != "" {
+		token = token.WithExtra(map[string]any{
+			"id_token": tokenRes.IDToken,
+		})
+	}
+	return token, nil
 }
 
 type EndSessionCaller interface {

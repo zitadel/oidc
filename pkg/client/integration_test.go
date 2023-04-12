@@ -53,6 +53,7 @@ func TestRelyingPartySession(t *testing.T) {
 	t.Logf("new token type %s", newTokens.TokenType)
 	t.Logf("new expiry %s", newTokens.Expiry.Format(time.RFC3339))
 	require.NotEmpty(t, newTokens.AccessToken, "new accessToken")
+	assert.NotEmpty(t, newTokens.Extra("id_token"), "new idToken")
 
 	t.Log("------ end session (logout) ------")
 
@@ -141,7 +142,6 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	require.Error(t, err, "refresh token")
 	assert.Contains(t, err.Error(), "subject_token is invalid")
 	require.Nil(t, tokenExchangeResponse, "token exchange response")
-
 }
 
 func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID, clientSecret string) (provider rp.RelyingParty, accessToken, refreshToken, idToken string) {
