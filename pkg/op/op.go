@@ -476,6 +476,16 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 	}
 }
 
+func WithCustomDeviceAuthorizationEndpoint(endpoint Endpoint) Option {
+	return func(o *Provider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.DeviceAuthorization = endpoint
+		return nil
+	}
+}
+
 func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
 	return func(o *Provider) error {
 		o.endpoints.Authorization = auth
