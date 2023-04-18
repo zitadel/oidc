@@ -181,6 +181,9 @@ func TestIDTokenClaims_SetUserInfo(t *testing.T) {
 		UserInfoEmail:   userInfoData.UserInfoEmail,
 		UserInfoPhone:   userInfoData.UserInfoPhone,
 		Address:         userInfoData.Address,
+		Claims: map[string]interface{}{
+			"foo": "bar",
+		},
 	}
 
 	var got IDTokenClaims
@@ -223,5 +226,18 @@ func TestNewIDTokenClaims(t *testing.T) {
 	// Make equal not fail on dynamic timestamp
 	got.IssuedAt = 0
 
+	assert.Equal(t, want, got)
+}
+
+func TestIDTokenClaims_GetUserInfo(t *testing.T) {
+	want := &UserInfo{
+		Subject:         idTokenData.Subject,
+		UserInfoProfile: idTokenData.UserInfoProfile,
+		UserInfoEmail:   idTokenData.UserInfoEmail,
+		UserInfoPhone:   idTokenData.UserInfoPhone,
+		Address:         idTokenData.Address,
+		Claims:          idTokenData.Claims,
+	}
+	got := idTokenData.GetUserInfo()
 	assert.Equal(t, want, got)
 }

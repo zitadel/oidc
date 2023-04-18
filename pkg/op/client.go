@@ -56,6 +56,12 @@ type Client interface {
 // interpretation. Redirect URIs that match either the non-glob version or the
 // glob version will be accepted. Glob URIs are only partially supported for native
 // clients: "http://" is not allowed except for loopback or in dev mode.
+//
+// Note that globbing / wildcards are not permitted by the OIDC
+// standard and implementing this interface can have security implications.
+// It is advised to only return a client of this type in rare cases,
+// such as DevMode for the client being enabled.
+// https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type HasRedirectGlobs interface {
 	RedirectURIGlobs() []string
 	PostLogoutRedirectURIGlobs() []string
@@ -145,21 +151,30 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 
 	data := new(clientData)
-	if err = p.Decoder().Decode(data, r.PostForm); err != nil {
+	if err = p.Decoder().Decode(data, r.Form); err != nil {
 		return "", false, err
 	}
 
 	JWTProfile, ok := p.(ClientJWTProfile)
-	if ok {
+	if ok && data.ClientAssertion != "" {
+		// if JWTProfile is supported and client sent an assertion, check it and use it as response
+		// regardless if it succeeded or failed
 		clientID, err = ClientJWTAuth(r.Context(), data.ClientAssertionParams, JWTProfile)
+		return clientID, err == nil, err
 	}
-	if !ok || errors.Is(err, ErrNoClientCredentials) {
-		clientID, err = ClientBasicAuth(r, p.Storage())
-	}
+	// try basic auth
+	clientID, err = ClientBasicAuth(r, p.Storage())
+	// if that succeeded, use it
 	if err == nil {
 		return clientID, true, nil
 	}
+	// if the client did not send a Basic Auth Header, ignore the `ErrNoClientCredentials`
+	// but return other errors immediately
+	if err != nil && !errors.Is(err, ErrNoClientCredentials) {
+		return "", false, err
+	}
 
+	// if the client did not authenticate (public clients) it must at least send a client_id
 	if data.ClientID == "" {
 		return "", false, oidc.ErrInvalidClient().WithParent(ErrMissingClientID)
 	}

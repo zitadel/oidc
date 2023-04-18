@@ -418,7 +418,7 @@ func (s *Storage) GetClientByClientID(ctx context.Context, clientID string) (op.
 	if !ok {
 		return nil, fmt.Errorf("client not found")
 	}
-	return client, nil
+	return RedirectGlobsClient(client), nil
 }
 
 // AuthorizeClientIDSecret implements the op.Storage interface
@@ -438,10 +438,17 @@ func (s *Storage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientS
 	return nil
 }
 
-// SetUserinfoFromScopes implements the op.Storage interface
-// it will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
+// SetUserinfoFromScopes implements the op.Storage interface.
+// Provide an empty implementation and use SetUserinfoFromRequest instead.
 func (s *Storage) SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error {
-	return s.setUserinfo(ctx, userinfo, userID, clientID, scopes)
+	return nil
+}
+
+// SetUserinfoFromRequests implements the op.CanSetUserinfoFromRequest interface.  In the
+// next major release, it will be required for op.Storage.
+// It will be called for the creation of an id_token, so we'll just pass it to the private function without any further check
+func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, token op.IDTokenRequest, scopes []string) error {
+	return s.setUserinfo(ctx, userinfo, token.GetSubject(), token.GetClientID(), scopes)
 }
 
 // SetUserinfoFromToken implements the op.Storage interface

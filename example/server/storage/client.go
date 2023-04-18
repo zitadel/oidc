@@ -32,6 +32,8 @@ type Client struct {
 	devMode                        bool
 	idTokenUserinfoClaimsAssertion bool
 	clockSkew                      time.Duration
+	postLogoutRedirectURIGlobs     []string
+	redirectURIGlobs               []string
 }
 
 // GetID must return the client_id
@@ -44,19 +46,9 @@ func (c *Client) RedirectURIs() []string {
 	return c.redirectURIs
 }
 
-// RedirectURIGlobs provide wildcarding for additional valid redirects
-func (c *Client) RedirectURIGlobs() []string {
-	return nil
-}
-
 // PostLogoutRedirectURIs must return the registered post_logout_redirect_uris for sign-outs
 func (c *Client) PostLogoutRedirectURIs() []string {
 	return []string{}
-}
-
-// PostLogoutRedirectURIGlobs provide extra wildcarding for additional valid redirects
-func (c *Client) PostLogoutRedirectURIGlobs() []string {
-	return nil
 }
 
 // ApplicationType must return the type of the client (app, native, user agent)
@@ -199,4 +191,27 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
 	}
+}
+
+type hasRedirectGlobs struct {
+	*Client
+}
+
+// RedirectURIGlobs provide wildcarding for additional valid redirects
+func (c hasRedirectGlobs) RedirectURIGlobs() []string {
+	return c.redirectURIGlobs
+}
+
+// PostLogoutRedirectURIGlobs provide extra wildcarding for additional valid redirects
+func (c hasRedirectGlobs) PostLogoutRedirectURIGlobs() []string {
+	return c.postLogoutRedirectURIGlobs
+}
+
+// RedirectGlobsClient wraps the client in a op.HasRedirectGlobs
+// only if DevMode is enabled.
+func RedirectGlobsClient(client *Client) op.Client {
+	if client.devMode {
+		return hasRedirectGlobs{client}
+	}
+	return client
 }
