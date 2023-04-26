@@ -6,13 +6,13 @@ At ZITADEL we are extremely grateful for security aware people that disclose vul
 
 We currently support the following version of the OIDC framework:
 
-| Version  | Supported          | Branch      | Details                               |
-| -------- | ------------------ | ----------- | ------------------------------------- |
-| 0.x.x    | :x:                |             | not maintained                        |
-| <1.13    | :x:                |             | not maintained                        |
+| Version  | Supported          | Branch      | Details                              |
+| -------- | ------------------ | ----------- | ------------------------------------ |
+| 0.x.x    | :x:                |             | not maintained                       |
+| <1.13    | :x:                |             | not maintained                       |
 | 1.13.x   | :lock: :warning:   | [1.13.x][1] | security only, [community effort][2] |
-| 2.x.x    | :heavy_check_mark: | [main][3]   | supported                             |
-| 3.0.0-xx | :white_check_mark: | [next][5] | [developement branch][4]              |
+| 2.x.x    | :heavy_check_mark: | [main][3]   | supported                            |
+| 3.0.0-xx | :white_check_mark: | [next][4]   | [developement branch][5]             |
 
 [1]: https://github.com/zitadel/oidc/tree/1.13.x
 [2]: https://github.com/zitadel/oidc/discussions/378
