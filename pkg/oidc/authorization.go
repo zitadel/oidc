@@ -60,7 +60,7 @@ const (
 )
 
 // AuthRequest according to:
-//https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+// https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {
 	Scopes       SpaceDelimitedArray `json:"scope" schema:"scope"`
 	ResponseType ResponseType        `json:"response_type" schema:"response_type"`
@@ -99,4 +99,9 @@ func (a *AuthRequest) GetResponseType() ResponseType {
 // GetState returns the optional state value for the ErrAuthRequest interface
 func (a *AuthRequest) GetState() string {
 	return a.State
+}
+
+// GetResponseMode returns the optional ResponseMode
+func (a *AuthRequest) GetResponseMode() ResponseMode {
+	return a.ResponseMode
 }

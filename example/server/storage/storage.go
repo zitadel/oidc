@@ -28,8 +28,10 @@ var serviceKey1 = &rsa.PublicKey{
 	E: 65537,
 }
 
-var _ op.Storage = &Storage{}
-var _ op.ClientCredentialsStorage = &Storage{}
+var (
+	_ op.Storage                  = &Storage{}
+	_ op.ClientCredentialsStorage = &Storage{}
+)
 
 // storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
@@ -166,6 +168,12 @@ func (s *Storage) CheckUsernamePasswordSimple(username, password string) error {
 func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, userID string) (op.AuthRequest, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	if len(authReq.Prompt) == 1 && authReq.Prompt[0] == "none" {
+		// With prompt=none, there is no way for the user to log in
+		// so return error right away.
+		return nil, oidc.ErrLoginRequired()
+	}
 
 	// typically, you'll fill your storage / storage model with the information of the passed object
 	request := authRequestToInternal(authReq, userID)

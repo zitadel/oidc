@@ -569,6 +569,11 @@ func WithPromptURLParam(prompt ...string) URLParamOpt {
 	return withPrompt(prompt...)
 }
 
+// WithResponseModeURLParam sets the `response_mode` parameter in a URL.
+func WithResponseModeURLParam(mode oidc.ResponseMode) URLParamOpt {
+	return withURLParam("response_mode", string(mode))
+}
+
 type AuthURLOpt func() []oauth2.AuthCodeOption
 
 // WithCodeChallenge sets the `code_challenge` params in the auth request
