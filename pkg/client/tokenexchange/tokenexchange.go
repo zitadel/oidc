@@ -1,12 +1,13 @@
 package tokenexchange
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
-	"github.com/zitadel/oidc/v2/pkg/client"
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/client"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 type TokenExchanger interface {
@@ -21,18 +22,18 @@ type OAuthTokenExchange struct {
 	authFn        func() (interface{}, error)
 }
 
-func NewTokenExchanger(issuer string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
-	return newOAuthTokenExchange(issuer, nil, options...)
+func NewTokenExchanger(ctx context.Context, issuer string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
+	return newOAuthTokenExchange(ctx, issuer, nil, options...)
 }
 
-func NewTokenExchangerClientCredentials(issuer, clientID, clientSecret string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
+func NewTokenExchangerClientCredentials(ctx context.Context, issuer, clientID, clientSecret string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
 	authorizer := func() (interface{}, error) {
 		return httphelper.AuthorizeBasic(clientID, clientSecret), nil
 	}
-	return newOAuthTokenExchange(issuer, authorizer, options...)
+	return newOAuthTokenExchange(ctx, issuer, authorizer, options...)
 }
 
-func newOAuthTokenExchange(issuer string, authorizer func() (interface{}, error), options ...func(source *OAuthTokenExchange)) (*OAuthTokenExchange, error) {
+func newOAuthTokenExchange(ctx context.Context, issuer string, authorizer func() (interface{}, error), options ...func(source *OAuthTokenExchange)) (*OAuthTokenExchange, error) {
 	te := &OAuthTokenExchange{
 		httpClient: httphelper.DefaultHTTPClient,
 	}
@@ -41,7 +42,7 @@ func newOAuthTokenExchange(issuer string, authorizer func() (interface{}, error)
 	}
 
 	if te.tokenEndpoint == "" {
-		config, err := client.Discover(issuer, te.httpClient)
+		config, err := client.Discover(ctx, issuer, te.httpClient)
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +90,7 @@ func (te *OAuthTokenExchange) AuthFn() (interface{}, error) {
 // ExchangeToken sends a token exchange request (rfc 8693) to te's token endpoint.
 // SubjectToken and SubjectTokenType are required parameters.
 func ExchangeToken(
+	ctx context.Context,
 	te TokenExchanger,
 	SubjectToken string,
 	SubjectTokenType oidc.TokenType,
@@ -123,5 +125,5 @@ func ExchangeToken(
 		RequestedTokenType: RequestedTokenType,
 	}
 
-	return client.CallTokenExchangeEndpoint(request, authFn, te)
+	return client.CallTokenExchangeEndpoint(ctx, request, authFn, te)
 }

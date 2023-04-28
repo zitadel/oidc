@@ -6,9 +6,9 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 const (
@@ -43,7 +43,7 @@ var (
 
 type login struct {
 	authenticate authenticate
-	router       *mux.Router
+	router       chi.Router
 	callback     func(context.Context, string) string
 }
 
@@ -57,9 +57,9 @@ func NewLogin(authenticate authenticate, callback func(context.Context, string) 
 }
 
 func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
-	l.router = mux.NewRouter()
-	l.router.Path("/username").Methods("GET").HandlerFunc(l.loginHandler)
-	l.router.Path("/username").Methods("POST").HandlerFunc(issuerInterceptor.HandlerFunc(l.checkLoginHandler))
+	l.router = chi.NewRouter()
+	l.router.Get("/username", l.loginHandler)
+	l.router.With(issuerInterceptor.Handler).Post("/username", l.checkLoginHandler)
 }
 
 type authenticate interface {

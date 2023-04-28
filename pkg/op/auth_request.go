@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,11 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
-
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	str "github.com/zitadel/oidc/v2/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	str "github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type AuthRequest interface {
@@ -39,7 +38,7 @@ type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
 }
@@ -48,7 +47,7 @@ type Authorizer interface {
 // implementing its own validation mechanism for the auth request
 type AuthorizeValidator interface {
 	Authorizer
-	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, IDTokenHintVerifier) (string, error)
+	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, *IDTokenHintVerifier) (string, error)
 }
 
 func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
@@ -205,7 +204,7 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 }
 
 // ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
-func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (sub string, err error) {
+func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return "", err
@@ -385,7 +384,7 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 
 // ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)
 // and returns the `sub` claim
-func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier IDTokenHintVerifier) (string, error) {
+func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifier *IDTokenHintVerifier) (string, error) {
 	if idTokenHint == "" {
 		return "", nil
 	}
@@ -405,13 +404,11 @@ func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *
 
 // AuthorizeCallback handles the callback after authentication in the Login UI
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	params := mux.Vars(r)
-	id := params["id"]
-	if id == "" {
-		AuthRequestError(w, r, nil, fmt.Errorf("auth request callback is missing id"), authorizer.Encoder())
+	id, err := ParseAuthorizeCallbackRequest(r)
+	if err != nil {
+		AuthRequestError(w, r, nil, err, authorizer.Encoder())
 		return
 	}
-
 	authReq, err := authorizer.Storage().AuthRequestByID(r.Context(), id)
 	if err != nil {
 		AuthRequestError(w, r, nil, err, authorizer.Encoder())
@@ -424,6 +421,17 @@ func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Author
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)
+}
+
+func ParseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
+	if err = r.ParseForm(); err != nil {
+		return "", fmt.Errorf("cannot parse form: %w", err)
+	}
+	id = r.Form.Get("id")
+	if id == "" {
+		return "", errors.New("auth request callback is missing id")
+	}
+	return id, nil
 }
 
 // AuthResponse creates the successful authentication response (either code or tokens)

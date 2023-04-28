@@ -14,9 +14,9 @@ import (
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v2/example/server/storage"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/text/language"
 )
 
@@ -370,7 +370,7 @@ func TestRoutes(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			testProvider.HttpHandler().ServeHTTP(rec, req)
+			testProvider.ServeHTTP(rec, req)
 
 			resp := rec.Result()
 			require.NoError(t, err)

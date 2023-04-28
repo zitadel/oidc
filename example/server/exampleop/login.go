@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 )
 
 type login struct {
 	authenticate authenticate
-	router       *mux.Router
+	router       chi.Router
 	callback     func(context.Context, string) string
 }
 
@@ -24,9 +24,9 @@ func NewLogin(authenticate authenticate, callback func(context.Context, string) 
 }
 
 func (l *login) createRouter() {
-	l.router = mux.NewRouter()
-	l.router.Path("/username").Methods("GET").HandlerFunc(l.loginHandler)
-	l.router.Path("/username").Methods("POST").HandlerFunc(l.checkLoginHandler)
+	l.router = chi.NewRouter()
+	l.router.Get("/username", l.loginHandler)
+	l.router.Post("/username", l.checkLoginHandler)
 }
 
 type authenticate interface {

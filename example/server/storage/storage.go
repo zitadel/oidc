@@ -14,8 +14,8 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 // serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant

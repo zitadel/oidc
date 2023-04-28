@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 type Exchanger interface {
@@ -20,8 +20,8 @@ type Exchanger interface {
 	GrantTypeJWTAuthorizationSupported() bool
 	GrantTypeClientCredentialsSupported() bool
 	GrantTypeDeviceCodeSupported() bool
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {

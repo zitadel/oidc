@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v2/pkg/client/profile"
+	"github.com/zitadel/oidc/v3/pkg/client/profile"
 )
 
 var client = http.DefaultClient
@@ -25,7 +25,7 @@ func main() {
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	if keyPath != "" {
-		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(issuer, keyPath, scopes)
+		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(context.TODO(), issuer, keyPath, scopes)
 		if err != nil {
 			logrus.Fatalf("error creating token source %s", err.Error())
 		}
@@ -76,7 +76,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			ts, err := profile.NewJWTProfileTokenSourceFromKeyFileData(issuer, key, scopes)
+			ts, err := profile.NewJWTProfileTokenSourceFromKeyFileData(context.TODO(), issuer, key, scopes)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

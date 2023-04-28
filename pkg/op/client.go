@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 //go:generate go get github.com/dmarkham/enumer
@@ -87,7 +87,7 @@ var (
 )
 
 type ClientJWTProfile interface {
-	JWTProfileVerifier(context.Context) JWTProfileVerifier
+	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
 func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier ClientJWTProfile) (clientID string, err error) {

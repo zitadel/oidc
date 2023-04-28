@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
+	"github.com/go-chi/chi"
 	"github.com/rs/cors"
+	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 const (
@@ -68,29 +68,32 @@ var (
 )
 
 type OpenIDProvider interface {
+	http.Handler
 	Configuration
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
+
+	// Deprecated: Provider now implements http.Handler directly.
 	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
 
-func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router {
-	router := mux.NewRouter()
+func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
+	router := chi.NewRouter()
 	router.Use(cors.New(defaultCORSOptions).Handler)
 	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Storage()))
 	router.HandleFunc(o.AuthorizationEndpoint().Relative(), authorizeHandler(o))
-	router.NewRoute().Path(authCallbackPath(o)).Queries("id", "{id}").HandlerFunc(authorizeCallbackHandler(o))
+	router.HandleFunc(authCallbackPath(o), authorizeCallbackHandler(o))
 	router.HandleFunc(o.TokenEndpoint().Relative(), tokenHandler(o))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
@@ -184,7 +187,7 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 		return nil, err
 	}
 
-	o.httpHandler = CreateRouter(o, o.interceptors...)
+	o.Handler = CreateRouter(o, o.interceptors...)
 
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
@@ -200,6 +203,7 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 }
 
 type Provider struct {
+	http.Handler
 	config                  *Config
 	issuer                  IssuerFromRequest
 	insecure                bool
@@ -207,7 +211,6 @@ type Provider struct {
 	storage                 Storage
 	keySet                  *openIDKeySet
 	crypto                  Crypto
-	httpHandler             http.Handler
 	decoder                 *schema.Decoder
 	encoder                 *schema.Encoder
 	interceptors            []HttpInterceptor
@@ -339,15 +342,15 @@ func (o *Provider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 
-func (o *Provider) IDTokenHintVerifier(ctx context.Context) IDTokenHintVerifier {
+func (o *Provider) IDTokenHintVerifier(ctx context.Context) *IDTokenHintVerifier {
 	return NewIDTokenHintVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 }
 
-func (o *Provider) JWTProfileVerifier(ctx context.Context) JWTProfileVerifier {
+func (o *Provider) JWTProfileVerifier(ctx context.Context) *JWTProfileVerifier {
 	return NewJWTProfileVerifier(o.Storage(), IssuerFromContext(ctx), 1*time.Hour, time.Second)
 }
 
-func (o *Provider) AccessTokenVerifier(ctx context.Context) AccessTokenVerifier {
+func (o *Provider) AccessTokenVerifier(ctx context.Context) *AccessTokenVerifier {
 	return NewAccessTokenVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 }
 
@@ -372,8 +375,9 @@ func (o *Provider) Probes() []ProbesFn {
 	}
 }
 
+// Deprecated: Provider now implements http.Handler directly.
 func (o *Provider) HttpHandler() http.Handler {
-	return o.httpHandler
+	return o
 }
 
 type openIDKeySet struct {

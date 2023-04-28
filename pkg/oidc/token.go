@@ -8,8 +8,7 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/muhlemmer/gu"
-	"github.com/zitadel/oidc/v2/pkg/crypto"
+	"github.com/zitadel/oidc/v3/pkg/crypto"
 )
 
 const (

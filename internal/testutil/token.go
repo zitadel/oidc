@@ -8,7 +8,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/muhlemmer/gu"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -17,7 +18,7 @@ type KeySet struct{}
 
 // VerifySignature implments op.KeySet.
 func (KeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
-	if ctx.Err() != nil {
+	if err = ctx.Err(); err != nil {
 		return nil, err
 	}
 
@@ -43,6 +44,16 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type JWTProfileKeyStorage struct{}
+
+func (JWTProfileKeyStorage) GetKeyByIDAndClientID(ctx context.Context, keyID string, clientID string) (*jose.JSONWebKey, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return gu.Ptr(WebKey.Public()), nil
 }
 
 func signEncodeTokenClaims(claims any) string {
@@ -106,6 +117,25 @@ func NewAccessToken(issuer, subject string, audience []string, expiration time.T
 	return NewAccessTokenCustom(issuer, subject, audience, expiration, jwtid, clientID, skew, nil)
 }
 
+func NewJWTProfileAssertion(issuer, clientID string, audience []string, issuedAt, expiration time.Time) (string, *oidc.JWTTokenRequest) {
+	req := &oidc.JWTTokenRequest{
+		Issuer:    issuer,
+		Subject:   clientID,
+		Audience:  audience,
+		ExpiresAt: oidc.FromTime(expiration),
+		IssuedAt:  oidc.FromTime(issuedAt),
+	}
+	// make sure the private claim map is set correctly
+	data, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	if err = json.Unmarshal(data, req); err != nil {
+		panic(err)
+	}
+	return signEncodeTokenClaims(req), req
+}
+
 const InvalidSignatureToken = `eyJhbGciOiJQUzUxMiJ9.eyJpc3MiOiJsb2NhbC5jb20iLCJzdWIiOiJ0aW1AbG9jYWwuY29tIiwiYXVkIjpbInVuaXQiLCJ0ZXN0IiwiNTU1NjY2Il0sImV4cCI6MTY3Nzg0MDQzMSwiaWF0IjoxNjc3ODQwMzcwLCJhdXRoX3RpbWUiOjE2Nzc4NDAzMTAsIm5vbmNlIjoiMTIzNDUiLCJhY3IiOiJzb21ldGhpbmciLCJhbXIiOlsiZm9vIiwiYmFyIl0sImF6cCI6IjU1NTY2NiJ9.DtZmvVkuE4Hw48ijBMhRJbxEWCr_WEYuPQBMY73J9TP6MmfeNFkjVJf4nh4omjB9gVLnQ-xhEkNOe62FS5P0BB2VOxPuHZUj34dNspCgG3h98fGxyiMb5vlIYAHDF9T-w_LntlYItohv63MmdYR-hPpAqjXE7KOfErf-wUDGE9R3bfiQ4HpTdyFJB1nsToYrZ9lhP2mzjTCTs58ckZfQ28DFHn_lfHWpR4rJBgvLx7IH4rMrUayr09Ap-PxQLbv0lYMtmgG1z3JK8MXnuYR0UJdZnEIezOzUTlThhCXB-nvuAXYjYxZZTR0FtlgZUHhIpYK0V2abf_Q_Or36akNCUg`
 
 // These variables always result in a valid token
@@ -135,6 +165,10 @@ func ValidIDToken() (string, *oidc.IDTokenClaims) {
 // verification within the same test run.
 func ValidAccessToken() (string, *oidc.AccessTokenClaims) {
 	return NewAccessToken(ValidIssuer, ValidSubject, ValidAudience, ValidExpiration, ValidJWTID, ValidClientID, ValidSkew)
+}
+
+func ValidJWTProfileAssertion() (string, *oidc.JWTTokenRequest) {
+	return NewJWTProfileAssertion(ValidClientID, ValidClientID, []string{ValidIssuer}, time.Now(), ValidExpiration)
 }
 
 // ACRVerify is a oidc.ACRVerifier func.

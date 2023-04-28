@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/schema"
+	"github.com/zitadel/schema"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func NewAuthorizer(t *testing.T) op.Authorizer {
@@ -49,7 +49,7 @@ func ExpectEncoder(a op.Authorizer) {
 func ExpectVerifier(a op.Authorizer, t *testing.T) {
 	mockA := a.(*MockAuthorizer)
 	mockA.EXPECT().IDTokenHintVerifier(gomock.Any()).DoAndReturn(
-		func() op.IDTokenHintVerifier {
+		func() *op.IDTokenHintVerifier {
 			return op.NewIDTokenHintVerifier("", nil)
 		})
 }

@@ -2,69 +2,24 @@ package op
 
 import (
 	"context"
-	"time"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-type IDTokenHintVerifier interface {
-	oidc.Verifier
-	SupportedSignAlgs() []string
-	KeySet() oidc.KeySet
-	ACR() oidc.ACRVerifier
-	MaxAge() time.Duration
-}
+type IDTokenHintVerifier oidc.Verifier
 
-type idTokenHintVerifier struct {
-	issuer            string
-	maxAgeIAT         time.Duration
-	offset            time.Duration
-	supportedSignAlgs []string
-	maxAge            time.Duration
-	acr               oidc.ACRVerifier
-	keySet            oidc.KeySet
-}
-
-func (i *idTokenHintVerifier) Issuer() string {
-	return i.issuer
-}
-
-func (i *idTokenHintVerifier) MaxAgeIAT() time.Duration {
-	return i.maxAgeIAT
-}
-
-func (i *idTokenHintVerifier) Offset() time.Duration {
-	return i.offset
-}
-
-func (i *idTokenHintVerifier) SupportedSignAlgs() []string {
-	return i.supportedSignAlgs
-}
-
-func (i *idTokenHintVerifier) KeySet() oidc.KeySet {
-	return i.keySet
-}
-
-func (i *idTokenHintVerifier) ACR() oidc.ACRVerifier {
-	return i.acr
-}
-
-func (i *idTokenHintVerifier) MaxAge() time.Duration {
-	return i.maxAge
-}
-
-type IDTokenHintVerifierOpt func(*idTokenHintVerifier)
+type IDTokenHintVerifierOpt func(*IDTokenHintVerifier)
 
 func WithSupportedIDTokenHintSigningAlgorithms(algs ...string) IDTokenHintVerifierOpt {
-	return func(verifier *idTokenHintVerifier) {
-		verifier.supportedSignAlgs = algs
+	return func(verifier *IDTokenHintVerifier) {
+		verifier.SupportedSignAlgs = algs
 	}
 }
 
-func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHintVerifierOpt) IDTokenHintVerifier {
-	verifier := &idTokenHintVerifier{
-		issuer: issuer,
-		keySet: keySet,
+func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHintVerifierOpt) *IDTokenHintVerifier {
+	verifier := &IDTokenHintVerifier{
+		Issuer: issuer,
+		KeySet: keySet,
 	}
 	for _, opt := range opts {
 		opt(verifier)
@@ -74,7 +29,7 @@ func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHi
 
 // VerifyIDTokenHint validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v IDTokenHintVerifier) (claims C, err error) {
+func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v *IDTokenHintVerifier) (claims C, err error) {
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)
@@ -86,27 +41,27 @@ func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v IDTok
 		return nilClaims, err
 	}
 
-	if err := oidc.CheckIssuer(claims, v.Issuer()); err != nil {
+	if err := oidc.CheckIssuer(claims, v.Issuer); err != nil {
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs(), v.KeySet()); err != nil {
+	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs, v.KeySet); err != nil {
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckExpiration(claims, v.Offset()); err != nil {
+	if err = oidc.CheckExpiration(claims, v.Offset); err != nil {
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT(), v.Offset()); err != nil {
+	if err = oidc.CheckIssuedAt(claims, v.MaxAgeIAT, v.Offset); err != nil {
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR()); err != nil {
+	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR); err != nil {
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckAuthTime(claims, v.MaxAge()); err != nil {
+	if err = oidc.CheckAuthTime(claims, v.MaxAge); err != nil {
 		return nilClaims, err
 	}
 	return claims, nil

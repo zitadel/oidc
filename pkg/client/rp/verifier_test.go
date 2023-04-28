@@ -7,22 +7,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tu "github.com/zitadel/oidc/v2/internal/testutil"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	tu "github.com/zitadel/oidc/v3/internal/testutil"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"gopkg.in/square/go-jose.v2"
 )
 
 func TestVerifyTokens(t *testing.T) {
-	verifier := &idTokenVerifier{
-		issuer:            tu.ValidIssuer,
-		maxAgeIAT:         2 * time.Minute,
-		offset:            time.Second,
-		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
-		keySet:            tu.KeySet{},
-		maxAge:            2 * time.Minute,
-		acr:               tu.ACRVerify,
-		nonce:             func(context.Context) string { return tu.ValidNonce },
-		clientID:          tu.ValidClientID,
+	verifier := &IDTokenVerifier{
+		Issuer:            tu.ValidIssuer,
+		MaxAgeIAT:         2 * time.Minute,
+		Offset:            time.Second,
+		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		KeySet:            tu.KeySet{},
+		MaxAge:            2 * time.Minute,
+		ACR:               tu.ACRVerify,
+		Nonce:             func(context.Context) string { return tu.ValidNonce },
+		ClientID:          tu.ValidClientID,
 	}
 	accessToken, _ := tu.ValidAccessToken()
 	atHash, err := oidc.ClaimHash(accessToken, tu.SignatureAlgorithm)
@@ -91,15 +91,15 @@ func TestVerifyTokens(t *testing.T) {
 }
 
 func TestVerifyIDToken(t *testing.T) {
-	verifier := &idTokenVerifier{
-		issuer:            tu.ValidIssuer,
-		maxAgeIAT:         2 * time.Minute,
-		offset:            time.Second,
-		supportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
-		keySet:            tu.KeySet{},
-		maxAge:            2 * time.Minute,
-		acr:               tu.ACRVerify,
-		nonce:             func(context.Context) string { return tu.ValidNonce },
+	verifier := &IDTokenVerifier{
+		Issuer:            tu.ValidIssuer,
+		MaxAgeIAT:         2 * time.Minute,
+		Offset:            time.Second,
+		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		KeySet:            tu.KeySet{},
+		MaxAge:            2 * time.Minute,
+		ACR:               tu.ACRVerify,
+		Nonce:             func(context.Context) string { return tu.ValidNonce },
 	}
 
 	tests := []struct {
@@ -219,7 +219,7 @@ func TestVerifyIDToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			token, want := tt.tokenClaims()
-			verifier.clientID = tt.clientID
+			verifier.ClientID = tt.clientID
 			got, err := VerifyIDToken[*oidc.IDTokenClaims](context.Background(), token, verifier)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -300,7 +300,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want IDTokenVerifier
+		want *IDTokenVerifier
 	}{
 		{
 			name: "nil nonce", // otherwise assert.Equal will fail on the function
@@ -317,16 +317,16 @@ func TestNewIDTokenVerifier(t *testing.T) {
 					WithSupportedSigningAlgorithms("ABC", "DEF"),
 				},
 			},
-			want: &idTokenVerifier{
-				issuer:            tu.ValidIssuer,
-				offset:            time.Minute,
-				maxAgeIAT:         time.Hour,
-				clientID:          tu.ValidClientID,
-				keySet:            tu.KeySet{},
-				nonce:             nil,
-				acr:               nil,
-				maxAge:            2 * time.Hour,
-				supportedSignAlgs: []string{"ABC", "DEF"},
+			want: &IDTokenVerifier{
+				Issuer:            tu.ValidIssuer,
+				Offset:            time.Minute,
+				MaxAgeIAT:         time.Hour,
+				ClientID:          tu.ValidClientID,
+				KeySet:            tu.KeySet{},
+				Nonce:             nil,
+				ACR:               nil,
+				MaxAge:            2 * time.Hour,
+				SupportedSignAlgs: []string{"ABC", "DEF"},
 			},
 		},
 	}
