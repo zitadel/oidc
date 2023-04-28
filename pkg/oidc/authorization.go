@@ -60,7 +60,7 @@ const (
 )
 
 // AuthRequest according to:
-//https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+// https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {
 	Scopes       SpaceDelimitedArray `json:"scope" schema:"scope"`
 	ResponseType ResponseType        `json:"response_type" schema:"response_type"`
@@ -77,7 +77,7 @@ type AuthRequest struct {
 	UILocales    Locales             `json:"ui_locales" schema:"ui_locales"`
 	IDTokenHint  string              `json:"id_token_hint" schema:"id_token_hint"`
 	LoginHint    string              `json:"login_hint" schema:"login_hint"`
-	ACRValues    []string            `json:"acr_values" schema:"acr_values"`
+	ACRValues    SpaceDelimitedArray `json:"acr_values" schema:"acr_values"`
 
 	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
