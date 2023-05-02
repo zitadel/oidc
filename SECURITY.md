@@ -4,13 +4,21 @@ At ZITADEL we are extremely grateful for security aware people that disclose vul
 
 ## Supported Versions
 
-After the initial Release the following version support will apply
+We currently support the following version of the OIDC framework:
 
-| Version | Supported                               |
-| ------- | ------------------                      |
-| 0.x.x   | :x:                                     |
-| 1.x.x   | :white_check_mark:                      |
-| 2.x.x   | :white_check_mark: (not released)       |
+| Version  | Supported          | Branch      | Details                              |
+| -------- | ------------------ | ----------- | ------------------------------------ |
+| 0.x.x    | :x:                |             | not maintained                       |
+| <1.13    | :x:                |             | not maintained                       |
+| 1.13.x   | :lock: :warning:   | [1.13.x][1] | security only, [community effort][2] |
+| 2.x.x    | :heavy_check_mark: | [main][3]   | supported                            |
+| 3.0.0-xx | :white_check_mark: | [next][4]   | [developement branch][5]             |
+
+[1]: https://github.com/zitadel/oidc/tree/1.13.x
+[2]: https://github.com/zitadel/oidc/discussions/378
+[3]: https://github.com/zitadel/oidc/tree/main
+[4]: https://github.com/zitadel/oidc/tree/next
+[5]: https://github.com/zitadel/oidc/milestone/2
 
 ## Reporting a vulnerability
 
