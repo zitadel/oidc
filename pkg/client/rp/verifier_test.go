@@ -114,6 +114,18 @@ func TestVerifyIDToken(t *testing.T) {
 			tokenClaims: tu.ValidIDToken,
 		},
 		{
+			name:     "custom claims",
+			clientID: tu.ValidClientID,
+			tokenClaims: func() (string, *oidc.IDTokenClaims) {
+				return tu.NewIDTokenCustom(
+					tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience,
+					tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
+					tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "",
+					map[string]any{"some": "thing"},
+				)
+			},
+		},
+		{
 			name:        "parse err",
 			clientID:    tu.ValidClientID,
 			tokenClaims: func() (string, *oidc.IDTokenClaims) { return "~~~~", nil },
