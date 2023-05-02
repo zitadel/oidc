@@ -17,7 +17,9 @@ type TokenSource interface {
 	TokenCtx(context.Context) (*oauth2.Token, error)
 }
 
-// jwtProfileTokenSource implements the TokenSource
+// jwtProfileTokenSource implement the oauth2.TokenSource
+// it will request a token using the OAuth2 JWT Profile Grant
+// therefore sending an `assertion` by signing a JWT with the provided private key
 type jwtProfileTokenSource struct {
 	clientID      string
 	audience      []string

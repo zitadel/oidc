@@ -599,6 +599,10 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
+// RefreshAccessToken performs a token refresh. If it doesn't error, it will always
+// provide a new AccessToken. It may provide a new RefreshToken, and if it does, then
+// the old one should be considered invalid. It may also provide a new IDToken. The
+// new IDToken can be retrieved with token.Extra("id_token").
 func RefreshAccessToken(ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oauth2.Token, error) {
 	request := RefreshTokenRequest{
 		RefreshToken:        refreshToken,

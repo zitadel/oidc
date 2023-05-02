@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
@@ -19,60 +20,34 @@ import (
 	"github.com/zitadel/schema"
 )
 
-//
-// TOOD: tests will be implemented in branch for service accounts
-// func TestAuthorize(t *testing.T) {
-//	// testCallback := func(t *testing.T, clienID string) callbackHandler {
-//	// 	return func(authReq *oidc.AuthRequest, client oidc.Client, w http.ResponseWriter, r *http.Request) {
-//	// 		// require.Equal(t, clientID, client.)
-//	// 	}
-//	// }
-//	// testErr := func(t *testing.T, expected error) errorHandler {
-//	// 	return func(w http.ResponseWriter, r *http.Request, authReq *oidc.AuthRequest, err error) {
-//	// 		require.Equal(t, expected, err)
-//	// 	}
-//	// }
-//	type args struct {
-//		w          http.ResponseWriter
-//		r          *http.Request
-//		authorizer op.Authorizer
-//	}
-//	tests := []struct {
-//		name string
-//		args args
-//	}{
-//		{
-//			"parsing fails",
-//			args{
-//				httptest.NewRecorder(),
-//				&http.Request{Method: "POST", Body: nil},
-//				mock.NewAuthorizerExpectValid(t, true),
-//				// testCallback(t, ""),
-//				// testErr(t, ErrInvalidRequest("cannot parse form")),
-//			},
-//		},
-//		{
-//			"decoding fails",
-//			args{
-//				httptest.NewRecorder(),
-//				func() *http.Request {
-//					r := httptest.NewRequest("POST", "/authorize", strings.NewReader("client_id=foo"))
-//					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-//					return r
-//				}(),
-//				mock.NewAuthorizerExpectValid(t, true),
-//				// testCallback(t, ""),
-//				// testErr(t, ErrInvalidRequest("cannot parse auth request")),
-//			},
-//		},
-//		// {"decoding fails", args{httptest.NewRecorder(), &http.Request{}, mock.NewAuthorizerExpectValid(t), nil, testErr(t, nil)}},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			op.Authorize(tt.args.w, tt.args.r, tt.args.authorizer)
-//		})
-//	}
-//}
+func TestAuthorize(t *testing.T) {
+	tests := []struct {
+		name   string
+		req    *http.Request
+		expect func(a *mock.MockAuthorizerMockRecorder)
+	}{
+		{
+			name: "parse error", // used to panic, see issue #315
+			req:  httptest.NewRequest(http.MethodPost, "/?;", nil),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			authorizer := mock.NewMockAuthorizer(gomock.NewController(t))
+
+			expect := authorizer.EXPECT()
+			expect.Decoder().Return(schema.NewDecoder())
+			expect.Encoder().Return(schema.NewEncoder())
+
+			if tt.expect != nil {
+				tt.expect(expect)
+			}
+
+			op.Authorize(w, tt.req, authorizer)
+		})
+	}
+}
 
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {

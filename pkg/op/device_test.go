@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -20,29 +21,60 @@ import (
 )
 
 func Test_deviceAuthorizationHandler(t *testing.T) {
-	req := &oidc.DeviceAuthorizationRequest{
-		Scopes:   []string{"foo", "bar"},
-		ClientID: "web",
+	type conf struct {
+		UserFormURL  string
+		UserFormPath string
 	}
-	values := make(url.Values)
-	testProvider.Encoder().Encode(req, values)
-	body := strings.NewReader(values.Encode())
+	tests := []struct {
+		name string
+		conf conf
+	}{
+		{
+			name: "UserFormURL",
+			conf: conf{
+				UserFormURL: "https://localhost:9998/device",
+			},
+		},
+		{
+			name: "UserFormPath",
+			conf: conf{
+				UserFormPath: "/device",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conf := gu.PtrCopy(testConfig)
+			conf.DeviceAuthorization.UserFormURL = tt.conf.UserFormURL
+			conf.DeviceAuthorization.UserFormPath = tt.conf.UserFormPath
+			provider := newTestProvider(conf)
 
-	r := httptest.NewRequest(http.MethodPost, "/", body)
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req := &oidc.DeviceAuthorizationRequest{
+				Scopes:   []string{"foo", "bar"},
+				ClientID: "web",
+			}
+			values := make(url.Values)
+			testProvider.Encoder().Encode(req, values)
+			body := strings.NewReader(values.Encode())
 
-	w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/", body)
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r = r.WithContext(op.ContextWithIssuer(r.Context(), testIssuer))
 
-	runWithRandReader(mr.New(mr.NewSource(1)), func() {
-		op.DeviceAuthorizationHandler(testProvider)(w, r)
-	})
+			w := httptest.NewRecorder()
 
-	result := w.Result()
+			runWithRandReader(mr.New(mr.NewSource(1)), func() {
+				op.DeviceAuthorizationHandler(provider)(w, r)
+			})
 
-	assert.Less(t, result.StatusCode, 300)
+			result := w.Result()
 
-	got, _ := io.ReadAll(result.Body)
-	assert.JSONEq(t, `{"device_code":"Uv38ByGCZU8WP18PmmIdcg", "expires_in":300, "interval":5, "user_code":"JKRV-FRGK", "verification_uri":"https://localhost:9998/device", "verification_uri_complete":"https://localhost:9998/device?user_code=JKRV-FRGK"}`, string(got))
+			assert.Less(t, result.StatusCode, 300)
+
+			got, _ := io.ReadAll(result.Body)
+			assert.JSONEq(t, `{"device_code":"Uv38ByGCZU8WP18PmmIdcg", "expires_in":300, "interval":5, "user_code":"JKRV-FRGK", "verification_uri":"https://localhost:9998/device", "verification_uri_complete":"https://localhost:9998/device?user_code=JKRV-FRGK"}`, string(got))
+		})
+	}
 }
 
 func TestParseDeviceCodeRequest(t *testing.T) {

@@ -67,7 +67,7 @@ func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, nil, err, authorizer.Encoder())
 		return
 	}
 	ctx := r.Context()
@@ -273,9 +273,9 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	return scopes, nil
 }
 
-// checkURIAginstRedirects just checks aginst the valid redirect URIs and ignores
+// checkURIAgainstRedirects just checks aginst the valid redirect URIs and ignores
 // other factors.
-func checkURIAginstRedirects(client Client, uri string) error {
+func checkURIAgainstRedirects(client Client, uri string) error {
 	if str.Contains(client.RedirectURIs(), uri) {
 		return nil
 	}
@@ -302,12 +302,12 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
 	if strings.HasPrefix(uri, "https://") {
-		return checkURIAginstRedirects(client, uri)
+		return checkURIAgainstRedirects(client, uri)
 	}
 	if client.ApplicationType() == ApplicationTypeNative {
 		return validateAuthReqRedirectURINative(client, uri, responseType)
 	}
-	if err := checkURIAginstRedirects(client, uri); err != nil {
+	if err := checkURIAgainstRedirects(client, uri); err != nil {
 		return err
 	}
 	if strings.HasPrefix(uri, "http://") {
@@ -328,7 +328,7 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 func validateAuthReqRedirectURINative(client Client, uri string, responseType oidc.ResponseType) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
 	isCustomSchema := !strings.HasPrefix(uri, "http://")
-	if err := checkURIAginstRedirects(client, uri); err == nil {
+	if err := checkURIAgainstRedirects(client, uri); err == nil {
 		if client.DevMode() {
 			return nil
 		}

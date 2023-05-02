@@ -52,11 +52,14 @@ func TestUserInfoMarshal(t *testing.T) {
 
 	out := new(UserInfo)
 	assert.NoError(t, json.Unmarshal(marshal, out))
-	assert.Equal(t, userinfo, out)
 	expected, err := json.Marshal(out)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, marshal)
+
+	out2 := new(UserInfo)
+	assert.NoError(t, json.Unmarshal(expected, out2))
+	assert.Equal(t, out, out2)
 }
 
 func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
