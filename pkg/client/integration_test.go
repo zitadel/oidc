@@ -25,6 +25,7 @@ import (
 	"github.com/zitadel/oidc/v2/pkg/client/tokenexchange"
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 func TestRelyingPartySession(t *testing.T) {
@@ -278,6 +279,92 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	assert.NotEmpty(t, email, "email")
 
 	return provider, accessToken, refreshToken, idToken
+}
+
+func TestErrorFromPromptNone(t *testing.T) {
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err, "create cookie jar")
+	httpClient := &http.Client{
+		Timeout: time.Second * 5,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Jar: jar,
+	}
+
+	t.Log("------- start example OP ------")
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
+	var dh deferredHandler
+	opServer := httptest.NewServer(&dh)
+	defer opServer.Close()
+	t.Logf("auth server at %s", opServer.URL)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, op.WithHttpInterceptors(
+		func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Logf("request to %s", r.URL)
+				next.ServeHTTP(w, r)
+			})
+		},
+	))
+	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
+	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
+	clientSecret := "secret"
+	client := storage.WebClient(clientID, clientSecret, targetURL)
+	storage.RegisterClients(client)
+
+	t.Log("------- create RP ------")
+	key := []byte("test1234test1234")
+	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
+	provider, err := rp.NewRelyingPartyOIDC(
+		opServer.URL,
+		clientID,
+		clientSecret,
+		targetURL,
+		[]string{"openid", "email", "profile", "offline_access"},
+		rp.WithPKCE(cookieHandler),
+		rp.WithVerifierOpts(
+			rp.WithIssuedAtOffset(5*time.Second),
+			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
+		),
+	)
+	require.NoError(t, err, "new rp")
+
+	t.Log("------- start auth flow with prompt=none ------- ")
+	state := "state-32892"
+	capturedW := httptest.NewRecorder()
+	localURL, err := url.Parse(targetURL + "/login")
+	require.NoError(t, err)
+
+	get := httptest.NewRequest("GET", localURL.String(), nil)
+	rp.AuthURLHandler(func() string { return state }, provider,
+		rp.WithPromptURLParam("none"),
+		rp.WithResponseModeURLParam(oidc.ResponseModeFragment),
+	)(capturedW, get)
+
+	defer func() {
+		if t.Failed() {
+			t.Log("response body (redirect from RP to OP)", capturedW.Body.String())
+		}
+	}()
+	require.GreaterOrEqual(t, capturedW.Code, 200, "captured response code")
+	require.Less(t, capturedW.Code, 400, "captured response code")
+
+	//nolint:bodyclose
+	resp := capturedW.Result()
+	jar.SetCookies(localURL, resp.Cookies())
+
+	startAuthURL, err := resp.Location()
+	require.NoError(t, err, "get redirect")
+	assert.NotEmpty(t, startAuthURL, "login url")
+	t.Log("Starting auth at", startAuthURL)
+
+	t.Log("------- get redirect from OP ------")
+	loginPageURL := getRedirect(t, "get redirect to login page", httpClient, startAuthURL)
+	t.Log("login page URL", loginPageURL)
+
+	require.Contains(t, loginPageURL.String(), `error=login_required`, "prompt=none should error")
+	require.Contains(t, loginPageURL.String(), `local-site#error=`, "response_mode=fragment means '#' instead of '?'")
 }
 
 type deferredHandler struct {
