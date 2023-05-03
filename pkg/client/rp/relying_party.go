@@ -325,7 +325,7 @@ func Discover(issuer string, httpClient *http.Client) (Endpoints, error) {
 		return Endpoints{}, err
 	}
 	if discoveryConfig.Issuer != issuer {
-		return Endpoints{}, oidc.ErrIssuerInvalid
+		return Endpoints{}, fmt.Errorf("%w: Expected: %s, got: %s", oidc.ErrIssuerInvalid, discoveryConfig.Issuer, issuer)
 	}
 	return GetEndpoints(discoveryConfig), nil
 }
