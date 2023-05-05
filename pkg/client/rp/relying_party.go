@@ -435,14 +435,18 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 	}
 }
 
-type CodeExchangeUserinfoCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, provider RelyingParty, info *oidc.UserInfo)
+type SubjectGetter interface {
+	GetSubject() string
+}
+
+type CodeExchangeUserinfoCallback[C oidc.IDClaims, U SubjectGetter] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, provider RelyingParty, info U)
 
 // UserinfoCallback wraps the callback function of the CodeExchangeHandler
 // and calls the userinfo endpoint with the access token
 // on success it will pass the userinfo into its callback function as well
-func UserinfoCallback[C oidc.IDClaims](f CodeExchangeUserinfoCallback[C]) CodeExchangeCallback[C] {
+func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCallback[C, U]) CodeExchangeCallback[C] {
 	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty) {
-		info, err := Userinfo(r.Context(), tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
+		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
 		if err != nil {
 			http.Error(w, "userinfo failed: "+err.Error(), http.StatusUnauthorized)
 			return
@@ -451,19 +455,25 @@ func UserinfoCallback[C oidc.IDClaims](f CodeExchangeUserinfoCallback[C]) CodeEx
 	}
 }
 
-// Userinfo will call the OIDC Userinfo Endpoint with the provided token
-func Userinfo(ctx context.Context, token, tokenType, subject string, rp RelyingParty) (*oidc.UserInfo, error) {
+// Userinfo will call the OIDC [UserInfo] Endpoint with the provided token and returns
+// the response in an instance of type U.
+// [*oidc.UserInfo] can be used as a good example, or use a custom type if type-safe
+// access to custom claims is needed.
+//
+// [UserInfo]: https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject string, rp RelyingParty) (userinfo U, err error) {
+	var nilU U
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rp.UserinfoEndpoint(), nil)
 	if err != nil {
-		return nil, err
+		return nilU, err
 	}
 	req.Header.Set("authorization", tokenType+" "+token)
-	userinfo := new(oidc.UserInfo)
 	if err := httphelper.HttpRequest(rp.HttpClient(), req, &userinfo); err != nil {
-		return nil, err
+		return nilU, err
 	}
-	if userinfo.Subject != subject {
-		return nil, ErrUserInfoSubNotMatching
+	if userinfo.GetSubject() != subject {
+		return nilU, ErrUserInfoSubNotMatching
 	}
 	return userinfo, nil
 }

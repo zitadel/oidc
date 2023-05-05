@@ -48,7 +48,7 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rs.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect[*oidc.IntrospectionResponse](r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
@@ -69,7 +69,7 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rs.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect[*oidc.IntrospectionResponse](r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return

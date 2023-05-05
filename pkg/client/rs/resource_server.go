@@ -112,18 +112,24 @@ func WithStaticEndpoints(tokenURL, introspectURL string) Option {
 	}
 }
 
-func Introspect(ctx context.Context, rp ResourceServer, token string) (*oidc.IntrospectionResponse, error) {
+// Introspect calls the [RFC7662] Token Introspection
+// endpoint and returns the response in an instance of type R.
+// [*oidc.IntrospectionResponse] can be used as a good example, or use a custom type if type-safe
+// access to custom claims is needed.
+//
+// [RFC7662]: https://www.rfc-editor.org/rfc/rfc7662
+func Introspect[R any](ctx context.Context, rp ResourceServer, token string) (resp R, err error) {
 	authFn, err := rp.AuthFn()
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 	req, err := httphelper.FormRequest(ctx, rp.IntrospectionURL(), &oidc.IntrospectionRequest{Token: token}, client.Encoder, authFn)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	resp := new(oidc.IntrospectionResponse)
-	if err := httphelper.HttpRequest(rp.HttpClient(), req, resp); err != nil {
-		return nil, err
+
+	if err := httphelper.HttpRequest(rp.HttpClient(), req, &resp); err != nil {
+		return resp, err
 	}
 	return resp, nil
 }
