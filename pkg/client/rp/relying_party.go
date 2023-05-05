@@ -456,7 +456,7 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 }
 
 // Userinfo will call the OIDC [UserInfo] Endpoint with the provided token and returns
-// the response in an isntance of type U.
+// the response in an instance of type U.
 // [*oidc.UserInfo] can be used as a good example, or use a custom type if type-safe
 // access to custom claims is needed.
 //
