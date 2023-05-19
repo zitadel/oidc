@@ -12,7 +12,7 @@ require (
 	github.com/jeremija/gosubmit v0.2.7
 	github.com/muhlemmer/gu v0.3.1
 	github.com/rs/cors v1.9.0
-	github.com/sirupsen/logrus v1.9.1
+	github.com/sirupsen/logrus v1.9.2
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/text v0.9.0
