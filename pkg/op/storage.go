@@ -182,18 +182,6 @@ type DeviceAuthorizationStorage interface {
 	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
 	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
-
-	// GetDeviceAuthorizationByUserCode resturn the current state of the device authorization flow,
-	// identified by the user code.
-	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*DeviceAuthorizationState, error)
-
-	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
-	// identified by userCode. The Subject is added to the state, so that
-	// GetDeviceAuthorizatonState can use it to create a new Access Token.
-	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
-
-	// DenyDeviceAuthorization marks a device authorization entry as Denied.
-	DenyDeviceAuthorization(ctx context.Context, userCode string) error
 }
 
 func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
