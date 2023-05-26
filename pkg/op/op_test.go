@@ -49,6 +49,7 @@ func init() {
 	storage.RegisterClients(
 		storage.NativeClient("native"),
 		storage.WebClient("web", "secret", "https://example.com"),
+		storage.DeviceClient("device", "secret"),
 		storage.WebClient("api", "secret"),
 	)
 
@@ -336,7 +337,7 @@ func TestRoutes(t *testing.T) {
 			name:      "device authorization",
 			method:    http.MethodGet,
 			path:      testProvider.DeviceAuthorizationEndpoint().Relative(),
-			basicAuth: &basicAuth{"web", "secret"},
+			basicAuth: &basicAuth{"device", "secret"},
 			values: map[string]string{
 				"scope": oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
 			},
