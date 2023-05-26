@@ -51,7 +51,7 @@ func Test_deviceAuthorizationHandler(t *testing.T) {
 
 			req := &oidc.DeviceAuthorizationRequest{
 				Scopes:   []string{"foo", "bar"},
-				ClientID: "web",
+				ClientID: "device",
 			}
 			values := make(url.Values)
 			testProvider.Encoder().Encode(req, values)
@@ -88,10 +88,26 @@ func TestParseDeviceCodeRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "success",
+			name: "missing grant type",
 			req: &oidc.DeviceAuthorizationRequest{
 				Scopes:   oidc.SpaceDelimitedArray{"foo", "bar"},
 				ClientID: "web",
+			},
+			wantErr: true,
+		},
+		{
+			name: "client not found",
+			req: &oidc.DeviceAuthorizationRequest{
+				Scopes:   oidc.SpaceDelimitedArray{"foo", "bar"},
+				ClientID: "foobar",
+			},
+			wantErr: true,
+		},
+		{
+			name: "success",
+			req: &oidc.DeviceAuthorizationRequest{
+				Scopes:   oidc.SpaceDelimitedArray{"foo", "bar"},
+				ClientID: "device",
 			},
 		},
 	}
@@ -110,8 +126,7 @@ func TestParseDeviceCodeRequest(t *testing.T) {
 			got, err := op.ParseDeviceCodeRequest(r, testProvider)
 			if tt.wantErr {
 				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
+				return
 			}
 			assert.Equal(t, tt.req, got)
 		})

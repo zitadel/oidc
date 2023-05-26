@@ -193,6 +193,24 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 	}
 }
 
+// DeviceClient creates a device client with Basic authentication.
+func DeviceClient(id, secret string) *Client {
+	return &Client{
+		id:                             id,
+		secret:                         secret,
+		redirectURIs:                   nil,
+		applicationType:                op.ApplicationTypeWeb,
+		authMethod:                     oidc.AuthMethodBasic,
+		loginURL:                       defaultLoginURL,
+		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
+		grantTypes:                     []oidc.GrantType{oidc.GrantTypeDeviceCode},
+		accessTokenType:                op.AccessTokenTypeBearer,
+		devMode:                        false,
+		idTokenUserinfoClaimsAssertion: false,
+		clockSkew:                      0,
+	}
+}
+
 type hasRedirectGlobs struct {
 	*Client
 }
