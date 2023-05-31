@@ -1,57 +1,57 @@
 name: 🐛 Bug Report
 description: "Create a bug report to help us improve ZITADEL Terrafform Provider."
-title: 
+title:
 labels: ["bug"]
 body:
-- type: markdown
-  attributes:
-    value: |
-      Thanks for taking the time to fill out this bug report!
-- type: checkboxes
-  id: preflight
-  attributes:
-    label: Preflight Checklist
-    options:
-    - label:
-        I could not find a solution in the documentation, the existing issues or discussions
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight Checklist
+      options:
+      - label:
+          I could not find a solution in the documentation, the existing issues or discussions
+        required: true
+      - label:
+          I have joined the [ZITADEL chat](https://zitadel.com/chat)
+  - type: input
+    id: version
+    attributes:
+      label: Version
       required: true
-    - label:
-        I have joined the [ZITADEL chat](https://zitadel.com/chat)
-- type: input
-  id: version
-  attributes:
-    label: Version
-    required: true
-    description: Which version of the OIDC Library are you using.
-- type: textarea
-  id: impact
-  attributes:
-    label: Describe the problems caused by this bug
-    description: A clear and concise description of what the problems you face and the bug you have.
-  validations:
-    required: true
-- type: textarea
-  id: reproduce
-  attributes:
-    label: To reproduce
-    description: Steps to reproduce the behaviour
-    placeholder: |
-      Steps to reproduce the behavior:
-  validations:
-    required: true
-- type: textarea
-  id: screenshots
-  attributes:
-    label: Screenshots
-    description: If applicable, add screenshots to help explain your problem.
-- type: textarea
-  id: expected
-  attributes:
-    label: Expected behavior
-    description: A clear and concise description of what you expected to happen.
-    placeholder: As a [type of user], I want [some goal] so that [some reason].
-- type: textarea
-  id: additional
-  attributes:
-    label: Additional Context
-    description: Please add any other infos that could be useful.
+      description: Which version of the OIDC Library are you using.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Describe the problems caused by this bug
+      description: A clear and concise description of what the problems you face and the bug you have.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: To reproduce
+      description: Steps to reproduce the behaviour
+      placeholder: |
+        Steps to reproduce the behavior:
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: As a [type of user], I want [some goal] so that [some reason].
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Please add any other infos that could be useful.
