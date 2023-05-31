@@ -1,6 +1,6 @@
 name: 💡 Proposal / Feature request
 description: 
-title: ""
+title: 
 labels: ["enhancement"]
 body:
   - type: markdown
