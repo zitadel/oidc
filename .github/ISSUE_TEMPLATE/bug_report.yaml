@@ -1,6 +1,6 @@
-name: 🐛 Bug Report
-description: "Create a bug report to help us improve ZITADEL Terrafform Provider."
-title: 
+name: Bug Report
+description: "Create a bug report to help us improve ZITADEL. Click [here](https://github.com/zitadel/zitadel/blob/main/CONTRIBUTING.md#product-management) to see how we process your issue."
+title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: markdown
@@ -21,13 +21,12 @@ body:
     id: version
     attributes:
       label: Version
-      required: true
-      description: Which version of the OIDC Library are you using.
+      description: Which version of ZITADEL are you using.
   - type: textarea
     id: impact
     attributes:
-      label: Describe the problems caused by this bug
-      description: A clear and concise description of what the problems you face and the bug you have.
+      label: Describe the problem caused by this bug
+      description: A clear and concise description of the problem you have and what the bug is.
     validations:
       required: true
   - type: textarea
