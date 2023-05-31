@@ -1,5 +1,5 @@
 name: 💡 Proposal / Feature request
-description:
+description: "Create an issue for a feature request/proposal."
 labels: ["enhancement"]
 body:
   - type: markdown
