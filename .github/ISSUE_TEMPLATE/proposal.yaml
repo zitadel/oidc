@@ -1,4 +1,5 @@
 name: 💡 Proposal / Feature request
+description:
 labels: ["enhancement"]
 body:
   - type: markdown
