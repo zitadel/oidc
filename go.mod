@@ -13,7 +13,7 @@ require (
 	github.com/muhlemmer/gu v0.3.1
 	github.com/rs/cors v1.9.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/text v0.9.0
 	gopkg.in/square/go-jose.v2 v2.6.0
