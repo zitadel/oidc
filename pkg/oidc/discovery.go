@@ -1,9 +1,5 @@
 package oidc
 
-import (
-	"golang.org/x/text/language"
-)
-
 const (
 	DiscoveryEndpoint = "/.well-known/openid-configuration"
 )
@@ -130,10 +126,10 @@ type DiscoveryConfiguration struct {
 	ServiceDocumentation string `json:"service_documentation,omitempty"`
 
 	// ClaimsLocalesSupported contains a list of BCP47 language tag values that the OP supports for values of Claims returned.
-	ClaimsLocalesSupported []language.Tag `json:"claims_locales_supported,omitempty"`
+	ClaimsLocalesSupported Locales `json:"claims_locales_supported,omitempty"`
 
 	// UILocalesSupported contains a list of BCP47 language tag values that the OP supports for the user interface.
-	UILocalesSupported []language.Tag `json:"ui_locales_supported,omitempty"`
+	UILocalesSupported Locales `json:"ui_locales_supported,omitempty"`
 
 	// RequestParameterSupported specifies whether the OP supports use of the `request` parameter. If omitted, the default value is false.
 	RequestParameterSupported bool `json:"request_parameter_supported,omitempty"`

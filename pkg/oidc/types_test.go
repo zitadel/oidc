@@ -224,6 +224,13 @@ func TestLocale_UnmarshalJSON(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+func TestParseLocales(t *testing.T) {
+	in := []string{language.Afrikaans.String(), language.Danish.String(), "foobar", language.Und.String()}
+	want := Locales{language.Afrikaans, language.Danish}
+	got := ParseLocales(in)
+	assert.ElementsMatch(t, want, got)
+}
+
 func TestLocales_UnmarshalText(t *testing.T) {
 	type args struct {
 		text []byte
@@ -277,6 +284,80 @@ func TestLocales_UnmarshalText(t *testing.T) {
 				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.ElementsMatch(t, locales, tt.res.tags)
+		})
+	}
+}
+
+func TestLocales_UnmarshalJSON(t *testing.T) {
+	in := []string{language.Afrikaans.String(), language.Danish.String(), "foobar", language.Und.String()}
+	spaceSepStr := strconv.Quote(strings.Join(in, " "))
+	jsonArray, err := json.Marshal(in)
+	require.NoError(t, err)
+
+	out := Locales{language.Afrikaans, language.Danish}
+
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Locales
+		wantErr bool
+	}{
+		{
+			name: "invalid JSON",
+			args: args{
+				data: []byte("~~~"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "null",
+			args: args{
+				data: []byte("null"),
+			},
+			want: nil,
+		},
+		{
+			name: "space seperated string",
+			args: args{
+				data: []byte(spaceSepStr),
+			},
+			want: out,
+		},
+		{
+			name: "json string array",
+			args: args{
+				data: jsonArray,
+			},
+			want: out,
+		},
+		{
+			name: "json invalid array",
+			args: args{
+				data: []byte(`[1,2,3]`),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid type (float64)",
+			args: args{
+				data: []byte("22"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got Locales
+			err := got.UnmarshalJSON([]byte(tt.args.data))
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

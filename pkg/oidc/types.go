@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/schema"
+	"github.com/muhlemmer/gu"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 )
@@ -81,13 +82,57 @@ func (l *Locale) UnmarshalJSON(data []byte) error {
 
 type Locales []language.Tag
 
-func (l *Locales) UnmarshalText(text []byte) error {
-	locales := strings.Split(string(text), " ")
+// ParseLocales parses a slice of strings into Locales.
+// If an entry causes a parse error or is undefined,
+// it is ignored and not set to Locales.
+func ParseLocales(locales []string) Locales {
+	out := make(Locales, 0, len(locales))
 	for _, locale := range locales {
 		tag, err := language.Parse(locale)
 		if err == nil && !tag.IsRoot() {
-			*l = append(*l, tag)
+			out = append(out, tag)
 		}
+	}
+	return out
+}
+
+// UnmarshalText implements the [encoding.TextUnmarshaler] interface.
+// It decodes an unquoted space seperated string into Locales.
+// Undefined language tags in the input are ignored and ommited from
+// the resulting Locales.
+func (l *Locales) UnmarshalText(text []byte) error {
+	*l = ParseLocales(
+		strings.Split(string(text), " "),
+	)
+	return nil
+}
+
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
+// It decodes a json array or a space seperated string into Locales.
+// Undefined language tags in the input are ignored and ommited from
+// the resulting Locales.
+func (l *Locales) UnmarshalJSON(data []byte) error {
+	var dst any
+	if err := json.Unmarshal(data, &dst); err != nil {
+		return fmt.Errorf("oidc locales: %w", err)
+	}
+
+	// We catch the posibility of a space seperated string here,
+	// because UnmarshalText might have been implicetely called
+	// by the json library before we added UnmarshalJSON.
+	switch v := dst.(type) {
+	case nil:
+		*l = nil
+	case string:
+		*l = ParseLocales(strings.Split(v, " "))
+	case []any:
+		locales, err := gu.AssertInterfaces[string](v)
+		if err != nil {
+			return fmt.Errorf("oidc locales: %w", err)
+		}
+		*l = ParseLocales(locales)
+	default:
+		return fmt.Errorf("oidc locales: unsupported type: %T", v)
 	}
 	return nil
 }
