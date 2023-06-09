@@ -31,7 +31,7 @@ func TestDiscover(t *testing.T) {
 			wantFields: &wantFields{
 				UILocalesSupported: true,
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
