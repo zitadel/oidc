@@ -77,11 +77,15 @@ func newResourceServer(issuer string, authorizer func() (interface{}, error), op
 		if err != nil {
 			return nil, err
 		}
-		rs.tokenURL = config.TokenEndpoint
-		rs.introspectURL = config.IntrospectionEndpoint
+		if rs.tokenURL == "" {
+			rs.tokenURL = config.TokenEndpoint
+		}
+		if rs.introspectURL == "" {
+			rs.introspectURL = config.IntrospectionEndpoint
+		}
 	}
-	if rs.introspectURL == "" || rs.tokenURL == "" {
-		return nil, errors.New("introspectURL and/or tokenURL is empty: please provide with either `WithStaticEndpoints` or a discovery url")
+	if rs.tokenURL == "" {
+		return nil, errors.New("tokenURL is empty: please provide with either `WithStaticEndpoints` or a discovery url")
 	}
 	rs.authFn = authorizer
 	return rs, nil
@@ -113,6 +117,9 @@ func WithStaticEndpoints(tokenURL, introspectURL string) Option {
 }
 
 func Introspect(ctx context.Context, rp ResourceServer, token string) (*oidc.IntrospectionResponse, error) {
+	if rp.IntrospectionURL() == "" {
+		return nil, errors.New("resource server: introspection URL is empty")
+	}
 	authFn, err := rp.AuthFn()
 	if err != nil {
 		return nil, err
