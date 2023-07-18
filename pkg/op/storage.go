@@ -62,6 +62,14 @@ type AuthStorage interface {
 	KeySet(context.Context) ([]Key, error)
 }
 
+// CanTerminateSessionFromRequest is an optional additional interface that may be implemented by
+// implementors of Storage as an alternative to TerminateSession of the AuthStorage.
+// It passes the complete parsed EndSessionRequest to the implementation, which allows access to additional data.
+// It also allows to modify the uri, which will be used for redirection, (e.g. a UI where the user can consent to the logout)
+type CanTerminateSessionFromRequest interface {
+	TerminateSessionFromRequest(ctx context.Context, endSessionRequest *EndSessionRequest) (string, error)
+}
+
 type ClientCredentialsStorage interface {
 	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
@@ -152,9 +160,10 @@ type StorageNotFoundError interface {
 }
 
 type EndSessionRequest struct {
-	UserID      string
-	ClientID    string
-	RedirectURI string
+	UserID            string
+	ClientID          string
+	IDTokenHintClaims *oidc.IDTokenClaims
+	RedirectURI       string
 }
 
 var ErrDuplicateUserCode = errors.New("user code already exists")

@@ -34,12 +34,17 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 		RequestError(w, r, err)
 		return
 	}
-	err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.ClientID)
+	redirect := session.RedirectURI
+	if fromRequest, ok := ender.Storage().(CanTerminateSessionFromRequest); ok {
+		redirect, err = fromRequest.TerminateSessionFromRequest(r.Context(), session)
+	} else {
+		err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.ClientID)
+	}
 	if err != nil {
 		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"))
 		return
 	}
-	http.Redirect(w, r, session.RedirectURI, http.StatusFound)
+	http.Redirect(w, r, redirect, http.StatusFound)
 }
 
 func ParseEndSessionRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.EndSessionRequest, error) {
@@ -60,11 +65,12 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 		RedirectURI: ender.DefaultLogoutRedirectURI(),
 	}
 	if req.IdTokenHint != "" {
-		claims, err := VerifyIDTokenHint[*oidc.TokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
+		claims, err := VerifyIDTokenHint[*oidc.IDTokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
 		if err != nil {
 			return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
 		}
 		session.UserID = claims.GetSubject()
+		session.IDTokenHintClaims = claims
 		if req.ClientID != "" && req.ClientID != claims.GetAuthorizedParty() {
 			return nil, oidc.ErrInvalidRequest().WithDescription("client_id does not match azp of id_token_hint")
 		}
