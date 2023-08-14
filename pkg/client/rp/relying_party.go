@@ -438,6 +438,7 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 				return
 			}
 			codeOpts = append(codeOpts, WithCodeVerifier(codeVerifier))
+			rp.CookieHandler().DeleteCookie(w, pkceCode)
 		}
 		if rp.Signer() != nil {
 			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
