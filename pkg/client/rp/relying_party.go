@@ -356,6 +356,25 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 	return oidc.NewSHACodeChallenge(codeVerifier), nil
 }
 
+// ErrMissingIDToken is returned when an id_token was expected,
+// but not received in the token response.
+var ErrMissingIDToken = errors.New("id_token missing")
+
+func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Token, rp RelyingParty) (*oidc.Tokens[C], error) {
+	if rp.IsOAuth2Only() {
+		return &oidc.Tokens[C]{Token: token}, nil
+	}
+	idTokenString, ok := token.Extra(idTokenKey).(string)
+	if !ok {
+		return &oidc.Tokens[C]{Token: token}, ErrMissingIDToken
+	}
+	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
+	if err != nil {
+		return nil, err
+	}
+	return &oidc.Tokens[C]{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
+}
+
 // CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
 // returning it parsed together with the oauth2 tokens (access, refresh)
 func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens[C], err error) {
@@ -369,22 +388,7 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 	if err != nil {
 		return nil, err
 	}
-
-	if rp.IsOAuth2Only() {
-		return &oidc.Tokens[C]{Token: token}, nil
-	}
-
-	idTokenString, ok := token.Extra(idTokenKey).(string)
-	if !ok {
-		return nil, errors.New("id_token missing")
-	}
-
-	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
-	if err != nil {
-		return nil, err
-	}
-
-	return &oidc.Tokens[C]{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
+	return verifyTokenResponse[C](ctx, token, rp)
 }
 
 type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty)
@@ -609,11 +613,14 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
-// RefreshAccessToken performs a token refresh. If it doesn't error, it will always
+// RefreshTokens performs a token refresh. If it doesn't error, it will always
 // provide a new AccessToken. It may provide a new RefreshToken, and if it does, then
-// the old one should be considered invalid. It may also provide a new IDToken. The
-// new IDToken can be retrieved with token.Extra("id_token").
-func RefreshAccessToken(ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oauth2.Token, error) {
+// the old one should be considered invalid.
+//
+// In case the RP is not OAuth2 only and an IDToken was part of the response,
+// the IDToken and AccessToken will be verfied
+// and the IDToken and IDTokenClaims fields will be populated in the returned object.
+func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oidc.Tokens[C], error) {
 	request := RefreshTokenRequest{
 		RefreshToken:        refreshToken,
 		Scopes:              rp.OAuthConfig().Scopes,
@@ -623,7 +630,17 @@ func RefreshAccessToken(ctx context.Context, rp RelyingParty, refreshToken, clie
 		ClientAssertionType: clientAssertionType,
 		GrantType:           oidc.GrantTypeRefreshToken,
 	}
-	return client.CallTokenEndpoint(ctx, request, tokenEndpointCaller{RelyingParty: rp})
+	newToken, err := client.CallTokenEndpoint(ctx, request, tokenEndpointCaller{RelyingParty: rp})
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := verifyTokenResponse[C](ctx, newToken, rp)
+	if err == nil || errors.Is(err, ErrMissingIDToken) {
+		// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
+		// ...except that it might not contain an id_token.
+		return tokens, nil
+	}
+	return nil, err
 }
 
 func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
