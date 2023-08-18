@@ -72,7 +72,7 @@ func SetupServer(issuer string, storage Storage, extraOptions ...op.Option) *mux
 	//
 	// if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	// then you would have to set the path prefix (/custom/path/)
-	router.PathPrefix("/oidc/").Handler(http.StripPrefix("/oidc", provider.HttpHandler()))
+	router.PathPrefix("/").Handler(provider.HttpHandler())
 
 	return router
 }

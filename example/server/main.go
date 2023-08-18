@@ -13,7 +13,7 @@ func main() {
 	//we will run on :9998
 	port := "9998"
 	//which gives us the issuer: http://localhost:9998/
-	issuer := fmt.Sprintf("http://localhost:%s/oidc/", port)
+	issuer := fmt.Sprintf("http://localhost:%s/", port)
 
 	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
 	// this might be the layer for accessing your database
