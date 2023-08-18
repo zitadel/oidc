@@ -1026,7 +1026,7 @@ func TestAuthResponseCode(t *testing.T) {
 			},
 			res: res{
 				wantCode:           http.StatusFound,
-				wantLocationHeader: "/auth/callback/?code=id1&state=",
+				wantLocationHeader: "/auth/callback/?code=id1&state=state1",
 				wantBody:           "",
 			},
 		},
@@ -1051,7 +1051,7 @@ func TestAuthResponseCode(t *testing.T) {
 			},
 			res: res{
 				wantCode:           http.StatusFound,
-				wantLocationHeader: "/auth/callback/?code=id1&state=state1",
+				wantLocationHeader: "/auth/callback/?code=id1",
 				wantBody:           "",
 			},
 		},
