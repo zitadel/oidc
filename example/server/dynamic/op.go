@@ -40,7 +40,7 @@ func main() {
 	port := "9998"
 	issuers := make([]string, len(hostnames))
 	for i, hostname := range hostnames {
-		issuers[i] = fmt.Sprintf("http://%s:%s/", hostname, port)
+		issuers[i] = fmt.Sprintf("http://%s:%s/oidc/", hostname, port)
 	}
 
 	//the OpenID Provider requires a 32-byte key for (token) encryption
@@ -84,7 +84,7 @@ func main() {
 	//if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	//then you would have to set the path prefix (/custom/path/):
 	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider.HttpHandler()))
-	router.PathPrefix("/").Handler(provider.HttpHandler())
+	router.PathPrefix("/oidc/").Handler(http.StripPrefix("/oidc", provider.HttpHandler()))
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -125,7 +125,7 @@ func newDynamicOP(ctx context.Context, storage op.Storage, key [32]byte) (*op.Pr
 		//this example has only static texts (in English), so we'll set the here accordingly
 		SupportedUILocales: []language.Tag{language.English},
 	}
-	handler, err := op.NewDynamicOpenIDProvider("/", config, storage,
+	handler, err := op.NewDynamicOpenIDProvider("/oidc/", config, storage,
 		//we must explicitly allow the use of the http issuer
 		op.WithAllowInsecure(),
 		//as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
