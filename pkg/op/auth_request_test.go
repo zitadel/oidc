@@ -3,6 +3,7 @@ package op_test
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,7 +14,7 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"github.com/zitadel/oidc/v2/example/server/storage"
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"github.com/zitadel/oidc/v2/pkg/op"
@@ -941,4 +942,132 @@ func (m *mockEncoder) Encode(src interface{}, dst map[string][]string) error {
 		dst[s] = strings
 	}
 	return nil
+}
+
+// mockCrypto implements the op.Crypto interface
+// and in always equals out. (It doesn't crypt anything).
+// When returnErr != nil, that error is always returned instread.
+type mockCrypto struct {
+	returnErr error
+}
+
+func (c *mockCrypto) Encrypt(s string) (string, error) {
+	if c.returnErr != nil {
+		return "", c.returnErr
+	}
+	return s, nil
+}
+
+func (c *mockCrypto) Decrypt(s string) (string, error) {
+	if c.returnErr != nil {
+		return "", c.returnErr
+	}
+	return s, nil
+}
+
+func TestAuthResponseCode(t *testing.T) {
+	type args struct {
+		authReq    op.AuthRequest
+		authorizer func(*testing.T) op.Authorizer
+	}
+	type res struct {
+		wantCode           int
+		wantLocationHeader string
+		wantBody           string
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			name: "create code error",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					TransferState: "state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{
+						returnErr: io.ErrClosedPipe,
+					})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode: http.StatusBadRequest,
+				wantBody: "io: read/write on closed pipe\n",
+			},
+		},
+		{
+			name: "success with state",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					TransferState: "state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusFound,
+				wantLocationHeader: "/auth/callback/?code=id1&state=",
+				wantBody:           "",
+			},
+		},
+		{
+			name: "success without state", // reproduce issue #415
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					TransferState: "",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusFound,
+				wantLocationHeader: "/auth/callback/?code=id1&state=state1",
+				wantBody:           "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/auth/callback/", nil)
+			w := httptest.NewRecorder()
+			op.AuthResponseCode(w, r, tt.args.authReq, tt.args.authorizer(t))
+			resp := w.Result()
+			defer resp.Body.Close()
+			assert.Equal(t, tt.res.wantCode, resp.StatusCode)
+			assert.Equal(t, tt.res.wantLocationHeader, resp.Header.Get("Location"))
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Equal(t, tt.res.wantBody, string(body))
+		})
+	}
 }
