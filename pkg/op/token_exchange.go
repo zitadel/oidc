@@ -282,6 +282,9 @@ func GetTokenIDAndSubjectFromToken(
 	case oidc.AccessTokenType:
 		var accessTokenClaims *oidc.AccessTokenClaims
 		tokenIDOrToken, subject, accessTokenClaims, ok = getTokenIDAndClaims(ctx, exchanger, token)
+		if !ok {
+			break
+		}
 		claims = accessTokenClaims.Claims
 	case oidc.RefreshTokenType:
 		refreshTokenRequest, err := exchanger.Storage().TokenRequestByRefreshToken(ctx, token)
