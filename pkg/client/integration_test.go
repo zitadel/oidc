@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -56,11 +55,11 @@ func TestRelyingPartySession(t *testing.T) {
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
 
 	t.Log("------- run authorization code flow ------")
-	provider, _, refreshToken, idToken := RunAuthorizationCodeFlow(t, opServer, clientID, "secret")
+	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, "secret")
 
 	t.Log("------- refresh tokens  ------")
 
-	newTokens, err := rp.RefreshAccessToken(CTX, provider, refreshToken, "", "")
+	newTokens, err := rp.RefreshTokens[*oidc.IDTokenClaims](CTX, provider, tokens.RefreshToken, "", "")
 	require.NoError(t, err, "refresh token")
 	assert.NotNil(t, newTokens, "access token")
 	t.Logf("new access token %s", newTokens.AccessToken)
@@ -68,11 +67,13 @@ func TestRelyingPartySession(t *testing.T) {
 	t.Logf("new token type %s", newTokens.TokenType)
 	t.Logf("new expiry %s", newTokens.Expiry.Format(time.RFC3339))
 	require.NotEmpty(t, newTokens.AccessToken, "new accessToken")
-	assert.NotEmpty(t, newTokens.Extra("id_token"), "new idToken")
+	assert.NotEmpty(t, newTokens.IDToken, "new idToken")
+	assert.NotNil(t, newTokens.IDTokenClaims)
+	assert.Equal(t, newTokens.IDTokenClaims.Subject, tokens.IDTokenClaims.Subject)
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, idToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -81,12 +82,12 @@ func TestRelyingPartySession(t *testing.T) {
 	}
 
 	t.Log("------ attempt refresh again (should fail) ------")
-	t.Log("trying original refresh token", refreshToken)
-	_, err = rp.RefreshAccessToken(CTX, provider, refreshToken, "", "")
+	t.Log("trying original refresh token", tokens.RefreshToken)
+	_, err = rp.RefreshTokens[*oidc.IDTokenClaims](CTX, provider, tokens.RefreshToken, "", "")
 	assert.Errorf(t, err, "refresh with original")
 	if newTokens.RefreshToken != "" {
 		t.Log("trying replacement refresh token", newTokens.RefreshToken)
-		_, err = rp.RefreshAccessToken(CTX, provider, newTokens.RefreshToken, "", "")
+		_, err = rp.RefreshTokens[*oidc.IDTokenClaims](CTX, provider, newTokens.RefreshToken, "", "")
 		assert.Errorf(t, err, "refresh with replacement")
 	}
 }
@@ -106,7 +107,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	clientSecret := "secret"
 
 	t.Log("------- run authorization code flow ------")
-	provider, _, refreshToken, idToken := RunAuthorizationCodeFlow(t, opServer, clientID, clientSecret)
+	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, clientSecret)
 
 	resourceServer, err := rs.NewResourceServerClientCredentials(CTX, opServer.URL, clientID, clientSecret)
 	require.NoError(t, err, "new resource server")
@@ -116,7 +117,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	tokenExchangeResponse, err := tokenexchange.ExchangeToken(
 		CTX,
 		resourceServer,
-		refreshToken,
+		tokens.RefreshToken,
 		oidc.RefreshTokenType,
 		"",
 		"",
@@ -134,7 +135,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, idToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -147,7 +148,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	tokenExchangeResponse, err = tokenexchange.ExchangeToken(
 		CTX,
 		resourceServer,
-		refreshToken,
+		tokens.RefreshToken,
 		oidc.RefreshTokenType,
 		"",
 		"",
@@ -161,7 +162,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	require.Nil(t, tokenExchangeResponse, "token exchange response")
 }
 
-func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID, clientSecret string) (provider rp.RelyingParty, accessToken, refreshToken, idToken string) {
+func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID, clientSecret string) (provider rp.RelyingParty, tokens *oidc.Tokens[*oidc.IDTokenClaims]) {
 	targetURL := "http://local-site"
 	localURL, err := url.Parse(targetURL + "/login?requestID=1234")
 	require.NoError(t, err, "local url")
@@ -258,7 +259,8 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}
 
 	var email string
-	redirect := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
+	redirect := func(w http.ResponseWriter, r *http.Request, newTokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
+		tokens = newTokens
 		require.NotNil(t, tokens, "tokens")
 		require.NotNil(t, info, "info")
 		t.Log("access token", tokens.AccessToken)
@@ -266,9 +268,6 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		t.Log("id token", tokens.IDToken)
 		t.Log("email", info.Email)
 
-		accessToken = tokens.AccessToken
-		refreshToken = tokens.RefreshToken
-		idToken = tokens.IDToken
 		email = info.Email
 		http.Redirect(w, r, targetURL, 302)
 	}
@@ -290,12 +289,12 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	require.NoError(t, err, "get fully-authorizied redirect location")
 	require.Equal(t, targetURL, authorizedURL.String(), "fully-authorizied redirect location")
 
-	require.NotEmpty(t, idToken, "id token")
-	assert.NotEmpty(t, refreshToken, "refresh token")
-	assert.NotEmpty(t, accessToken, "access token")
+	require.NotEmpty(t, tokens.IDToken, "id token")
+	assert.NotEmpty(t, tokens.RefreshToken, "refresh token")
+	assert.NotEmpty(t, tokens.AccessToken, "access token")
 	assert.NotEmpty(t, email, "email")
 
-	return provider, accessToken, refreshToken, idToken
+	return provider, tokens
 }
 
 type deferredHandler struct {
@@ -343,7 +342,7 @@ func getForm(t *testing.T, desc string, httpClient *http.Client, uri *url.URL) [
 
 func fillForm(t *testing.T, desc string, httpClient *http.Client, body []byte, uri *url.URL, opts ...gosubmit.Option) *url.URL {
 	// TODO: switch to io.NopCloser when go1.15 support is dropped
-	req := gosubmit.ParseWithURL(ioutil.NopCloser(bytes.NewReader(body)), uri.String()).FirstForm().Testing(t).NewTestRequest(
+	req := gosubmit.ParseWithURL(io.NopCloser(bytes.NewReader(body)), uri.String()).FirstForm().Testing(t).NewTestRequest(
 		append([]gosubmit.Option{gosubmit.AutoFill()}, opts...)...,
 	)
 	if req.URL.Scheme == "" {
