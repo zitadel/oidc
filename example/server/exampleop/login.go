@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/zitadel/oidc/v2/pkg/op"
 )
 
 type login struct {
@@ -14,19 +15,19 @@ type login struct {
 	callback     func(context.Context, string) string
 }
 
-func NewLogin(authenticate authenticate, callback func(context.Context, string) string) *login {
+func NewLogin(authenticate authenticate, callback func(context.Context, string) string, issuerInterceptor *op.IssuerInterceptor) *login {
 	l := &login{
 		authenticate: authenticate,
 		callback:     callback,
 	}
-	l.createRouter()
+	l.createRouter(issuerInterceptor)
 	return l
 }
 
-func (l *login) createRouter() {
+func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
 	l.router = mux.NewRouter()
 	l.router.Path("/username").Methods("GET").HandlerFunc(l.loginHandler)
-	l.router.Path("/username").Methods("POST").HandlerFunc(l.checkLoginHandler)
+	l.router.Path("/username").Methods("POST").HandlerFunc(issuerInterceptor.HandlerFunc(l.checkLoginHandler))
 }
 
 type authenticate interface {

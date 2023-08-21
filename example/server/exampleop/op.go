@@ -55,9 +55,10 @@ func SetupServer(issuer string, storage Storage, extraOptions ...op.Option) *mux
 		log.Fatal(err)
 	}
 
-	// the provider will only take care of the OpenID Protocol, so there must be some sort of UI for the login process
-	// for the simplicity of the example this means a simple page with username and password field
-	l := NewLogin(storage, op.AuthCallbackURL(provider))
+	//the provider will only take care of the OpenID Protocol, so there must be some sort of UI for the login process
+	//for the simplicity of the example this means a simple page with username and password field
+	//be sure to provide an IssuerInterceptor with the IssuerFromRequest from the OP so the login can select / and pass it to the storage
+	l := NewLogin(storage, op.AuthCallbackURL(provider), op.NewIssuerInterceptor(provider.IssuerFromRequest))
 
 	// regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	// so we will direct all calls to /login to the login UI
