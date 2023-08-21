@@ -14,9 +14,13 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	str "github.com/zitadel/oidc/v3/pkg/strings"
+	"golang.org/x/exp/slog"
 )
 
 type AuthRequest interface {
+	// LogValuer allows the implementation which fields to log,
+	// and which ones to redact for security reasons.
+	slog.LogValuer
 	GetID() string
 	GetACR() string
 	GetAMR() []string
@@ -41,6 +45,7 @@ type Authorizer interface {
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
+	Logger() *slog.Logger
 }
 
 // AuthorizeValidator is an extension of Authorizer interface
@@ -67,23 +72,23 @@ func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	authReq, err := ParseAuthorizeRequest(r, authorizer.Decoder())
 	if err != nil {
-		AuthRequestError(w, r, nil, err, authorizer.Encoder())
+		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
 	ctx := r.Context()
 	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
 		authReq, err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
 		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			AuthRequestError(w, r, authReq, err, authorizer)
 			return
 		}
 	}
 	if authReq.ClientID == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing client_id"), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing client_id"), authorizer)
 		return
 	}
 	if authReq.RedirectURI == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing redirect_uri"), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing redirect_uri"), authorizer)
 		return
 	}
 	validation := ValidateAuthRequest
@@ -92,21 +97,21 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	}
 	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	if authReq.RequestParam != "" {
-		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer)
 		return
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
-		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer.Encoder())
+		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
 		return
 	}
 	client, err := authorizer.Storage().GetClientByClientID(ctx, req.GetClientID())
 	if err != nil {
-		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer.Encoder())
+		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer)
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
@@ -406,18 +411,18 @@ func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	id, err := ParseAuthorizeCallbackRequest(r)
 	if err != nil {
-		AuthRequestError(w, r, nil, err, authorizer.Encoder())
+		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
 	authReq, err := authorizer.Storage().AuthRequestByID(r.Context(), id)
 	if err != nil {
-		AuthRequestError(w, r, nil, err, authorizer.Encoder())
+		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
 	if !authReq.Done() {
 		AuthRequestError(w, r, authReq,
 			oidc.ErrInteractionRequired().WithDescription("Unfortunately, the user may be not logged in and/or additional interaction is required."),
-			authorizer.Encoder())
+			authorizer)
 		return
 	}
 	AuthResponse(authReq, authorizer, w, r)
@@ -438,7 +443,7 @@ func ParseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
 	client, err := authorizer.Storage().GetClientByClientID(r.Context(), authReq.GetClientID())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	if authReq.GetResponseType() == oidc.ResponseTypeCode {
@@ -452,7 +457,7 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
 	code, err := CreateAuthRequestCode(r.Context(), authReq, authorizer.Storage(), authorizer.Crypto())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	codeResponse := struct {
@@ -464,7 +469,7 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 	}
 	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), &codeResponse, authorizer.Encoder())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	http.Redirect(w, r, callback, http.StatusFound)
@@ -475,12 +480,12 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "", "")
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), resp, authorizer.Encoder())
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
 	http.Redirect(w, r, callback, http.StatusFound)

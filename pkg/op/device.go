@@ -57,7 +57,7 @@ var (
 func DeviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := DeviceAuthorization(w, r, o); err != nil {
-			RequestError(w, r, err)
+			RequestError(w, r, err, o.Logger())
 		}
 	}
 }
@@ -190,7 +190,7 @@ func (r *deviceAccessTokenRequest) GetScopes() []string {
 
 func DeviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	if err := deviceAccessToken(w, r, exchanger); err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 }
 

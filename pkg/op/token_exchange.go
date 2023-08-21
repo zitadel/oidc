@@ -136,17 +136,17 @@ func (r *tokenExchangeRequest) SetSubject(subject string) {
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenExchangeReq, clientID, clientSecret, err := ParseTokenExchangeRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 
 	tokenExchangeRequest, client, err := ValidateTokenExchangeRequest(r.Context(), tokenExchangeReq, clientID, clientSecret, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	resp, err := CreateTokenExchangeResponse(r.Context(), tokenExchangeRequest, client, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	httphelper.MarshalJSON(w, resp)

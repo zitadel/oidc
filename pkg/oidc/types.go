@@ -106,7 +106,7 @@ type ResponseType string
 
 type ResponseMode string
 
-func (s SpaceDelimitedArray) Encode() string {
+func (s SpaceDelimitedArray) String() string {
 	return strings.Join(s, " ")
 }
 
@@ -116,11 +116,11 @@ func (s *SpaceDelimitedArray) UnmarshalText(text []byte) error {
 }
 
 func (s SpaceDelimitedArray) MarshalText() ([]byte, error) {
-	return []byte(s.Encode()), nil
+	return []byte(s.String()), nil
 }
 
 func (s SpaceDelimitedArray) MarshalJSON() ([]byte, error) {
-	return json.Marshal((s).Encode())
+	return json.Marshal((s).String())
 }
 
 func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
@@ -165,7 +165,7 @@ func (s SpaceDelimitedArray) Value() (driver.Value, error) {
 func NewEncoder() *schema.Encoder {
 	e := schema.NewEncoder()
 	e.RegisterEncoder(SpaceDelimitedArray{}, func(value reflect.Value) string {
-		return value.Interface().(SpaceDelimitedArray).Encode()
+		return value.Interface().(SpaceDelimitedArray).String()
 	})
 	return e
 }

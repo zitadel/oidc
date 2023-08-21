@@ -7,6 +7,7 @@ import (
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"golang.org/x/exp/slog"
 )
 
 type Exchanger interface {
@@ -22,6 +23,7 @@ type Exchanger interface {
 	GrantTypeDeviceCodeSupported() bool
 	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	Logger() *slog.Logger
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +65,10 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 			return
 		}
 	case "":
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), exchanger.Logger())
 		return
 	}
-	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType))
+	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), exchanger.Logger())
 }
 
 // AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest

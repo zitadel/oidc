@@ -546,7 +546,7 @@ func withURLParam(key, value string) func() []oauth2.AuthCodeOption {
 // This is the generalized, unexported, function used by both
 // URLParamOpt and AuthURLOpt.
 func withPrompt(prompt ...string) func() []oauth2.AuthCodeOption {
-	return withURLParam("prompt", oidc.SpaceDelimitedArray(prompt).Encode())
+	return withURLParam("prompt", oidc.SpaceDelimitedArray(prompt).String())
 }
 
 type URLParamOpt func() []oauth2.AuthCodeOption

@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	http "github.com/zitadel/oidc/v3/pkg/http"
 	op "github.com/zitadel/oidc/v3/pkg/op"
+	slog "golang.org/x/exp/slog"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.
@@ -90,6 +91,20 @@ func (m *MockAuthorizer) IDTokenHintVerifier(arg0 context.Context) *op.IDTokenHi
 func (mr *MockAuthorizerMockRecorder) IDTokenHintVerifier(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IDTokenHintVerifier", reflect.TypeOf((*MockAuthorizer)(nil).IDTokenHintVerifier), arg0)
+}
+
+// Logger mocks base method.
+func (m *MockAuthorizer) Logger() *slog.Logger {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logger")
+	ret0, _ := ret[0].(*slog.Logger)
+	return ret0
+}
+
+// Logger indicates an expected call of Logger.
+func (mr *MockAuthorizerMockRecorder) Logger() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockAuthorizer)(nil).Logger))
 }
 
 // RequestObjectSupported mocks base method.

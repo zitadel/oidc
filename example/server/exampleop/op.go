@@ -4,9 +4,11 @@ import (
 	"crypto/sha256"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi"
+	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -43,10 +45,8 @@ func SetupServer(issuer string, storage Storage) chi.Router {
 
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
-		_, err := w.Write([]byte("signed out successfully"))
-		if err != nil {
-			log.Printf("error serving logged out page: %v", err)
-		}
+		w.Write([]byte("signed out successfully"))
+		// no need to check/log error, this will be handeled by the middleware.
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
@@ -117,6 +117,12 @@ func newOP(storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, 
 		op.WithAllowInsecure(),
 		// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
+		op.WithLogger(slog.New(
+			slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				AddSource: true,
+				Level:     slog.LevelDebug,
+			}),
+		)),
 	)
 	if err != nil {
 		return nil, err
