@@ -20,7 +20,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	logger := authorizer.Logger().With("oidc_error", e)
 
 	if authReq == nil {
-		logger.Log(r.Context(), e.LogLevel(), "auth request nil")
+		logger.Log(r.Context(), e.LogLevel(), "auth request")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -42,7 +42,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	logger.Log(r.Context(), e.LogLevel(), "auth request error")
+	logger.Log(r.Context(), e.LogLevel(), "auth request")
 	http.Redirect(w, r, url, http.StatusFound)
 }
 

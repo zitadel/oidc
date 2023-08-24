@@ -87,9 +87,8 @@ type OpenIDProvider interface {
 
 type HttpInterceptor func(http.Handler) http.Handler
 
-func CreateRouter(o *Provider, interceptors ...HttpInterceptor) chi.Router {
+func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
 	router := chi.NewRouter()
-	router.Use(o.LogMiddleware())
 	router.Use(cors.New(defaultCORSOptions).Handler)
 	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
@@ -534,7 +533,7 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *Provider) error {
-		o.logger = newLogger(logger)
+		o.logger = logger
 		return nil
 	}
 }
