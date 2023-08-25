@@ -115,10 +115,10 @@ Versions that also build are marked with :warning:.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| <1.18   | :x:                |
-| 1.18    | :warning:          |
-| 1.19    | :white_check_mark: |
+| <1.19   | :x:                |
+| 1.19    | :warning:          |
 | 1.20    | :white_check_mark: |
+| 1.21    | :white_check_mark: |
 
 ## Why another library
 
