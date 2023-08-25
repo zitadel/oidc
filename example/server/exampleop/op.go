@@ -4,15 +4,12 @@ import (
 	"crypto/sha256"
 	"log"
 	"net/http"
-	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi"
 	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/example/server/storage"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
@@ -35,9 +32,6 @@ type Storage interface {
 	deviceAuthenticate
 }
 
-// simple request id counter
-var requestID atomic.Uint64
-
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
@@ -47,13 +41,6 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger) chi.Router
 	key := sha256.Sum256([]byte("test"))
 
 	router := chi.NewRouter()
-	// Enable request logging on INFO level
-	router.Use(logging.Middleware(
-		logging.MiddlewareWithLoggerOption(logger),
-		logging.MiddlewareWithIDOption(func() string {
-			return strconv.FormatUint(requestID.Add(1), 10)
-		}),
-	))
 
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {

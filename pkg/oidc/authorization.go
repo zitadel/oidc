@@ -1,8 +1,6 @@
 package oidc
 
 import (
-	"fmt"
-
 	"golang.org/x/exp/slog"
 )
 
@@ -94,7 +92,7 @@ type AuthRequest struct {
 
 func (a *AuthRequest) LogValue() slog.Value {
 	return slog.GroupValue(
-		slog.Any("scopes", fmt.Stringer(a.Scopes)),
+		slog.Any("scopes", a.Scopes),
 		slog.String("response_type", string(a.ResponseType)),
 		slog.String("client_id", a.ClientID),
 		slog.String("redirect_uri", a.RedirectURI),

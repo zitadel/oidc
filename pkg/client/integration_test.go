@@ -19,6 +19,7 @@ import (
 	"github.com/jeremija/gosubmit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slog"
 
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -27,6 +28,13 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/client/tokenexchange"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+)
+
+var Logger = slog.New(
+	slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	}),
 )
 
 var CTX context.Context
@@ -49,7 +57,7 @@ func TestRelyingPartySession(t *testing.T) {
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
@@ -100,7 +108,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)

@@ -18,6 +18,7 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"github.com/zitadel/oidc/v3/pkg/op/mock"
 	"github.com/zitadel/schema"
+	"golang.org/x/exp/slog"
 )
 
 func TestAuthorize(t *testing.T) {
@@ -38,7 +39,7 @@ func TestAuthorize(t *testing.T) {
 
 			expect := authorizer.EXPECT()
 			expect.Decoder().Return(schema.NewDecoder())
-			expect.Encoder().Return(schema.NewEncoder())
+			expect.Logger().Return(slog.Default())
 
 			if tt.expect != nil {
 				tt.expect(expect)

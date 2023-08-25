@@ -186,7 +186,7 @@ func (e *Error) LogLevel() slog.Level {
 }
 
 func (e *Error) LogValue() slog.Value {
-	attrs := make([]slog.Attr, 0, 4)
+	attrs := make([]slog.Attr, 0, 5)
 	if e.Parent != nil {
 		attrs = append(attrs, slog.Any("parent", e.Parent))
 	}
@@ -198,6 +198,9 @@ func (e *Error) LogValue() slog.Value {
 	}
 	if e.State != "" {
 		attrs = append(attrs, slog.String("state", e.State))
+	}
+	if e.redirectDisabled {
+		attrs = append(attrs, slog.Bool("redirect_disabled", e.redirectDisabled))
 	}
 	return slog.GroupValue(attrs...)
 }

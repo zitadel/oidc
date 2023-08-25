@@ -18,9 +18,6 @@ import (
 )
 
 type AuthRequest interface {
-	// LogValuer allows the implementation which fields to log,
-	// and which ones to redact for security reasons.
-	slog.LogValuer
 	GetID() string
 	GetACR() string
 	GetAMR() []string

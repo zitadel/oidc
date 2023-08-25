@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
 	"golang.org/x/exp/slog"
@@ -27,13 +26,12 @@ func main() {
 	// data set to the context gets printed
 	// as part of the log output.
 	// This helps us tie log output to requests.
-	logger := slog.New(logging.WrapHandler(
+	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     slog.LevelDebug,
 		}),
-		logging.HandlerWithCTXGroupName("ctx"),
-	))
+	)
 	router := exampleop.SetupServer(issuer, storage, logger)
 
 	server := &http.Server{

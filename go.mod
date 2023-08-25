@@ -13,7 +13,6 @@ require (
 	github.com/rs/cors v1.9.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.2
-	github.com/zitadel/logging v0.3.5-0.20230824152050-9b8a8a0bdf73
 	github.com/zitadel/schema v1.3.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	golang.org/x/oauth2 v0.7.0
@@ -22,7 +21,6 @@ require (
 )
 
 require (
-	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect

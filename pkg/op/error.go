@@ -9,10 +9,18 @@ import (
 )
 
 type ErrAuthRequest interface {
-	slog.LogValuer
 	GetRedirectURI() string
 	GetResponseType() oidc.ResponseType
 	GetState() string
+}
+
+// LogAuthRequest is an optional interface,
+// that allows logging AuthRequest fields.
+// If the AuthRequest does not implement this interface,
+// no details shall be printed to the logs.
+type LogAuthRequest interface {
+	ErrAuthRequest
+	slog.LogValuer
 }
 
 func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, authorizer Authorizer) {
@@ -24,10 +32,13 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	logger = logger.With("authRequest", authReq)
+
+	if logAuthReq, ok := authReq.(LogAuthRequest); ok {
+		logger = logger.With("auth_request", logAuthReq)
+	}
 
 	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
-		logger.Log(r.Context(), e.LogLevel(), "auth request without redirect")
+		logger.Log(r.Context(), e.LogLevel(), "auth request: not redirecting")
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
@@ -50,7 +61,7 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slo
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	if e.ErrorType == oidc.InvalidClient {
-		status = 401
+		status = http.StatusUnauthorized
 	}
 	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
 	httphelper.MarshalJSONWithStatus(w, e, status)

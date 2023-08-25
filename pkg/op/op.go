@@ -79,6 +79,8 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
+
+	// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
 	Logger() *slog.Logger
 
 	// Deprecated: Provider now implements http.Handler directly.
@@ -531,6 +533,9 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 	}
 }
 
+// WithLogger lets a logger other than slog.Default().
+//
+// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *Provider) error {
 		o.logger = logger
