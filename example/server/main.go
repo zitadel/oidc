@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -22,10 +21,6 @@ func main() {
 	// in this example it will be handled in-memory
 	storage := storage.NewStorage(storage.NewUserStore(issuer))
 
-	// Using our wrapped logging handler,
-	// data set to the context gets printed
-	// as part of the log output.
-	// This helps us tie log output to requests.
 	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			AddSource: true,
@@ -40,7 +35,8 @@ func main() {
 	}
 	logger.Info("server listening, press ctrl+c to stop", "addr", fmt.Sprintf("http://localhost:%s/", port))
 	err := server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
+	if err != http.ErrServerClosed {
+		logger.Error("server terminated", "error", err)
+		os.Exit(1)
 	}
 }

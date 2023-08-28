@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 
+	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -33,9 +36,25 @@ func main() {
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
+	logger := slog.New(
+		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+		}),
+	)
+	client := &http.Client{
+		Timeout: time.Minute,
+	}
+	// enable outgoing request logging
+	logging.EnableHTTPClient(client,
+		logging.WithClientGroup("client"),
+	)
+
 	options := []rp.Option{
 		rp.WithCookieHandler(cookieHandler),
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
+		rp.WithHTTPClient(client),
+		rp.WithLogger(logger),
 	}
 	if clientSecret == "" {
 		options = append(options, rp.WithPKCE(cookieHandler))
@@ -44,7 +63,10 @@ func main() {
 		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
 	}
 
-	provider, err := rp.NewRelyingPartyOIDC(context.TODO(), issuer, clientID, clientSecret, redirectURI, scopes, options...)
+	// One can add a logger to the context,
+	// pre-defining log attributes as required.
+	ctx := logging.ToContext(context.TODO(), logger)
+	provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, redirectURI, scopes, options...)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
@@ -119,8 +141,22 @@ func main() {
 	//
 	// http.Handle(callbackPath, rp.CodeExchangeHandler(marshalToken, provider))
 
+	// simple counter for request IDs
+	var counter atomic.Int64
+	// enable incomming request logging
+	mw := logging.Middleware(
+		logging.WithLogger(logger),
+		logging.WithGroup("server"),
+		logging.WithIDFunc(func() slog.Attr {
+			return slog.Int64("id", counter.Add(1))
+		}),
+	)
+
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	logrus.Infof("listening on http://%s/", lis)
-	logrus.Info("press ctrl+c to stop")
-	logrus.Fatal(http.ListenAndServe(lis, nil))
+	logger.Info("server listening, press ctrl+c to stop", "addr", lis)
+	err = http.ListenAndServe(lis, mw(http.DefaultServeMux))
+	if err != http.ErrServerClosed {
+		logger.Error("server terminated", "error", err)
+		os.Exit(1)
+	}
 }
