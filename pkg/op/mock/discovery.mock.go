@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	jose "github.com/go-jose/go-jose/v3"
 	gomock "github.com/golang/mock/gomock"
-	jose "gopkg.in/square/go-jose.v2"
 )
 
 // MockDiscoverStorage is a mock of DiscoverStorage interface.

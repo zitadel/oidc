@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"gopkg.in/square/go-jose.v2"
 )
 
 func TestVerifyTokens(t *testing.T) {

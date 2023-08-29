@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/golang/mock/gomock"
 	"github.com/zitadel/schema"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"

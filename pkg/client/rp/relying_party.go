@@ -9,11 +9,11 @@ import (
 	"net/url"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/google/uuid"
 	"github.com/zitadel/logging"
 	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"

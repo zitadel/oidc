@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
-	"gopkg.in/square/go-jose.v2"
 )
 
 type Audience []string

@@ -9,10 +9,10 @@ import (
 	reflect "reflect"
 	time "time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	gomock "github.com/golang/mock/gomock"
 	oidc "github.com/zitadel/oidc/v3/pkg/oidc"
 	op "github.com/zitadel/oidc/v3/pkg/op"
-	jose "gopkg.in/square/go-jose.v2"
 )
 
 // MockStorage is a mock of Storage interface.

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"golang.org/x/oauth2"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/crypto"

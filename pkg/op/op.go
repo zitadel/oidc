@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/rs/cors"
 	"github.com/zitadel/schema"
 	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
-	"gopkg.in/square/go-jose.v2"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
