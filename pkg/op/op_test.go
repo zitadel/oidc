@@ -156,7 +156,7 @@ func TestRoutes(t *testing.T) {
 			values: map[string]string{
 				"client_id":     client.GetID(),
 				"redirect_uri":  "https://example.com",
-				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"response_type": string(oidc.ResponseTypeCode),
 			},
 			wantCode:       http.StatusFound,
@@ -193,7 +193,7 @@ func TestRoutes(t *testing.T) {
 			path:   testProvider.TokenEndpoint().Relative(),
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeBearer),
-				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"assertion":  jwtToken,
 			},
 			wantCode: http.StatusBadRequest,
@@ -206,7 +206,7 @@ func TestRoutes(t *testing.T) {
 			basicAuth: &basicAuth{"web", "secret"},
 			values: map[string]string{
 				"grant_type":         string(oidc.GrantTypeTokenExchange),
-				"scope":              oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":              oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"subject_token":      jwtToken,
 				"subject_token_type": string(oidc.AccessTokenType),
 			},
@@ -223,7 +223,7 @@ func TestRoutes(t *testing.T) {
 			basicAuth: &basicAuth{"sid1", "verysecret"},
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeClientCredentials),
-				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
 			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
@@ -338,7 +338,7 @@ func TestRoutes(t *testing.T) {
 			path:      testProvider.DeviceAuthorizationEndpoint().Relative(),
 			basicAuth: &basicAuth{"web", "secret"},
 			values: map[string]string{
-				"scope": oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope": oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
 			contains: []string{

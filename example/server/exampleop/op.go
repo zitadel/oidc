@@ -4,9 +4,12 @@ import (
 	"crypto/sha256"
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/zitadel/logging"
+	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -31,26 +34,33 @@ type Storage interface {
 	deviceAuthenticate
 }
 
+// simple counter for request IDs
+var counter atomic.Int64
+
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
-func SetupServer(issuer string, storage Storage) chi.Router {
+func SetupServer(issuer string, storage Storage, logger *slog.Logger) chi.Router {
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 
 	router := chi.NewRouter()
+	router.Use(logging.Middleware(
+		logging.WithLogger(logger),
+		logging.WithIDFunc(func() slog.Attr {
+			return slog.Int64("id", counter.Add(1))
+		}),
+	))
 
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
-		_, err := w.Write([]byte("signed out successfully"))
-		if err != nil {
-			log.Printf("error serving logged out page: %v", err)
-		}
+		w.Write([]byte("signed out successfully"))
+		// no need to check/log error, this will be handeled by the middleware.
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newOP(storage, issuer, key)
+	provider, err := newOP(storage, issuer, key, logger)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +90,7 @@ func SetupServer(issuer string, storage Storage) chi.Router {
 // newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newOP(storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, error) {
+func newOP(storage op.Storage, issuer string, key [32]byte, logger *slog.Logger) (op.OpenIDProvider, error) {
 	config := &op.Config{
 		CryptoKey: key,
 
@@ -117,6 +127,8 @@ func newOP(storage op.Storage, issuer string, key [32]byte) (op.OpenIDProvider, 
 		op.WithAllowInsecure(),
 		// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
+		// Pass our logger to the OP
+		op.WithLogger(logger.WithGroup("op")),
 	)
 	if err != nil {
 		return nil, err

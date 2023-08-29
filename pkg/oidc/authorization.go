@@ -1,5 +1,9 @@
 package oidc
 
+import (
+	"golang.org/x/exp/slog"
+)
+
 const (
 	// ScopeOpenID defines the scope `openid`
 	// OpenID Connect requests MUST contain the `openid` scope value
@@ -84,6 +88,15 @@ type AuthRequest struct {
 
 	// RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)
 	RequestParam string `schema:"request"`
+}
+
+func (a *AuthRequest) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Any("scopes", a.Scopes),
+		slog.String("response_type", string(a.ResponseType)),
+		slog.String("client_id", a.ClientID),
+		slog.String("redirect_uri", a.RedirectURI),
+	)
 }
 
 // GetRedirectURI returns the redirect_uri value for the ErrAuthRequest interface

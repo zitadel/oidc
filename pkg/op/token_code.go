@@ -13,20 +13,20 @@ import (
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 	if tokenReq.Code == "" {
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"))
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"), exchanger.Logger())
 		return
 	}
 	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code, "")
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	httphelper.MarshalJSON(w, resp)

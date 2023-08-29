@@ -14,6 +14,7 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -37,6 +38,10 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 	if err != nil {
 		return nil, err
 	}
+	if logger, ok := logging.FromContext(ctx); ok {
+		logger.Debug("discover", "config", discoveryConfig)
+	}
+
 	if discoveryConfig.Issuer != issuer {
 		return nil, oidc.ErrIssuerInvalid
 	}

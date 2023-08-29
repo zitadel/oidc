@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/rs/cors"
 	"github.com/zitadel/schema"
+	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
@@ -78,6 +79,9 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
+
+	// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
+	Logger() *slog.Logger
 
 	// Deprecated: Provider now implements http.Handler directly.
 	HttpHandler() http.Handler
@@ -174,6 +178,7 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 		storage:   storage,
 		endpoints: DefaultEndpoints,
 		timer:     make(<-chan time.Time),
+		logger:    slog.Default(),
 	}
 
 	for _, optFunc := range opOpts {
@@ -217,6 +222,7 @@ type Provider struct {
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
+	logger                  *slog.Logger
 }
 
 func (o *Provider) IssuerFromRequest(r *http.Request) string {
@@ -375,6 +381,10 @@ func (o *Provider) Probes() []ProbesFn {
 	}
 }
 
+func (o *Provider) Logger() *slog.Logger {
+	return o.logger
+}
+
 // Deprecated: Provider now implements http.Handler directly.
 func (o *Provider) HttpHandler() http.Handler {
 	return o
@@ -519,6 +529,16 @@ func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
 func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 	return func(o *Provider) error {
 		o.idTokenHintVerifierOpts = opts
+		return nil
+	}
+}
+
+// WithLogger lets a logger other than slog.Default().
+//
+// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
+func WithLogger(logger *slog.Logger) Option {
+	return func(o *Provider) error {
+		o.logger = logger
 		return nil
 	}
 }

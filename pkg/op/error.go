@@ -5,6 +5,7 @@ import (
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"golang.org/x/exp/slog"
 )
 
 type ErrAuthRequest interface {
@@ -13,13 +14,31 @@ type ErrAuthRequest interface {
 	GetState() string
 }
 
-func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, encoder httphelper.Encoder) {
+// LogAuthRequest is an optional interface,
+// that allows logging AuthRequest fields.
+// If the AuthRequest does not implement this interface,
+// no details shall be printed to the logs.
+type LogAuthRequest interface {
+	ErrAuthRequest
+	slog.LogValuer
+}
+
+func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, authorizer Authorizer) {
+	e := oidc.DefaultToServerError(err, err.Error())
+	logger := authorizer.Logger().With("oidc_error", e)
+
 	if authReq == nil {
+		logger.Log(r.Context(), e.LogLevel(), "auth request")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	e := oidc.DefaultToServerError(err, err.Error())
+
+	if logAuthReq, ok := authReq.(LogAuthRequest); ok {
+		logger = logger.With("auth_request", logAuthReq)
+	}
+
 	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
+		logger.Log(r.Context(), e.LogLevel(), "auth request: not redirecting")
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
@@ -28,19 +47,22 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
 		responseMode = rm.GetResponseMode()
 	}
-	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder)
+	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, authorizer.Encoder())
 	if err != nil {
+		logger.ErrorContext(r.Context(), "auth response URL", "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	logger.Log(r.Context(), e.LogLevel(), "auth request")
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func RequestError(w http.ResponseWriter, r *http.Request, err error) {
+func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	if e.ErrorType == oidc.InvalidClient {
-		status = 401
+		status = http.StatusUnauthorized
 	}
+	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
 	httphelper.MarshalJSONWithStatus(w, e, status)
 }
