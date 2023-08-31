@@ -6,9 +6,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
-var (
-	ErrSignerCreationFailed = errors.New("signer creation failed")
-)
+var ErrSignerCreationFailed = errors.New("signer creation failed")
 
 type SigningKey interface {
 	SignatureAlgorithm() jose.SignatureAlgorithm
@@ -23,9 +21,9 @@ func SignerFromKey(key SigningKey) (jose.Signer, error) {
 			Key:   key.Key(),
 			KeyID: key.ID(),
 		},
-	}, &jose.SignerOptions{})
+	}, (&jose.SignerOptions{}).WithType("JWT"))
 	if err != nil {
-		return nil, ErrSignerCreationFailed //TODO: log / wrap error?
+		return nil, ErrSignerCreationFailed // TODO: log / wrap error?
 	}
 	return signer, nil
 }
