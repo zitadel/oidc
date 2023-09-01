@@ -8,9 +8,9 @@ import (
 	"errors"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/muhlemmer/gu"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"gopkg.in/square/go-jose.v2"
 )
 
 // KeySet implements oidc.Keys

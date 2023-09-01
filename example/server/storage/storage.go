@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/google/uuid"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
