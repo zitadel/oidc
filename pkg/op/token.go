@@ -28,6 +28,9 @@ type AccessTokenClient interface {
 }
 
 func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
+	ctx, span := tracer.Start(ctx, "CreateTokenResponse")
+	defer span.End()
+
 	var accessToken, newRefreshToken string
 	var validity time.Duration
 	if createAccessToken {
@@ -84,6 +87,9 @@ func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool
 }
 
 func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
+	ctx, span := tracer.Start(ctx, "CreateAccessToken")
+	defer span.End()
+
 	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
 	if err != nil {
 		return "", "", 0, err
@@ -97,7 +103,9 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 		accessToken, err = CreateJWT(ctx, IssuerFromContext(ctx), tokenRequest, exp, id, client, creator.Storage())
 		return
 	}
+	_, span = tracer.Start(ctx, "CreateBearerToken")
 	accessToken, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
+	span.End()
 	return
 }
 
@@ -106,6 +114,9 @@ func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
 }
 
 func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client AccessTokenClient, storage Storage) (string, error) {
+	ctx, span := tracer.Start(ctx, "CreateJWT")
+	defer span.End()
+
 	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
@@ -152,6 +163,9 @@ type IDTokenRequest interface {
 }
 
 func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, client Client) (string, error) {
+	ctx, span := tracer.Start(ctx, "CreateIDToken")
+	defer span.End()
+
 	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
 	var acr, nonce string
 	if authRequest, ok := request.(AuthRequest); ok {

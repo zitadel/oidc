@@ -464,6 +464,10 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 
 // AuthResponseToken creates the successful token(s) authentication response
 func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
+	ctx, span := tracer.Start(r.Context(), "AuthResponseToken")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	createAccessToken := authReq.GetResponseType() != oidc.ResponseTypeIDTokenOnly
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, authorizer, createAccessToken, "", "")
 	if err != nil {

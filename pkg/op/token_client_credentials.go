@@ -12,6 +12,10 @@ import (
 // ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including
 // parsing, validating, authorizing the client and finally returning a token
 func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	ctx, span := tracer.Start(r.Context(), "ClientCredentialsExchange")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	request, err := ParseClientCredentialsRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
@@ -66,6 +70,9 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 // ValidateClientCredentialsRequest validates the client_credentials request parameters including authorization check of the client
 // and returns a TokenRequest and Client implementation to be used in the client_credentials response, resp. creation of the corresponding access_token.
 func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientCredentialsRequest, exchanger Exchanger) (TokenRequest, Client, error) {
+	ctx, span := tracer.Start(ctx, "ValidateClientCredentialsRequest")
+	defer span.End()
+
 	storage, ok := exchanger.Storage().(ClientCredentialsStorage)
 	if !ok {
 		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
@@ -85,6 +92,9 @@ func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientC
 }
 
 func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientCredentialsRequest, storage ClientCredentialsStorage) (Client, error) {
+	ctx, span := tracer.Start(ctx, "AuthorizeClientCredentialsClient")
+	defer span.End()
+
 	client, err := storage.ClientCredentials(ctx, request.ClientID, request.ClientSecret)
 	if err != nil {
 		return nil, oidc.ErrInvalidClient().WithParent(err)
@@ -98,6 +108,9 @@ func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientC
 }
 
 func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
+	ctx, span := tracer.Start(ctx, "CreateClientCredentialsTokenResponse")
+	defer span.End()
+
 	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
 	if err != nil {
 		return nil, err

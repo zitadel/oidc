@@ -134,6 +134,10 @@ func (r *tokenExchangeRequest) SetSubject(subject string) {
 
 // TokenExchange handles the OAuth 2.0 token exchange grant ("urn:ietf:params:oauth:grant-type:token-exchange")
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	ctx, span := tracer.Start(r.Context(), "TokenExchange")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	tokenExchangeReq, clientID, clientSecret, err := ParseTokenExchangeRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
