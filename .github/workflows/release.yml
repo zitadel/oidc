@@ -15,8 +15,9 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     strategy:
+      fail-fast: false
       matrix:
-        go: ['1.18', '1.19', '1.20']
+        go: ['1.19', '1.20', '1.21']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v3
