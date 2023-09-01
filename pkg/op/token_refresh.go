@@ -24,6 +24,10 @@ type RefreshTokenRequest interface {
 // RefreshTokenExchange handles the OAuth 2.0 refresh_token grant, including
 // parsing, validating, authorizing the client and finally exchanging the refresh_token for new tokens
 func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
+	ctx, span := tracer.Start(r.Context(), "RefreshTokenExchange")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	tokenReq, err := ParseRefreshTokenRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err)
@@ -54,6 +58,9 @@ func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oid
 // ValidateRefreshTokenRequest validates the refresh_token request parameters including authorization check of the client
 // and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (RefreshTokenRequest, Client, error) {
+	ctx, span := tracer.Start(ctx, "ValidateRefreshTokenRequest")
+	defer span.End()
+
 	if tokenReq.RefreshToken == "" {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("refresh_token missing")
 	}
@@ -89,6 +96,9 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 // AuthorizeRefreshClient checks the authorization of the client and that the used method was the one previously registered.
 // It than returns the data representing the original auth request corresponding to the refresh_token
 func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (request RefreshTokenRequest, client Client, err error) {
+	ctx, span := tracer.Start(ctx, "AuthorizeRefreshClient")
+	defer span.End()
+
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
 		if !ok || !exchanger.AuthMethodPrivateKeyJWTSupported() {

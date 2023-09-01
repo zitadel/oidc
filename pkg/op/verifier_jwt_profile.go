@@ -74,6 +74,9 @@ func (v *jwtProfileVerifier) CheckSubject(request *oidc.JWTTokenRequest) error {
 //
 // checks audience, exp, iat, signature and that issuer and sub are the same
 func VerifyJWTAssertion(ctx context.Context, assertion string, v JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
+	ctx, span := tracer.Start(ctx, "VerifyJWTAssertion")
+	defer span.End()
+
 	request := new(oidc.JWTTokenRequest)
 	payload, err := oidc.ParseToken(assertion, request)
 	if err != nil {

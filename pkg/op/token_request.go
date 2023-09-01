@@ -26,7 +26,10 @@ type Exchanger interface {
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		Exchange(w, r, exchanger)
+		ctx, span := tracer.Start(r.Context(), "tokenHandler")
+		defer span.End()
+
+		Exchange(w, r.WithContext(ctx), exchanger)
 	}
 }
 
@@ -79,6 +82,10 @@ type AuthenticatedTokenRequest interface {
 // ParseAuthenticatedTokenRequest parses the client_id and client_secret from the HTTP request from either
 // HTTP Basic Auth header or form body and sets them into the provided authenticatedTokenRequest interface
 func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder, request AuthenticatedTokenRequest) error {
+	ctx, span := tracer.Start(r.Context(), "ParseAuthenticatedTokenRequest")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	err := r.ParseForm()
 	if err != nil {
 		return oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
@@ -128,6 +135,9 @@ func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.C
 // AuthorizePrivateJWTKey authorizes a client by validating the client_assertion's signature with a previously
 // registered public key (JWT Profile)
 func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchanger JWTAuthorizationGrantExchanger) (Client, error) {
+	ctx, span := tracer.Start(ctx, "AuthorizePrivateJWTKey")
+	defer span.End()
+
 	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))
 	if err != nil {
 		return nil, err

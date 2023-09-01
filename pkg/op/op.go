@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/rs/cors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/text/language"
 	"gopkg.in/square/go-jose.v2"
 
@@ -66,6 +68,12 @@ var (
 		},
 	}
 )
+
+var tracer trace.Tracer
+
+func init() {
+	tracer = otel.Tracer("github.com/zitadel/oidc/pkg/op")
+}
 
 type OpenIDProvider interface {
 	Configuration
