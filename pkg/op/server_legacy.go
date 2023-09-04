@@ -42,7 +42,7 @@ func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCreden
 	return client, nil
 }
 
-func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
 	authReq, err := AuthRequestByCode(ctx, s.op.storage, r.Data.Code)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
 	if !ValidateGrantType(r.Client, oidc.GrantTypeRefreshToken) {
 		return nil, oidc.ErrUnauthorizedClient()
 	}

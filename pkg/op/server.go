@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-	jose "github.com/go-jose/go-jose/v3"
 	"github.com/muhlemmer/gu"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -72,45 +71,64 @@ func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientReq
 	}
 }
 
-type Response[T any] struct {
+type Response struct {
+	// Header map will be merged with the
+	// header on the [http.ResponseWriter].
 	Header http.Header
-	Data   *T
+
+	// Data will be JSON marshalled to
+	// the response body.
+	// We allow any type, so that implementers
+	// can extend the standard types as they wish.
+	// However, each method will recommend which
+	// (base) type to use as model, in order to
+	// be complient with the standards.
+	Data any
 }
 
-func NewResponse[T any](data *T) *Response[T] {
-	return &Response[T]{
+func NewResponse(data any) *Response {
+	return &Response{
 		Data: data,
 	}
 }
 
-func (resp *Response[T]) writeOut(w http.ResponseWriter) {
+func (resp *Response) writeOut(w http.ResponseWriter) {
 	gu.MapMerge(resp.Header, w.Header())
 	json.NewEncoder(w).Encode(resp.Data)
 }
 
+type Redirect struct {
+	URL    url.URL
+	Params url.Values
+}
+
 type Server interface {
 	// Health should return a status of "ok" once the Server is listining.
-	Health(context.Context, *Request[struct{}]) (*Response[Status], error)
+	// The recommended Response Data type is [Status].
+	Health(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Ready should return a status of "ok" once all dependecies,
 	// such as database storage are ready.
 	// An error can be returned to explain what is not ready.
-	Ready(context.Context, *Request[struct{}]) (*Response[Status], error)
+	// The recommended Response Data type is [Status].
+	Ready(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Discovery return the OpenID Provider Configuration Information for this server.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
-	Discovery(context.Context, *Request[struct{}]) (*Response[oidc.DiscoveryConfiguration], error)
+	// The recommended Response Data type is [oidc.DiscoveryConfiguration].
+	Discovery(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Authorize initiates the authorization flow and redirects to a login page.
 	// See the various https://openid.net/specs/openid-connect-core-1_0.html
 	// authorize endpoint sections (one for each type of flow).
-	Authorize(context.Context, *Request[oidc.AuthRequest]) (*Response[url.URL], error)
+	Authorize(context.Context, *Request[oidc.AuthRequest]) (*Redirect, error)
 
 	// AuthorizeCallback? Do we still need it?
 
 	// DeviceAuthorization initiates the device authorization flow.
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
-	DeviceAuthorization(context.Context, *Request[oidc.DeviceAuthorizationRequest]) (*Response[oidc.DeviceAuthorizationResponse], error)
+	// The recommended Response Data type is [oidc.DeviceAuthorizationResponse].
+	DeviceAuthorization(context.Context, *Request[oidc.DeviceAuthorizationRequest]) (*Response, error)
 
 	// VerifyClient is called on most oauth/token handlers to authenticate,
 	// using either a secret (POST, Basic) or assertion (JWT).
@@ -124,31 +142,36 @@ type Server interface {
 	// It is called by the Token endpoint handler when
 	// grant_type has the value authorization_code
 	// https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
-	CodeExchange(context.Context, *ClientRequest[oidc.AccessTokenRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	CodeExchange(context.Context, *ClientRequest[oidc.AccessTokenRequest]) (*Response, error)
 
 	// RefreshToken returns new Tokens after verifying a Refresh token.
 	// It is called by the Token endpoint handler when
 	// grant_type has the value refresh_token
 	// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
-	RefreshToken(context.Context, *ClientRequest[oidc.RefreshTokenRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	RefreshToken(context.Context, *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error)
 
 	// JWTProfile handles the OAuth 2.0 JWT Profile Authorization Grant
 	// It is called by the Token endpoint handler when
 	// grant_type has the value urn:ietf:params:oauth:grant-type:jwt-bearer
 	// https://datatracker.ietf.org/doc/html/rfc7523#section-2.1
-	JWTProfile(context.Context, *Request[oidc.JWTProfileGrantRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	JWTProfile(context.Context, *Request[oidc.JWTProfileGrantRequest]) (*Response, error)
 
 	// TokenExchange handles the OAuth 2.0 token exchange grant
 	// It is called by the Token endpoint handler when
 	// grant_type has the value urn:ietf:params:oauth:grant-type:token-exchange
 	// https://datatracker.ietf.org/doc/html/rfc8693
-	TokenExchange(context.Context, *ClientRequest[oidc.TokenExchangeRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	TokenExchange(context.Context, *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error)
 
 	// ClientCredentialsExchange handles the OAuth 2.0 client credentials grant
 	// It is called by the Token endpoint handler when
 	// grant_type has the value client_credentials
 	// https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
-	ClientCredentialsExchange(context.Context, *ClientRequest[oidc.ClientCredentialsRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	ClientCredentialsExchange(context.Context, *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error)
 
 	// DeviceToken handles the OAuth 2.0 Device Authorization Grant
 	// It is called by the Token endpoint handler when
@@ -157,27 +180,33 @@ type Server interface {
 	// should be returned to signal authorization_pending or access_denied etc.
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.4,
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.5.
-	DeviceToken(context.Context, *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response[oidc.AccessTokenResponse], error)
+	// The recommended Response Data type is [oidc.AccessTokenResponse].
+	DeviceToken(context.Context, *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error)
 
 	// Introspect handles the OAuth 2.0 Token Introspection endpoint.
 	// https://datatracker.ietf.org/doc/html/rfc7662
-	Introspect(context.Context, *Request[oidc.IntrospectionRequest]) (*Response[oidc.IntrospectionResponse], error)
+	// The recommended Response Data type is [oidc.IntrospectionResponse].
+	Introspect(context.Context, *Request[oidc.IntrospectionRequest]) (*Response, error)
 
 	// UserInfo handles the UserInfo endpoint and returns Claims about the authenticated End-User.
 	// https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-	UserInfo(context.Context, *Request[oidc.UserInfoRequest]) (*Response[oidc.UserInfo], error)
+	// The recommended Response Data type is [oidc.UserInfo].
+	UserInfo(context.Context, *Request[oidc.UserInfoRequest]) (*Response, error)
 
 	// Revocation handles token revocation using an access or refresh token.
 	// https://datatracker.ietf.org/doc/html/rfc7009
-	Revocation(context.Context, *Request[oidc.RevocationRequest]) (*Response[struct{}], error)
+	// There are no response requirements. Data may remain empty.
+	Revocation(context.Context, *Request[oidc.RevocationRequest]) (*Response, error)
 
 	// EndSession handles the OpenID Connect RP-Initiated Logout.
 	// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
-	EndSession(context.Context, *Request[oidc.EndSessionRequest]) (*Response[struct{}], error)
+	// There are no response requirements. Data may remain empty.
+	EndSession(context.Context, *Request[oidc.EndSessionRequest]) (*Response, error)
 
 	// Keys serves the JWK set which the client can use verify signatures from the op.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata `jwks_uri` key.
-	Keys(context.Context, *Request[struct{}]) (*Response[jose.JSONWebKeySet], error)
+	// The recommended Response Data type is [jose.JSOMWebKeySet].
+	Keys(context.Context, *Request[struct{}]) (*Response, error)
 
 	mustImpl()
 }
@@ -200,23 +229,23 @@ func unimplementedError[T any](r *Request[T]) StatusError {
 
 func (UnimplementedServer) mustImpl() {}
 
-func (UnimplementedServer) Health(_ context.Context, r *Request[struct{}]) (*Response[Status], error) {
+func (UnimplementedServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Ready(_ context.Context, r *Request[struct{}]) (*Response[Status], error) {
+func (UnimplementedServer) Ready(_ context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Discovery(_ context.Context, r *Request[struct{}]) (*Response[oidc.DiscoveryConfiguration], error) {
+func (UnimplementedServer) Discovery(_ context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Authorize(_ context.Context, r *Request[oidc.AuthRequest]) (*Response[url.URL], error) {
+func (UnimplementedServer) Authorize(_ context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) DeviceAuthorization(_ context.Context, r *Request[oidc.DeviceAuthorizationRequest]) (*Response[oidc.DeviceAuthorizationResponse], error) {
+func (UnimplementedServer) DeviceAuthorization(_ context.Context, r *Request[oidc.DeviceAuthorizationRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
@@ -224,46 +253,46 @@ func (UnimplementedServer) VerifyClient(_ context.Context, r *Request[ClientCred
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) CodeExchange(_ context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) CodeExchange(_ context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) RefreshToken(_ context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) RefreshToken(_ context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) JWTProfile(_ context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) JWTProfile(_ context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) TokenExchange(_ context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) TokenExchange(_ context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) ClientCredentialsExchange(_ context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) ClientCredentialsExchange(_ context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response[oidc.AccessTokenResponse], error) {
+func (UnimplementedServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) Introspect(_ context.Context, r *Request[oidc.IntrospectionRequest]) (*Response[oidc.IntrospectionResponse], error) {
+func (UnimplementedServer) Introspect(_ context.Context, r *Request[oidc.IntrospectionRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) UserInfo(_ context.Context, r *Request[oidc.UserInfoRequest]) (*Response[oidc.UserInfo], error) {
+func (UnimplementedServer) UserInfo(_ context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Revocation(_ context.Context, r *Request[oidc.RevocationRequest]) (*Response[struct{}], error) {
+func (UnimplementedServer) Revocation(_ context.Context, r *Request[oidc.RevocationRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) EndSession(_ context.Context, r *Request[oidc.EndSessionRequest]) (*Response[struct{}], error) {
+func (UnimplementedServer) EndSession(_ context.Context, r *Request[oidc.EndSessionRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Keys(_ context.Context, r *Request[struct{}]) (*Response[jose.JSONWebKeySet], error) {
+func (UnimplementedServer) Keys(_ context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
