@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	DefaultEndpoints = &endpoints{
+	DefaultEndpoints = &Endpoints{
 		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
 		Token:               NewEndpoint(defaultTokenEndpoint),
 		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
@@ -131,7 +131,7 @@ type Config struct {
 	DeviceAuthorization      DeviceAuthorizationConfig
 }
 
-type endpoints struct {
+type Endpoints struct {
 	Authorization       Endpoint
 	Token               Endpoint
 	Introspection       Endpoint
@@ -212,7 +212,7 @@ type Provider struct {
 	config                  *Config
 	issuer                  IssuerFromRequest
 	insecure                bool
-	endpoints               *endpoints
+	endpoints               *Endpoints
 	storage                 Storage
 	keySet                  *openIDKeySet
 	crypto                  Crypto

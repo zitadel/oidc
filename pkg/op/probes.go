@@ -41,9 +41,9 @@ func ReadyStorage(s Storage) ProbesFn {
 }
 
 func ok(w http.ResponseWriter) {
-	httphelper.MarshalJSON(w, status{"ok"})
+	httphelper.MarshalJSON(w, Status{"ok"})
 }
 
-type status struct {
+type Status struct {
 	Status string `json:"status,omitempty"`
 }
