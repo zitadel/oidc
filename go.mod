@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/jeremija/gosubmit v0.2.7
 	github.com/muhlemmer/gu v0.3.1
-	github.com/rs/cors v1.9.0
+	github.com/rs/cors v1.10.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.17.0
