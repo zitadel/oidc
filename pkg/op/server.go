@@ -41,94 +41,18 @@ func (e StatusError) Is(err error) bool {
 		e.statusCode == target.statusCode
 }
 
-type Request[T any] struct {
-	Method   string
-	URL      *url.URL
-	Header   http.Header
-	Form     url.Values
-	PostForm url.Values
-	Data     *T
-}
-
-func newRequest[T any](r *http.Request, data *T) *Request[T] {
-	return &Request[T]{
-		Method:   r.Method,
-		URL:      r.URL,
-		Header:   r.Header,
-		Form:     r.Form,
-		PostForm: r.PostForm,
-		Data:     data,
-	}
-}
-
-// ClientRequest is a Request with a verified client attached to it.
-// Methods the recieve this argument may assume the client was authenticated,
-// or verified to be a public client.
-type ClientRequest[T any] struct {
-	*Request[T]
-	Client Client
-}
-
-func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientRequest[T] {
-	return &ClientRequest[T]{
-		Request: newRequest[T](r, data),
-		Client:  client,
-	}
-}
-
-type Response struct {
-	// Header map will be merged with the
-	// header on the [http.ResponseWriter].
-	Header http.Header
-
-	// Data will be JSON marshalled to
-	// the response body.
-	// We allow any type, so that implementers
-	// can extend the standard types as they wish.
-	// However, each method will recommend which
-	// (base) type to use as model, in order to
-	// be complient with the standards.
-	Data any
-}
-
-func NewResponse(data any) *Response {
-	return &Response{
-		Data: data,
-	}
-}
-
-func (resp *Response) writeOut(w http.ResponseWriter) {
-	gu.MapMerge(resp.Header, w.Header())
-	json.NewEncoder(w).Encode(resp.Data)
-}
-
-type Redirect struct {
-	URL    url.URL
-	Params url.Values
-}
-
-// Server describes the inferface that needs to be implemented to serve
-// openID Connect and Oauth2 standard requests.
+// Server describes the interface that needs to be implemented to serve
+// OpenID Connect and Oauth2 standard requests.
 //
 // Methods are called after the HTTP route is resolved and
 // the request body is parsed into the Request's Data field.
 // When a method is called, it can be assumed that required fields,
-// as described in their relavant standard, are validated already.
-// The Response Data field may be of any type to allow flexibilty
+// as described in their relevant standard, are validated already.
+// The Response Data field may be of any type to allow flexibility
 // to extend responses with custom fields. There are however requirements
-// in the standards regarding the repsonse models. Where applicable
-// the method documentation gives a recommodated type which can be used
+// in the standards regarding the response models. Where applicable
+// the method documentation gives a recommended type which can be used
 // directly or extended upon.
-//
-// In short it is the scope of this framework to:
-//   - Route requests to their methods;
-//   - Parse request data into a type that represents the model from the standards;
-//   - Validate required fields in the request;
-//   - Provide utility functions that help implementors build the response;
-//
-// It is in the scope of the implementor:
-//   - Handle the request data to obtain or modify state in their storage / database;
-//   - Implement the business logic that is needed to build the response;
 type Server interface {
 	// Health should return a status of "ok" once the Server is listining.
 	// The recommended Response Data type is [Status].
@@ -238,6 +162,88 @@ type Server interface {
 	// mustImpl forces implementations to embed the UnimplementedServer for forward
 	// compatibilty with the interface.
 	mustImpl()
+}
+
+// Request contains the [http.Request] informational fields
+// and parsed Data from the request body (POST) or URL parameters (GET).
+// Data can be assumed to be validated according to the applicable
+// standard for the specific endpoints.
+type Request[T any] struct {
+	Method   string
+	URL      *url.URL
+	Header   http.Header
+	Form     url.Values
+	PostForm url.Values
+	Data     *T
+}
+
+func newRequest[T any](r *http.Request, data *T) *Request[T] {
+	return &Request[T]{
+		Method:   r.Method,
+		URL:      r.URL,
+		Header:   r.Header,
+		Form:     r.Form,
+		PostForm: r.PostForm,
+		Data:     data,
+	}
+}
+
+// ClientRequest is a Request with a verified client attached to it.
+// Methods the recieve this argument may assume the client was authenticated,
+// or verified to be a public client.
+type ClientRequest[T any] struct {
+	*Request[T]
+	Client Client
+}
+
+func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientRequest[T] {
+	return &ClientRequest[T]{
+		Request: newRequest[T](r, data),
+		Client:  client,
+	}
+}
+
+type Response struct {
+	// Header map will be merged with the
+	// header on the [http.ResponseWriter].
+	Header http.Header
+
+	// Data will be JSON marshaled to
+	// the response body.
+	// We allow any type, so that implementations
+	// can extend the standard types as they wish.
+	// However, each method will recommend which
+	// (base) type to use as model, in order to
+	// be complaint with the standards.
+	Data any
+}
+
+func NewResponse(data any) *Response {
+	return &Response{
+		Data: data,
+	}
+}
+
+func (resp *Response) writeOut(w http.ResponseWriter) {
+	gu.MapMerge(resp.Header, w.Header())
+	json.NewEncoder(w).Encode(resp.Data)
+}
+
+// Redirect is a special response type which will
+// initiate a [http.StatusFound] redirect.
+// The Params field will be encoded and set to the
+// URL's RawQuery field before building the URL.
+//
+// If the RawQuery contains values that need to persist,
+// the implementation should parse them into Params and
+// add request specific values after.
+type Redirect struct {
+	// Header map will be merged with the
+	// header on the [http.ResponseWriter].
+	Header http.Header
+
+	URL    url.URL
+	Params url.Values
 }
 
 type UnimplementedServer struct{}
