@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateIssuer(t *testing.T) {
@@ -234,7 +235,7 @@ func TestIssuerFromHost(t *testing.T) {
 			},
 		},
 		{
-			"custom path unsecure",
+			"custom path insecure",
 			args{
 				path:          "/custom/",
 				allowInsecure: true,
@@ -257,6 +258,109 @@ func TestIssuerFromHost(t *testing.T) {
 			if tt.res.err != nil {
 				assert.ErrorIs(t, err, tt.res.err)
 			}
+		})
+	}
+}
+
+func TestIssuerFromForwardedOrHost(t *testing.T) {
+	type args struct {
+		path      string
+		target    string
+		forwarded []string
+	}
+	type res struct {
+		issuer string
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			"header parse error",
+			args{
+				path:      "/custom/",
+				target:    "https://issuer.com",
+				forwarded: []string{"~~~"},
+			},
+			res{
+				issuer: "https://issuer.com/custom/",
+			},
+		},
+		{
+			"no forwarded header",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+			},
+			res{
+				issuer: "https://issuer.com/custom/",
+			},
+		},
+		// by=<identifier>;for=<identifier>;host=<host>;proto=<http|https>
+		{
+			"forwarded header without host",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+				forwarded: []string{
+					`by=identifier;for=identifier;proto=https`,
+				},
+			},
+			res{
+				issuer: "https://issuer.com/custom/",
+			},
+		},
+		{
+			"forwarded header with host",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+				forwarded: []string{
+					`by=identifier;for=identifier;host=first.com;proto=https`,
+				},
+			},
+			res{
+				issuer: "https://first.com/custom/",
+			},
+		},
+		{
+			"forwarded header with multiple hosts",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+				forwarded: []string{
+					`by=identifier;for=identifier;host=first.com;proto=https,host=second.com`,
+				},
+			},
+			res{
+				issuer: "https://first.com/custom/",
+			},
+		},
+		{
+			"multiple forwarded headers hosts",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+				forwarded: []string{
+					`by=identifier;for=identifier;host=first.com;proto=https,host=second.com`,
+					`by=identifier;for=identifier;host=third.com;proto=https`,
+				},
+			},
+			res{
+				issuer: "https://first.com/custom/",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issuer, err := IssuerFromForwardedOrHost(tt.args.path)(false)
+			require.NoError(t, err)
+			req := httptest.NewRequest("", tt.args.target, nil)
+			if tt.args.forwarded != nil {
+				req.Header["Forwarded"] = tt.args.forwarded
+			}
+			assert.Equal(t, tt.res.issuer, issuer(req))
 		})
 	}
 }
