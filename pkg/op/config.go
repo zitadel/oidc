@@ -2,10 +2,12 @@ package op
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/muhlemmer/httpforwarded"
 	"golang.org/x/text/language"
 )
 
@@ -52,6 +54,21 @@ type Configuration interface {
 type IssuerFromRequest func(r *http.Request) string
 
 func IssuerFromHost(path string) func(bool) (IssuerFromRequest, error) {
+	return issuerFromForwardedOrHost(path, false)
+}
+
+// IssuerFromForwardedOrHost tries to establish the Issuer based
+// on the Forwarded header host field.
+// If multiple Forwarded headers are present, the first mention
+// of the host field will be used.
+// If the Forwarded header is not present, no host field is found,
+// or there is a parser error the Request Host will be used as a fallback.
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
+func IssuerFromForwardedOrHost(path string) func(bool) (IssuerFromRequest, error) {
+	return issuerFromForwardedOrHost(path, true)
+}
+
+func issuerFromForwardedOrHost(path string, parseForwarded bool) func(bool) (IssuerFromRequest, error) {
 	return func(allowInsecure bool) (IssuerFromRequest, error) {
 		issuerPath, err := url.Parse(path)
 		if err != nil {
@@ -61,9 +78,26 @@ func IssuerFromHost(path string) func(bool) (IssuerFromRequest, error) {
 			return nil, err
 		}
 		return func(r *http.Request) string {
+			if parseForwarded {
+				if host, ok := hostFromForwarded(r); ok {
+					return dynamicIssuer(host, path, allowInsecure)
+				}
+			}
 			return dynamicIssuer(r.Host, path, allowInsecure)
 		}, nil
 	}
+}
+
+func hostFromForwarded(r *http.Request) (host string, ok bool) {
+	fwd, err := httpforwarded.ParseFromRequest(r)
+	if err != nil {
+		log.Printf("Err: issuer from forwarded header: %v", err) // TODO change to slog on next branch
+		return "", false
+	}
+	if fwd == nil || len(fwd["host"]) == 0 {
+		return "", false
+	}
+	return fwd["host"][0], true
 }
 
 func StaticIssuer(issuer string) func(bool) (IssuerFromRequest, error) {
