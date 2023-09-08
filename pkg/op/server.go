@@ -79,7 +79,7 @@ type Server interface {
 	// DeviceAuthorization initiates the device authorization flow.
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
 	// The recommended Response Data type is [oidc.DeviceAuthorizationResponse].
-	DeviceAuthorization(context.Context, *Request[oidc.DeviceAuthorizationRequest]) (*Response, error)
+	DeviceAuthorization(context.Context, *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error)
 
 	// VerifyClient is called on most oauth/token handlers to authenticate,
 	// using either a secret (POST, Basic) or assertion (JWT).
@@ -137,7 +137,7 @@ type Server interface {
 	// Introspect handles the OAuth 2.0 Token Introspection endpoint.
 	// https://datatracker.ietf.org/doc/html/rfc7662
 	// The recommended Response Data type is [oidc.IntrospectionResponse].
-	Introspect(context.Context, *Request[oidc.IntrospectionRequest]) (*Response, error)
+	Introspect(context.Context, *ClientRequest[oidc.IntrospectionRequest]) (*Response, error)
 
 	// UserInfo handles the UserInfo endpoint and returns Claims about the authenticated End-User.
 	// https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
@@ -231,19 +231,18 @@ func (resp *Response) writeOut(w http.ResponseWriter) {
 
 // Redirect is a special response type which will
 // initiate a [http.StatusFound] redirect.
-// The Params field will be encoded and set to the
+// The Params fielde will be encoded and set to the
 // URL's RawQuery field before building the URL.
-//
-// If the RawQuery contains values that need to persist,
-// the implementation should parse them into Params and
-// add request specific values after.
 type Redirect struct {
 	// Header map will be merged with the
 	// header on the [http.ResponseWriter].
 	Header http.Header
 
-	URL    url.URL
-	Params url.Values
+	URL string
+}
+
+func NewRedirect(url string) *Redirect {
+	return &Redirect{URL: url}
 }
 
 type UnimplementedServer struct{}
@@ -280,8 +279,8 @@ func (UnimplementedServer) Authorize(_ context.Context, r *Request[oidc.AuthRequ
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) DeviceAuthorization(_ context.Context, r *Request[oidc.DeviceAuthorizationRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (UnimplementedServer) DeviceAuthorization(_ context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
+	return nil, unimplementedError(r.Request)
 }
 
 func (UnimplementedServer) VerifyClient(_ context.Context, r *Request[ClientCredentials]) (Client, error) {
@@ -312,8 +311,8 @@ func (UnimplementedServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) Introspect(_ context.Context, r *Request[oidc.IntrospectionRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (UnimplementedServer) Introspect(_ context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
+	return nil, unimplementedError(r.Request)
 }
 
 func (UnimplementedServer) UserInfo(_ context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
