@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -15,11 +16,13 @@ type LegacyServer struct {
 	readyProbes []ProbesFn
 }
 
-func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
+type none = struct{}
+
+func (s *LegacyServer) Health(_ context.Context, r *Request[none]) (*Response, error) {
 	return NewResponse(Status{Status: "ok"}), nil
 }
 
-func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Response, error) {
+func (s *LegacyServer) Ready(ctx context.Context, r *Request[none]) (*Response, error) {
 	for _, probe := range s.readyProbes {
 		// shouldn't we run probes in Go routines?
 		if err := probe(ctx); err != nil {
@@ -29,7 +32,7 @@ func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Respon
 	return NewResponse(Status{Status: "ok"}), nil
 }
 
-func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
+func (s *LegacyServer) Discovery(ctx context.Context, r *Request[none]) (*Response, error) {
 	return NewResponse(
 		CreateDiscoveryConfig(ctx, s.provider, s.provider.Storage()),
 	), nil
@@ -134,6 +137,9 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 }
 
 func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
+	if !s.provider.GrantTypeRefreshTokenSupported() {
+		return nil, unimplementedGrantError(oidc.GrantTypeRefreshToken)
+	}
 	if !ValidateGrantType(r.Client, oidc.GrantTypeRefreshToken) {
 		return nil, oidc.ErrUnauthorizedClient()
 	}
@@ -154,20 +160,81 @@ func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.R
 	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) JWTProfile(_ context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (s *LegacyServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
+	exchanger, ok := s.provider.(JWTAuthorizationGrantExchanger)
+	if !ok {
+		return nil, unimplementedGrantError(oidc.GrantTypeBearer)
+	}
+	tokenRequest, err := VerifyJWTAssertion(ctx, r.Data.Assertion, exchanger.JWTProfileVerifier(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	tokenRequest.Scopes, err = exchanger.Storage().ValidateJWTProfileScopes(ctx, tokenRequest.Issuer, r.Data.Scope)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := CreateJWTTokenResponse(ctx, tokenRequest, exchanger)
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) TokenExchange(_ context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+func (s *LegacyServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
+	if !s.provider.GrantTypeTokenExchangeSupported() {
+		return nil, unimplementedGrantError(oidc.GrantTypeTokenExchange)
+	}
+	tokenExchangeRequest, err := CreateTokenExchangeRequest(ctx, r.Data, r.Client, s.provider)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := CreateTokenExchangeResponse(ctx, tokenExchangeRequest, r.Client, s.provider)
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) ClientCredentialsExchange(_ context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
+	storage, ok := s.provider.Storage().(ClientCredentialsStorage)
+	if !ok {
+		return nil, unimplementedGrantError(oidc.GrantTypeClientCredentials)
+	}
+	tokenRequest, err := storage.ClientCredentialsTokenRequest(ctx, r.Client.GetID(), r.Data.Scope)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := CreateClientCredentialsTokenResponse(ctx, tokenRequest, s.provider, r.Client)
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
+	if !s.provider.GrantTypeClientCredentialsSupported() {
+		return nil, unimplementedGrantError(oidc.GrantTypeDeviceCode)
+	}
+	// use a limited context timeout shorter as the default
+	// poll interval of 5 seconds.
+	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
+	defer cancel()
+
+	state, err := CheckDeviceAuthorizationState(ctx, r.Client.GetID(), r.Data.DeviceCode, s.provider)
+	if err != nil {
+		return nil, err
+	}
+	tokenRequest := &deviceAccessTokenRequest{
+		subject:  state.Subject,
+		audience: []string{r.Client.GetID()},
+		scopes:   state.Scopes,
+	}
+	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
 func (s *LegacyServer) Introspect(ctx context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {

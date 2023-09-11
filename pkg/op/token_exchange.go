@@ -197,12 +197,6 @@ func ValidateTokenExchangeRequest(
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("subject_token_type missing")
 	}
 
-	storage := exchanger.Storage()
-	teStorage, ok := storage.(TokenExchangeStorage)
-	if !ok {
-		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("token_exchange grant not supported")
-	}
-
 	client, err := AuthorizeTokenExchangeClient(ctx, clientID, clientSecret, exchanger)
 	if err != nil {
 		return nil, nil, err
@@ -220,10 +214,28 @@ func ValidateTokenExchangeRequest(
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("actor_token_type is not supported")
 	}
 
+	req, err := CreateTokenExchangeRequest(ctx, oidcTokenExchangeRequest, client, exchanger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return req, client, nil
+}
+
+func CreateTokenExchangeRequest(
+	ctx context.Context,
+	oidcTokenExchangeRequest *oidc.TokenExchangeRequest,
+	client Client,
+	exchanger Exchanger,
+) (TokenExchangeRequest, error) {
+	teStorage, ok := exchanger.Storage().(TokenExchangeStorage)
+	if !ok {
+		return nil, unimplementedGrantError(oidc.GrantTypeTokenExchange)
+	}
+
 	exchangeSubjectTokenIDOrToken, exchangeSubject, exchangeSubjectTokenClaims, ok := GetTokenIDAndSubjectFromToken(ctx, exchanger,
 		oidcTokenExchangeRequest.SubjectToken, oidcTokenExchangeRequest.SubjectTokenType, false)
 	if !ok {
-		return nil, nil, oidc.ErrInvalidRequest().WithDescription("subject_token is invalid")
+		return nil, oidc.ErrInvalidRequest().WithDescription("subject_token is invalid")
 	}
 
 	var (
@@ -234,7 +246,7 @@ func ValidateTokenExchangeRequest(
 		exchangeActorTokenIDOrToken, exchangeActor, exchangeActorTokenClaims, ok = GetTokenIDAndSubjectFromToken(ctx, exchanger,
 			oidcTokenExchangeRequest.ActorToken, oidcTokenExchangeRequest.ActorTokenType, true)
 		if !ok {
-			return nil, nil, oidc.ErrInvalidRequest().WithDescription("actor_token is invalid")
+			return nil, oidc.ErrInvalidRequest().WithDescription("actor_token is invalid")
 		}
 	}
 
@@ -258,17 +270,17 @@ func ValidateTokenExchangeRequest(
 		authTime:           time.Now(),
 	}
 
-	err = teStorage.ValidateTokenExchangeRequest(ctx, req)
+	err := teStorage.ValidateTokenExchangeRequest(ctx, req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = teStorage.CreateTokenExchangeRequest(ctx, req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return req, client, nil
+	return req, nil
 }
 
 func GetTokenIDAndSubjectFromToken(

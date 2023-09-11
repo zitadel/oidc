@@ -254,11 +254,16 @@ type UnimplementedServer struct{}
 var UnimplementedStatusCode = http.StatusNotFound
 
 func unimplementedError[T any](r *Request[T]) StatusError {
-	err := oidc.ErrServerError().WithDescription(fmt.Sprintf("%s not implemented on this server", r.URL.Path))
+	err := oidc.ErrServerError().WithDescription("%s not implemented on this server", r.URL.Path)
 	return StatusError{
 		parent:     err,
 		statusCode: UnimplementedStatusCode,
 	}
+}
+
+func unimplementedGrantError(gt oidc.GrantType) StatusError {
+	err := oidc.ErrUnsupportedGrantType().WithDescription("%s grant not supported", gt)
+	return NewStatusError(err, http.StatusBadRequest) // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 }
 
 func (UnimplementedServer) mustImpl() {}
@@ -288,27 +293,27 @@ func (UnimplementedServer) VerifyClient(_ context.Context, r *Request[ClientCred
 }
 
 func (UnimplementedServer) CodeExchange(_ context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedGrantError(oidc.GrantTypeCode)
 }
 
 func (UnimplementedServer) RefreshToken(_ context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedGrantError(oidc.GrantTypeRefreshToken)
 }
 
 func (UnimplementedServer) JWTProfile(_ context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+	return nil, unimplementedGrantError(oidc.GrantTypeBearer)
 }
 
 func (UnimplementedServer) TokenExchange(_ context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedGrantError(oidc.GrantTypeTokenExchange)
 }
 
 func (UnimplementedServer) ClientCredentialsExchange(_ context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedGrantError(oidc.GrantTypeClientCredentials)
 }
 
 func (UnimplementedServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedGrantError(oidc.GrantTypeDeviceCode)
 }
 
 func (UnimplementedServer) Introspect(_ context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
