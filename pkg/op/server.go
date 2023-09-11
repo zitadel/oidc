@@ -69,6 +69,11 @@ type Server interface {
 	// The recommended Response Data type is [oidc.DiscoveryConfiguration].
 	Discovery(context.Context, *Request[struct{}]) (*Response, error)
 
+	// Keys serves the JWK set which the client can use verify signatures from the op.
+	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata `jwks_uri` key.
+	// The recommended Response Data type is [jose.JSOMWebKeySet].
+	Keys(context.Context, *Request[struct{}]) (*Response, error)
+
 	// Authorize initiates the authorization flow and redirects to a login page.
 	// See the various https://openid.net/specs/openid-connect-core-1_0.html
 	// authorize endpoint sections (one for each type of flow).
@@ -147,17 +152,12 @@ type Server interface {
 	// Revocation handles token revocation using an access or refresh token.
 	// https://datatracker.ietf.org/doc/html/rfc7009
 	// There are no response requirements. Data may remain empty.
-	Revocation(context.Context, *Request[oidc.RevocationRequest]) (*Response, error)
+	Revocation(context.Context, *ClientRequest[oidc.RevocationRequest]) (*Response, error)
 
 	// EndSession handles the OpenID Connect RP-Initiated Logout.
 	// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
 	// There are no response requirements. Data may remain empty.
-	EndSession(context.Context, *Request[oidc.EndSessionRequest]) (*Response, error)
-
-	// Keys serves the JWK set which the client can use verify signatures from the op.
-	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata `jwks_uri` key.
-	// The recommended Response Data type is [jose.JSOMWebKeySet].
-	Keys(context.Context, *Request[struct{}]) (*Response, error)
+	EndSession(context.Context, *Request[oidc.EndSessionRequest]) (*Redirect, error)
 
 	// mustImpl forces implementations to embed the UnimplementedServer for forward
 	// compatibilty with the interface.
@@ -268,70 +268,70 @@ func unimplementedGrantError(gt oidc.GrantType) StatusError {
 
 func (UnimplementedServer) mustImpl() {}
 
-func (UnimplementedServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
+func (UnimplementedServer) Health(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Ready(_ context.Context, r *Request[struct{}]) (*Response, error) {
+func (UnimplementedServer) Ready(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Discovery(_ context.Context, r *Request[struct{}]) (*Response, error) {
+func (UnimplementedServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Authorize(_ context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
+func (UnimplementedServer) Keys(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) DeviceAuthorization(_ context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
+func (UnimplementedServer) Authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
+	return nil, unimplementedError(r)
+}
+
+func (UnimplementedServer) DeviceAuthorization(ctx context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) VerifyClient(_ context.Context, r *Request[ClientCredentials]) (Client, error) {
+func (UnimplementedServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) CodeExchange(_ context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
+func (UnimplementedServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeCode)
 }
 
-func (UnimplementedServer) RefreshToken(_ context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
+func (UnimplementedServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeRefreshToken)
 }
 
-func (UnimplementedServer) JWTProfile(_ context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
+func (UnimplementedServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeBearer)
 }
 
-func (UnimplementedServer) TokenExchange(_ context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
+func (UnimplementedServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeTokenExchange)
 }
 
-func (UnimplementedServer) ClientCredentialsExchange(_ context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
+func (UnimplementedServer) ClientCredentialsExchange(ctx context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeClientCredentials)
 }
 
-func (UnimplementedServer) DeviceToken(_ context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
+func (UnimplementedServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
 	return nil, unimplementedGrantError(oidc.GrantTypeDeviceCode)
 }
 
-func (UnimplementedServer) Introspect(_ context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
+func (UnimplementedServer) Introspect(ctx context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
 	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) UserInfo(_ context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
+func (UnimplementedServer) UserInfo(ctx context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Revocation(_ context.Context, r *Request[oidc.RevocationRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (UnimplementedServer) Revocation(ctx context.Context, r *ClientRequest[oidc.RevocationRequest]) (*Response, error) {
+	return nil, unimplementedError(r.Request)
 }
 
-func (UnimplementedServer) EndSession(_ context.Context, r *Request[oidc.EndSessionRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
-}
-
-func (UnimplementedServer) Keys(_ context.Context, r *Request[struct{}]) (*Response, error) {
+func (UnimplementedServer) EndSession(ctx context.Context, r *Request[oidc.EndSessionRequest]) (*Redirect, error) {
 	return nil, unimplementedError(r)
 }

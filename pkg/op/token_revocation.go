@@ -131,6 +131,11 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 }
 
 func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {
+	statusErr := RevocationError(err)
+	httphelper.MarshalJSONWithStatus(w, statusErr.parent, statusErr.statusCode)
+}
+
+func RevocationError(err error) StatusError {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	switch e.ErrorType {
@@ -139,7 +144,7 @@ func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case oidc.ServerError:
 		status = 500
 	}
-	httphelper.MarshalJSONWithStatus(w, e, status)
+	return NewStatusError(e, status)
 }
 
 func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {

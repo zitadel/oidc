@@ -16,13 +16,11 @@ type LegacyServer struct {
 	readyProbes []ProbesFn
 }
 
-type none = struct{}
-
-func (s *LegacyServer) Health(_ context.Context, r *Request[none]) (*Response, error) {
+func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
 	return NewResponse(Status{Status: "ok"}), nil
 }
 
-func (s *LegacyServer) Ready(ctx context.Context, r *Request[none]) (*Response, error) {
+func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	for _, probe := range s.readyProbes {
 		// shouldn't we run probes in Go routines?
 		if err := probe(ctx); err != nil {
@@ -32,10 +30,18 @@ func (s *LegacyServer) Ready(ctx context.Context, r *Request[none]) (*Response, 
 	return NewResponse(Status{Status: "ok"}), nil
 }
 
-func (s *LegacyServer) Discovery(ctx context.Context, r *Request[none]) (*Response, error) {
+func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return NewResponse(
 		CreateDiscoveryConfig(ctx, s.provider, s.provider.Storage()),
 	), nil
+}
+
+func (s *LegacyServer) Keys(ctx context.Context, r *Request[struct{}]) (*Response, error) {
+	keys, err := s.provider.Storage().KeySet(ctx)
+	if err != nil {
+		return nil, NewStatusError(err, http.StatusInternalServerError)
+	}
+	return NewResponse(jsonWebKeySet(keys)), nil
 }
 
 var (
@@ -264,14 +270,43 @@ func (s *LegacyServer) UserInfo(ctx context.Context, r *Request[oidc.UserInfoReq
 	return NewResponse(info), nil
 }
 
-func (s *LegacyServer) Revocation(_ context.Context, r *Request[oidc.RevocationRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (s *LegacyServer) Revocation(ctx context.Context, r *ClientRequest[oidc.RevocationRequest]) (*Response, error) {
+	var subject string
+	doDecrypt := true
+	if r.Data.TokenTypeHint != "access_token" {
+		userID, tokenID, err := s.provider.Storage().GetRefreshTokenInfo(ctx, r.Client.GetID(), r.Data.Token)
+		if err != nil {
+			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
+			if !errors.Is(err, ErrInvalidRefreshToken) {
+				return nil, RevocationError(oidc.ErrServerError().WithParent(err))
+			}
+		} else {
+			r.Data.Token = tokenID
+			subject = userID
+			doDecrypt = false
+		}
+	}
+	if doDecrypt {
+		tokenID, userID, ok := getTokenIDAndSubjectForRevocation(ctx, s.provider, r.Data.Token)
+		if ok {
+			r.Data.Token = tokenID
+			subject = userID
+		}
+	}
+	if err := s.provider.Storage().RevokeToken(ctx, r.Data.Token, subject, r.Client.GetID()); err != nil {
+		return nil, RevocationError(err)
+	}
+	return NewResponse(nil), nil
 }
 
-func (s *LegacyServer) EndSession(_ context.Context, r *Request[oidc.EndSessionRequest]) (*Response, error) {
-	return nil, unimplementedError(r)
-}
-
-func (s *LegacyServer) Keys(_ context.Context, r *Request[struct{}]) (*Response, error) {
-	return nil, unimplementedError(r)
+func (s *LegacyServer) EndSession(ctx context.Context, r *Request[oidc.EndSessionRequest]) (*Redirect, error) {
+	session, err := ValidateEndSessionRequest(ctx, r.Data, s.provider)
+	if err != nil {
+		return nil, err
+	}
+	err = s.provider.Storage().TerminateSession(ctx, session.UserID, session.ClientID)
+	if err != nil {
+		return nil, err
+	}
+	return NewRedirect(session.RedirectURI), nil
 }
