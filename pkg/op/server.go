@@ -2,44 +2,13 @@ package op
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/muhlemmer/gu"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
-
-type StatusError struct {
-	parent     error
-	statusCode int
-}
-
-func NewStatusError(parent error, statusCode int) StatusError {
-	return StatusError{
-		parent:     parent,
-		statusCode: statusCode,
-	}
-}
-
-func (e StatusError) Error() string {
-	return fmt.Sprintf("%s: %s", http.StatusText(e.statusCode), e.parent.Error())
-}
-
-func (e StatusError) Unwrap() error {
-	return e.parent
-}
-
-func (e StatusError) Is(err error) bool {
-	var target StatusError
-	if !errors.As(err, &target) {
-		return false
-	}
-	return errors.Is(e.parent, target.parent) &&
-		e.statusCode == target.statusCode
-}
 
 // Server describes the interface that needs to be implemented to serve
 // OpenID Connect and Oauth2 standard requests.
@@ -177,6 +146,10 @@ type Request[T any] struct {
 	Data     *T
 }
 
+func (r *Request[_]) path() string {
+	return r.URL.Path
+}
+
 func newRequest[T any](r *http.Request, data *T) *Request[T] {
 	return &Request[T]{
 		Method:   r.Method,
@@ -226,7 +199,7 @@ func NewResponse(data any) *Response {
 
 func (resp *Response) writeOut(w http.ResponseWriter) {
 	gu.MapMerge(resp.Header, w.Header())
-	json.NewEncoder(w).Encode(resp.Data)
+	httphelper.MarshalJSON(w, resp.Data)
 }
 
 // Redirect is a special response type which will
@@ -253,12 +226,9 @@ type UnimplementedServer struct{}
 // and not http methods covered by "501 Not Implemented".
 var UnimplementedStatusCode = http.StatusNotFound
 
-func unimplementedError[T any](r *Request[T]) StatusError {
-	err := oidc.ErrServerError().WithDescription("%s not implemented on this server", r.URL.Path)
-	return StatusError{
-		parent:     err,
-		statusCode: UnimplementedStatusCode,
-	}
+func unimplementedError(r interface{ path() string }) StatusError {
+	err := oidc.ErrServerError().WithDescription("%s not implemented on this server", r.path())
+	return NewStatusError(err, UnimplementedStatusCode)
 }
 
 func unimplementedGrantError(gt oidc.GrantType) StatusError {
@@ -289,7 +259,7 @@ func (UnimplementedServer) Authorize(ctx context.Context, r *Request[oidc.AuthRe
 }
 
 func (UnimplementedServer) DeviceAuthorization(ctx context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedError(r)
 }
 
 func (UnimplementedServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
@@ -321,7 +291,7 @@ func (UnimplementedServer) DeviceToken(ctx context.Context, r *ClientRequest[oid
 }
 
 func (UnimplementedServer) Introspect(ctx context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedError(r)
 }
 
 func (UnimplementedServer) UserInfo(ctx context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
@@ -329,7 +299,7 @@ func (UnimplementedServer) UserInfo(ctx context.Context, r *Request[oidc.UserInf
 }
 
 func (UnimplementedServer) Revocation(ctx context.Context, r *ClientRequest[oidc.RevocationRequest]) (*Response, error) {
-	return nil, unimplementedError(r.Request)
+	return nil, unimplementedError(r)
 }
 
 func (UnimplementedServer) EndSession(ctx context.Context, r *Request[oidc.EndSessionRequest]) (*Redirect, error) {
