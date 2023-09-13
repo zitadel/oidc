@@ -183,8 +183,7 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 
 type ClientCredentials struct {
 	ClientID            string `schema:"client_id"`
-	ClientSecret        string `schema:"client_secret"`    // Client secret from request body
-	ClientSecretBasic   string `schema:"-"`                // Obtained from http request
+	ClientSecret        string `schema:"client_secret"`    // Client secret from Basic auth or request body
 	ClientAssertion     string `schema:"client_assertion"` // JWT
 	ClientAssertionType string `schema:"client_assertion_type"`
 }

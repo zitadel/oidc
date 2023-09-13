@@ -218,6 +218,11 @@ func NewRedirect(url string) *Redirect {
 	return &Redirect{URL: url}
 }
 
+func (red *Redirect) writeOut(w http.ResponseWriter, r *http.Request) {
+	gu.MapMerge(r.Header, w.Header())
+	http.Redirect(w, r, red.URL, http.StatusFound)
+}
+
 type UnimplementedServer struct{}
 
 // UnimplementedStatusCode is the statuscode returned for methods
