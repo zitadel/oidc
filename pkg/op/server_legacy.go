@@ -50,37 +50,17 @@ var (
 )
 
 func (s *LegacyServer) Authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (_ *Redirect, err error) {
-	authReq := r.Data
-	if authReq.RequestParam != "" && s.provider.RequestObjectSupported() {
-		authReq, err = ParseRequestObject(ctx, authReq, s.provider.Storage(), IssuerFromContext(ctx))
-		if err != nil {
-			return nil, NewStatusError(err, http.StatusBadRequest)
-		}
-	}
-	if authReq.ClientID == "" {
-		return TryErrorRedirect(ctx, authReq, ErrAuthReqMissingClientID, s.provider.Encoder(), s.provider.Logger())
-	}
-	if authReq.RedirectURI == "" {
-		return TryErrorRedirect(ctx, authReq, ErrAuthReqMissingRedirectURI, s.provider.Encoder(), s.provider.Logger())
-	}
-	validation := ValidateAuthRequest
-	if validater, ok := s.provider.(AuthorizeValidator); ok {
-		validation = validater.ValidateAuthRequest
-	}
-	userID, err := validation(ctx, authReq, s.provider.Storage(), s.provider.IDTokenHintVerifier(ctx))
+	userID, err := ValidateAuthRequestV2(ctx, r.Data, s.provider)
 	if err != nil {
-		return TryErrorRedirect(ctx, authReq, err, s.provider.Encoder(), s.provider.Logger())
+		return nil, err
 	}
-	if authReq.RequestParam != "" {
-		return TryErrorRedirect(ctx, authReq, oidc.ErrRequestNotSupported(), s.provider.Encoder(), s.provider.Logger())
-	}
-	req, err := s.provider.Storage().CreateAuthRequest(ctx, authReq, userID)
+	req, err := s.provider.Storage().CreateAuthRequest(ctx, r.Data, userID)
 	if err != nil {
-		return TryErrorRedirect(ctx, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), s.provider.Logger())
+		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), s.provider.Logger())
 	}
 	client, err := s.provider.Storage().GetClientByClientID(ctx, req.GetClientID())
 	if err != nil {
-		return TryErrorRedirect(ctx, authReq, oidc.DefaultToServerError(err, "unable to retrieve client by id"), s.provider.Encoder(), s.provider.Logger())
+		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to retrieve client by id"), s.provider.Encoder(), s.provider.Logger())
 	}
 	return NewRedirect(client.LoginURL(req.GetID())), nil
 }
