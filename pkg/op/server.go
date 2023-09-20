@@ -43,10 +43,21 @@ type Server interface {
 	// The recommended Response Data type is [jose.JSOMWebKeySet].
 	Keys(context.Context, *Request[struct{}]) (*Response, error)
 
+	// VerifyAuthRequest verifies the Auth Request and
+	// adds the Client to the request.
+	//
+	// When the `request` field is populated with a
+	// "Request Object" JWT, it needs to be Validated
+	// and its claims overwrtite any fields in the AuthRequest.
+	// If the implementation does not support "Request Object",
+	// it MUST return an [oidc.ErrRequestNotSupported].
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
+	VerifyAuthRequest(context.Context, *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error)
+
 	// Authorize initiates the authorization flow and redirects to a login page.
 	// See the various https://openid.net/specs/openid-connect-core-1_0.html
 	// authorize endpoint sections (one for each type of flow).
-	Authorize(context.Context, *Request[oidc.AuthRequest]) (*Redirect, error)
+	Authorize(context.Context, *ClientRequest[oidc.AuthRequest]) (*Redirect, error)
 
 	// AuthorizeCallback? Do we still need it?
 
@@ -259,7 +270,14 @@ func (UnimplementedServer) Keys(ctx context.Context, r *Request[struct{}]) (*Res
 	return nil, unimplementedError(r)
 }
 
-func (UnimplementedServer) Authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
+func (UnimplementedServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
+	if r.Data.RequestParam != "" {
+		return nil, oidc.ErrRequestNotSupported()
+	}
+	return nil, unimplementedError(r)
+}
+
+func (UnimplementedServer) Authorize(ctx context.Context, r *ClientRequest[oidc.AuthRequest]) (*Redirect, error) {
 	return nil, unimplementedError(r)
 }
 

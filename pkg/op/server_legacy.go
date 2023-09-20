@@ -49,8 +49,32 @@ var (
 	ErrAuthReqMissingRedirectURI = errors.New("auth request is missing redirect_uri")
 )
 
-func (s *LegacyServer) Authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (_ *Redirect, err error) {
-	userID, err := ValidateAuthRequestV2(ctx, r.Data, s.provider)
+func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
+	if r.Data.RequestParam != "" {
+		if !s.provider.RequestObjectSupported() {
+			return nil, oidc.ErrRequestNotSupported()
+		}
+		err := ParseRequestObject(ctx, r.Data, s.provider.Storage(), IssuerFromContext(ctx))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if r.Data.ClientID == "" {
+		return nil, ErrAuthReqMissingClientID
+	}
+	client, err := s.provider.Storage().GetClientByClientID(ctx, r.Data.ClientID)
+	if err != nil {
+		return nil, oidc.DefaultToServerError(err, "unable to retrieve client by id")
+	}
+
+	return &ClientRequest[oidc.AuthRequest]{
+		Request: r,
+		Client:  client,
+	}, nil
+}
+
+func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
+	userID, err := ValidateAuthReqIDTokenHint(ctx, r.Data.IDTokenHint, s.provider.IDTokenHintVerifier(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +149,6 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
 	if !s.provider.GrantTypeRefreshTokenSupported() {
 		return nil, unimplementedGrantError(oidc.GrantTypeRefreshToken)
-	}
-	if !ValidateGrantType(r.Client, oidc.GrantTypeRefreshToken) {
-		return nil, oidc.ErrUnauthorizedClient()
 	}
 	request, err := RefreshTokenRequestByRefreshToken(ctx, s.provider.Storage(), r.Data.RefreshToken)
 	if err != nil {
