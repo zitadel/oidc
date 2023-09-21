@@ -12,8 +12,12 @@ import (
 type LegacyServer struct {
 	UnimplementedServer
 	provider OpenIDProvider
+}
 
-	readyProbes []ProbesFn
+func NewLegacyServer(provider OpenIDProvider) http.Handler {
+	return RegisterServer(&LegacyServer{
+		provider: provider,
+	}, WithHTTPMiddleware(intercept(provider.IssuerFromRequest)))
 }
 
 func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
@@ -21,7 +25,7 @@ func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Respons
 }
 
 func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Response, error) {
-	for _, probe := range s.readyProbes {
+	for _, probe := range s.provider.Probes() {
 		// shouldn't we run probes in Go routines?
 		if err := probe(ctx); err != nil {
 			return nil, NewStatusError(err, http.StatusInternalServerError)

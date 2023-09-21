@@ -248,7 +248,7 @@ func unimplementedError(r interface{ path() string }) StatusError {
 }
 
 func unimplementedGrantError(gt oidc.GrantType) StatusError {
-	err := oidc.ErrUnsupportedGrantType().WithDescription("%s grant not supported", gt)
+	err := oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", gt)
 	return NewStatusError(err, http.StatusBadRequest) // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 }
 
