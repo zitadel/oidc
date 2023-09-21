@@ -269,14 +269,17 @@ func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request,
 }
 
 func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Request, client Client) {
+	if client.AuthMethod() == oidc.AuthMethodNone {
+		err := oidc.ErrInvalidClient().WithDescription("client must be authenticated")
+		WriteError(w, r, err, s.logger)
+		return
+	}
+
 	request, err := decodeRequest[oidc.ClientCredentialsRequest](s.decoder, r, false)
 	if err != nil {
 		WriteError(w, r, err, s.logger)
 		return
 	}
-
-	// TODO: is a public client allowed here?
-
 	resp, err := s.server.ClientCredentialsExchange(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
 		WriteError(w, r, err, s.logger)
