@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/cors"
@@ -66,17 +67,24 @@ func (s *webServer) createRouter() {
 	s.Handler = router
 }
 
-func (s *webServer) verifyRequestClient(r *http.Request) (Client, error) {
-	if err := r.ParseForm(); err != nil {
+func (s *webServer) verifyRequestClient(r *http.Request) (_ Client, err error) {
+	if err = r.ParseForm(); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
 	}
 	cc := new(ClientCredentials)
-	if err := s.decoder.Decode(cc, r.Form); err != nil {
+	if err = s.decoder.Decode(cc, r.Form); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 	// Basic auth takes precedence, so if set it overwrites the form data.
 	if clientID, clientSecret, ok := r.BasicAuth(); ok {
-		cc.ClientID, cc.ClientSecret = clientID, clientSecret
+		cc.ClientID, err = url.QueryUnescape(clientID)
+		if err != nil {
+			return nil, oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
+		}
+		cc.ClientSecret, err = url.QueryUnescape(clientSecret)
+		if err != nil {
+			return nil, oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
+		}
 	}
 	if cc.ClientID == "" && cc.ClientAssertion == "" {
 		return nil, oidc.ErrInvalidRequest().WithDescription("client_id or client_assertion must be provided")

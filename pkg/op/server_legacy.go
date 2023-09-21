@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -15,9 +16,15 @@ type LegacyServer struct {
 }
 
 func NewLegacyServer(provider OpenIDProvider) http.Handler {
-	return RegisterServer(&LegacyServer{
+	server := RegisterServer(&LegacyServer{
 		provider: provider,
 	}, WithHTTPMiddleware(intercept(provider.IssuerFromRequest)))
+
+	router := chi.NewRouter()
+	router.Mount("/", server)
+	router.HandleFunc(authCallbackPath(provider), authorizeCallbackHandler(provider))
+
+	return router
 }
 
 func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {

@@ -3,6 +3,7 @@ package client_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -50,6 +51,14 @@ func TestMain(m *testing.M) {
 }
 
 func TestRelyingPartySession(t *testing.T) {
+	for _, wrapServer := range []bool{false, true} {
+		t.Run(fmt.Sprint("wrapServer ", wrapServer), func(t *testing.T) {
+			testRelyingPartySession(t, wrapServer)
+		})
+	}
+}
+
+func testRelyingPartySession(t *testing.T, wrapServer bool) {
 	t.Log("------- start example OP ------")
 	targetURL := "http://local-site"
 	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
@@ -57,7 +66,7 @@ func TestRelyingPartySession(t *testing.T) {
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, wrapServer)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
@@ -101,6 +110,14 @@ func TestRelyingPartySession(t *testing.T) {
 }
 
 func TestResourceServerTokenExchange(t *testing.T) {
+	for _, wrapServer := range []bool{false, true} {
+		t.Run(fmt.Sprint("wrapServer ", wrapServer), func(t *testing.T) {
+			testResourceServerTokenExchange(t, wrapServer)
+		})
+	}
+}
+
+func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 	t.Log("------- start example OP ------")
 	targetURL := "http://local-site"
 	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
@@ -108,7 +125,7 @@ func TestResourceServerTokenExchange(t *testing.T) {
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, wrapServer)
 
 	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
