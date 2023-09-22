@@ -165,5 +165,5 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.
 	e := oidc.DefaultToServerError(statusError.parent, statusError.parent.Error())
 
 	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
-	httphelper.MarshalJSONWithStatus(w, oidc.DefaultToServerError(e, e.Error()), statusError.statusCode)
+	httphelper.MarshalJSONWithStatus(w, e, statusError.statusCode)
 }
