@@ -228,44 +228,6 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
-// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
-func ValidateAuthRequestV2(ctx context.Context, authReq *oidc.AuthRequest, provider Authorizer) (sub string, err error) {
-	if authReq.RequestParam != "" && provider.RequestObjectSupported() {
-		err := ParseRequestObject(ctx, authReq, provider.Storage(), IssuerFromContext(ctx))
-		if err != nil {
-			return "", err
-		}
-	}
-	if authReq.ClientID == "" {
-		return "", ErrAuthReqMissingClientID
-	}
-	if authReq.RedirectURI == "" {
-		return "", ErrAuthReqMissingRedirectURI
-	}
-	if authReq.RequestParam != "" {
-		return "", oidc.ErrRequestNotSupported()
-	}
-	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
-	if err != nil {
-		return "", err
-	}
-	client, err := provider.Storage().GetClientByClientID(ctx, authReq.ClientID)
-	if err != nil {
-		return "", oidc.DefaultToServerError(err, "unable to retrieve client by id")
-	}
-	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
-	if err != nil {
-		return "", err
-	}
-	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
-		return "", err
-	}
-	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
-		return "", err
-	}
-	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, provider.IDTokenHintVerifier(ctx))
-}
-
 // ValidateAuthReqPrompt validates the passed prompt values and sets max_age to 0 if prompt login is present
 func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) {
 	for _, prompt := range prompts {
