@@ -93,11 +93,7 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 	if err != nil {
 		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), s.provider.Logger())
 	}
-	client, err := s.provider.Storage().GetClientByClientID(ctx, req.GetClientID())
-	if err != nil {
-		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to retrieve client by id"), s.provider.Encoder(), s.provider.Logger())
-	}
-	return NewRedirect(client.LoginURL(req.GetID())), nil
+	return NewRedirect(r.Client.LoginURL(req.GetID())), nil
 }
 
 func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
