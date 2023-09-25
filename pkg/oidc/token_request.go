@@ -50,16 +50,6 @@ const (
 	JWTTokenType     TokenType = "urn:ietf:params:oauth:token-type:jwt"
 )
 
-func (t GrantType) IsSupported() bool {
-	for _, gt := range AllGrantTypes {
-		if t == gt {
-			return true
-		}
-	}
-
-	return false
-}
-
 var AllTokenTypes = []TokenType{
 	AccessTokenType, RefreshTokenType, IDTokenType, JWTTokenType,
 }
