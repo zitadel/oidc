@@ -23,24 +23,24 @@ import (
 // the method documentation gives a recommended type which can be used
 // directly or extended upon.
 type Server interface {
-	// Health should return a status of "ok" once the Server is listining.
+	// Health returns a status of "ok" once the Server is listening.
 	// The recommended Response Data type is [Status].
 	Health(context.Context, *Request[struct{}]) (*Response, error)
 
-	// Ready should return a status of "ok" once all dependecies,
-	// such as database storage are ready.
+	// Ready returns a status of "ok" once all dependencies,
+	// such as database storage, are ready.
 	// An error can be returned to explain what is not ready.
 	// The recommended Response Data type is [Status].
 	Ready(context.Context, *Request[struct{}]) (*Response, error)
 
-	// Discovery return the OpenID Provider Configuration Information for this server.
+	// Discovery returns the OpenID Provider Configuration Information for this server.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
 	// The recommended Response Data type is [oidc.DiscoveryConfiguration].
 	Discovery(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Keys serves the JWK set which the client can use verify signatures from the op.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata `jwks_uri` key.
-	// The recommended Response Data type is [jose.JSOMWebKeySet].
+	// The recommended Response Data type is [jose.JSONWebKeySet].
 	Keys(context.Context, *Request[struct{}]) (*Response, error)
 
 	// VerifyAuthRequest verifies the Auth Request and
@@ -48,7 +48,7 @@ type Server interface {
 	//
 	// When the `request` field is populated with a
 	// "Request Object" JWT, it needs to be Validated
-	// and its claims overwrtite any fields in the AuthRequest.
+	// and its claims overwrite any fields in the AuthRequest.
 	// If the implementation does not support "Request Object",
 	// it MUST return an [oidc.ErrRequestNotSupported].
 	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
@@ -58,8 +58,6 @@ type Server interface {
 	// See the various https://openid.net/specs/openid-connect-core-1_0.html
 	// authorize endpoint sections (one for each type of flow).
 	Authorize(context.Context, *ClientRequest[oidc.AuthRequest]) (*Redirect, error)
-
-	// AuthorizeCallback? Do we still need it?
 
 	// DeviceAuthorization initiates the device authorization flow.
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
@@ -74,7 +72,7 @@ type Server interface {
 	VerifyClient(context.Context, *Request[ClientCredentials]) (Client, error)
 
 	// CodeExchange returns Tokens after an authorization code
-	// is obtained in a succesfull Authorize flow.
+	// is obtained in a successful Authorize flow.
 	// It is called by the Token endpoint handler when
 	// grant_type has the value authorization_code
 	// https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
@@ -112,7 +110,7 @@ type Server interface {
 	// DeviceToken handles the OAuth 2.0 Device Authorization Grant
 	// It is called by the Token endpoint handler when
 	// grant_type has the value urn:ietf:params:oauth:grant-type:device_code.
-	// It is typically called in a polling fashion and appropiate errors
+	// It is typically called in a polling fashion and appropriate errors
 	// should be returned to signal authorization_pending or access_denied etc.
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.4,
 	// https://datatracker.ietf.org/doc/html/rfc8628#section-3.5.
@@ -140,7 +138,7 @@ type Server interface {
 	EndSession(context.Context, *Request[oidc.EndSessionRequest]) (*Redirect, error)
 
 	// mustImpl forces implementations to embed the UnimplementedServer for forward
-	// compatibilty with the interface.
+	// compatibility with the interface.
 	mustImpl()
 }
 
@@ -173,7 +171,7 @@ func newRequest[T any](r *http.Request, data *T) *Request[T] {
 }
 
 // ClientRequest is a Request with a verified client attached to it.
-// Methods the recieve this argument may assume the client was authenticated,
+// Methods the receive this argument may assume the client was authenticated,
 // or verified to be a public client.
 type ClientRequest[T any] struct {
 	*Request[T]
@@ -215,7 +213,7 @@ func (resp *Response) writeOut(w http.ResponseWriter) {
 
 // Redirect is a special response type which will
 // initiate a [http.StatusFound] redirect.
-// The Params fielde will be encoded and set to the
+// The Params field will be encoded and set to the
 // URL's RawQuery field before building the URL.
 type Redirect struct {
 	// Header map will be merged with the
@@ -236,7 +234,7 @@ func (red *Redirect) writeOut(w http.ResponseWriter, r *http.Request) {
 
 type UnimplementedServer struct{}
 
-// UnimplementedStatusCode is the statuscode returned for methods
+// UnimplementedStatusCode is the status code returned for methods
 // that are not yet implemented.
 // Note that this means methods in the sense of the Go interface,
 // and not http methods covered by "501 Not Implemented".
