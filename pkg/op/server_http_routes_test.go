@@ -110,11 +110,14 @@ func TestServerRoutes(t *testing.T) {
 			method: http.MethodGet,
 			path:   testProvider.TokenEndpoint().Relative(),
 			values: map[string]string{
-				"grant_type": string(oidc.GrantTypeCode),
-				"code":       "123",
+				"grant_type":    string(oidc.GrantTypeCode),
+				"client_id":     client.GetID(),
+				"client_secret": "secret",
+				"redirect_uri":  "https://example.com",
+				"code":          "123",
 			},
 			wantCode: http.StatusBadRequest,
-			json:     `{"error":"invalid_request", "error_description":"client_id or client_assertion must be provided"}`,
+			json:     `{"error":"invalid_grant", "error_description":"invalid code"}`,
 		},
 		{
 			name:   "JWT authorization",
