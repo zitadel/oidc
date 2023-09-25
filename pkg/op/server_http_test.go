@@ -147,6 +147,28 @@ func (c *testClient) ClockSkew() time.Duration {
 	return 0
 }
 
+type requestVerifier struct {
+	UnimplementedServer
+	client Client
+}
+
+func (s *requestVerifier) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
+	if s.client == nil {
+		return nil, oidc.ErrServerError()
+	}
+	return &ClientRequest[oidc.AuthRequest]{
+		Request: r,
+		Client:  s.client,
+	}, nil
+}
+
+func (s *requestVerifier) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
+	if s.client == nil {
+		return nil, oidc.ErrServerError()
+	}
+	return s.client, nil
+}
+
 var testDecoder = func() *schema.Decoder {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
@@ -170,6 +192,54 @@ func runWebServerTest(t *testing.T, handler http.HandlerFunc, r *http.Request, w
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	assert.JSONEq(t, want.wantBody, string(body))
+}
+
+func Test_webServer_withClient(t *testing.T) {
+	tests := []struct {
+		name string
+		r    *http.Request
+		want webServerResult
+	}{
+		{
+			name: "parse error",
+			r:    httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(make([]byte, 11<<20))),
+			want: webServerResult{
+				wantStatus: http.StatusBadRequest,
+				wantBody:   `{"error":"invalid_request", "error_description":"error parsing form"}`,
+			},
+		},
+		{
+			name: "invalid grant type",
+			r:    httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=native&grant_type=bad&foo=bar")),
+			want: webServerResult{
+				wantStatus: http.StatusBadRequest,
+				wantBody:   `{"error":"unauthorized_client", "error_description":"grant_type \"bad\" not allowed"}`,
+			},
+		},
+		{
+			name: "no grant type",
+			r:    httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=native&foo=bar")),
+			want: webServerResult{
+				wantStatus: http.StatusOK,
+				wantBody:   `{"foo":"bar"}`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &webServer{
+				server: &requestVerifier{
+					client: newClient(clientTypeNative),
+				},
+				decoder: testDecoder,
+				logger:  slog.Default(),
+			}
+			handler := func(w http.ResponseWriter, r *http.Request, client Client) {
+				fmt.Fprintf(w, `{"foo":%q}`, r.FormValue("foo"))
+			}
+			runWebServerTest(t, s.withClient(handler), tt.r, tt.want)
+		})
+	}
 }
 
 func Test_webServer_verifyRequestClient(t *testing.T) {
@@ -247,28 +317,6 @@ func Test_webServer_verifyRequestClient(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-type requestVerifier struct {
-	UnimplementedServer
-	client Client
-}
-
-func (s *requestVerifier) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
-	if s.client == nil {
-		return nil, oidc.ErrServerError()
-	}
-	return &ClientRequest[oidc.AuthRequest]{
-		Request: r,
-		Client:  s.client,
-	}, nil
-}
-
-func (s *requestVerifier) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
-	if s.client == nil {
-		return nil, oidc.ErrServerError()
-	}
-	return s.client, nil
 }
 
 func Test_webServer_authorizeHandler(t *testing.T) {
