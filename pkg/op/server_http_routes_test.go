@@ -145,22 +145,18 @@ func TestServerRoutes(t *testing.T) {
 				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer","expires_in":299,"scope":"openid offline_access","refresh_token":"`,
 			},
 		},
-
-		/*
-			{
-				name:      "Client credentials exchange",
-				method:    http.MethodGet,
-				path:      testProvider.TokenEndpoint().Relative(),
-				basicAuth: &basicAuth{"web", "secret"},
-				values: map[string]string{
-					"grant_type": string(oidc.GrantTypeClientCredentials),
-					"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
-				},
-				wantCode: http.StatusOK,
-				contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
+		{
+			name:      "Client credentials exchange",
+			method:    http.MethodGet,
+			path:      testProvider.TokenEndpoint().Relative(),
+			basicAuth: &basicAuth{"sid1", "verysecret"},
+			values: map[string]string{
+				"grant_type": string(oidc.GrantTypeClientCredentials),
+				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
-		*/
-
+			wantCode: http.StatusOK,
+			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
+		},
 		{
 			// This call will fail. A successfull test is already
 			// part of device_test.go

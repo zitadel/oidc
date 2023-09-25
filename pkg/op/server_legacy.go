@@ -105,6 +105,14 @@ func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest
 }
 
 func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
+	if oidc.GrantType(r.Form.Get("grant_type")) == oidc.GrantTypeClientCredentials {
+		storage, ok := s.provider.Storage().(ClientCredentialsStorage)
+		if !ok {
+			return nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
+		}
+		return storage.ClientCredentials(ctx, r.Data.ClientID, r.Data.ClientSecret)
+	}
+
 	if r.Data.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := s.provider.(JWTAuthorizationGrantExchanger)
 		if !ok || !s.provider.AuthMethodPrivateKeyJWTSupported() {
