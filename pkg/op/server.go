@@ -22,6 +22,13 @@ import (
 // in the standards regarding the response models. Where applicable
 // the method documentation gives a recommended type which can be used
 // directly or extended upon.
+//
+// The addition of new methods is not considered a breaking change
+// as defined by semver rules.
+// Implementations MUST embed [UnimplementedServer] to maintain
+// forward compatibility.
+//
+// EXPERIMENTAL: may change until v4
 type Server interface {
 	// Health returns a status of "ok" once the Server is listening.
 	// The recommended Response Data type is [Status].
@@ -146,6 +153,8 @@ type Server interface {
 // and parsed Data from the request body (POST) or URL parameters (GET).
 // Data can be assumed to be validated according to the applicable
 // standard for the specific endpoints.
+//
+// EXPERIMENTAL: may change until v4
 type Request[T any] struct {
 	Method   string
 	URL      *url.URL
@@ -173,6 +182,8 @@ func newRequest[T any](r *http.Request, data *T) *Request[T] {
 // ClientRequest is a Request with a verified client attached to it.
 // Methods the receive this argument may assume the client was authenticated,
 // or verified to be a public client.
+//
+// EXPERIMENTAL: may change until v4
 type ClientRequest[T any] struct {
 	*Request[T]
 	Client Client
@@ -185,6 +196,9 @@ func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientReq
 	}
 }
 
+// Response object for most [Server] methods.
+//
+// EXPERIMENTAL: may change until v4
 type Response struct {
 	// Header map will be merged with the
 	// header on the [http.ResponseWriter].
@@ -200,6 +214,8 @@ type Response struct {
 	Data any
 }
 
+// NewResponse creates a new response for data,
+// without custom headers.
 func NewResponse(data any) *Response {
 	return &Response{
 		Data: data,
@@ -215,6 +231,8 @@ func (resp *Response) writeOut(w http.ResponseWriter) {
 // initiate a [http.StatusFound] redirect.
 // The Params field will be encoded and set to the
 // URL's RawQuery field before building the URL.
+//
+// EXPERIMENTAL: may change until v4
 type Redirect struct {
 	// Header map will be merged with the
 	// header on the [http.ResponseWriter].

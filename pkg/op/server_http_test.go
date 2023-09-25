@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +21,28 @@ import (
 	"github.com/zitadel/schema"
 	"golang.org/x/exp/slog"
 )
+
+func TestRegisterServer(t *testing.T) {
+	server := UnimplementedServer{}
+	endpoints := Endpoints{
+		Authorization: Endpoint{
+			path: "/auth",
+		},
+	}
+	decoder := schema.NewDecoder()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	h := RegisterServer(server,
+		WithEndpoints(endpoints),
+		WithDecoder(decoder),
+		WithFallbackLogger(logger),
+	)
+	got := h.(*webServer)
+	assert.Equal(t, got.server, server)
+	assert.Equal(t, got.endpoints, endpoints)
+	assert.Equal(t, got.decoder, decoder)
+	assert.Equal(t, got.logger, logger)
+}
 
 type testClient struct {
 	id              string
