@@ -10,7 +10,7 @@ var ErrSignerCreationFailed = errors.New("signer creation failed")
 
 type SigningKey interface {
 	SignatureAlgorithm() jose.SignatureAlgorithm
-	Key() interface{}
+	Key() any
 	ID() string
 }
 
@@ -32,5 +32,5 @@ type Key interface {
 	ID() string
 	Algorithm() jose.SignatureAlgorithm
 	Use() string
-	Key() interface{}
+	Key() any
 }

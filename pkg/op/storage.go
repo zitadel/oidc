@@ -100,7 +100,7 @@ type TokenExchangeStorage interface {
 
 	// GetPrivateClaimsFromTokenExchangeRequest will be called during access token creation.
 	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
-	GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) (claims map[string]interface{}, err error)
+	GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) (claims map[string]any, err error)
 
 	// SetUserinfoFromTokenExchangeRequest will be called during id token creation.
 	// Claims evaluation can be based on all validated request data available, including: scopes, resource, audience, etc.
@@ -110,8 +110,8 @@ type TokenExchangeStorage interface {
 // TokenExchangeTokensVerifierStorage is an optional interface used in token exchange process to verify tokens
 // issued by third-party applications. If interface is not implemented - only tokens issued by op will be exchanged.
 type TokenExchangeTokensVerifierStorage interface {
-	VerifyExchangeSubjectToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, subject string, tokenClaims map[string]interface{}, err error)
-	VerifyExchangeActorToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, actor string, tokenClaims map[string]interface{}, err error)
+	VerifyExchangeSubjectToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, subject string, tokenClaims map[string]any, err error)
+	VerifyExchangeActorToken(ctx context.Context, token string, tokenType oidc.TokenType) (tokenIDOrToken string, actor string, tokenClaims map[string]any, err error)
 }
 
 var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
@@ -126,7 +126,7 @@ type OPStorage interface {
 	SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error
 	SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error
 	SetIntrospectionFromToken(ctx context.Context, userinfo *oidc.IntrospectionResponse, tokenID, subject, clientID string) error
-	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]interface{}, error)
+	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]any, error)
 	GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 	ValidateJWTProfileScopes(ctx context.Context, userID string, scopes []string) ([]string, error)
 }

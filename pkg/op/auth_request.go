@@ -501,7 +501,7 @@ func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
 
 // AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
 // depending on the response_mode and response_type
-func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response interface{}, encoder httphelper.Encoder) (string, error) {
+func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response any, encoder httphelper.Encoder) (string, error) {
 	uri, err := url.Parse(redirectURI)
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)

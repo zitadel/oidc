@@ -745,7 +745,7 @@ func TestAuthResponseURL(t *testing.T) {
 		redirectURI  string
 		responseType oidc.ResponseType
 		responseMode oidc.ResponseMode
-		response     interface{}
+		response     any
 		encoder      httphelper.Encoder
 	}
 	type res struct {
@@ -763,7 +763,7 @@ func TestAuthResponseURL(t *testing.T) {
 				"uri",
 				oidc.ResponseTypeCode,
 				"",
-				map[string]interface{}{"test": "test"},
+				map[string]any{"test": "test"},
 				&mockEncoder{
 					errors.New("error encoding"),
 				},
@@ -934,7 +934,7 @@ type mockEncoder struct {
 	err error
 }
 
-func (m *mockEncoder) Encode(src interface{}, dst map[string][]string) error {
+func (m *mockEncoder) Encode(src any, dst map[string][]string) error {
 	if m.err != nil {
 		return m.err
 	}
