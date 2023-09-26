@@ -61,7 +61,7 @@ func (s *signingKey) SignatureAlgorithm() jose.SignatureAlgorithm {
 	return s.algorithm
 }
 
-func (s *signingKey) Key() interface{} {
+func (s *signingKey) Key() any {
 	return s.key
 }
 
@@ -85,7 +85,7 @@ func (s *publicKey) Use() string {
 	return "sig"
 }
 
-func (s *publicKey) Key() interface{} {
+func (s *publicKey) Key() any {
 	return &s.key.PublicKey
 }
 
@@ -525,11 +525,11 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *
 
 // GetPrivateClaimsFromScopes implements the op.Storage interface
 // it will be called for the creation of a JWT access token to assert claims for custom scopes
-func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
+func (s *Storage) GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]any, err error) {
 	return s.getPrivateClaimsFromScopes(ctx, userID, clientID, scopes)
 }
 
-func (s *Storage) getPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]interface{}, err error) {
+func (s *Storage) getPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (claims map[string]any, err error) {
 	for _, scope := range scopes {
 		switch scope {
 		case CustomScope:
@@ -713,7 +713,7 @@ func (s *Storage) CreateTokenExchangeRequest(ctx context.Context, request op.Tok
 // GetPrivateClaimsFromScopesForTokenExchange implements the op.TokenExchangeStorage interface
 // it will be called for the creation of an exchanged JWT access token to assert claims for custom scopes
 // plus adding token exchange specific claims related to delegation or impersonation
-func (s *Storage) GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}, err error) {
+func (s *Storage) GetPrivateClaimsFromTokenExchangeRequest(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]any, err error) {
 	claims, err = s.getPrivateClaimsFromScopes(ctx, "", request.GetClientID(), request.GetScopes())
 	if err != nil {
 		return nil, err
@@ -742,12 +742,12 @@ func (s *Storage) SetUserinfoFromTokenExchangeRequest(ctx context.Context, useri
 	return nil
 }
 
-func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]interface{}) {
+func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenExchangeRequest) (claims map[string]any) {
 	for _, scope := range request.GetScopes() {
 		switch {
 		case strings.HasPrefix(scope, CustomScopeImpersonatePrefix) && request.GetExchangeActor() == "":
 			// Set actor subject claim for impersonation flow
-			claims = appendClaim(claims, "act", map[string]interface{}{
+			claims = appendClaim(claims, "act", map[string]any{
 				"sub": request.GetExchangeSubject(),
 			})
 		}
@@ -755,7 +755,7 @@ func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenEx
 
 	// Set actor subject claim for delegation flow
 	// if request.GetExchangeActor() != "" {
-	// 	claims = appendClaim(claims, "act", map[string]interface{}{
+	// 	claims = appendClaim(claims, "act", map[string]any{
 	// 		"sub": request.GetExchangeActor(),
 	// 	})
 	// }
@@ -777,16 +777,16 @@ func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Tim
 }
 
 // customClaim demonstrates how to return custom claims based on provided information
-func customClaim(clientID string) map[string]interface{} {
-	return map[string]interface{}{
+func customClaim(clientID string) map[string]any {
+	return map[string]any{
 		"client": clientID,
 		"other":  "stuff",
 	}
 }
 
-func appendClaim(claims map[string]interface{}, claim string, value interface{}) map[string]interface{} {
+func appendClaim(claims map[string]any, claim string, value any) map[string]any {
 	if claims == nil {
-		claims = make(map[string]interface{})
+		claims = make(map[string]any)
 	}
 	claims[claim] = value
 	return claims

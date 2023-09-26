@@ -125,7 +125,7 @@ func main() {
 		testURL := r.Form.Get("url")
 		var data struct {
 			URL      string
-			Response interface{}
+			Response any
 		}
 		if testURL != "" {
 			data.URL = testURL
@@ -149,7 +149,7 @@ func main() {
 	logrus.Fatal(http.ListenAndServe("127.0.0.1:"+port, nil))
 }
 
-func callExampleEndpoint(client *http.Client, testURL string) (interface{}, error) {
+func callExampleEndpoint(client *http.Client, testURL string) (any, error) {
 	req, err := http.NewRequest("GET", testURL, nil)
 	if err != nil {
 		return nil, err
