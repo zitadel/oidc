@@ -85,7 +85,7 @@ func DecryptToken(tokenString string) (string, error) {
 	return tokenString, nil // TODO: impl
 }
 
-func ParseToken(tokenString string, claims interface{}) ([]byte, error) {
+func ParseToken(tokenString string, claims any) ([]byte, error) {
 	parts := strings.Split(tokenString, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("%w: token contains an invalid number of segments", ErrParse)

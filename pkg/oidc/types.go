@@ -17,13 +17,13 @@ import (
 type Audience []string
 
 func (a *Audience) UnmarshalJSON(text []byte) error {
-	var i interface{}
+	var i any
 	err := json.Unmarshal(text, &i)
 	if err != nil {
 		return err
 	}
 	switch aud := i.(type) {
-	case []interface{}:
+	case []any:
 		*a = make([]string, len(aud))
 		for i, audience := range aud {
 			(*a)[i] = audience.(string)
@@ -177,7 +177,7 @@ func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s *SpaceDelimitedArray) Scan(src interface{}) error {
+func (s *SpaceDelimitedArray) Scan(src any) error {
 	if src == nil {
 		*s = nil
 		return nil
