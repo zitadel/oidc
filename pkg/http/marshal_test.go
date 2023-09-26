@@ -94,7 +94,7 @@ func TestConcatenateJSON(t *testing.T) {
 
 func TestMarshalJSONWithStatus(t *testing.T) {
 	type args struct {
-		i      interface{}
+		i      any
 		status int
 	}
 	type res struct {
