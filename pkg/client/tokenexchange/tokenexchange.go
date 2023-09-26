@@ -12,13 +12,13 @@ import (
 type TokenExchanger interface {
 	TokenEndpoint() string
 	HttpClient() *http.Client
-	AuthFn() (interface{}, error)
+	AuthFn() (any, error)
 }
 
 type OAuthTokenExchange struct {
 	httpClient    *http.Client
 	tokenEndpoint string
-	authFn        func() (interface{}, error)
+	authFn        func() (any, error)
 }
 
 func NewTokenExchanger(issuer string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
@@ -26,13 +26,13 @@ func NewTokenExchanger(issuer string, options ...func(source *OAuthTokenExchange
 }
 
 func NewTokenExchangerClientCredentials(issuer, clientID, clientSecret string, options ...func(source *OAuthTokenExchange)) (TokenExchanger, error) {
-	authorizer := func() (interface{}, error) {
+	authorizer := func() (any, error) {
 		return httphelper.AuthorizeBasic(clientID, clientSecret), nil
 	}
 	return newOAuthTokenExchange(issuer, authorizer, options...)
 }
 
-func newOAuthTokenExchange(issuer string, authorizer func() (interface{}, error), options ...func(source *OAuthTokenExchange)) (*OAuthTokenExchange, error) {
+func newOAuthTokenExchange(issuer string, authorizer func() (any, error), options ...func(source *OAuthTokenExchange)) (*OAuthTokenExchange, error) {
 	te := &OAuthTokenExchange{
 		httpClient: httphelper.DefaultHTTPClient,
 	}
@@ -78,7 +78,7 @@ func (te *OAuthTokenExchange) HttpClient() *http.Client {
 	return te.httpClient
 }
 
-func (te *OAuthTokenExchange) AuthFn() (interface{}, error) {
+func (te *OAuthTokenExchange) AuthFn() (any, error) {
 	if te.authFn != nil {
 		return te.authFn()
 	}
