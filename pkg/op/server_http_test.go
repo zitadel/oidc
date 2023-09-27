@@ -745,7 +745,7 @@ func Test_webServer_codeExchangeHandler(t *testing.T) {
 			},
 		},
 		{
-			name:    "unimplemented JWTProfile called",
+			name:    "unimplemented CodeExchange called",
 			decoder: testDecoder,
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("code=123&redirect_uri=https://example.com/callback")),
 			want: webServerResult{

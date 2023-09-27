@@ -180,7 +180,7 @@ func newRequest[T any](r *http.Request, data *T) *Request[T] {
 }
 
 // ClientRequest is a Request with a verified client attached to it.
-// Methods the receive this argument may assume the client was authenticated,
+// Methods that receive this argument may assume the client was authenticated,
 // or verified to be a public client.
 //
 // EXPERIMENTAL: may change until v4
@@ -210,7 +210,7 @@ type Response struct {
 	// can extend the standard types as they wish.
 	// However, each method will recommend which
 	// (base) type to use as model, in order to
-	// be complaint with the standards.
+	// be compliant with the standards.
 	Data any
 }
 

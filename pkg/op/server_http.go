@@ -41,7 +41,7 @@ func RegisterServer(server Server, options ...ServerOption) http.Handler {
 
 type ServerOption func(s *webServer)
 
-// WithHTTPMiddler sets the passed middleware chain to the root of
+// WithHTTPMiddleware sets the passed middleware chain to the root of
 // the Server's router.
 func WithHTTPMiddleware(m ...func(http.Handler) http.Handler) ServerOption {
 	return func(s *webServer) {
