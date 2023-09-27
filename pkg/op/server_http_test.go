@@ -25,15 +25,14 @@ import (
 func TestRegisterServer(t *testing.T) {
 	server := UnimplementedServer{}
 	endpoints := Endpoints{
-		Authorization: Endpoint{
+		Authorization: &Endpoint{
 			path: "/auth",
 		},
 	}
 	decoder := schema.NewDecoder()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	h := RegisterServer(server,
-		WithEndpoints(endpoints),
+	h := RegisterServer(server, endpoints,
 		WithDecoder(decoder),
 		WithFallbackLogger(logger),
 	)

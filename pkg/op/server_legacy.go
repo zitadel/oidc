@@ -10,15 +10,31 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
+// LegacyServer is an implementation of [Server[] that
+// simply wraps a [OpenIDProvider].
+// It can be used to transition from the former Provider/Storage
+// interfaces to the new Server interface.
 type LegacyServer struct {
 	UnimplementedServer
-	provider OpenIDProvider
+	provider  OpenIDProvider
+	endpoints Endpoints
 }
 
-func NewLegacyServer(provider OpenIDProvider) http.Handler {
+// NewLegacyServer wraps provider in a `Server` and returns a handler which is
+// the Server's router.
+//
+// Only non-nil endpoints will be registered on the router.
+// Nil endpoints are disabled.
+//
+// The passed endpoints is also set to the provider,
+// to be consistent with the discovery config.
+// Any `With*Endpoint()` option used on the provider is
+// therefore ineffective.
+func NewLegacyServer(provider OpenIDProvider, endpoints Endpoints) http.Handler {
 	server := RegisterServer(&LegacyServer{
-		provider: provider,
-	}, WithHTTPMiddleware(intercept(provider.IssuerFromRequest)))
+		provider:  provider,
+		endpoints: endpoints,
+	}, endpoints, WithHTTPMiddleware(intercept(provider.IssuerFromRequest)))
 
 	router := chi.NewRouter()
 	router.Mount("/", server)
@@ -43,7 +59,7 @@ func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Respon
 
 func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
 	return NewResponse(
-		CreateDiscoveryConfig(ctx, s.provider, s.provider.Storage()),
+		createDiscoveryConfigV2(ctx, s.provider, s.provider.Storage(), &s.endpoints),
 	), nil
 }
 

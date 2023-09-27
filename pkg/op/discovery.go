@@ -64,6 +64,37 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 	}
 }
 
+func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage DiscoverStorage, endpoints *Endpoints) *oidc.DiscoveryConfiguration {
+	issuer := IssuerFromContext(ctx)
+	return &oidc.DiscoveryConfiguration{
+		Issuer:                                     issuer,
+		AuthorizationEndpoint:                      endpoints.Authorization.Absolute(issuer),
+		TokenEndpoint:                              endpoints.Token.Absolute(issuer),
+		IntrospectionEndpoint:                      endpoints.Introspection.Absolute(issuer),
+		UserinfoEndpoint:                           endpoints.Userinfo.Absolute(issuer),
+		RevocationEndpoint:                         endpoints.Revocation.Absolute(issuer),
+		EndSessionEndpoint:                         endpoints.EndSession.Absolute(issuer),
+		JwksURI:                                    endpoints.JwksURI.Absolute(issuer),
+		DeviceAuthorizationEndpoint:                endpoints.DeviceAuthorization.Absolute(issuer),
+		ScopesSupported:                            Scopes(config),
+		ResponseTypesSupported:                     ResponseTypes(config),
+		GrantTypesSupported:                        GrantTypes(config),
+		SubjectTypesSupported:                      SubjectTypes(config),
+		IDTokenSigningAlgValuesSupported:           SigAlgorithms(ctx, storage),
+		RequestObjectSigningAlgValuesSupported:     RequestObjectSigAlgorithms(config),
+		TokenEndpointAuthMethodsSupported:          AuthMethodsTokenEndpoint(config),
+		TokenEndpointAuthSigningAlgValuesSupported: TokenSigAlgorithms(config),
+		IntrospectionEndpointAuthSigningAlgValuesSupported: IntrospectionSigAlgorithms(config),
+		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
+		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
+		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
+		ClaimsSupported:                                    SupportedClaims(config),
+		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		UILocalesSupported:                                 config.SupportedUILocales(),
+		RequestParameterSupported:                          config.RequestObjectSupported(),
+	}
+}
+
 func Scopes(c Configuration) []string {
 	return DefaultSupportedScopes // TODO: config
 }

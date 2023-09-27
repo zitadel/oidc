@@ -20,13 +20,13 @@ import (
 // The routes can be customized with [WithEndpoints].
 //
 // EXPERIMENTAL: may change until v4
-func RegisterServer(server Server, options ...ServerOption) http.Handler {
+func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption) http.Handler {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 
 	ws := &webServer{
 		server:    server,
-		endpoints: *DefaultEndpoints,
+		endpoints: endpoints,
 		decoder:   decoder,
 		logger:    slog.Default(),
 	}
@@ -46,13 +46,6 @@ type ServerOption func(s *webServer)
 func WithHTTPMiddleware(m ...func(http.Handler) http.Handler) ServerOption {
 	return func(s *webServer) {
 		s.middleware = m
-	}
-}
-
-// WithEndpoints overrides the [DefaultEndpoints]
-func WithEndpoints(endpoints Endpoints) ServerOption {
-	return func(s *webServer) {
-		s.endpoints = endpoints
 	}
 }
 
@@ -96,15 +89,23 @@ func (s *webServer) createRouter() {
 	router.HandleFunc(healthEndpoint, simpleHandler(s, s.server.Health))
 	router.HandleFunc(readinessEndpoint, simpleHandler(s, s.server.Ready))
 	router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
-	router.HandleFunc(s.endpoints.Authorization.Relative(), s.authorizeHandler)
-	router.HandleFunc(s.endpoints.DeviceAuthorization.Relative(), s.withClient(s.deviceAuthorizationHandler))
-	router.HandleFunc(s.endpoints.Token.Relative(), s.tokensHandler)
-	router.HandleFunc(s.endpoints.Introspection.Relative(), s.withClient(s.introspectionHandler))
-	router.HandleFunc(s.endpoints.Userinfo.Relative(), s.userInfoHandler)
-	router.HandleFunc(s.endpoints.Revocation.Relative(), s.withClient(s.revocationHandler))
-	router.HandleFunc(s.endpoints.EndSession.Relative(), s.endSessionHandler)
-	router.HandleFunc(s.endpoints.JwksURI.Relative(), simpleHandler(s, s.server.Keys))
+
+	s.endpointRoute(router, s.endpoints.Authorization, s.authorizeHandler)
+	s.endpointRoute(router, s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
+	s.endpointRoute(router, s.endpoints.Token, s.tokensHandler)
+	s.endpointRoute(router, s.endpoints.Introspection, s.withClient(s.introspectionHandler))
+	s.endpointRoute(router, s.endpoints.Userinfo, s.userInfoHandler)
+	s.endpointRoute(router, s.endpoints.Revocation, s.withClient(s.revocationHandler))
+	s.endpointRoute(router, s.endpoints.EndSession, s.endSessionHandler)
+	s.endpointRoute(router, s.endpoints.JwksURI, simpleHandler(s, s.server.Keys))
 	s.Handler = router
+}
+
+func (s *webServer) endpointRoute(router *chi.Mux, e *Endpoint, hf http.HandlerFunc) {
+	if e != nil {
+		router.HandleFunc(e.Relative(), hf)
+		s.logger.Info("registered route", "endpoint", e.Relative())
+	}
 }
 
 type clientHandler func(w http.ResponseWriter, r *http.Request, client Client)
