@@ -88,7 +88,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 		if err != nil {
 			return nil, nil, err
 		}
-		err = AuthorizeCodeChallenge(tokenReq, request.GetCodeChallenge())
+		err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, request.GetCodeChallenge())
 		return request, client, err
 	}
 	if client.AuthMethod() == oidc.AuthMethodPost && !exchanger.AuthMethodPostSupported() {

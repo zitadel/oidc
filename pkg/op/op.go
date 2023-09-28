@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	DefaultEndpoints = &endpoints{
+	DefaultEndpoints = &Endpoints{
 		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
 		Token:               NewEndpoint(defaultTokenEndpoint),
 		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
@@ -131,16 +131,17 @@ type Config struct {
 	DeviceAuthorization      DeviceAuthorizationConfig
 }
 
-type endpoints struct {
-	Authorization       Endpoint
-	Token               Endpoint
-	Introspection       Endpoint
-	Userinfo            Endpoint
-	Revocation          Endpoint
-	EndSession          Endpoint
-	CheckSessionIframe  Endpoint
-	JwksURI             Endpoint
-	DeviceAuthorization Endpoint
+// Endpoints defines endpoint routes.
+type Endpoints struct {
+	Authorization       *Endpoint
+	Token               *Endpoint
+	Introspection       *Endpoint
+	Userinfo            *Endpoint
+	Revocation          *Endpoint
+	EndSession          *Endpoint
+	CheckSessionIframe  *Endpoint
+	JwksURI             *Endpoint
+	DeviceAuthorization *Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -212,7 +213,7 @@ type Provider struct {
 	config                  *Config
 	issuer                  IssuerFromRequest
 	insecure                bool
-	endpoints               *endpoints
+	endpoints               *Endpoints
 	storage                 Storage
 	keySet                  *openIDKeySet
 	crypto                  Crypto
@@ -233,35 +234,35 @@ func (o *Provider) Insecure() bool {
 	return o.insecure
 }
 
-func (o *Provider) AuthorizationEndpoint() Endpoint {
+func (o *Provider) AuthorizationEndpoint() *Endpoint {
 	return o.endpoints.Authorization
 }
 
-func (o *Provider) TokenEndpoint() Endpoint {
+func (o *Provider) TokenEndpoint() *Endpoint {
 	return o.endpoints.Token
 }
 
-func (o *Provider) IntrospectionEndpoint() Endpoint {
+func (o *Provider) IntrospectionEndpoint() *Endpoint {
 	return o.endpoints.Introspection
 }
 
-func (o *Provider) UserinfoEndpoint() Endpoint {
+func (o *Provider) UserinfoEndpoint() *Endpoint {
 	return o.endpoints.Userinfo
 }
 
-func (o *Provider) RevocationEndpoint() Endpoint {
+func (o *Provider) RevocationEndpoint() *Endpoint {
 	return o.endpoints.Revocation
 }
 
-func (o *Provider) EndSessionEndpoint() Endpoint {
+func (o *Provider) EndSessionEndpoint() *Endpoint {
 	return o.endpoints.EndSession
 }
 
-func (o *Provider) DeviceAuthorizationEndpoint() Endpoint {
+func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
 }
 
-func (o *Provider) KeysEndpoint() Endpoint {
+func (o *Provider) KeysEndpoint() *Endpoint {
 	return o.endpoints.JwksURI
 }
 
@@ -420,7 +421,7 @@ func WithAllowInsecure() Option {
 	}
 }
 
-func WithCustomAuthEndpoint(endpoint Endpoint) Option {
+func WithCustomAuthEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -430,7 +431,7 @@ func WithCustomAuthEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomTokenEndpoint(endpoint Endpoint) Option {
+func WithCustomTokenEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -440,7 +441,7 @@ func WithCustomTokenEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
+func WithCustomIntrospectionEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -450,7 +451,7 @@ func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
+func WithCustomUserinfoEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -460,7 +461,7 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
+func WithCustomRevocationEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -470,7 +471,7 @@ func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
+func WithCustomEndSessionEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -480,7 +481,7 @@ func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomKeysEndpoint(endpoint Endpoint) Option {
+func WithCustomKeysEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -490,7 +491,7 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomDeviceAuthorizationEndpoint(endpoint Endpoint) Option {
+func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -500,8 +501,16 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
+// WithCustomEndpoints sets multiple endpoints at once.
+// Non of the endpoints may be nil, or an error will
+// be returned when the Option used by the Provider.
+func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys *Endpoint) Option {
 	return func(o *Provider) error {
+		for _, e := range []*Endpoint{auth, token, userInfo, revocation, endSession, keys} {
+			if err := e.Validate(); err != nil {
+				return err
+			}
+		}
 		o.endpoints.Authorization = auth
 		o.endpoints.Token = token
 		o.endpoints.Userinfo = userInfo

@@ -180,3 +180,10 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 	return data.ClientID, false, nil
 }
+
+type ClientCredentials struct {
+	ClientID            string `schema:"client_id"`
+	ClientSecret        string `schema:"client_secret"`    // Client secret from Basic auth or request body
+	ClientAssertion     string `schema:"client_assertion"` // JWT
+	ClientAssertionType string `schema:"client_assertion_type"`
+}

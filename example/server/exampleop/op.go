@@ -40,7 +40,7 @@ var counter atomic.Int64
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
-func SetupServer(issuer string, storage Storage, logger *slog.Logger) chi.Router {
+func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer bool) chi.Router {
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
@@ -77,12 +77,17 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger) chi.Router
 		registerDeviceAuth(storage, r)
 	})
 
+	handler := http.Handler(provider)
+	if wrapServer {
+		handler = op.NewLegacyServer(provider, *op.DefaultEndpoints)
+	}
+
 	// we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
 	// is served on the correct path
 	//
 	// if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	// then you would have to set the path prefix (/custom/path/)
-	router.Mount("/", provider)
+	router.Mount("/", handler)
 
 	return router
 }

@@ -25,7 +25,7 @@ var DefaultSupportedScopes = []string{
 
 func discoveryHandler(c Configuration, s DiscoverStorage) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		Discover(w, CreateDiscoveryConfig(r, c, s))
+		Discover(w, CreateDiscoveryConfig(r.Context(), c, s))
 	}
 }
 
@@ -33,8 +33,8 @@ func Discover(w http.ResponseWriter, config *oidc.DiscoveryConfiguration) {
 	httphelper.MarshalJSON(w, config)
 }
 
-func CreateDiscoveryConfig(r *http.Request, config Configuration, storage DiscoverStorage) *oidc.DiscoveryConfiguration {
-	issuer := config.IssuerFromRequest(r)
+func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage DiscoverStorage) *oidc.DiscoveryConfiguration {
+	issuer := IssuerFromContext(ctx)
 	return &oidc.DiscoveryConfiguration{
 		Issuer:                                     issuer,
 		AuthorizationEndpoint:                      config.AuthorizationEndpoint().Absolute(issuer),
@@ -49,7 +49,38 @@ func CreateDiscoveryConfig(r *http.Request, config Configuration, storage Discov
 		ResponseTypesSupported:                     ResponseTypes(config),
 		GrantTypesSupported:                        GrantTypes(config),
 		SubjectTypesSupported:                      SubjectTypes(config),
-		IDTokenSigningAlgValuesSupported:           SigAlgorithms(r.Context(), storage),
+		IDTokenSigningAlgValuesSupported:           SigAlgorithms(ctx, storage),
+		RequestObjectSigningAlgValuesSupported:     RequestObjectSigAlgorithms(config),
+		TokenEndpointAuthMethodsSupported:          AuthMethodsTokenEndpoint(config),
+		TokenEndpointAuthSigningAlgValuesSupported: TokenSigAlgorithms(config),
+		IntrospectionEndpointAuthSigningAlgValuesSupported: IntrospectionSigAlgorithms(config),
+		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
+		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
+		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
+		ClaimsSupported:                                    SupportedClaims(config),
+		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		UILocalesSupported:                                 config.SupportedUILocales(),
+		RequestParameterSupported:                          config.RequestObjectSupported(),
+	}
+}
+
+func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage DiscoverStorage, endpoints *Endpoints) *oidc.DiscoveryConfiguration {
+	issuer := IssuerFromContext(ctx)
+	return &oidc.DiscoveryConfiguration{
+		Issuer:                                     issuer,
+		AuthorizationEndpoint:                      endpoints.Authorization.Absolute(issuer),
+		TokenEndpoint:                              endpoints.Token.Absolute(issuer),
+		IntrospectionEndpoint:                      endpoints.Introspection.Absolute(issuer),
+		UserinfoEndpoint:                           endpoints.Userinfo.Absolute(issuer),
+		RevocationEndpoint:                         endpoints.Revocation.Absolute(issuer),
+		EndSessionEndpoint:                         endpoints.EndSession.Absolute(issuer),
+		JwksURI:                                    endpoints.JwksURI.Absolute(issuer),
+		DeviceAuthorizationEndpoint:                endpoints.DeviceAuthorization.Absolute(issuer),
+		ScopesSupported:                            Scopes(config),
+		ResponseTypesSupported:                     ResponseTypes(config),
+		GrantTypesSupported:                        GrantTypes(config),
+		SubjectTypesSupported:                      SubjectTypes(config),
+		IDTokenSigningAlgValuesSupported:           SigAlgorithms(ctx, storage),
 		RequestObjectSigningAlgValuesSupported:     RequestObjectSigAlgorithms(config),
 		TokenEndpointAuthMethodsSupported:          AuthMethodsTokenEndpoint(config),
 		TokenEndpointAuthSigningAlgValuesSupported: TokenSigAlgorithms(config),

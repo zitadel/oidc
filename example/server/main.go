@@ -27,7 +27,7 @@ func main() {
 			Level:     slog.LevelDebug,
 		}),
 	)
-	router := exampleop.SetupServer(issuer, storage, logger)
+	router := exampleop.SetupServer(issuer, storage, logger, false)
 
 	server := &http.Server{
 		Addr:    ":" + port,

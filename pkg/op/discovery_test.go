@@ -48,9 +48,9 @@ func TestDiscover(t *testing.T) {
 
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
-		request *http.Request
-		c       op.Configuration
-		s       op.DiscoverStorage
+		ctx context.Context
+		c   op.Configuration
+		s   op.DiscoverStorage
 	}
 	tests := []struct {
 		name string
@@ -61,7 +61,7 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := op.CreateDiscoveryConfig(tt.args.request, tt.args.c, tt.args.s)
+			got := op.CreateDiscoveryConfig(tt.args.ctx, tt.args.c, tt.args.s)
 			assert.Equal(t, tt.want, got)
 		})
 	}

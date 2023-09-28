@@ -2,7 +2,6 @@ package op_test
 
 import (
 	"context"
-	"crypto/sha256"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,71 +13,27 @@ import (
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v3/example/server/storage"
+
+	"github.com/zitadel/oidc/v3/pkg/client"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
-	"golang.org/x/text/language"
 )
 
-var (
-	testProvider op.OpenIDProvider
-	testConfig   = &op.Config{
-		CryptoKey:                sha256.Sum256([]byte("test")),
-		DefaultLogoutRedirectURI: pathLoggedOut,
-		CodeMethodS256:           true,
-		AuthMethodPost:           true,
-		AuthMethodPrivateKeyJWT:  true,
-		GrantTypeRefreshToken:    true,
-		RequestObjectSupported:   true,
-		SupportedUILocales:       []language.Tag{language.English},
-		DeviceAuthorization: op.DeviceAuthorizationConfig{
-			Lifetime:     5 * time.Minute,
-			PollInterval: 5 * time.Second,
-			UserFormPath: "/device",
-			UserCode:     op.UserCodeBase20,
-		},
-	}
-)
-
-const (
-	testIssuer    = "https://localhost:9998/"
-	pathLoggedOut = "/logged-out"
-)
-
-func init() {
-	storage.RegisterClients(
-		storage.NativeClient("native"),
-		storage.WebClient("web", "secret", "https://example.com"),
-		storage.WebClient("api", "secret"),
-	)
-
-	testProvider = newTestProvider(testConfig)
-}
-
-func newTestProvider(config *op.Config) op.OpenIDProvider {
-	provider, err := op.NewOpenIDProvider(testIssuer, config,
-		storage.NewStorage(storage.NewUserStore(testIssuer)), op.WithAllowInsecure(),
-	)
+func jwtProfile() (string, error) {
+	keyData, err := client.ConfigFromKeyFile("../../example/server/service-key1.json")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return provider
-}
-
-type routesTestStorage interface {
-	op.Storage
-	AuthRequestDone(id string) error
-}
-
-func mapAsValues(m map[string]string) string {
-	values := make(url.Values, len(m))
-	for k, v := range m {
-		values.Set(k, v)
+	signer, err := client.NewSignerFromPrivateKeyByte([]byte(keyData.Key), keyData.KeyID)
+	if err != nil {
+		return "", err
 	}
-	return values.Encode()
+	return client.SignedJWTProfileAssertion(keyData.UserID, []string{testIssuer}, time.Hour, signer)
 }
 
-func TestRoutes(t *testing.T) {
+func TestServerRoutes(t *testing.T) {
+	server := op.NewLegacyServer(testProvider, *op.DefaultEndpoints)
+
 	storage := testProvider.Storage().(routesTestStorage)
 	ctx := op.ContextWithIssuer(context.Background(), testIssuer)
 
@@ -104,6 +59,8 @@ func TestRoutes(t *testing.T) {
 	idToken, err := op.CreateIDToken(ctx, testIssuer, authReq, time.Hour, accessToken, "123", storage, client)
 	require.NoError(t, err)
 	jwtToken, _, _, err := op.CreateAccessToken(ctx, authReq, op.AccessTokenTypeJWT, testProvider, client, "")
+	require.NoError(t, err)
+	jwtProfileToken, err := jwtProfile()
 	require.NoError(t, err)
 
 	oidcAuthReq.IDTokenHint = idToken
@@ -163,29 +120,20 @@ func TestRoutes(t *testing.T) {
 			headerContains: map[string]string{"Location": "/login/username?authRequestID="},
 		},
 		{
-			name:           "authorization callback",
-			method:         http.MethodGet,
-			path:           testProvider.AuthorizationEndpoint().Relative() + "/callback",
-			values:         map[string]string{"id": authReq.GetID()},
-			wantCode:       http.StatusFound,
-			headerContains: map[string]string{"Location": "https://example.com?code="},
-			contains: []string{
-				`<a href="https://example.com?code=`,
-				">Found</a>.",
-			},
-		},
-		{
 			// This call will fail. A successfull test is already
 			// part of client/integration_test.go
 			name:   "code exchange",
 			method: http.MethodGet,
 			path:   testProvider.TokenEndpoint().Relative(),
 			values: map[string]string{
-				"grant_type": string(oidc.GrantTypeCode),
-				"code":       "123",
+				"grant_type":    string(oidc.GrantTypeCode),
+				"client_id":     client.GetID(),
+				"client_secret": "secret",
+				"redirect_uri":  "https://example.com",
+				"code":          "123",
 			},
-			wantCode: http.StatusUnauthorized,
-			json:     `{"error":"invalid_client"}`,
+			wantCode: http.StatusBadRequest,
+			json:     `{"error":"invalid_grant", "error_description":"invalid code"}`,
 		},
 		{
 			name:   "JWT authorization",
@@ -194,10 +142,10 @@ func TestRoutes(t *testing.T) {
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeBearer),
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
-				"assertion":  jwtToken,
+				"assertion":  jwtProfileToken,
 			},
-			wantCode: http.StatusBadRequest,
-			json:     "{\"error\":\"server_error\",\"error_description\":\"audience is not valid: Audience must contain client_id \\\"https://localhost:9998/\\\"\"}",
+			wantCode: http.StatusOK,
+			contains: []string{`{"access_token":`, `"token_type":"Bearer","expires_in":299}`},
 		},
 		{
 			name:      "Token exchange",
@@ -370,7 +318,7 @@ func TestRoutes(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			testProvider.ServeHTTP(rec, req)
+			server.ServeHTTP(rec, req)
 
 			resp := rec.Result()
 			require.NoError(t, err)
@@ -392,57 +340,6 @@ func TestRoutes(t *testing.T) {
 			for k, v := range tt.headerContains {
 				assert.Contains(t, resp.Header.Get(k), v)
 			}
-		})
-	}
-}
-
-func TestWithCustomEndpoints(t *testing.T) {
-	type args struct {
-		auth       *op.Endpoint
-		token      *op.Endpoint
-		userInfo   *op.Endpoint
-		revocation *op.Endpoint
-		endSession *op.Endpoint
-		keys       *op.Endpoint
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr error
-	}{
-		{
-			name:    "all nil",
-			args:    args{},
-			wantErr: op.ErrNilEndpoint,
-		},
-		{
-			name: "all set",
-			args: args{
-				auth:       op.NewEndpoint("/authorize"),
-				token:      op.NewEndpoint("/oauth/token"),
-				userInfo:   op.NewEndpoint("/userinfo"),
-				revocation: op.NewEndpoint("/revoke"),
-				endSession: op.NewEndpoint("/end_session"),
-				keys:       op.NewEndpoint("/keys"),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			provider, err := op.NewOpenIDProvider(testIssuer, testConfig,
-				storage.NewStorage(storage.NewUserStore(testIssuer)),
-				op.WithCustomEndpoints(tt.args.auth, tt.args.token, tt.args.userInfo, tt.args.revocation, tt.args.endSession, tt.args.keys),
-			)
-			require.ErrorIs(t, err, tt.wantErr)
-			if tt.wantErr != nil {
-				return
-			}
-			assert.Equal(t, tt.args.auth, provider.AuthorizationEndpoint())
-			assert.Equal(t, tt.args.token, provider.TokenEndpoint())
-			assert.Equal(t, tt.args.userInfo, provider.UserinfoEndpoint())
-			assert.Equal(t, tt.args.revocation, provider.RevocationEndpoint())
-			assert.Equal(t, tt.args.endSession, provider.EndSessionEndpoint())
-			assert.Equal(t, tt.args.keys, provider.KeysEndpoint())
 		})
 	}
 }
