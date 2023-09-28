@@ -13,9 +13,23 @@ import (
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/zitadel/oidc/v3/pkg/client"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
+
+func jwtProfile() (string, error) {
+	keyData, err := client.ConfigFromKeyFile("../../example/server/service-key1.json")
+	if err != nil {
+		return "", err
+	}
+	signer, err := client.NewSignerFromPrivateKeyByte([]byte(keyData.Key), keyData.KeyID)
+	if err != nil {
+		return "", err
+	}
+	return client.SignedJWTProfileAssertion(keyData.UserID, []string{testIssuer}, time.Hour, signer)
+}
 
 func TestServerRoutes(t *testing.T) {
 	server := op.NewLegacyServer(testProvider, *op.DefaultEndpoints)
@@ -45,6 +59,8 @@ func TestServerRoutes(t *testing.T) {
 	idToken, err := op.CreateIDToken(ctx, testIssuer, authReq, time.Hour, accessToken, "123", storage, client)
 	require.NoError(t, err)
 	jwtToken, _, _, err := op.CreateAccessToken(ctx, authReq, op.AccessTokenTypeJWT, testProvider, client, "")
+	require.NoError(t, err)
+	jwtProfileToken, err := jwtProfile()
 	require.NoError(t, err)
 
 	oidcAuthReq.IDTokenHint = idToken
@@ -126,7 +142,7 @@ func TestServerRoutes(t *testing.T) {
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeBearer),
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
-				"assertion":  jwtToken,
+				"assertion":  jwtProfileToken,
 			},
 			wantCode: http.StatusBadRequest,
 			json:     "{\"error\":\"server_error\",\"error_description\":\"audience is not valid: Audience must contain client_id \\\"https://localhost:9998/\\\"\"}",
