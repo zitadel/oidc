@@ -144,8 +144,8 @@ func TestServerRoutes(t *testing.T) {
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"assertion":  jwtProfileToken,
 			},
-			wantCode: http.StatusBadRequest,
-			json:     "{\"error\":\"server_error\",\"error_description\":\"audience is not valid: Audience must contain client_id \\\"https://localhost:9998/\\\"\"}",
+			wantCode: http.StatusOK,
+			contains: []string{`{"access_token":`, `"token_type":"Bearer","expires_in":299}`},
 		},
 		{
 			name:      "Token exchange",
