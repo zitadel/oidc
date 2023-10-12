@@ -122,7 +122,7 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
 
 		var (
-			privateClaims map[string]interface{}
+			privateClaims map[string]any
 			err           error
 		)
 

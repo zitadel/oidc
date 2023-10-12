@@ -17,11 +17,11 @@ var DefaultHTTPClient = &http.Client{
 }
 
 type Decoder interface {
-	Decode(dst interface{}, src map[string][]string) error
+	Decode(dst any, src map[string][]string) error
 }
 
 type Encoder interface {
-	Encode(src interface{}, dst map[string][]string) error
+	Encode(src any, dst map[string][]string) error
 }
 
 type FormAuthorization func(url.Values)
@@ -33,7 +33,7 @@ func AuthorizeBasic(user, password string) RequestAuthorization {
 	}
 }
 
-func FormRequest(endpoint string, request interface{}, encoder Encoder, authFn interface{}) (*http.Request, error) {
+func FormRequest(endpoint string, request any, encoder Encoder, authFn any) (*http.Request, error) {
 	form := url.Values{}
 	if err := encoder.Encode(request, form); err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func FormRequest(endpoint string, request interface{}, encoder Encoder, authFn i
 	return req, nil
 }
 
-func HttpRequest(client *http.Client, req *http.Request, response interface{}) error {
+func HttpRequest(client *http.Client, req *http.Request, response any) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func HttpRequest(client *http.Client, req *http.Request, response interface{}) e
 	return nil
 }
 
-func URLEncodeParams(resp interface{}, encoder Encoder) (url.Values, error) {
+func URLEncodeParams(resp any, encoder Encoder) (url.Values, error) {
 	values := make(map[string][]string)
 	err := encoder.Encode(resp, values)
 	if err != nil {

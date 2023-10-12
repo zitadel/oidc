@@ -29,7 +29,7 @@ var (
 	accessTokenData = &AccessTokenClaims{
 		TokenClaims: tokenClaimsData,
 		Scopes:      []string{"email", "phone"},
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -43,7 +43,7 @@ var (
 		UserInfoEmail:   userInfoData.UserInfoEmail,
 		UserInfoPhone:   userInfoData.UserInfoPhone,
 		Address:         userInfoData.Address,
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -64,7 +64,7 @@ var (
 		UserInfoEmail:   userInfoData.UserInfoEmail,
 		UserInfoPhone:   userInfoData.UserInfoPhone,
 		Address:         userInfoData.Address,
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -102,7 +102,7 @@ var (
 			PostalCode:    "666-666",
 			Country:       "Moon",
 		},
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -114,7 +114,7 @@ var (
 		Audience:     Audience{"foo", "bar"},
 		Expiration:   12345,
 		IssuedAt:     12000,
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}
@@ -181,7 +181,7 @@ func TestIDTokenClaims_SetUserInfo(t *testing.T) {
 		UserInfoEmail:   userInfoData.UserInfoEmail,
 		UserInfoPhone:   userInfoData.UserInfoPhone,
 		Address:         userInfoData.Address,
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"foo": "bar",
 		},
 	}

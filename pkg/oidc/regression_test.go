@@ -17,7 +17,7 @@ const dataDir = "regression_data"
 
 // jsonFilename builds a filename for the regression testdata.
 // dataDir/<type_name>.json
-func jsonFilename(obj interface{}) string {
+func jsonFilename(obj any) string {
 	name := fmt.Sprintf("%T.json", obj)
 	return path.Join(
 		dataDir,
@@ -25,13 +25,13 @@ func jsonFilename(obj interface{}) string {
 	)
 }
 
-func encodeJSON(t *testing.T, w io.Writer, obj interface{}) {
+func encodeJSON(t *testing.T, w io.Writer, obj any) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
 	require.NoError(t, enc.Encode(obj))
 }
 
-var regressionData = []interface{}{
+var regressionData = []any{
 	accessTokenData,
 	idTokenData,
 	introspectionResponseData,

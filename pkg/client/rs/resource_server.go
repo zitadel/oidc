@@ -15,7 +15,7 @@ type ResourceServer interface {
 	IntrospectionURL() string
 	TokenEndpoint() string
 	HttpClient() *http.Client
-	AuthFn() (interface{}, error)
+	AuthFn() (any, error)
 }
 
 type resourceServer struct {
@@ -23,7 +23,7 @@ type resourceServer struct {
 	tokenURL      string
 	introspectURL string
 	httpClient    *http.Client
-	authFn        func() (interface{}, error)
+	authFn        func() (any, error)
 }
 
 func (r *resourceServer) IntrospectionURL() string {
@@ -38,12 +38,12 @@ func (r *resourceServer) HttpClient() *http.Client {
 	return r.httpClient
 }
 
-func (r *resourceServer) AuthFn() (interface{}, error) {
+func (r *resourceServer) AuthFn() (any, error) {
 	return r.authFn()
 }
 
 func NewResourceServerClientCredentials(issuer, clientID, clientSecret string, option ...Option) (ResourceServer, error) {
-	authorizer := func() (interface{}, error) {
+	authorizer := func() (any, error) {
 		return httphelper.AuthorizeBasic(clientID, clientSecret), nil
 	}
 	return newResourceServer(issuer, authorizer, option...)
@@ -54,7 +54,7 @@ func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, opt
 	if err != nil {
 		return nil, err
 	}
-	authorizer := func() (interface{}, error) {
+	authorizer := func() (any, error) {
 		assertion, err := client.SignedJWTProfileAssertion(clientID, []string{issuer}, time.Hour, signer)
 		if err != nil {
 			return nil, err
@@ -64,7 +64,7 @@ func NewResourceServerJWTProfile(issuer, clientID, keyID string, key []byte, opt
 	return newResourceServer(issuer, authorizer, options...)
 }
 
-func newResourceServer(issuer string, authorizer func() (interface{}, error), options ...Option) (*resourceServer, error) {
+func newResourceServer(issuer string, authorizer func() (any, error), options ...Option) (*resourceServer, error) {
 	rs := &resourceServer{
 		issuer:     issuer,
 		httpClient: httphelper.DefaultHTTPClient,

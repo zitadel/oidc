@@ -48,11 +48,11 @@ type TokenEndpointCaller interface {
 	HttpClient() *http.Client
 }
 
-func CallTokenEndpoint(request interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func CallTokenEndpoint(request any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	return callTokenEndpoint(request, nil, caller)
 }
 
-func callTokenEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
+func callTokenEndpoint(request any, authFn any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ type EndSessionCaller interface {
 	HttpClient() *http.Client
 }
 
-func CallEndSessionEndpoint(request interface{}, authFn interface{}, caller EndSessionCaller) (*url.URL, error) {
+func CallEndSessionEndpoint(request any, authFn any, caller EndSessionCaller) (*url.URL, error) {
 	req, err := httphelper.FormRequest(caller.GetEndSessionEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ type RevokeRequest struct {
 	ClientSecret  string `schema:"client_secret"`
 }
 
-func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCaller) error {
+func CallRevokeEndpoint(request any, authFn any, caller RevokeCaller) error {
 	req, err := httphelper.FormRequest(caller.GetRevokeEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func CallRevokeEndpoint(request interface{}, authFn interface{}, caller RevokeCa
 	return nil
 }
 
-func CallTokenExchangeEndpoint(request interface{}, authFn interface{}, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
+func CallTokenExchangeEndpoint(request any, authFn any, caller TokenEndpointCaller) (resp *oidc.TokenExchangeResponse, err error) {
 	req, err := httphelper.FormRequest(caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err

@@ -130,7 +130,7 @@ type JWTTokenRequest struct {
 	IssuedAt  Time                `json:"iat"`
 	ExpiresAt Time                `json:"exp"`
 
-	private map[string]interface{}
+	private map[string]any
 }
 
 func (j *JWTTokenRequest) MarshalJSON() ([]byte, error) {
@@ -171,7 +171,7 @@ func (j *JWTTokenRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (j *JWTTokenRequest) GetCustomClaim(key string) interface{} {
+func (j *JWTTokenRequest) GetCustomClaim(key string) any {
 	return j.private[key]
 }
 

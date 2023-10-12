@@ -151,7 +151,7 @@ func (e *Error) WithParent(err error) *Error {
 	return e
 }
 
-func (e *Error) WithDescription(desc string, args ...interface{}) *Error {
+func (e *Error) WithDescription(desc string, args ...any) *Error {
 	e.Description = fmt.Sprintf(desc, args...)
 	return e
 }

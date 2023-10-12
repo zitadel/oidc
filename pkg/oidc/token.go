@@ -222,7 +222,7 @@ type JWTProfileAssertionClaims struct {
 	Expiration   Time     `json:"exp"`
 	IssuedAt     Time     `json:"iat"`
 
-	Claims map[string]interface{} `json:"-"`
+	Claims map[string]any `json:"-"`
 }
 
 type jpaAlias JWTProfileAssertionClaims
@@ -262,7 +262,7 @@ func JWTProfileDelegatedSubject(sub string) func(*JWTProfileAssertionClaims) {
 	}
 }
 
-func JWTProfileCustomClaim(key string, value interface{}) func(*JWTProfileAssertionClaims) {
+func JWTProfileCustomClaim(key string, value any) func(*JWTProfileAssertionClaims) {
 	return func(j *JWTProfileAssertionClaims) {
 		j.Claims[key] = value
 	}
@@ -292,7 +292,7 @@ func NewJWTProfileAssertion(userID, keyID string, audience []string, key []byte,
 		IssuedAt:     FromTime(time.Now().UTC()),
 		Expiration:   FromTime(time.Now().Add(1 * time.Hour).UTC()),
 		Audience:     audience,
-		Claims:       make(map[string]interface{}),
+		Claims:       make(map[string]any),
 	}
 
 	for _, opt := range opts {

@@ -8,11 +8,11 @@ import (
 	"reflect"
 )
 
-func MarshalJSON(w http.ResponseWriter, i interface{}) {
+func MarshalJSON(w http.ResponseWriter, i any) {
 	MarshalJSONWithStatus(w, i, http.StatusOK)
 }
 
-func MarshalJSONWithStatus(w http.ResponseWriter, i interface{}, status int) {
+func MarshalJSONWithStatus(w http.ResponseWriter, i any, status int) {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)
 	if i == nil || (reflect.ValueOf(i).Kind() == reflect.Ptr && reflect.ValueOf(i).IsNil()) {

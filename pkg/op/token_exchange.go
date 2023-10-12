@@ -24,12 +24,12 @@ type TokenExchangeRequest interface {
 	GetExchangeSubject() string
 	GetExchangeSubjectTokenType() oidc.TokenType
 	GetExchangeSubjectTokenIDOrToken() string
-	GetExchangeSubjectTokenClaims() map[string]interface{}
+	GetExchangeSubjectTokenClaims() map[string]any
 
 	GetExchangeActor() string
 	GetExchangeActorTokenType() oidc.TokenType
 	GetExchangeActorTokenIDOrToken() string
-	GetExchangeActorTokenClaims() map[string]interface{}
+	GetExchangeActorTokenClaims() map[string]any
 
 	SetCurrentScopes(scopes []string)
 	SetRequestedTokenType(tt oidc.TokenType)
@@ -40,12 +40,12 @@ type tokenExchangeRequest struct {
 	exchangeSubjectTokenIDOrToken string
 	exchangeSubjectTokenType      oidc.TokenType
 	exchangeSubject               string
-	exchangeSubjectTokenClaims    map[string]interface{}
+	exchangeSubjectTokenClaims    map[string]any
 
 	exchangeActorTokenIDOrToken string
 	exchangeActorTokenType      oidc.TokenType
 	exchangeActor               string
-	exchangeActorTokenClaims    map[string]interface{}
+	exchangeActorTokenClaims    map[string]any
 
 	resource           []string
 	audience           oidc.Audience
@@ -96,7 +96,7 @@ func (r *tokenExchangeRequest) GetExchangeSubjectTokenIDOrToken() string {
 	return r.exchangeSubjectTokenIDOrToken
 }
 
-func (r *tokenExchangeRequest) GetExchangeSubjectTokenClaims() map[string]interface{} {
+func (r *tokenExchangeRequest) GetExchangeSubjectTokenClaims() map[string]any {
 	return r.exchangeSubjectTokenClaims
 }
 
@@ -112,7 +112,7 @@ func (r *tokenExchangeRequest) GetExchangeActorTokenIDOrToken() string {
 	return r.exchangeActorTokenIDOrToken
 }
 
-func (r *tokenExchangeRequest) GetExchangeActorTokenClaims() map[string]interface{} {
+func (r *tokenExchangeRequest) GetExchangeActorTokenClaims() map[string]any {
 	return r.exchangeActorTokenClaims
 }
 
@@ -232,7 +232,7 @@ func ValidateTokenExchangeRequest(
 
 	var (
 		exchangeActorTokenIDOrToken, exchangeActor string
-		exchangeActorTokenClaims                   map[string]interface{}
+		exchangeActorTokenClaims                   map[string]any
 	)
 	if oidcTokenExchangeRequest.ActorToken != "" {
 		exchangeActorTokenIDOrToken, exchangeActor, exchangeActorTokenClaims, ok = GetTokenIDAndSubjectFromToken(ctx, exchanger,
@@ -281,7 +281,7 @@ func GetTokenIDAndSubjectFromToken(
 	token string,
 	tokenType oidc.TokenType,
 	isActor bool,
-) (tokenIDOrToken, subject string, claims map[string]interface{}, ok bool) {
+) (tokenIDOrToken, subject string, claims map[string]any, ok bool) {
 	switch tokenType {
 	case oidc.AccessTokenType:
 		var accessTokenClaims *oidc.AccessTokenClaims

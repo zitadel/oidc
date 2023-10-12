@@ -11,14 +11,14 @@ import (
 func TestNewResourceServer(t *testing.T) {
 	type args struct {
 		issuer     string
-		authorizer func() (interface{}, error)
+		authorizer func() (any, error)
 		options    []Option
 	}
 	type wantFields struct {
 		issuer        string
 		tokenURL      string
 		introspectURL string
-		authFn        func() (interface{}, error)
+		authFn        func() (any, error)
 	}
 	tests := []struct {
 		name       string
