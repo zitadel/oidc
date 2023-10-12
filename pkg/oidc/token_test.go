@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/language"
-	"gopkg.in/square/go-jose.v2"
 )
 
 var (

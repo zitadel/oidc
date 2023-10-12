@@ -16,8 +16,9 @@ import (
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func Test_deviceAuthorizationHandler(t *testing.T) {
@@ -319,7 +320,7 @@ func BenchmarkNewUserCode(b *testing.B) {
 }
 
 func TestDeviceAccessToken(t *testing.T) {
-	storage := testProvider.Storage().(op.DeviceAuthorizationStorage)
+	storage := testProvider.Storage().(*storage.Storage)
 	storage.StoreDeviceAuthorization(context.Background(), "native", "qwerty", "yuiop", time.Now().Add(time.Minute), []string{"foo"})
 	storage.CompleteDeviceAuthorization(context.Background(), "yuiop", "tim")
 
@@ -344,7 +345,7 @@ func TestDeviceAccessToken(t *testing.T) {
 func TestCheckDeviceAuthorizationState(t *testing.T) {
 	now := time.Now()
 
-	storage := testProvider.Storage().(op.DeviceAuthorizationStorage)
+	storage := testProvider.Storage().(*storage.Storage)
 	storage.StoreDeviceAuthorization(context.Background(), "native", "pending", "pending", now.Add(time.Minute), []string{"foo"})
 	storage.StoreDeviceAuthorization(context.Background(), "native", "denied", "denied", now.Add(time.Minute), []string{"foo"})
 	storage.StoreDeviceAuthorization(context.Background(), "native", "completed", "completed", now.Add(time.Minute), []string{"foo"})

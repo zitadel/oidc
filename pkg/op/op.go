@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
+	"github.com/go-chi/chi"
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/rs/cors"
+	"github.com/zitadel/schema"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
-	"gopkg.in/square/go-jose.v2"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 )
 
 var (
-	DefaultEndpoints = &endpoints{
+	DefaultEndpoints = &Endpoints{
 		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
 		Token:               NewEndpoint(defaultTokenEndpoint),
 		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
@@ -76,29 +77,35 @@ func init() {
 }
 
 type OpenIDProvider interface {
+	http.Handler
 	Configuration
 	Storage() Storage
 	Decoder() httphelper.Decoder
 	Encoder() httphelper.Encoder
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
+
+	// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
+	Logger() *slog.Logger
+
+	// Deprecated: Provider now implements http.Handler directly.
 	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
 
-func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *mux.Router {
-	router := mux.NewRouter()
+func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
+	router := chi.NewRouter()
 	router.Use(cors.New(defaultCORSOptions).Handler)
 	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Storage()))
 	router.HandleFunc(o.AuthorizationEndpoint().Relative(), authorizeHandler(o))
-	router.NewRoute().Path(authCallbackPath(o)).Queries("id", "{id}").HandlerFunc(authorizeCallbackHandler(o))
+	router.HandleFunc(authCallbackPath(o), authorizeCallbackHandler(o))
 	router.HandleFunc(o.TokenEndpoint().Relative(), tokenHandler(o))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
@@ -132,16 +139,17 @@ type Config struct {
 	DeviceAuthorization      DeviceAuthorizationConfig
 }
 
-type endpoints struct {
-	Authorization       Endpoint
-	Token               Endpoint
-	Introspection       Endpoint
-	Userinfo            Endpoint
-	Revocation          Endpoint
-	EndSession          Endpoint
-	CheckSessionIframe  Endpoint
-	JwksURI             Endpoint
-	DeviceAuthorization Endpoint
+// Endpoints defines endpoint routes.
+type Endpoints struct {
+	Authorization       *Endpoint
+	Token               *Endpoint
+	Introspection       *Endpoint
+	Userinfo            *Endpoint
+	Revocation          *Endpoint
+	EndSession          *Endpoint
+	CheckSessionIframe  *Endpoint
+	JwksURI             *Endpoint
+	DeviceAuthorization *Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -186,6 +194,7 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 		storage:   storage,
 		endpoints: DefaultEndpoints,
 		timer:     make(<-chan time.Time),
+		logger:    slog.Default(),
 	}
 
 	for _, optFunc := range opOpts {
@@ -199,7 +208,7 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 		return nil, err
 	}
 
-	o.httpHandler = CreateRouter(o, o.interceptors...)
+	o.Handler = CreateRouter(o, o.interceptors...)
 
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
@@ -215,20 +224,21 @@ func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromR
 }
 
 type Provider struct {
+	http.Handler
 	config                  *Config
 	issuer                  IssuerFromRequest
 	insecure                bool
-	endpoints               *endpoints
+	endpoints               *Endpoints
 	storage                 Storage
 	keySet                  *openIDKeySet
 	crypto                  Crypto
-	httpHandler             http.Handler
 	decoder                 *schema.Decoder
 	encoder                 *schema.Encoder
 	interceptors            []HttpInterceptor
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
+	logger                  *slog.Logger
 }
 
 func (o *Provider) IssuerFromRequest(r *http.Request) string {
@@ -239,35 +249,35 @@ func (o *Provider) Insecure() bool {
 	return o.insecure
 }
 
-func (o *Provider) AuthorizationEndpoint() Endpoint {
+func (o *Provider) AuthorizationEndpoint() *Endpoint {
 	return o.endpoints.Authorization
 }
 
-func (o *Provider) TokenEndpoint() Endpoint {
+func (o *Provider) TokenEndpoint() *Endpoint {
 	return o.endpoints.Token
 }
 
-func (o *Provider) IntrospectionEndpoint() Endpoint {
+func (o *Provider) IntrospectionEndpoint() *Endpoint {
 	return o.endpoints.Introspection
 }
 
-func (o *Provider) UserinfoEndpoint() Endpoint {
+func (o *Provider) UserinfoEndpoint() *Endpoint {
 	return o.endpoints.Userinfo
 }
 
-func (o *Provider) RevocationEndpoint() Endpoint {
+func (o *Provider) RevocationEndpoint() *Endpoint {
 	return o.endpoints.Revocation
 }
 
-func (o *Provider) EndSessionEndpoint() Endpoint {
+func (o *Provider) EndSessionEndpoint() *Endpoint {
 	return o.endpoints.EndSession
 }
 
-func (o *Provider) DeviceAuthorizationEndpoint() Endpoint {
+func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
 }
 
-func (o *Provider) KeysEndpoint() Endpoint {
+func (o *Provider) KeysEndpoint() *Endpoint {
 	return o.endpoints.JwksURI
 }
 
@@ -354,15 +364,15 @@ func (o *Provider) Encoder() httphelper.Encoder {
 	return o.encoder
 }
 
-func (o *Provider) IDTokenHintVerifier(ctx context.Context) IDTokenHintVerifier {
+func (o *Provider) IDTokenHintVerifier(ctx context.Context) *IDTokenHintVerifier {
 	return NewIDTokenHintVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.idTokenHintVerifierOpts...)
 }
 
-func (o *Provider) JWTProfileVerifier(ctx context.Context) JWTProfileVerifier {
+func (o *Provider) JWTProfileVerifier(ctx context.Context) *JWTProfileVerifier {
 	return NewJWTProfileVerifier(o.Storage(), IssuerFromContext(ctx), 1*time.Hour, time.Second)
 }
 
-func (o *Provider) AccessTokenVerifier(ctx context.Context) AccessTokenVerifier {
+func (o *Provider) AccessTokenVerifier(ctx context.Context) *AccessTokenVerifier {
 	return NewAccessTokenVerifier(IssuerFromContext(ctx), o.openIDKeySet(), o.accessTokenVerifierOpts...)
 }
 
@@ -387,8 +397,13 @@ func (o *Provider) Probes() []ProbesFn {
 	}
 }
 
+func (o *Provider) Logger() *slog.Logger {
+	return o.logger
+}
+
+// Deprecated: Provider now implements http.Handler directly.
 func (o *Provider) HttpHandler() http.Handler {
-	return o.httpHandler
+	return o
 }
 
 type openIDKeySet struct {
@@ -421,7 +436,7 @@ func WithAllowInsecure() Option {
 	}
 }
 
-func WithCustomAuthEndpoint(endpoint Endpoint) Option {
+func WithCustomAuthEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -431,7 +446,7 @@ func WithCustomAuthEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomTokenEndpoint(endpoint Endpoint) Option {
+func WithCustomTokenEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -441,7 +456,7 @@ func WithCustomTokenEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
+func WithCustomIntrospectionEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -451,7 +466,7 @@ func WithCustomIntrospectionEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
+func WithCustomUserinfoEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -461,7 +476,7 @@ func WithCustomUserinfoEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
+func WithCustomRevocationEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -471,7 +486,7 @@ func WithCustomRevocationEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
+func WithCustomEndSessionEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -481,7 +496,7 @@ func WithCustomEndSessionEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomKeysEndpoint(endpoint Endpoint) Option {
+func WithCustomKeysEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -491,7 +506,7 @@ func WithCustomKeysEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomDeviceAuthorizationEndpoint(endpoint Endpoint) Option {
+func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 	return func(o *Provider) error {
 		if err := endpoint.Validate(); err != nil {
 			return err
@@ -501,8 +516,16 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint Endpoint) Option {
 	}
 }
 
-func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys Endpoint) Option {
+// WithCustomEndpoints sets multiple endpoints at once.
+// Non of the endpoints may be nil, or an error will
+// be returned when the Option used by the Provider.
+func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys *Endpoint) Option {
 	return func(o *Provider) error {
+		for _, e := range []*Endpoint{auth, token, userInfo, revocation, endSession, keys} {
+			if err := e.Validate(); err != nil {
+				return err
+			}
+		}
 		o.endpoints.Authorization = auth
 		o.endpoints.Token = token
 		o.endpoints.Userinfo = userInfo
@@ -530,6 +553,16 @@ func WithAccessTokenVerifierOpts(opts ...AccessTokenVerifierOpt) Option {
 func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 	return func(o *Provider) error {
 		o.idTokenHintVerifierOpts = opts
+		return nil
+	}
+}
+
+// WithLogger lets a logger other than slog.Default().
+//
+// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
+func WithLogger(logger *slog.Logger) Option {
+	return func(o *Provider) error {
+		o.logger = logger
 		return nil
 	}
 }

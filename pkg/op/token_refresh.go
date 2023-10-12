@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type RefreshTokenRequest interface {
@@ -30,16 +30,16 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 
 	tokenReq, err := ParseRefreshTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 	validatedRequest, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	resp, err := CreateTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 	httphelper.MarshalJSON(w, resp)

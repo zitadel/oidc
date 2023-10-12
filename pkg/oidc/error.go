@@ -3,6 +3,8 @@ package oidc
 import (
 	"errors"
 	"fmt"
+
+	"golang.org/x/exp/slog"
 )
 
 type errorType string
@@ -170,4 +172,35 @@ func DefaultToServerError(err error, description string) *Error {
 		oauth.Parent = err
 	}
 	return oauth
+}
+
+func (e *Error) LogLevel() slog.Level {
+	level := slog.LevelWarn
+	if e.ErrorType == ServerError {
+		level = slog.LevelError
+	}
+	if e.ErrorType == AuthorizationPending {
+		level = slog.LevelInfo
+	}
+	return level
+}
+
+func (e *Error) LogValue() slog.Value {
+	attrs := make([]slog.Attr, 0, 5)
+	if e.Parent != nil {
+		attrs = append(attrs, slog.Any("parent", e.Parent))
+	}
+	if e.Description != "" {
+		attrs = append(attrs, slog.String("description", e.Description))
+	}
+	if e.ErrorType != "" {
+		attrs = append(attrs, slog.String("type", string(e.ErrorType)))
+	}
+	if e.State != "" {
+		attrs = append(attrs, slog.String("state", e.State))
+	}
+	if e.redirectDisabled {
+		attrs = append(attrs, slog.Bool("redirect_disabled", e.redirectDisabled))
+	}
+	return slog.GroupValue(attrs...)
 }

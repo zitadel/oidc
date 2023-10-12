@@ -11,18 +11,18 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.com/zitadel/oidc/v2/pkg/op/mock"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op/mock"
+	"github.com/zitadel/schema"
 )
 
 type testClientJWTProfile struct{}
 
-func (testClientJWTProfile) JWTProfileVerifier(context.Context) op.JWTProfileVerifier { return nil }
+func (testClientJWTProfile) JWTProfileVerifier(context.Context) *op.JWTProfileVerifier { return nil }
 
 func TestClientJWTAuth(t *testing.T) {
 	type args struct {

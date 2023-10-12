@@ -3,8 +3,8 @@ package storage
 import (
 	"time"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 var (
@@ -185,7 +185,7 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 		authMethod:                     oidc.AuthMethodBasic,
 		loginURL:                       defaultLoginURL,
 		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
-		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken},
+		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeTokenExchange},
 		accessTokenType:                op.AccessTokenTypeBearer,
 		devMode:                        false,
 		idTokenUserinfoClaimsAssertion: false,

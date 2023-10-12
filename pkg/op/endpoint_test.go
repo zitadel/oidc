@@ -3,13 +3,14 @@ package op_test
 import (
 	"testing"
 
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/stretchr/testify/require"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func TestEndpoint_Path(t *testing.T) {
 	tests := []struct {
 		name string
-		e    op.Endpoint
+		e    *op.Endpoint
 		want string
 	}{
 		{
@@ -27,6 +28,11 @@ func TestEndpoint_Path(t *testing.T) {
 			op.NewEndpointWithURL("/test", "http://test.com/test"),
 			"/test",
 		},
+		{
+			"nil",
+			nil,
+			"",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -43,7 +49,7 @@ func TestEndpoint_Absolute(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		e    op.Endpoint
+		e    *op.Endpoint
 		args args
 		want string
 	}{
@@ -77,6 +83,12 @@ func TestEndpoint_Absolute(t *testing.T) {
 			args{"https://host"},
 			"https://test.com/test",
 		},
+		{
+			"nil",
+			nil,
+			args{"https://host"},
+			"",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -91,16 +103,19 @@ func TestEndpoint_Absolute(t *testing.T) {
 func TestEndpoint_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		e       op.Endpoint
-		wantErr bool
+		e       *op.Endpoint
+		wantErr error
 	}{
-		// TODO: Add test cases.
+		{
+			"nil",
+			nil,
+			op.ErrNilEndpoint,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.e.Validate(); (err != nil) != tt.wantErr {
-				t.Errorf("Endpoint.Validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			err := tt.e.Validate()
+			require.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }

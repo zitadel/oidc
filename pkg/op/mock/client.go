@@ -5,8 +5,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func NewClient(t *testing.T) op.Client {

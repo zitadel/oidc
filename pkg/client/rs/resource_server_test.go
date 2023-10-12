@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 func TestNewResourceServer(t *testing.T) {
@@ -164,7 +165,7 @@ func TestNewResourceServer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResourceServer(tt.args.issuer, tt.args.authorizer, tt.args.options...)
+			got, err := newResourceServer(context.Background(), tt.args.issuer, tt.args.authorizer, tt.args.options...)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -187,6 +188,7 @@ func TestIntrospect(t *testing.T) {
 		token string
 	}
 	rp, err := newResourceServer(
+		context.Background(),
 		"https://accounts.spotify.com",
 		nil,
 	)
@@ -208,7 +210,7 @@ func TestIntrospect(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Introspect(tt.args.ctx, tt.args.rp, tt.args.token)
+			_, err := Introspect[*oidc.IntrospectionResponse](tt.args.ctx, tt.args.rp, tt.args.token)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

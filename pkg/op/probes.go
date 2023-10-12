@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 )
 
 type ProbesFn func(context.Context) error
@@ -41,9 +41,9 @@ func ReadyStorage(s Storage) ProbesFn {
 }
 
 func ok(w http.ResponseWriter) {
-	httphelper.MarshalJSON(w, status{"ok"})
+	httphelper.MarshalJSON(w, Status{"ok"})
 }
 
-type status struct {
+type Status struct {
 	Status string `json:"status,omitempty"`
 }

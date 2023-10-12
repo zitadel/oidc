@@ -22,14 +22,14 @@ var (
 type Configuration interface {
 	IssuerFromRequest(r *http.Request) string
 	Insecure() bool
-	AuthorizationEndpoint() Endpoint
-	TokenEndpoint() Endpoint
-	IntrospectionEndpoint() Endpoint
-	UserinfoEndpoint() Endpoint
-	RevocationEndpoint() Endpoint
-	EndSessionEndpoint() Endpoint
-	KeysEndpoint() Endpoint
-	DeviceAuthorizationEndpoint() Endpoint
+	AuthorizationEndpoint() *Endpoint
+	TokenEndpoint() *Endpoint
+	IntrospectionEndpoint() *Endpoint
+	UserinfoEndpoint() *Endpoint
+	RevocationEndpoint() *Endpoint
+	EndSessionEndpoint() *Endpoint
+	KeysEndpoint() *Endpoint
+	DeviceAuthorizationEndpoint() *Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool

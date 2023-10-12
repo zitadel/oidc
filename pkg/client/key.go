@@ -10,7 +10,7 @@ const (
 	applicationKey    = "application"
 )
 
-type keyFile struct {
+type KeyFile struct {
 	Type   string `json:"type"` // serviceaccount or application
 	KeyID  string `json:"keyId"`
 	Key    string `json:"key"`
@@ -23,7 +23,7 @@ type keyFile struct {
 	ClientID string `json:"clientId"`
 }
 
-func ConfigFromKeyFile(path string) (*keyFile, error) {
+func ConfigFromKeyFile(path string) (*KeyFile, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -31,8 +31,8 @@ func ConfigFromKeyFile(path string) (*keyFile, error) {
 	return ConfigFromKeyFileData(data)
 }
 
-func ConfigFromKeyFileData(data []byte) (*keyFile, error) {
-	var f keyFile
+func ConfigFromKeyFileData(data []byte) (*KeyFile, error) {
+	var f KeyFile
 	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, err
 	}

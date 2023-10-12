@@ -11,14 +11,16 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v2/example/server/storage"
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.com/zitadel/oidc/v2/pkg/op/mock"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	tu "github.com/zitadel/oidc/v3/internal/testutil"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op/mock"
+	"github.com/zitadel/schema"
+	"golang.org/x/exp/slog"
 )
 
 func TestAuthorize(t *testing.T) {
@@ -39,7 +41,7 @@ func TestAuthorize(t *testing.T) {
 
 			expect := authorizer.EXPECT()
 			expect.Decoder().Return(schema.NewDecoder())
-			expect.Encoder().Return(schema.NewEncoder())
+			expect.Logger().Return(slog.Default())
 
 			if tt.expect != nil {
 				tt.expect(expect)
@@ -123,7 +125,7 @@ func TestValidateAuthRequest(t *testing.T) {
 	type args struct {
 		authRequest *oidc.AuthRequest
 		storage     op.Storage
-		verifier    op.IDTokenHintVerifier
+		verifier    *op.IDTokenHintVerifier
 	}
 	tests := []struct {
 		name    string
@@ -996,7 +998,7 @@ func TestAuthResponseCode(t *testing.T) {
 					authorizer.EXPECT().Crypto().Return(&mockCrypto{
 						returnErr: io.ErrClosedPipe,
 					})
-					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					authorizer.EXPECT().Logger().Return(slog.Default())
 					return authorizer
 				},
 			},
@@ -1068,6 +1070,74 @@ func TestAuthResponseCode(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, tt.res.wantBody, string(body))
+		})
+	}
+}
+
+func Test_parseAuthorizeCallbackRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		wantId  string
+		wantErr bool
+	}{
+		{
+			name:    "parse error",
+			url:     "/?id;=99",
+			wantErr: true,
+		},
+		{
+			name:    "missing id",
+			url:     "/",
+			wantErr: true,
+		},
+		{
+			name:   "ok",
+			url:    "/?id=99",
+			wantId: "99",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			gotId, err := op.ParseAuthorizeCallbackRequest(r)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantId, gotId)
+		})
+	}
+}
+
+func TestValidateAuthReqIDTokenHint(t *testing.T) {
+	token, _ := tu.ValidIDToken()
+	tests := []struct {
+		name        string
+		idTokenHint string
+		want        string
+		wantErr     error
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name:        "verify err",
+			idTokenHint: "foo",
+			wantErr:     oidc.ErrLoginRequired(),
+		},
+		{
+			name:        "ok",
+			idTokenHint: token,
+			want:        tu.ValidSubject,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := op.ValidateAuthReqIDTokenHint(context.Background(), tt.idTokenHint, op.NewIDTokenHintVerifier(tu.ValidIssuer, tu.KeySet{}))
+			require.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

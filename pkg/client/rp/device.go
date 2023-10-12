@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zitadel/oidc/v2/pkg/client"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/client"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
@@ -32,19 +32,21 @@ func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.
 // DeviceAuthorization starts a new Device Authorization flow as defined
 // in RFC 8628, section 3.1 and 3.2:
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.1
-func DeviceAuthorization(scopes []string, rp RelyingParty) (*oidc.DeviceAuthorizationResponse, error) {
+func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, authFn any) (*oidc.DeviceAuthorizationResponse, error) {
+	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAuthorization")
 	req, err := newDeviceClientCredentialsRequest(scopes, rp)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.CallDeviceAuthorizationEndpoint(req, rp)
+	return client.CallDeviceAuthorizationEndpoint(ctx, req, rp, authFn)
 }
 
 // DeviceAccessToken attempts to obtain tokens from a Device Authorization,
 // by means of polling as defined in RFC, section 3.3 and 3.4:
 // https://www.rfc-editor.org/rfc/rfc8628#section-3.4
 func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Duration, rp RelyingParty) (resp *oidc.AccessTokenResponse, err error) {
+	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAccessToken")
 	req := &client.DeviceAccessTokenRequest{
 		DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{
 			GrantType:  oidc.GrantTypeDeviceCode,

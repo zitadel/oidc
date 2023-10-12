@@ -7,11 +7,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v2/example/server/storage"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 const (
@@ -47,7 +47,7 @@ func main() {
 	//be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 
-	router := mux.NewRouter()
+	router := chi.NewRouter()
 
 	//for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
@@ -76,7 +76,7 @@ func main() {
 
 	//regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	//so we will direct all calls to /login to the login UI
-	router.PathPrefix("/login/").Handler(http.StripPrefix("/login", l.router))
+	router.Mount("/login/", http.StripPrefix("/login", l.router))
 
 	//we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
 	//is served on the correct path
@@ -84,7 +84,7 @@ func main() {
 	//if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	//then you would have to set the path prefix (/custom/path/):
 	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider.HttpHandler()))
-	router.PathPrefix("/").Handler(provider.HttpHandler())
+	router.Mount("/", provider)
 
 	server := &http.Server{
 		Addr:    ":" + port,

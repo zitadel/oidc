@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"golang.org/x/exp/slog"
 )
 
 type Exchanger interface {
@@ -20,8 +21,9 @@ type Exchanger interface {
 	GrantTypeJWTAuthorizationSupported() bool
 	GrantTypeClientCredentialsSupported() bool
 	GrantTypeDeviceCodeSupported() bool
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
-	IDTokenHintVerifier(context.Context) IDTokenHintVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
+	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	Logger() *slog.Logger
 }
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
@@ -66,10 +68,10 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 			return
 		}
 	case "":
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), exchanger.Logger())
 		return
 	}
-	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType))
+	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), exchanger.Logger())
 }
 
 // AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
@@ -122,11 +124,11 @@ func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string,
 
 // AuthorizeCodeChallenge authorizes a client by validating the code_verifier against the previously sent
 // code_challenge of the auth request (PKCE)
-func AuthorizeCodeChallenge(tokenReq *oidc.AccessTokenRequest, challenge *oidc.CodeChallenge) error {
-	if tokenReq.CodeVerifier == "" {
+func AuthorizeCodeChallenge(codeVerifier string, challenge *oidc.CodeChallenge) error {
+	if codeVerifier == "" {
 		return oidc.ErrInvalidRequest().WithDescription("code_challenge required")
 	}
-	if !oidc.VerifyCodeChallenge(challenge, tokenReq.CodeVerifier) {
+	if !oidc.VerifyCodeChallenge(challenge, codeVerifier) {
 		return oidc.ErrInvalidGrant().WithDescription("invalid code challenge")
 	}
 	return nil
