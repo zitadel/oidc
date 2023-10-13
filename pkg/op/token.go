@@ -51,7 +51,10 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		if err != nil {
 			return nil, err
 		}
-		state = authRequest.GetState()
+		// only implicit flow requires state to be returned.
+		if code == "" {
+			state = authRequest.GetState()
+		}
 	}
 
 	exp := uint64(validity.Seconds())
