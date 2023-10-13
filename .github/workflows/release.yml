@@ -2,6 +2,7 @@ name: Release
 on:
   push:
     branches:
+      - "2.11.x"
       - main
       - next
     tags-ignore:
