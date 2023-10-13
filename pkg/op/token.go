@@ -52,7 +52,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 			return nil, err
 		}
 		// only implicit flow requires state to be returned.
-		if code != "" {
+		if code == "" {
 			state = authRequest.GetState()
 		}
 	}
