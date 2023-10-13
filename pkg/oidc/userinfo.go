@@ -29,6 +29,11 @@ func (u *UserInfo) GetAddress() *UserInfoAddress {
 	return u.Address
 }
 
+// GetSubject implements [rp.SubjectGetter]
+func (u *UserInfo) GetSubject() string {
+	return u.Subject
+}
+
 type uiAlias UserInfo
 
 func (u *UserInfo) MarshalJSON() ([]byte, error) {

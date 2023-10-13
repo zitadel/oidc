@@ -6,14 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	jose "github.com/go-jose/go-jose/v3"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
-	"github.com/zitadel/oidc/v2/pkg/op/mock"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op/mock"
 )
 
 func TestDiscover(t *testing.T) {
@@ -48,9 +48,9 @@ func TestDiscover(t *testing.T) {
 
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
-		request *http.Request
-		c       op.Configuration
-		s       op.DiscoverStorage
+		ctx context.Context
+		c   op.Configuration
+		s   op.DiscoverStorage
 	}
 	tests := []struct {
 		name string
@@ -61,7 +61,7 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := op.CreateDiscoveryConfig(tt.args.request, tt.args.c, tt.args.s)
+			got := op.CreateDiscoveryConfig(tt.args.ctx, tt.args.c, tt.args.s)
 			assert.Equal(t, tt.want, got)
 		})
 	}

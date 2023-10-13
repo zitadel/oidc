@@ -1,21 +1,34 @@
 package exampleop
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 	"github.com/gorilla/securecookie"
 	"github.com/sirupsen/logrus"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 type deviceAuthenticate interface {
 	CheckUsernamePasswordSimple(username, password string) error
 	op.DeviceAuthorizationStorage
+
+	// GetDeviceAuthorizationByUserCode resturns the current state of the device authorization flow,
+	// identified by the user code.
+	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error)
+
+	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
+	// identified by userCode. The Subject is added to the state, so that
+	// GetDeviceAuthorizatonState can use it to create a new Access Token.
+	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
+
+	// DenyDeviceAuthorization marks a device authorization entry as Denied.
+	DenyDeviceAuthorization(ctx context.Context, userCode string) error
 }
 
 type deviceLogin struct {
@@ -23,14 +36,14 @@ type deviceLogin struct {
 	cookie  *securecookie.SecureCookie
 }
 
-func registerDeviceAuth(storage deviceAuthenticate, router *mux.Router) {
+func registerDeviceAuth(storage deviceAuthenticate, router chi.Router) {
 	l := &deviceLogin{
 		storage: storage,
 		cookie:  securecookie.New(securecookie.GenerateRandomKey(32), nil),
 	}
 
-	router.HandleFunc("", l.userCodeHandler)
-	router.Path("/login").Methods(http.MethodPost).HandlerFunc(l.loginHandler)
+	router.HandleFunc("/", l.userCodeHandler)
+	router.Post("/login", l.loginHandler)
 	router.HandleFunc("/confirm", l.confirmHandler)
 }
 

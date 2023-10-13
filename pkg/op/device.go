@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 type DeviceAuthorizationConfig struct {
@@ -57,47 +57,57 @@ var (
 func DeviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := DeviceAuthorization(w, r, o); err != nil {
-			RequestError(w, r, err)
+			RequestError(w, r, err, o.Logger())
 		}
 	}
 }
 
 func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
-	storage, err := assertDeviceStorage(o.Storage())
-	if err != nil {
-		return err
-	}
-
 	req, err := ParseDeviceCodeRequest(r, o)
 	if err != nil {
 		return err
 	}
+	response, err := createDeviceAuthorization(r.Context(), req, req.ClientID, o)
+	if err != nil {
+		return err
+	}
 
+	httphelper.MarshalJSON(w, response)
+	return nil
+}
+
+func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizationRequest, clientID string, o OpenIDProvider) (*oidc.DeviceAuthorizationResponse, error) {
+	storage, err := assertDeviceStorage(o.Storage())
+	if err != nil {
+		return nil, err
+	}
 	config := o.DeviceAuthorization()
 
 	deviceCode, err := NewDeviceCode(RecommendedDeviceCodeBytes)
 	if err != nil {
-		return err
+		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
 	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.DashInterval)
 	if err != nil {
-		return err
+		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
 
 	expires := time.Now().Add(config.Lifetime)
-	err = storage.StoreDeviceAuthorization(r.Context(), req.ClientID, deviceCode, userCode, expires, req.Scopes)
+	err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
 	if err != nil {
-		return err
+		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
 
 	var verification *url.URL
 	if config.UserFormURL != "" {
 		if verification, err = url.Parse(config.UserFormURL); err != nil {
-			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for device user form")
+			err = oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for device user form")
+			return nil, NewStatusError(err, http.StatusInternalServerError)
 		}
 	} else {
-		if verification, err = url.Parse(IssuerFromContext(r.Context())); err != nil {
-			return oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+		if verification, err = url.Parse(IssuerFromContext(ctx)); err != nil {
+			err = oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+			return nil, NewStatusError(err, http.StatusInternalServerError)
 		}
 		verification.Path = config.UserFormPath
 	}
@@ -112,9 +122,7 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 
 	verification.RawQuery = "user_code=" + userCode
 	response.VerificationURIComplete = verification.String()
-
-	httphelper.MarshalJSON(w, response)
-	return nil
+	return response, nil
 }
 
 func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuthorizationRequest, error) {
@@ -201,7 +209,7 @@ func DeviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	r = r.WithContext(ctx)
 
 	if err := deviceAccessToken(w, r, exchanger); err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 }
 

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
 )
 

@@ -14,9 +14,9 @@ import (
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v2/example/server/storage"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/text/language"
 )
 
@@ -157,7 +157,7 @@ func TestRoutes(t *testing.T) {
 			values: map[string]string{
 				"client_id":     client.GetID(),
 				"redirect_uri":  "https://example.com",
-				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"response_type": string(oidc.ResponseTypeCode),
 			},
 			wantCode:       http.StatusFound,
@@ -194,7 +194,7 @@ func TestRoutes(t *testing.T) {
 			path:   testProvider.TokenEndpoint().Relative(),
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeBearer),
-				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"assertion":  jwtToken,
 			},
 			wantCode: http.StatusBadRequest,
@@ -207,7 +207,7 @@ func TestRoutes(t *testing.T) {
 			basicAuth: &basicAuth{"web", "secret"},
 			values: map[string]string{
 				"grant_type":         string(oidc.GrantTypeTokenExchange),
-				"scope":              oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":              oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 				"subject_token":      jwtToken,
 				"subject_token_type": string(oidc.AccessTokenType),
 			},
@@ -224,7 +224,7 @@ func TestRoutes(t *testing.T) {
 			basicAuth: &basicAuth{"sid1", "verysecret"},
 			values: map[string]string{
 				"grant_type": string(oidc.GrantTypeClientCredentials),
-				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
 			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
@@ -339,7 +339,7 @@ func TestRoutes(t *testing.T) {
 			path:      testProvider.DeviceAuthorizationEndpoint().Relative(),
 			basicAuth: &basicAuth{"device", "secret"},
 			values: map[string]string{
-				"scope": oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
+				"scope": oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
 			contains: []string{
@@ -371,7 +371,7 @@ func TestRoutes(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			testProvider.HttpHandler().ServeHTTP(rec, req)
+			testProvider.ServeHTTP(rec, req)
 
 			resp := rec.Result()
 			require.NoError(t, err)
@@ -393,6 +393,57 @@ func TestRoutes(t *testing.T) {
 			for k, v := range tt.headerContains {
 				assert.Contains(t, resp.Header.Get(k), v)
 			}
+		})
+	}
+}
+
+func TestWithCustomEndpoints(t *testing.T) {
+	type args struct {
+		auth       *op.Endpoint
+		token      *op.Endpoint
+		userInfo   *op.Endpoint
+		revocation *op.Endpoint
+		endSession *op.Endpoint
+		keys       *op.Endpoint
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name:    "all nil",
+			args:    args{},
+			wantErr: op.ErrNilEndpoint,
+		},
+		{
+			name: "all set",
+			args: args{
+				auth:       op.NewEndpoint("/authorize"),
+				token:      op.NewEndpoint("/oauth/token"),
+				userInfo:   op.NewEndpoint("/userinfo"),
+				revocation: op.NewEndpoint("/revoke"),
+				endSession: op.NewEndpoint("/end_session"),
+				keys:       op.NewEndpoint("/keys"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider, err := op.NewOpenIDProvider(testIssuer, testConfig,
+				storage.NewStorage(storage.NewUserStore(testIssuer)),
+				op.WithCustomEndpoints(tt.args.auth, tt.args.token, tt.args.userInfo, tt.args.revocation, tt.args.endSession, tt.args.keys),
+			)
+			require.ErrorIs(t, err, tt.wantErr)
+			if tt.wantErr != nil {
+				return
+			}
+			assert.Equal(t, tt.args.auth, provider.AuthorizationEndpoint())
+			assert.Equal(t, tt.args.token, provider.TokenEndpoint())
+			assert.Equal(t, tt.args.userInfo, provider.UserinfoEndpoint())
+			assert.Equal(t, tt.args.revocation, provider.RevocationEndpoint())
+			assert.Equal(t, tt.args.endSession, provider.EndSessionEndpoint())
+			assert.Equal(t, tt.args.keys, provider.KeysEndpoint())
 		})
 	}
 }

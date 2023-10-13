@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 // ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including
@@ -18,18 +18,18 @@ func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger
 
 	request, err := ParseClientCredentialsRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 	}
 
 	validatedRequest, client, err := ValidateClientCredentialsRequest(r.Context(), request, exchanger)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 
 	resp, err := CreateClientCredentialsTokenResponse(r.Context(), validatedRequest, exchanger, client)
 	if err != nil {
-		RequestError(w, r, err)
+		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 

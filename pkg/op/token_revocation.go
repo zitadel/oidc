@@ -7,22 +7,22 @@ import (
 	"net/url"
 	"strings"
 
-	httphelper "github.com/zitadel/oidc/v2/pkg/http"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 type Revoker interface {
 	Decoder() httphelper.Decoder
 	Crypto() Crypto
 	Storage() Storage
-	AccessTokenVerifier(context.Context) AccessTokenVerifier
+	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	AuthMethodPrivateKeyJWTSupported() bool
 	AuthMethodPostSupported() bool
 }
 
 type RevokerJWTProfile interface {
 	Revoker
-	JWTProfileVerifier(context.Context) JWTProfileVerifier
+	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
 func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request) {
@@ -131,6 +131,11 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 }
 
 func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {
+	statusErr := RevocationError(err)
+	httphelper.MarshalJSONWithStatus(w, statusErr.parent, statusErr.statusCode)
+}
+
+func RevocationError(err error) StatusError {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	switch e.ErrorType {
@@ -139,7 +144,7 @@ func RevocationRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case oidc.ServerError:
 		status = 500
 	}
-	httphelper.MarshalJSONWithStatus(w, e, status)
+	return NewStatusError(e, status)
 }
 
 func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {

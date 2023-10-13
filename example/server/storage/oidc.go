@@ -3,10 +3,11 @@ package storage
 import (
 	"time"
 
+	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"github.com/zitadel/oidc/v2/pkg/op"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 const (
@@ -39,6 +40,19 @@ type AuthRequest struct {
 
 	done     bool
 	authTime time.Time
+}
+
+// LogValue allows you to define which fields will be logged.
+// Implements the [slog.LogValuer]
+func (a *AuthRequest) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("id", a.ID),
+		slog.Time("creation_date", a.CreationDate),
+		slog.Any("scopes", a.Scopes),
+		slog.String("response_type", string(a.ResponseType)),
+		slog.String("app_id", a.ApplicationID),
+		slog.String("callback_uri", a.CallbackURI),
+	)
 }
 
 func (a *AuthRequest) GetID() string {

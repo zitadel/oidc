@@ -33,7 +33,7 @@ func AuthorizeBasic(user, password string) RequestAuthorization {
 	}
 }
 
-func FormRequest(endpoint string, request any, encoder Encoder, authFn any) (*http.Request, error) {
+func FormRequest(ctx context.Context, endpoint string, request any, encoder Encoder, authFn any) (*http.Request, error) {
 	form := url.Values{}
 	if err := encoder.Encode(request, form); err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func FormRequest(endpoint string, request any, encoder Encoder, authFn any) (*ht
 		fn(form)
 	}
 	body := strings.NewReader(form.Encode())
-	req, err := http.NewRequest("POST", endpoint, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, body)
 	if err != nil {
 		return nil, err
 	}

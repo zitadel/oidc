@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 
-	"github.com/zitadel/oidc/v2/pkg/client/rs"
-	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"github.com/zitadel/oidc/v3/pkg/client/rs"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 const (
@@ -27,12 +28,12 @@ func main() {
 	port := os.Getenv("PORT")
 	issuer := os.Getenv("ISSUER")
 
-	provider, err := rs.NewResourceServerFromKeyFile(issuer, keyPath)
+	provider, err := rs.NewResourceServerFromKeyFile(context.TODO(), issuer, keyPath)
 	if err != nil {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
 
-	router := mux.NewRouter()
+	router := chi.NewRouter()
 
 	// public url accessible without any authorization
 	// will print `OK` and current timestamp
@@ -47,7 +48,7 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rs.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect[*oidc.IntrospectionResponse](r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
@@ -68,14 +69,14 @@ func main() {
 		if !ok {
 			return
 		}
-		resp, err := rs.Introspect(r.Context(), provider, token)
+		resp, err := rs.Introspect[*oidc.IntrospectionResponse](r.Context(), provider, token)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		params := mux.Vars(r)
-		requestedClaim := params["claim"]
-		requestedValue := params["value"]
+		requestedClaim := chi.URLParam(r, "claim")
+		requestedValue := chi.URLParam(r, "value")
+
 		value, ok := resp.Claims[requestedClaim].(string)
 		if !ok || value == "" || value != requestedValue {
 			http.Error(w, "claim does not match", http.StatusForbidden)
