@@ -1,10 +1,15 @@
 # Upgrading
 
 All commands are executed from the root of the project that imports oidc packages.
-`sed` commands are created with GNU `sed` in mind and might need alternate syntax
-on non-GNU systems, such as MacOS or the GNU sed command to be installed manually.
+`sed` commands are created with **GNU sed** in mind and might need alternate syntax
+on non-GNU systems, such as MacOS.
+Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 
 ## V2 to V3
+
+**TL;DR** at the [bottom](#full-script) of this chapter is a full `sed` script
+containing all automatic the steps at once.
+
 
 As first steps we will:
 1. Download the latest v3 module;
