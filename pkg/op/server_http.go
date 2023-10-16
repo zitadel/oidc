@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/cors"
 	"github.com/zitadel/logging"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"

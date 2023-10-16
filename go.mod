@@ -3,7 +3,7 @@ module github.com/zitadel/oidc/v3
 go 1.19
 
 require (
-	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
