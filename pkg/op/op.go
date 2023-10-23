@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	jose "github.com/go-jose/go-jose/v3"
 	"github.com/rs/cors"
 	"github.com/zitadel/schema"

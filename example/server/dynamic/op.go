@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"

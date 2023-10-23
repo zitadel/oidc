@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/zitadel/logging"
 	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
