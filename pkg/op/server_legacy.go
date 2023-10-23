@@ -336,9 +336,14 @@ func (s *LegacyServer) EndSession(ctx context.Context, r *Request[oidc.EndSessio
 	if err != nil {
 		return nil, err
 	}
-	err = s.provider.Storage().TerminateSession(ctx, session.UserID, session.ClientID)
+	redirect := session.RedirectURI
+	if fromRequest, ok := s.provider.Storage().(CanTerminateSessionFromRequest); ok {
+		redirect, err = fromRequest.TerminateSessionFromRequest(ctx, session)
+	} else {
+		err = s.provider.Storage().TerminateSession(ctx, session.UserID, session.ClientID)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return NewRedirect(session.RedirectURI), nil
+	return NewRedirect(redirect), nil
 }
