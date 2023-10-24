@@ -1001,14 +1001,12 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 	tests := []struct {
 		name    string
 		decoder httphelper.Decoder
-		client  Client
 		r       *http.Request
 		want    webServerResult
 	}{
 		{
 			name:    "decoder error",
 			decoder: schema.NewDecoder(),
-			client:  newClient(clientTypeUserAgent),
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("foo=bar")),
 			want: webServerResult{
 				wantStatus: http.StatusBadRequest,
@@ -1018,8 +1016,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 		{
 			name:    "public client",
 			decoder: testDecoder,
-			client:  newClient(clientTypeNative),
-			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("foo=bar")),
+			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=123")),
 			want: webServerResult{
 				wantStatus: http.StatusBadRequest,
 				wantBody:   `{"error":"invalid_client", "error_description":"client must be authenticated"}`,
@@ -1028,8 +1025,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 		{
 			name:    "token missing",
 			decoder: testDecoder,
-			client:  newClient(clientTypeWeb),
-			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("foo=bar")),
+			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=123&client_secret=SECRET")),
 			want: webServerResult{
 				wantStatus: http.StatusBadRequest,
 				wantBody:   `{"error":"invalid_request", "error_description":"token missing"}`,
@@ -1038,8 +1034,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 		{
 			name:    "unimplemented Introspect called",
 			decoder: testDecoder,
-			client:  newClient(clientTypeWeb),
-			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("token=xxx")),
+			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=123&client_secret=SECRET&token=xxx")),
 			want: webServerResult{
 				wantStatus: UnimplementedStatusCode,
 				wantBody:   `{"error":"server_error", "error_description":"/ not implemented on this server"}`,
@@ -1053,7 +1048,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 				decoder: tt.decoder,
 				logger:  slog.Default(),
 			}
-			runWebServerClientTest(t, s.introspectionHandler, tt.r, tt.client, tt.want)
+			runWebServerTest(t, s.introspectionHandler, tt.r, tt.want)
 		})
 	}
 }

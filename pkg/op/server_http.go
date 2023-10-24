@@ -102,7 +102,7 @@ func (s *webServer) createRouter() {
 	s.endpointRoute(s.endpoints.Authorization, s.authorizeHandler)
 	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
 	s.endpointRoute(s.endpoints.Token, s.tokensHandler)
-	s.endpointRoute(s.endpoints.Introspection, s.withClient(s.introspectionHandler))
+	s.endpointRoute(s.endpoints.Introspection, s.introspectionHandler)
 	s.endpointRoute(s.endpoints.Userinfo, s.userInfoHandler)
 	s.endpointRoute(s.endpoints.Revocation, s.withClient(s.revocationHandler))
 	s.endpointRoute(s.endpoints.EndSession, s.endSessionHandler)
@@ -136,7 +136,21 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 }
 
 func (s *webServer) verifyRequestClient(r *http.Request) (_ Client, err error) {
-	if err = r.ParseForm(); err != nil {
+	cc, err := s.parseClientCredentials(r)
+	if err != nil {
+		return nil, err
+	}
+	return s.server.VerifyClient(r.Context(), &Request[ClientCredentials]{
+		Method: r.Method,
+		URL:    r.URL,
+		Header: r.Header,
+		Form:   r.Form,
+		Data:   cc,
+	})
+}
+
+func (s *webServer) parseClientCredentials(r *http.Request) (_ *ClientCredentials, err error) {
+	if err := r.ParseForm(); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err)
 	}
 	cc := new(ClientCredentials)
@@ -160,13 +174,7 @@ func (s *webServer) verifyRequestClient(r *http.Request) (_ Client, err error) {
 	if cc.ClientAssertion != "" && cc.ClientAssertionType != oidc.ClientAssertionTypeJWTAssertion {
 		return nil, oidc.ErrInvalidRequest().WithDescription("invalid client_assertion_type %s", cc.ClientAssertionType)
 	}
-	return s.server.VerifyClient(r.Context(), &Request[ClientCredentials]{
-		Method: r.Method,
-		URL:    r.URL,
-		Header: r.Header,
-		Form:   r.Form,
-		Data:   cc,
-	})
+	return cc, nil
 }
 
 func (s *webServer) authorizeHandler(w http.ResponseWriter, r *http.Request) {
@@ -378,8 +386,13 @@ func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, c
 	resp.writeOut(w)
 }
 
-func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request, client Client) {
-	if client.AuthMethod() == oidc.AuthMethodNone {
+func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request) {
+	cc, err := s.parseClientCredentials(r)
+	if err != nil {
+		WriteError(w, r, err, s.getLogger(r.Context()))
+		return
+	}
+	if cc.ClientSecret == "" && cc.ClientAssertion == "" {
 		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"), s.getLogger(r.Context()))
 		return
 	}
@@ -392,7 +405,7 @@ func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request,
 		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("token missing"), s.getLogger(r.Context()))
 		return
 	}
-	resp, err := s.server.Introspect(r.Context(), newClientRequest(r, request, client))
+	resp, err := s.server.Introspect(r.Context(), newRequest(r, &IntrospectionRequest{cc, request}))
 	if err != nil {
 		WriteError(w, r, err, s.getLogger(r.Context()))
 		return

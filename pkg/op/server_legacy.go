@@ -315,13 +315,30 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	return NewResponse(resp), nil
 }
 
-func (s *LegacyServer) Introspect(ctx context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
+func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *ClientCredentials) (string, error) {
+	if cc.ClientAssertion != "" {
+		if jp, ok := s.provider.(ClientJWTProfile); ok {
+			return ClientJWTAuth(ctx, oidc.ClientAssertionParams{ClientAssertion: cc.ClientAssertion}, jp)
+		}
+		return "", oidc.ErrInvalidClient().WithDescription("client_assertion not supported")
+	}
+	if err := s.provider.Storage().AuthorizeClientIDSecret(ctx, cc.ClientID, cc.ClientSecret); err != nil {
+		return "", oidc.ErrUnauthorizedClient().WithParent(err)
+	}
+	return cc.ClientID, nil
+}
+
+func (s *LegacyServer) Introspect(ctx context.Context, r *Request[IntrospectionRequest]) (*Response, error) {
+	clientID, err := s.authenticateResourceClient(ctx, r.Data.ClientCredentials)
+	if err != nil {
+		return nil, err
+	}
 	response := new(oidc.IntrospectionResponse)
 	tokenID, subject, ok := getTokenIDAndSubject(ctx, s.provider, r.Data.Token)
 	if !ok {
 		return NewResponse(response), nil
 	}
-	err := s.provider.Storage().SetIntrospectionFromToken(ctx, response, tokenID, subject, r.Client.GetID())
+	err = s.provider.Storage().SetIntrospectionFromToken(ctx, response, tokenID, subject, clientID)
 	if err != nil {
 		return NewResponse(response), nil
 	}
