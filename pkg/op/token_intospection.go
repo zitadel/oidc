@@ -65,3 +65,8 @@ func ParseTokenIntrospectionRequest(r *http.Request, introspector Introspector) 
 
 	return req.Token, clientID, nil
 }
+
+type IntrospectionRequest struct {
+	*ClientCredentials
+	*oidc.IntrospectionRequest
+}
