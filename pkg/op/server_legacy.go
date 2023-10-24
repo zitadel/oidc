@@ -10,37 +10,69 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-// LegacyServer is an implementation of [Server[] that
-// simply wraps a [OpenIDProvider].
+// ExtendedLegacyServer allows embedding [LegacyServer] in a struct,
+// so that its methods can be individually overridden.
+//
+// EXPERIMENTAL: may change until v4
+type ExtendedLegacyServer interface {
+	Server
+	Provider() OpenIDProvider
+	Endpoints() Endpoints
+}
+
+// RegisterLegacyServer registers a [LegacyServer] or an extension thereof.
+// It takes care of registering the IssuerFromRequest middleware
+// and Authorization Callback Routes.
+// Neither are part of the bare [Server] interface.
+//
+// EXPERIMENTAL: may change until v4
+func RegisterLegacyServer(s ExtendedLegacyServer, options ...ServerOption) http.Handler {
+	provider := s.Provider()
+	options = append(options,
+		WithHTTPMiddleware(intercept(provider.IssuerFromRequest)),
+		WithSetRouter(func(r chi.Router) {
+			r.HandleFunc(authCallbackPath(provider), authorizeCallbackHandler(provider))
+		}),
+	)
+	return RegisterServer(s, s.Endpoints(), options...)
+}
+
+// LegacyServer is an implementation of [Server] that
+// simply wraps an [OpenIDProvider].
 // It can be used to transition from the former Provider/Storage
 // interfaces to the new Server interface.
+//
+// EXPERIMENTAL: may change until v4
 type LegacyServer struct {
 	UnimplementedServer
 	provider  OpenIDProvider
 	endpoints Endpoints
 }
 
-// NewLegacyServer wraps provider in a `Server` and returns a handler which is
-// the Server's router.
+// NewLegacyServer wraps provider in a `Server` implementation
 //
 // Only non-nil endpoints will be registered on the router.
 // Nil endpoints are disabled.
 //
-// The passed endpoints is also set to the provider,
-// to be consistent with the discovery config.
+// The passed endpoints is also used for the discovery config,
+// and endpoints already set to the provider are ignored.
 // Any `With*Endpoint()` option used on the provider is
 // therefore ineffective.
-func NewLegacyServer(provider OpenIDProvider, endpoints Endpoints) http.Handler {
-	server := RegisterServer(&LegacyServer{
+//
+// EXPERIMENTAL: may change until v4
+func NewLegacyServer(provider OpenIDProvider, endpoints Endpoints) *LegacyServer {
+	return &LegacyServer{
 		provider:  provider,
 		endpoints: endpoints,
-	}, endpoints, WithHTTPMiddleware(intercept(provider.IssuerFromRequest)))
+	}
+}
 
-	router := chi.NewRouter()
-	router.Mount("/", server)
-	router.HandleFunc(authCallbackPath(provider), authorizeCallbackHandler(provider))
+func (s *LegacyServer) Provider() OpenIDProvider {
+	return s.provider
+}
 
-	return router
+func (s *LegacyServer) Endpoints() Endpoints {
+	return s.endpoints
 }
 
 func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {

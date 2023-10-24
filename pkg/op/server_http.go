@@ -25,11 +25,13 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 	decoder.IgnoreUnknownKeys(true)
 
 	ws := &webServer{
+		router:    chi.NewRouter(),
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
 		logger:    slog.Default(),
 	}
+	ws.router.Use(cors.New(defaultCORSOptions).Handler)
 
 	for _, option := range options {
 		option(ws)
@@ -45,7 +47,14 @@ type ServerOption func(s *webServer)
 // the Server's router.
 func WithHTTPMiddleware(m ...func(http.Handler) http.Handler) ServerOption {
 	return func(s *webServer) {
-		s.middleware = m
+		s.router.Use(m...)
+	}
+}
+
+// WithSetRouter allows customization or the Server's router.
+func WithSetRouter(set func(chi.Router)) ServerOption {
+	return func(s *webServer) {
+		set(s.router)
 	}
 }
 
@@ -67,12 +76,15 @@ func WithFallbackLogger(logger *slog.Logger) ServerOption {
 }
 
 type webServer struct {
-	http.Handler
-	server     Server
-	middleware []func(http.Handler) http.Handler
-	endpoints  Endpoints
-	decoder    httphelper.Decoder
-	logger     *slog.Logger
+	server    Server
+	router    *chi.Mux
+	endpoints Endpoints
+	decoder   httphelper.Decoder
+	logger    *slog.Logger
+}
+
+func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.router.ServeHTTP(w, r)
 }
 
 func (s *webServer) getLogger(ctx context.Context) *slog.Logger {
@@ -83,27 +95,23 @@ func (s *webServer) getLogger(ctx context.Context) *slog.Logger {
 }
 
 func (s *webServer) createRouter() {
-	router := chi.NewRouter()
-	router.Use(cors.New(defaultCORSOptions).Handler)
-	router.Use(s.middleware...)
-	router.HandleFunc(healthEndpoint, simpleHandler(s, s.server.Health))
-	router.HandleFunc(readinessEndpoint, simpleHandler(s, s.server.Ready))
-	router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
+	s.router.HandleFunc(healthEndpoint, simpleHandler(s, s.server.Health))
+	s.router.HandleFunc(readinessEndpoint, simpleHandler(s, s.server.Ready))
+	s.router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
 
-	s.endpointRoute(router, s.endpoints.Authorization, s.authorizeHandler)
-	s.endpointRoute(router, s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
-	s.endpointRoute(router, s.endpoints.Token, s.tokensHandler)
-	s.endpointRoute(router, s.endpoints.Introspection, s.withClient(s.introspectionHandler))
-	s.endpointRoute(router, s.endpoints.Userinfo, s.userInfoHandler)
-	s.endpointRoute(router, s.endpoints.Revocation, s.withClient(s.revocationHandler))
-	s.endpointRoute(router, s.endpoints.EndSession, s.endSessionHandler)
-	s.endpointRoute(router, s.endpoints.JwksURI, simpleHandler(s, s.server.Keys))
-	s.Handler = router
+	s.endpointRoute(s.endpoints.Authorization, s.authorizeHandler)
+	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
+	s.endpointRoute(s.endpoints.Token, s.tokensHandler)
+	s.endpointRoute(s.endpoints.Introspection, s.withClient(s.introspectionHandler))
+	s.endpointRoute(s.endpoints.Userinfo, s.userInfoHandler)
+	s.endpointRoute(s.endpoints.Revocation, s.withClient(s.revocationHandler))
+	s.endpointRoute(s.endpoints.EndSession, s.endSessionHandler)
+	s.endpointRoute(s.endpoints.JwksURI, simpleHandler(s, s.server.Keys))
 }
 
-func (s *webServer) endpointRoute(router *chi.Mux, e *Endpoint, hf http.HandlerFunc) {
+func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {
 	if e != nil {
-		router.HandleFunc(e.Relative(), hf)
+		s.router.HandleFunc(e.Relative(), hf)
 		s.logger.Info("registered route", "endpoint", e.Relative())
 	}
 }
