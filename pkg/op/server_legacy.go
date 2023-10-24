@@ -18,6 +18,7 @@ type ExtendedLegacyServer interface {
 	Server
 	Provider() OpenIDProvider
 	Endpoints() Endpoints
+	AuthCallbackURL() func(context.Context, string) string
 }
 
 // RegisterLegacyServer registers a [LegacyServer] or an extension thereof.
@@ -31,7 +32,7 @@ func RegisterLegacyServer(s ExtendedLegacyServer, options ...ServerOption) http.
 	options = append(options,
 		WithHTTPMiddleware(intercept(provider.IssuerFromRequest)),
 		WithSetRouter(func(r chi.Router) {
-			r.HandleFunc(authCallbackPath(provider), authorizeCallbackHandler(provider))
+			r.HandleFunc(s.Endpoints().Authorization.Relative()+authCallbackPathSuffix, authorizeCallbackHandler(provider))
 		}),
 	)
 	return RegisterServer(s, s.Endpoints(), options...)
@@ -73,6 +74,13 @@ func (s *LegacyServer) Provider() OpenIDProvider {
 
 func (s *LegacyServer) Endpoints() Endpoints {
 	return s.endpoints
+}
+
+// AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
+func (s *LegacyServer) AuthCallbackURL() func(context.Context, string) string {
+	return func(ctx context.Context, requestID string) string {
+		return s.endpoints.Authorization.Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + requestID
+	}
 }
 
 func (s *LegacyServer) Health(_ context.Context, r *Request[struct{}]) (*Response, error) {
