@@ -15,7 +15,7 @@ require (
 	github.com/rs/cors v1.10.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
-	github.com/zitadel/logging v0.4.0
+	github.com/zitadel/logging v0.5.0
 	github.com/zitadel/schema v1.3.0
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
