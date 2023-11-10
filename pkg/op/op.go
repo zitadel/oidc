@@ -173,22 +173,52 @@ type Endpoints struct {
 // Successful logins should mark the request as authorized and redirect back to to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
+//
+// Deprecated: use [NewProvider] with an issuer function direct.
 func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return newProvider(config, storage, StaticIssuer(issuer), opOpts...)
+	return NewProvider(config, storage, StaticIssuer(issuer), opOpts...)
 }
 
 // NewForwardedOpenIDProvider tries to establishes the issuer from the request Host.
+//
+// Deprecated: use [NewProvider] with an issuer function direct.
 func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return newProvider(config, storage, IssuerFromHost(path), opOpts...)
+	return NewProvider(config, storage, IssuerFromHost(path), opOpts...)
 }
 
 // NewForwardedOpenIDProvider tries to establish the Issuer from a Forwarded request header, if it is set.
 // See [IssuerFromForwardedOrHost] for details.
+//
+// Deprecated: use [NewProvider] with an issuer function direct.
 func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return newProvider(config, storage, IssuerFromForwardedOrHost(path), opOpts...)
+	return NewProvider(config, storage, IssuerFromForwardedOrHost(path), opOpts...)
 }
 
-func newProvider(config *Config, storage Storage, issuer func(bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
+// NewProvider creates a provider with a router on it's embedded http.Handler.
+// Issuer is a function that must return the issuer on every request.
+// Typically [StaticIssuer], [IssuerFromHost] or [IssuerFromForwardedOrHost] can be used.
+//
+// The router handles a suite of endpoints (some paths can be overridden):
+//
+//	/healthz
+//	/ready
+//	/.well-known/openid-configuration
+//	/oauth/token
+//	/oauth/introspect
+//	/callback
+//	/authorize
+//	/userinfo
+//	/revoke
+//	/end_session
+//	/keys
+//	/device_authorization
+//
+// This does not include login. Login is handled with a redirect that includes the
+// request ID. The redirect for logins is specified per-client by Client.LoginURL().
+// Successful logins should mark the request as authorized and redirect back to to
+// op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
+// to the AuthCallbackURL, the request id should be passed as the "id" parameter.
+func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
 	o := &Provider{
 		config:    config,
 		storage:   storage,
