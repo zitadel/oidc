@@ -26,7 +26,7 @@ func NewJWTProfileVerifier(storage JWTProfileKeyStorage, issuer string, maxAgeIA
 	return newJWTProfileVerifier(storage, nil, issuer, maxAgeIAT, offset, opts...)
 }
 
-// NewJWTProfileVerifier creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
+// NewJWTProfileVerifierKeySet creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
 func NewJWTProfileVerifierKeySet(keySet oidc.KeySet, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) *JWTProfileVerifier {
 	return newJWTProfileVerifier(nil, keySet, issuer, maxAgeIAT, offset, opts...)
 }
