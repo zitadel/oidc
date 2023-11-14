@@ -624,6 +624,6 @@ func intercept(i IssuerFromRequest, interceptors ...HttpInterceptor) func(handle
 		for i := len(interceptors) - 1; i >= 0; i-- {
 			handler = interceptors[i](handler)
 		}
-		return cors.New(defaultCORSOptions).Handler(issuerInterceptor.Handler(handler))
+		return issuerInterceptor.Handler(handler)
 	}
 }
