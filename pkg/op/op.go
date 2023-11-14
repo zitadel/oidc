@@ -98,13 +98,15 @@ type OpenIDProvider interface {
 type HttpInterceptor func(http.Handler) http.Handler
 
 type corsOptioner interface {
-	CORSOptions() cors.Options
+	CORSOptions() *cors.Options
 }
 
 func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
 	router := chi.NewRouter()
 	if co, ok := o.(corsOptioner); ok {
-		router.Use(cors.New(co.CORSOptions()).Handler)
+		if opts := co.CORSOptions(); opts != nil {
+			router.Use(cors.New(*opts).Handler)
+		}
 	} else {
 		router.Use(cors.New(defaultCORSOptions).Handler)
 	}
@@ -232,7 +234,7 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 		storage:   storage,
 		endpoints: DefaultEndpoints,
 		timer:     make(<-chan time.Time),
-		corsOpts:  defaultCORSOptions,
+		corsOpts:  &defaultCORSOptions,
 		logger:    slog.Default(),
 	}
 
@@ -277,7 +279,7 @@ type Provider struct {
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
-	corsOpts                cors.Options
+	corsOpts                *cors.Options
 	logger                  *slog.Logger
 }
 
@@ -437,7 +439,7 @@ func (o *Provider) Probes() []ProbesFn {
 	}
 }
 
-func (o *Provider) CORSOptions() cors.Options {
+func (o *Provider) CORSOptions() *cors.Options {
 	return o.corsOpts
 }
 
@@ -601,7 +603,7 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 	}
 }
 
-func WithCORSOptions(opts cors.Options) Option {
+func WithCORSOptions(opts *cors.Options) Option {
 	return func(o *Provider) error {
 		o.corsOpts = opts
 		return nil
