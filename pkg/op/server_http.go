@@ -29,16 +29,16 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
+		corsOpts:  defaultCORSOptions,
 		logger:    slog.Default(),
 	}
-	ws.router.Use(cors.New(defaultCORSOptions).Handler)
 
 	for _, option := range options {
 		option(ws)
 	}
 
 	ws.createRouter()
-	return ws
+	return cors.New(ws.corsOpts).Handler(ws)
 }
 
 type ServerOption func(s *webServer)
@@ -66,6 +66,13 @@ func WithDecoder(decoder httphelper.Decoder) ServerOption {
 	}
 }
 
+// WithServerCORSOptions sets the CORS policy for the Server's router.
+func WithServerCORSOptions(opts cors.Options) ServerOption {
+	return func(s *webServer) {
+		s.corsOpts = opts
+	}
+}
+
 // WithFallbackLogger overrides the fallback logger, which
 // is used when no logger was found in the context.
 // Defaults to [slog.Default].
@@ -80,6 +87,7 @@ type webServer struct {
 	router    *chi.Mux
 	endpoints Endpoints
 	decoder   httphelper.Decoder
+	corsOpts  cors.Options
 	logger    *slog.Logger
 }
 
