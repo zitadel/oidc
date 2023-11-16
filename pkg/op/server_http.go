@@ -38,8 +38,9 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 	}
 
 	ws.createRouter()
+	ws.handler = ws.router
 	if ws.corsOpts != nil {
-		return cors.New(*ws.corsOpts).Handler(ws)
+		ws.handler = cors.New(*ws.corsOpts).Handler(ws.router)
 	}
 	return ws
 }
@@ -88,6 +89,7 @@ func WithFallbackLogger(logger *slog.Logger) ServerOption {
 type webServer struct {
 	server    Server
 	router    *chi.Mux
+	handler   http.Handler
 	endpoints Endpoints
 	decoder   httphelper.Decoder
 	corsOpts  *cors.Options
@@ -95,7 +97,7 @@ type webServer struct {
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 func (s *webServer) getLogger(ctx context.Context) *slog.Logger {
