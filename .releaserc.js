@@ -1,6 +1,6 @@
 module.exports = {
     branches: [
-        {name: "2.11.x"},
+        {name: "2.12.x"},
         {name: "main"},
         {name: "next", prerelease: true},
     ],
