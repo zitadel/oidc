@@ -97,9 +97,19 @@ type OpenIDProvider interface {
 
 type HttpInterceptor func(http.Handler) http.Handler
 
+type corsOptioner interface {
+	CORSOptions() *cors.Options
+}
+
 func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
 	router := chi.NewRouter()
-	router.Use(cors.New(defaultCORSOptions).Handler)
+	if co, ok := o.(corsOptioner); ok {
+		if opts := co.CORSOptions(); opts != nil {
+			router.Use(cors.New(*opts).Handler)
+		}
+	} else {
+		router.Use(cors.New(defaultCORSOptions).Handler)
+	}
 	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
@@ -224,6 +234,7 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 		storage:   storage,
 		endpoints: DefaultEndpoints,
 		timer:     make(<-chan time.Time),
+		corsOpts:  &defaultCORSOptions,
 		logger:    slog.Default(),
 	}
 
@@ -268,6 +279,7 @@ type Provider struct {
 	timer                   <-chan time.Time
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
+	corsOpts                *cors.Options
 	logger                  *slog.Logger
 }
 
@@ -425,6 +437,10 @@ func (o *Provider) Probes() []ProbesFn {
 	return []ProbesFn{
 		ReadyStorage(o.Storage()),
 	}
+}
+
+func (o *Provider) CORSOptions() *cors.Options {
+	return o.corsOpts
 }
 
 func (o *Provider) Logger() *slog.Logger {
@@ -587,6 +603,13 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 	}
 }
 
+func WithCORSOptions(opts *cors.Options) Option {
+	return func(o *Provider) error {
+		o.corsOpts = opts
+		return nil
+	}
+}
+
 // WithLogger lets a logger other than slog.Default().
 //
 // EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
@@ -603,6 +626,6 @@ func intercept(i IssuerFromRequest, interceptors ...HttpInterceptor) func(handle
 		for i := len(interceptors) - 1; i >= 0; i-- {
 			handler = interceptors[i](handler)
 		}
-		return cors.New(defaultCORSOptions).Handler(issuerInterceptor.Handler(handler))
+		return issuerInterceptor.Handler(handler)
 	}
 }
