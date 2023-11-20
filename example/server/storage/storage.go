@@ -90,6 +90,10 @@ func (s *publicKey) Key() any {
 }
 
 func NewStorage(userStore UserStore) *Storage {
+	return NewStorageWithClients(userStore, clients)
+}
+
+func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Storage {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	return &Storage{
 		authRequests:  make(map[string]*AuthRequest),
