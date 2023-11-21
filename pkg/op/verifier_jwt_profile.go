@@ -17,11 +17,21 @@ import (
 type JWTProfileVerifier struct {
 	oidc.Verifier
 	Storage      JWTProfileKeyStorage
+	keySet       oidc.KeySet
 	CheckSubject func(request *oidc.JWTTokenRequest) error
 }
 
 // NewJWTProfileVerifier creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
 func NewJWTProfileVerifier(storage JWTProfileKeyStorage, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) *JWTProfileVerifier {
+	return newJWTProfileVerifier(storage, nil, issuer, maxAgeIAT, offset, opts...)
+}
+
+// NewJWTProfileVerifierKeySet creates a oidc.Verifier for JWT Profile assertions (authorization grant and client authentication)
+func NewJWTProfileVerifierKeySet(keySet oidc.KeySet, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) *JWTProfileVerifier {
+	return newJWTProfileVerifier(nil, keySet, issuer, maxAgeIAT, offset, opts...)
+}
+
+func newJWTProfileVerifier(storage JWTProfileKeyStorage, keySet oidc.KeySet, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) *JWTProfileVerifier {
 	j := &JWTProfileVerifier{
 		Verifier: oidc.Verifier{
 			Issuer:    issuer,
@@ -29,6 +39,7 @@ func NewJWTProfileVerifier(storage JWTProfileKeyStorage, issuer string, maxAgeIA
 			Offset:    offset,
 		},
 		Storage:      storage,
+		keySet:       keySet,
 		CheckSubject: SubjectIsIssuer,
 	}
 
@@ -78,7 +89,10 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v *JWTProfileVeri
 		return nil, err
 	}
 
-	keySet := &jwtProfileKeySet{storage: v.Storage, clientID: request.Issuer}
+	keySet := v.keySet
+	if keySet == nil {
+		keySet = &jwtProfileKeySet{storage: v.Storage, clientID: request.Issuer}
+	}
 	if err = oidc.CheckSignature(ctx, assertion, payload, request, nil, keySet); err != nil {
 		return nil, err
 	}
