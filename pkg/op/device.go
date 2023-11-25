@@ -291,7 +291,7 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
-	accessToken, refreshToken, validity, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
+	accessToken, refreshToken, validity, storageInfo, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
 	if err != nil {
 		return nil, err
 	}
@@ -301,5 +301,6 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		RefreshToken: refreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    uint64(validity.Seconds()),
+		StorageInfo:  storageInfo,
 	}, nil
 }
