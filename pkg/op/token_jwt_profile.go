@@ -81,7 +81,7 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 		}
 	}
 
-	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, tokenType, creator, client, "")
+	accessToken, _, validity, storageInfo, err := CreateAccessToken(ctx, tokenRequest, tokenType, creator, client, "")
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +89,7 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 		AccessToken: accessToken,
 		TokenType:   oidc.BearerToken,
 		ExpiresIn:   uint64(validity.Seconds()),
+		StorageInfo: storageInfo,
 	}, nil
 }
 

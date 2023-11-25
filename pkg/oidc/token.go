@@ -5,10 +5,11 @@ import (
 	"os"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3"
 	"golang.org/x/oauth2"
 
 	"github.com/muhlemmer/gu"
+
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 )
 
@@ -205,12 +206,13 @@ func (i *IDTokenClaims) UnmarshalJSON(data []byte) error {
 }
 
 type AccessTokenResponse struct {
-	AccessToken  string `json:"access_token,omitempty" schema:"access_token,omitempty"`
-	TokenType    string `json:"token_type,omitempty" schema:"token_type,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty" schema:"refresh_token,omitempty"`
-	ExpiresIn    uint64 `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
-	IDToken      string `json:"id_token,omitempty" schema:"id_token,omitempty"`
-	State        string `json:"state,omitempty" schema:"state,omitempty"`
+	AccessToken  string            `json:"access_token,omitempty" schema:"access_token,omitempty"`
+	TokenType    string            `json:"token_type,omitempty" schema:"token_type,omitempty"`
+	RefreshToken string            `json:"refresh_token,omitempty" schema:"refresh_token,omitempty"`
+	ExpiresIn    uint64            `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
+	IDToken      string            `json:"id_token,omitempty" schema:"id_token,omitempty"`
+	State        string            `json:"state,omitempty" schema:"state,omitempty"`
+	StorageInfo  map[string]string `json:"storage_info,omitempty" schema:"storage_info,omitempty"`
 }
 
 type JWTProfileAssertionClaims struct {
@@ -352,4 +354,5 @@ type TokenExchangeResponse struct {
 	ExpiresIn       uint64              `json:"expires_in,omitempty"`
 	Scopes          SpaceDelimitedArray `json:"scope,omitempty"`
 	RefreshToken    string              `json:"refresh_token,omitempty"`
+	StorageInfo     map[string]string   `json:"storage_info,omitempty" schema:"storage_info,omitempty"`
 }

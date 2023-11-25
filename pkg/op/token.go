@@ -33,9 +33,10 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 
 	var accessToken, newRefreshToken string
 	var validity time.Duration
+	var storageInfo map[string]string
 	if createAccessToken {
 		var err error
-		accessToken, newRefreshToken, validity, err = CreateAccessToken(ctx, request, client.AccessTokenType(), creator, client, refreshToken)
+		accessToken, newRefreshToken, validity, storageInfo, err = CreateAccessToken(ctx, request, client.AccessTokenType(), creator, client, refreshToken)
 		if err != nil {
 			return nil, err
 		}
@@ -65,14 +66,15 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    exp,
 		State:        state,
+		StorageInfo:  storageInfo,
 	}, nil
 }
 
-func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, err error) {
+func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, storageInfo map[string]string, err error) {
 	if needsRefreshToken(tokenRequest, client) {
 		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}
-	id, exp, err = storage.CreateAccessToken(ctx, tokenRequest)
+	id, exp, storageInfo, err = storage.CreateAccessToken(ctx, tokenRequest)
 	return
 }
 
@@ -89,13 +91,13 @@ func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool
 	}
 }
 
-func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
+func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, storageInfo map[string]string, err error) {
 	ctx, span := tracer.Start(ctx, "CreateAccessToken")
 	defer span.End()
 
-	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
+	id, newRefreshToken, exp, storageInfo, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", 0, nil, err
 	}
 	var clockSkew time.Duration
 	if client != nil {

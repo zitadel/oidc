@@ -363,11 +363,12 @@ func CreateTokenExchangeResponse(
 	var (
 		token, refreshToken, tokenType string
 		validity                       time.Duration
+		storageInfo                    map[string]string
 	)
 
 	switch tokenExchangeRequest.GetRequestedTokenType() {
 	case oidc.AccessTokenType, oidc.RefreshTokenType:
-		token, refreshToken, validity, err = CreateAccessToken(ctx, tokenExchangeRequest, client.AccessTokenType(), creator, client, "")
+		token, refreshToken, validity, storageInfo, err = CreateAccessToken(ctx, tokenExchangeRequest, client.AccessTokenType(), creator, client, "")
 		if err != nil {
 			return nil, err
 		}
@@ -396,6 +397,7 @@ func CreateTokenExchangeResponse(
 		ExpiresIn:       exp,
 		RefreshToken:    refreshToken,
 		Scopes:          tokenExchangeRequest.GetScopes(),
+		StorageInfo:     storageInfo,
 	}, nil
 }
 

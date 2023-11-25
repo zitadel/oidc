@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -27,7 +27,7 @@ type AuthStorage interface {
 	//   Grant: https://datatracker.ietf.org/doc/html/rfc7523#section-2.1
 	//
 	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
-	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, err error)
+	CreateAccessToken(context.Context, TokenRequest) (accessTokenID string, expiration time.Time, storageInfo map[string]string, err error)
 
 	// The TokenRequest parameter of CreateAccessAndRefreshTokens can be any of:
 	//
@@ -40,7 +40,7 @@ type AuthStorage interface {
 	//   registered the refresh_token grant type in advance
 	//
 	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
-	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
+	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, storageInfo map[string]string, err error)
 	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
 
 	TerminateSession(ctx context.Context, userID string, clientID string) error

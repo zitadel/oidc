@@ -111,7 +111,7 @@ func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest Toke
 	ctx, span := tracer.Start(ctx, "CreateClientCredentialsTokenResponse")
 	defer span.End()
 
-	accessToken, _, validity, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
+	accessToken, _, validity, storageInfo, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
 	if err != nil {
 		return nil, err
 	}
@@ -120,5 +120,6 @@ func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest Toke
 		AccessToken: accessToken,
 		TokenType:   oidc.BearerToken,
 		ExpiresIn:   uint64(validity.Seconds()),
+		StorageInfo: storageInfo,
 	}, nil
 }

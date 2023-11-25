@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -214,7 +215,11 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 	if err != nil {
 		return nil, err
 	}
-	return NewResponse(resp), nil
+	ret := NewResponse(resp)
+	for k, v := range resp.StorageInfo {
+		ret.Header.Add(k, v)
+	}
+	return ret, nil
 }
 
 func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
@@ -256,7 +261,11 @@ func (s *LegacyServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfil
 	if err != nil {
 		return nil, err
 	}
-	return NewResponse(resp), nil
+	ret := NewResponse(resp)
+	for k, v := range resp.StorageInfo {
+		ret.Header.Add(k, v)
+	}
+	return ret, nil
 }
 
 func (s *LegacyServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
@@ -271,7 +280,11 @@ func (s *LegacyServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.
 	if err != nil {
 		return nil, err
 	}
-	return NewResponse(resp), nil
+	ret := NewResponse(resp)
+	for k, v := range resp.StorageInfo {
+		ret.Header.Add(k, v)
+	}
+	return ret, nil
 }
 
 func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
@@ -287,7 +300,11 @@ func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientR
 	if err != nil {
 		return nil, err
 	}
-	return NewResponse(resp), nil
+	ret := NewResponse(resp)
+	for k, v := range resp.StorageInfo {
+		ret.Header.Add(k, v)
+	}
+	return ret, nil
 }
 
 func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
@@ -312,7 +329,11 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	if err != nil {
 		return nil, err
 	}
-	return NewResponse(resp), nil
+	ret := NewResponse(resp)
+	for k, v := range resp.StorageInfo {
+		ret.Header.Add(k, v)
+	}
+	return ret, nil
 }
 
 func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *ClientCredentials) (string, error) {
