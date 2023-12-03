@@ -57,7 +57,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
 		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
-		ClaimsSupported:                                    SupportedClaims(config),
+		ClaimsSupported:                                    config.SupportedClaims(),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
@@ -88,7 +88,7 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
 		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
-		ClaimsSupported:                                    SupportedClaims(config),
+		ClaimsSupported:                                    config.SupportedClaims(),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
@@ -213,32 +213,7 @@ func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
 }
 
 func SupportedClaims(c Configuration) []string {
-	return []string{ // TODO: config
-		"sub",
-		"aud",
-		"exp",
-		"iat",
-		"iss",
-		"auth_time",
-		"nonce",
-		"acr",
-		"amr",
-		"c_hash",
-		"at_hash",
-		"act",
-		"scopes",
-		"client_id",
-		"azp",
-		"preferred_username",
-		"name",
-		"family_name",
-		"given_name",
-		"locale",
-		"email",
-		"email_verified",
-		"phone_number",
-		"phone_number_verified",
-	}
+	return c.SupportedClaims()
 }
 
 func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {

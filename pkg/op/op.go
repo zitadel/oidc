@@ -45,6 +45,33 @@ var (
 		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
 	}
 
+	DefaultSupportedClaims = []string{
+		"sub",
+		"aud",
+		"exp",
+		"iat",
+		"iss",
+		"auth_time",
+		"nonce",
+		"acr",
+		"amr",
+		"c_hash",
+		"at_hash",
+		"act",
+		"scopes",
+		"client_id",
+		"azp",
+		"preferred_username",
+		"name",
+		"family_name",
+		"given_name",
+		"locale",
+		"email",
+		"email_verified",
+		"phone_number",
+		"phone_number_verified",
+	}
+
 	defaultCORSOptions = cors.Options{
 		AllowCredentials: true,
 		AllowedHeaders: []string{
@@ -146,6 +173,7 @@ type Config struct {
 	GrantTypeRefreshToken    bool
 	RequestObjectSupported   bool
 	SupportedUILocales       []language.Tag
+	SupportedClaims          []string
 	DeviceAuthorization      DeviceAuthorizationConfig
 }
 
@@ -384,6 +412,14 @@ func (o *Provider) RequestObjectSupported() bool {
 
 func (o *Provider) RequestObjectSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
+}
+
+func (o *Provider) SupportedClaims() []string {
+	if o.config.SupportedClaims == nil {
+		return DefaultSupportedClaims
+	} else {
+		return o.config.SupportedClaims
+	}
 }
 
 func (o *Provider) SupportedUILocales() []language.Tag {

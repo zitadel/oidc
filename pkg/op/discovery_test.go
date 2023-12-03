@@ -544,7 +544,11 @@ func TestSupportedClaims(t *testing.T) {
 	}{
 		{
 			"scopes",
-			args{},
+			args{func() op.Configuration {
+				m := mock.NewMockConfiguration(gomock.NewController(t))
+				m.EXPECT().SupportedClaims().Return(op.DefaultSupportedClaims)
+				return m
+			}()},
 			[]string{
 				"sub",
 				"aud",
