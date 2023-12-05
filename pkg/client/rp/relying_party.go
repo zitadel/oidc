@@ -14,6 +14,7 @@ import (
 	"github.com/zitadel/logging"
 	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
@@ -416,12 +417,34 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 	return verifyTokenResponse[C](ctx, token, rp)
 }
 
+// ClientCredentials requests an access token using the `client_credentials` grant,
+// as defined in [RFC 6749, section 4.4].
+//
+// As there is no user associated to the request an ID Token can never be returned.
+// Client Credentials are undefined in OpenID Connect and is a pure OAuth2 grant.
+// Furthermore the server SHOULD NOT return a refresh token.
+//
+// [RFC 6749, section 4.4]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.Values) (token *oauth2.Token, err error) {
+	ctx = logCtxWithRPData(ctx, rp, "function", "ClientCredentials")
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
+	config := clientcredentials.Config{
+		ClientID:       rp.OAuthConfig().ClientID,
+		ClientSecret:   rp.OAuthConfig().ClientSecret,
+		TokenURL:       rp.OAuthConfig().Endpoint.TokenURL,
+		Scopes:         rp.OAuthConfig().Scopes,
+		EndpointParams: endpointParams,
+		AuthStyle:      rp.OAuthConfig().Endpoint.AuthStyle,
+	}
+	return config.Token(ctx)
+}
+
 type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty)
 
 // CodeExchangeHandler extends the `CodeExchange` method with a http handler
 // including cookie handling for secure `state` transfer
 // and optional PKCE code verifier checking.
-// Custom paramaters can optionally be set to the token URL.
+// Custom parameters can optionally be set to the token URL.
 func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := tryReadStateCookie(w, r, rp)

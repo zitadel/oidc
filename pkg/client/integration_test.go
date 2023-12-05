@@ -323,6 +323,31 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	return provider, tokens
 }
 
+func TestClientCredentials(t *testing.T) {
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
+	var dh deferredHandler
+	opServer := httptest.NewServer(&dh)
+	defer opServer.Close()
+	t.Logf("auth server at %s", opServer.URL)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, true)
+
+	provider, err := rp.NewRelyingPartyOIDC(
+		CTX,
+		opServer.URL,
+		"sid1",
+		"verysecret",
+		targetURL,
+		[]string{"openid"},
+	)
+	require.NoError(t, err, "new rp")
+
+	token, err := rp.ClientCredentials(CTX, provider, nil)
+	require.NoError(t, err, "ClientCredentials call")
+	require.NotNil(t, token)
+	assert.NotEmpty(t, token.AccessToken)
+}
+
 func TestErrorFromPromptNone(t *testing.T) {
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err, "create cookie jar")
