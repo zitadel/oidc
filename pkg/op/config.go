@@ -47,7 +47,6 @@ type Configuration interface {
 	RequestObjectSupported() bool
 	RequestObjectSigningAlgorithmsSupported() []string
 
-	SupportedClaims() []string
 	SupportedUILocales() []language.Tag
 	DeviceAuthorization() DeviceAuthorizationConfig
 }

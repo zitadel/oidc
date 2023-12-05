@@ -414,14 +414,6 @@ func (o *Provider) RequestObjectSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
-func (o *Provider) SupportedClaims() []string {
-	if o.config.SupportedClaims == nil {
-		return DefaultSupportedClaims
-	} else {
-		return o.config.SupportedClaims
-	}
-}
-
 func (o *Provider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
 }

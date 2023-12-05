@@ -57,7 +57,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
 		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
-		ClaimsSupported:                                    config.SupportedClaims(),
+		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
@@ -88,7 +88,7 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		IntrospectionEndpointAuthMethodsSupported:          AuthMethodsIntrospectionEndpoint(config),
 		RevocationEndpointAuthSigningAlgValuesSupported:    RevocationSigAlgorithms(config),
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
-		ClaimsSupported:                                    config.SupportedClaims(),
+		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
@@ -213,7 +213,12 @@ func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
 }
 
 func SupportedClaims(c Configuration) []string {
-	return c.SupportedClaims()
+	provider, ok := c.(*Provider)
+	if ok && provider.config.SupportedClaims != nil {
+		return provider.config.SupportedClaims
+	}
+
+	return DefaultSupportedClaims
 }
 
 func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
