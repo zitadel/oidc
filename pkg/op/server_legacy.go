@@ -205,7 +205,7 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 	if err != nil {
 		return nil, err
 	}
-	if r.Client.AuthMethod() == oidc.AuthMethodNone {
+	if r.Client.AuthMethod() == oidc.AuthMethodNone || r.Data.CodeVerifier != "" {
 		if err = AuthorizeCodeChallenge(r.Data.CodeVerifier, authReq.GetCodeChallenge()); err != nil {
 			return nil, err
 		}
