@@ -453,3 +453,101 @@ func TestCheckDeviceAuthorizationState(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateDeviceTokenResponse(t *testing.T) {
+	tests := []struct {
+		name             string
+		tokenRequest     op.TokenRequest
+		wantAccessToken  bool
+		wantRefreshToken bool
+		wantIDToken      bool
+		wantErr          bool
+	}{
+		{
+			name: "access token",
+			tokenRequest: &storage.AuthRequest{
+				ID:            "auth1",
+				AuthTime:      time.Now(),
+				ApplicationID: "app1",
+				ResponseType:  oidc.ResponseTypeCode,
+				UserID:        "id1",
+			},
+			wantAccessToken: true,
+		},
+		{
+			name: "access and refresh tokens",
+			tokenRequest: &storage.AuthRequest{
+				ID:            "auth1",
+				AuthTime:      time.Now(),
+				ApplicationID: "app1",
+				ResponseType:  oidc.ResponseTypeCode,
+				UserID:        "id1",
+				Scopes:        []string{oidc.ScopeOfflineAccess},
+			},
+			wantAccessToken:  true,
+			wantRefreshToken: true,
+		},
+		{
+			name: "access and id token",
+			tokenRequest: &storage.AuthRequest{
+				ID:            "auth1",
+				AuthTime:      time.Now(),
+				ApplicationID: "app1",
+				ResponseType:  oidc.ResponseTypeCode,
+				UserID:        "id1",
+				Scopes:        []string{oidc.ScopeOpenID},
+			},
+			wantAccessToken: true,
+			wantIDToken:     true,
+		},
+		{
+			name: "access, refresh and id token",
+			tokenRequest: &storage.AuthRequest{
+				ID:            "auth1",
+				AuthTime:      time.Now(),
+				ApplicationID: "app1",
+				ResponseType:  oidc.ResponseTypeCode,
+				UserID:        "id1",
+				Scopes:        []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
+			},
+			wantAccessToken:  true,
+			wantRefreshToken: true,
+			wantIDToken:      true,
+		},
+		{
+			name: "id token creation error",
+			tokenRequest: &storage.AuthRequest{
+				ID:            "auth1",
+				AuthTime:      time.Now(),
+				ApplicationID: "app1",
+				ResponseType:  oidc.ResponseTypeCode,
+				UserID:        "foobar",
+				Scopes:        []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := testProvider.Storage().GetClientByClientID(context.Background(), "native")
+			require.NoError(t, err)
+
+			got, err := op.CreateDeviceTokenResponse(context.Background(), tt.tokenRequest, testProvider, client)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.InDelta(t, 300, got.ExpiresIn, 2)
+			if tt.wantAccessToken {
+				assert.NotEmpty(t, got.AccessToken, "access token")
+			}
+			if tt.wantRefreshToken {
+				assert.NotEmpty(t, got.RefreshToken, "refresh token")
+			}
+			if tt.wantIDToken {
+				assert.NotEmpty(t, got.IDToken, "id token")
+			}
+		})
+	}
+}

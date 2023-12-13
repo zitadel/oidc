@@ -14,6 +14,7 @@ import (
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"golang.org/x/exp/slices"
 )
 
 type DeviceAuthorizationConfig struct {
@@ -291,15 +292,27 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
+	ctx, span := tracer.Start(ctx, "CreateDeviceTokenResponse")
+	defer span.End()
+
 	accessToken, refreshToken, validity, err := CreateAccessToken(ctx, tokenRequest, client.AccessTokenType(), creator, client, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return &oidc.AccessTokenResponse{
+	response := &oidc.AccessTokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    uint64(validity.Seconds()),
-	}, nil
+	}
+
+	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
+		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return response, nil
 }

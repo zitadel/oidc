@@ -771,7 +771,7 @@ func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenEx
 func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Time, amr []string) {
 	authReq, ok := req.(*AuthRequest) // Code Flow (with scope offline_access)
 	if ok {
-		return authReq.ApplicationID, authReq.authTime, authReq.GetAMR()
+		return authReq.ApplicationID, authReq.AuthTime, authReq.GetAMR()
 	}
 	refreshReq, ok := req.(*RefreshTokenRequest) // Refresh Token Request
 	if ok {
