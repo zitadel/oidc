@@ -39,7 +39,7 @@ type AuthRequest struct {
 	CodeChallenge *OIDCCodeChallenge
 
 	done     bool
-	AuthTime time.Time
+	authTime time.Time
 }
 
 // LogValue allows you to define which fields will be logged.
@@ -76,7 +76,7 @@ func (a *AuthRequest) GetAudience() []string {
 }
 
 func (a *AuthRequest) GetAuthTime() time.Time {
-	return a.AuthTime
+	return a.authTime
 }
 
 func (a *AuthRequest) GetClientID() string {
