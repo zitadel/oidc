@@ -465,50 +465,46 @@ func TestCreateDeviceTokenResponse(t *testing.T) {
 	}{
 		{
 			name: "access token",
-			tokenRequest: &storage.AuthRequest{
-				ID:            "auth1",
-				AuthTime:      time.Now(),
-				ApplicationID: "app1",
-				ResponseType:  oidc.ResponseTypeCode,
-				UserID:        "id1",
+			tokenRequest: &op.DeviceAuthorizationState{
+				ClientID: "client1",
+				Subject:  "id1",
+				AMR:      []string{"password"},
+				AuthTime: time.Now(),
 			},
 			wantAccessToken: true,
 		},
 		{
 			name: "access and refresh tokens",
-			tokenRequest: &storage.AuthRequest{
-				ID:            "auth1",
-				AuthTime:      time.Now(),
-				ApplicationID: "app1",
-				ResponseType:  oidc.ResponseTypeCode,
-				UserID:        "id1",
-				Scopes:        []string{oidc.ScopeOfflineAccess},
+			tokenRequest: &op.DeviceAuthorizationState{
+				ClientID: "client1",
+				Subject:  "id1",
+				AMR:      []string{"password"},
+				AuthTime: time.Now(),
+				Scopes:   []string{oidc.ScopeOfflineAccess},
 			},
 			wantAccessToken:  true,
 			wantRefreshToken: true,
 		},
 		{
 			name: "access and id token",
-			tokenRequest: &storage.AuthRequest{
-				ID:            "auth1",
-				AuthTime:      time.Now(),
-				ApplicationID: "app1",
-				ResponseType:  oidc.ResponseTypeCode,
-				UserID:        "id1",
-				Scopes:        []string{oidc.ScopeOpenID},
+			tokenRequest: &op.DeviceAuthorizationState{
+				ClientID: "client1",
+				Subject:  "id1",
+				AMR:      []string{"password"},
+				AuthTime: time.Now(),
+				Scopes:   []string{oidc.ScopeOpenID},
 			},
 			wantAccessToken: true,
 			wantIDToken:     true,
 		},
 		{
 			name: "access, refresh and id token",
-			tokenRequest: &storage.AuthRequest{
-				ID:            "auth1",
-				AuthTime:      time.Now(),
-				ApplicationID: "app1",
-				ResponseType:  oidc.ResponseTypeCode,
-				UserID:        "id1",
-				Scopes:        []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
+			tokenRequest: &op.DeviceAuthorizationState{
+				ClientID: "client1",
+				Subject:  "id1",
+				AMR:      []string{"password"},
+				AuthTime: time.Now(),
+				Scopes:   []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
 			},
 			wantAccessToken:  true,
 			wantRefreshToken: true,
@@ -516,13 +512,12 @@ func TestCreateDeviceTokenResponse(t *testing.T) {
 		},
 		{
 			name: "id token creation error",
-			tokenRequest: &storage.AuthRequest{
-				ID:            "auth1",
-				AuthTime:      time.Now(),
-				ApplicationID: "app1",
-				ResponseType:  oidc.ResponseTypeCode,
-				UserID:        "foobar",
-				Scopes:        []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
+			tokenRequest: &op.DeviceAuthorizationState{
+				ClientID: "client1",
+				Subject:  "foobar",
+				AMR:      []string{"password"},
+				AuthTime: time.Now(),
+				Scopes:   []string{oidc.ScopeOfflineAccess, oidc.ScopeOpenID},
 			},
 			wantErr: true,
 		},

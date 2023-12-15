@@ -186,24 +186,6 @@ func NewUserCode(charSet []rune, charAmount, dashInterval int) (string, error) {
 	return buf.String(), nil
 }
 
-type deviceAccessTokenRequest struct {
-	subject  string
-	audience []string
-	scopes   []string
-}
-
-func (r *deviceAccessTokenRequest) GetSubject() string {
-	return r.subject
-}
-
-func (r *deviceAccessTokenRequest) GetAudience() []string {
-	return r.audience
-}
-
-func (r *deviceAccessTokenRequest) GetScopes() []string {
-	return r.scopes
-}
-
 func DeviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	ctx, span := tracer.Start(r.Context(), "DeviceAccessToken")
 	defer span.End()
@@ -230,7 +212,7 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
-	state, err := CheckDeviceAuthorizationState(ctx, clientID, req.DeviceCode, exchanger)
+	tokenRequest, err := CheckDeviceAuthorizationState(ctx, clientID, req.DeviceCode, exchanger)
 	if err != nil {
 		return err
 	}
@@ -244,11 +226,6 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 			WithDescription("confidential client requires authentication")
 	}
 
-	tokenRequest := &deviceAccessTokenRequest{
-		subject:  state.Subject,
-		audience: []string{clientID},
-		scopes:   state.Scopes,
-	}
 	resp, err := CreateDeviceTokenResponse(r.Context(), tokenRequest, exchanger, client)
 	if err != nil {
 		return err
@@ -264,6 +241,50 @@ func ParseDeviceAccessTokenRequest(r *http.Request, exchanger Exchanger) (*oidc.
 		return nil, err
 	}
 	return req, nil
+}
+
+// DeviceAuthorizationState describes the current state of
+// the device authorization flow.
+// It implements the [IDTokenRequest] interface.
+type DeviceAuthorizationState struct {
+	ClientID string
+	Audience []string
+	Scopes   []string
+	Expires  time.Time // The time after we consider the authorization request timed-out
+	Done     bool      // The user authenticated and approved the authorization request
+	Denied   bool      // The user authenticated and denied the authorization request
+
+	// The following fields are populated after Done == true
+	Subject  string
+	AMR      []string
+	AuthTime time.Time
+}
+
+func (r *DeviceAuthorizationState) GetAMR() []string {
+	return r.AMR
+}
+
+func (r *DeviceAuthorizationState) GetAudience() []string {
+	if !slices.Contains(r.Audience, r.ClientID) {
+		r.Audience = append(r.Audience, r.ClientID)
+	}
+	return r.Audience
+}
+
+func (r *DeviceAuthorizationState) GetAuthTime() time.Time {
+	return r.AuthTime
+}
+
+func (r *DeviceAuthorizationState) GetClientID() string {
+	return r.ClientID
+}
+
+func (r *DeviceAuthorizationState) GetScopes() []string {
+	return r.Scopes
+}
+
+func (r *DeviceAuthorizationState) GetSubject() string {
+	return r.Subject
 }
 
 func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode string, exchanger Exchanger) (*DeviceAuthorizationState, error) {
@@ -292,6 +313,10 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
+	/* TODO(v4):
+	Change the TokenRequest argument type to *DeviceAuthorizationState.
+	Breaking change that can not be done for v3.
+	*/
 	ctx, span := tracer.Start(ctx, "CreateDeviceTokenResponse")
 	defer span.End()
 
@@ -307,6 +332,7 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		ExpiresIn:    uint64(validity.Seconds()),
 	}
 
+	// TODO(v4): remove type assertion
 	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
 		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
 		if err != nil {
