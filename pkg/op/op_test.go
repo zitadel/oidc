@@ -30,6 +30,7 @@ var (
 		AuthMethodPrivateKeyJWT:  true,
 		GrantTypeRefreshToken:    true,
 		RequestObjectSupported:   true,
+		SupportedClaims:          op.DefaultSupportedClaims,
 		SupportedUILocales:       []language.Tag{language.English},
 		DeviceAuthorization: op.DeviceAuthorizationConfig{
 			Lifetime:     5 * time.Minute,
