@@ -84,6 +84,8 @@ func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool
 		return req.GetRequestedTokenType() == oidc.RefreshTokenType
 	case RefreshTokenRequest:
 		return true
+	case *DeviceAuthorizationState:
+		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
 	default:
 		return false
 	}

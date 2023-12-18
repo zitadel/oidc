@@ -291,7 +291,7 @@ func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientR
 }
 
 func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
-	if !s.provider.GrantTypeClientCredentialsSupported() {
+	if !s.provider.GrantTypeDeviceCodeSupported() {
 		return nil, unimplementedGrantError(oidc.GrantTypeDeviceCode)
 	}
 	// use a limited context timeout shorter as the default
@@ -299,14 +299,9 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	defer cancel()
 
-	state, err := CheckDeviceAuthorizationState(ctx, r.Client.GetID(), r.Data.DeviceCode, s.provider)
+	tokenRequest, err := CheckDeviceAuthorizationState(ctx, r.Client.GetID(), r.Data.DeviceCode, s.provider)
 	if err != nil {
 		return nil, err
-	}
-	tokenRequest := &deviceAccessTokenRequest{
-		subject:  state.Subject,
-		audience: []string{r.Client.GetID()},
-		scopes:   state.Scopes,
 	}
 	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)
 	if err != nil {
