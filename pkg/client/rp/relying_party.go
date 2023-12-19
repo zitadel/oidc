@@ -166,9 +166,6 @@ func (rp *relyingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, 
 }
 
 func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Request, string, string) {
-	if rp.unauthorizedHandler == nil {
-		rp.unauthorizedHandler = DefaultUnauthorizedHandler
-	}
 	return rp.unauthorizedHandler
 }
 
@@ -185,9 +182,10 @@ func (rp *relyingParty) Logger(ctx context.Context) (logger *slog.Logger, ok boo
 // it will use the AuthURL and TokenURL set in config
 func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingParty, error) {
 	rp := &relyingParty{
-		oauthConfig: config,
-		httpClient:  httphelper.DefaultHTTPClient,
-		oauth2Only:  true,
+		oauthConfig:         config,
+		httpClient:          httphelper.DefaultHTTPClient,
+		oauth2Only:          true,
+		unauthorizedHandler: DefaultUnauthorizedHandler,
 	}
 
 	for _, optFunc := range options {
