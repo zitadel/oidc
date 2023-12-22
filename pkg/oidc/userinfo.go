@@ -41,13 +41,7 @@ func (u *UserInfo) MarshalJSON() ([]byte, error) {
 }
 
 func (u *UserInfo) UnmarshalJSON(data []byte) error {
-	if err := unmarshalJSONMulti(data, (*uiAlias)(u), &u.Claims); err != nil {
-		return err
-	}
-	if u.Locale != nil && u.Locale.tag.IsRoot() {
-		u.Locale = nil
-	}
-	return nil
+	return unmarshalJSONMulti(data, (*uiAlias)(u), &u.Claims)
 }
 
 type UserInfoProfile struct {

@@ -77,6 +77,10 @@ func (l *Locale) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tag)
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+// When [language.ValueError] is encountered, the containing tag will be set
+// to an empty value (language "und") and no error will be returned.
+// This state can be checked with the `l.Tag().IsRoot()` method.
 func (l *Locale) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &l.tag)
 	if err == nil {
@@ -86,6 +90,7 @@ func (l *Locale) UnmarshalJSON(data []byte) error {
 	// catch "well-formed but unknown" errors
 	var target language.ValueError
 	if errors.As(err, &target) {
+		l.tag = language.Tag{}
 		return nil
 	}
 	return err
