@@ -583,6 +583,60 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"code flow dev mode has redirect globs regular ok",
+			args{
+				"http://registered.com/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://registered.com/*"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow dev mode has redirect globs wildcard ok",
+			args{
+				"http://registered.com/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://registered.com/*"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow dev mode has redirect globs double star ok",
+			args{
+				"http://registered.com/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://**/*"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow dev mode has redirect globs double star ok",
+			args{
+				"http://registered.com/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://**/*"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow dev mode has redirect globs IPv6 ok",
+			args{
+				"http://[::1]:80/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://\\[::1\\]:80/*"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow dev mode has redirect globs bad pattern",
+			args{
+				"http://registered.com/callback",
+				mock.NewHasRedirectGlobsWithConfig(t, []string{"http://**/\\"}, op.ApplicationTypeUserAgent, nil, true),
+				oidc.ResponseTypeCode,
+			},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

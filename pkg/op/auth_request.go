@@ -7,10 +7,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	str "github.com/zitadel/oidc/v3/pkg/strings"
@@ -283,7 +283,7 @@ func checkURIAgainstRedirects(client Client, uri string) error {
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.RedirectURIGlobs() {
-			isMatch, err := path.Match(uriGlob, uri)
+			isMatch, err := doublestar.Match(uriGlob, uri)
 			if err != nil {
 				return oidc.ErrServerError().WithParent(err)
 			}

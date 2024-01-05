@@ -63,6 +63,7 @@ type Client interface {
 // such as DevMode for the client being enabled.
 // https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type HasRedirectGlobs interface {
+	Client
 	RedirectURIGlobs() []string
 	PostLogoutRedirectURIGlobs() []string
 }

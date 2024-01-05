@@ -208,20 +208,46 @@ func TestLocale_MarshalJSON(t *testing.T) {
 }
 
 func TestLocale_UnmarshalJSON(t *testing.T) {
-	type a struct {
+	type dst struct {
 		Locale *Locale `json:"locale,omitempty"`
 	}
-	want := a{
-		Locale: NewLocale(language.Afrikaans),
+	tests := []struct {
+		name    string
+		input   string
+		want    dst
+		wantErr bool
+	}{
+		{
+			name:  "afrikaans, ok",
+			input: `{"locale": "af"}`,
+			want: dst{
+				Locale: NewLocale(language.Afrikaans),
+			},
+		},
+		{
+			name:  "gb, ignored",
+			input: `{"locale": "gb"}`,
+			want: dst{
+				Locale: &Locale{},
+			},
+		},
+		{
+			name:    "bad form, error",
+			input:   `{"locale": "g!!!!!"}`,
+			wantErr: true,
+		},
 	}
 
-	const input = `{"locale": "af"}`
-	var got a
-
-	require.NoError(t,
-		json.Unmarshal([]byte(input), &got),
-	)
-	assert.Equal(t, want, got)
+	for _, tt := range tests {
+		var got dst
+		err := json.Unmarshal([]byte(tt.input), &got)
+		if tt.wantErr {
+			require.Error(t, err)
+			return
+		}
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got)
+	}
 }
 
 func TestParseLocales(t *testing.T) {
