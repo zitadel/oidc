@@ -1,3 +1,37 @@
+// Command device is an example Oauth2 Device Authorization Grant app.
+// It creates a new Device Authorization request on the Issuer and then polls for tokens.
+// The user is then prompted to visit a URL and enter the user code.
+// Or, the complete URL can be used instead to omit manual entry.
+// In practice then can be a "magic link" in the form or a QR.
+//
+// The following environment variables are used for configuration:
+//
+//	ISSUER: URL to the OP, required.
+//	CLIENT_ID: ID of the application, required.
+//	CLIENT_SECRET: Secret to authenticate the app using basic auth. Only required if the OP expects this type of authentication.
+//	KEY_PATH: Path to a private key file, used to for JWT authentication of the App. Only required if the OP expects this type of authentication.
+//	SCOPES: Scopes of the Authentication Request. Optional.
+//
+// Basic usage:
+//
+//	cd example/client/device
+//	export ISSUER="http://localhost:9000" CLIENT_ID="246048465824634593@demo"
+//
+// Get an Access Token:
+//
+//	SCOPES="email profile" go run .
+//
+// Get an Access Token and ID Token:
+//
+//	SCOPES="email profile openid" go run .
+//
+// Get an Access Token and Refresh Token
+//
+//	SCOPES="email profile offline_access" go run .
+//
+// Get Access, Refresh and ID Tokens:
+//
+//	SCOPES="email profile offline_access openid" go run .
 package main
 
 import (
@@ -57,5 +91,5 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	logrus.Infof("successfully obtained token: %v", token)
+	logrus.Infof("successfully obtained token: %#v", token)
 }
