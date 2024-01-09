@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -748,7 +747,7 @@ func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHi
 	if rc, ok := rp.(client.RevokeCaller); ok && rc.GetRevokeEndpoint() != "" {
 		return client.CallRevokeEndpoint(ctx, request, nil, rc)
 	}
-	return fmt.Errorf("RelyingParty does not support RevokeCaller")
+	return ErrRelyingPartyNotSupportRevokeCaller
 }
 
 func unauthorizedError(w http.ResponseWriter, r *http.Request, desc string, state string, rp RelyingParty) {

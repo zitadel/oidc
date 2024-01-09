@@ -9,6 +9,16 @@ updates:
   commit-message:
     prefix: chore
     include: scope
+- package-ecosystem: gomod
+  target-branch: "2.12.x"
+  directory: "/"
+  schedule:
+    interval: daily
+    time: '04:00'
+  open-pull-requests-limit: 10
+  commit-message:
+    prefix: chore
+    include: scope
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
