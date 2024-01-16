@@ -160,10 +160,13 @@ func (e StatusError) Is(err error) bool {
 // WriteError asserts for a StatusError containing an [oidc.Error].
 // If no StatusError is found, the status code will default to [http.StatusBadRequest].
 // If no [oidc.Error] was found in the parent, the error type defaults to [oidc.ServerError].
+// When the final oidc Error is a server error, the status code is adjusted to [http.StatusInternalServerError].
 func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
 	statusError := AsStatusError(err, http.StatusBadRequest)
 	e := oidc.DefaultToServerError(statusError.parent, statusError.parent.Error())
-
-	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
+	if e.ErrorType == oidc.ServerError {
+		statusError.statusCode = http.StatusInternalServerError
+	}
+	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e, "status_code", statusError.statusCode)
 	httphelper.MarshalJSONWithStatus(w, e, statusError.statusCode)
 }

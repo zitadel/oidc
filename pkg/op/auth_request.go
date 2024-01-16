@@ -138,20 +138,20 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	}
 
 	if requestObject.ClientID != "" && requestObject.ClientID != authReq.ClientID {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong client id in request")
 	}
 	if requestObject.ResponseType != "" && requestObject.ResponseType != authReq.ResponseType {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong response type in request")
 	}
 	if requestObject.Issuer != requestObject.ClientID {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong issuer in request")
 	}
 	if !str.Contains(requestObject.Audience, issuer) {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("issuer missing in audience")
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
 	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
-		return err
+		return oidc.ErrInvalidRequest().WithParent(err).WithDescription(err.Error())
 	}
 	CopyRequestObjectToAuthRequest(authReq, requestObject)
 	return nil
