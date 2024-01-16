@@ -210,6 +210,9 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 			return nil, err
 		}
 	}
+	if r.Data.RedirectURI != authReq.GetRedirectURI() {
+		return nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
+	}
 	resp, err := CreateTokenResponse(ctx, authReq, r.Client, s.provider, true, r.Data.Code, "")
 	if err != nil {
 		return nil, err
