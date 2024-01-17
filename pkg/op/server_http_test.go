@@ -365,14 +365,14 @@ func Test_webServer_authorizeHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "authorize error",
+			name: "server error",
 			fields: fields{
 				server:  &requestVerifier{},
 				decoder: testDecoder,
 			},
 			r: httptest.NewRequest(http.MethodPost, "/authorize", strings.NewReader("foo=bar")),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusInternalServerError,
 				wantBody:   `{"error":"server_error"}`,
 			},
 		},
@@ -1237,7 +1237,7 @@ func Test_webServer_simpleHandler(t *testing.T) {
 			},
 			r: httptest.NewRequest(http.MethodGet, "/", bytes.NewReader(make([]byte, 11<<20))),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusInternalServerError,
 				wantBody:   `{"error":"server_error", "error_description":"io: read/write on closed pipe"}`,
 			},
 		},

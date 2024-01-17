@@ -157,13 +157,29 @@ func (e StatusError) Is(err error) bool {
 		e.statusCode == target.statusCode
 }
 
-// WriteError asserts for a StatusError containing an [oidc.Error].
-// If no StatusError is found, the status code will default to [http.StatusBadRequest].
-// If no [oidc.Error] was found in the parent, the error type defaults to [oidc.ServerError].
+// WriteError asserts for a [StatusError] containing an [oidc.Error].
+// If no `StatusError` is found, the status code will default to [http.StatusBadRequest].
+// If no `oidc.Error` was found in the parent, the error type defaults to [oidc.ServerError].
+// When there was no `StatusError` and the `oidc.Error` is of type `oidc.ServerError`,
+// the status code will be set to [http.StatusInternalServerError]
 func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
-	statusError := AsStatusError(err, http.StatusBadRequest)
-	e := oidc.DefaultToServerError(statusError.parent, statusError.parent.Error())
+	var statusError StatusError
+	if errors.As(err, &statusError) {
+		writeError(w, r,
+			oidc.DefaultToServerError(statusError.parent, statusError.parent.Error()),
+			statusError.statusCode, logger,
+		)
+		return
+	}
+	statusCode := http.StatusBadRequest
+	e := oidc.DefaultToServerError(err, err.Error())
+	if e.ErrorType == oidc.ServerError {
+		statusCode = http.StatusInternalServerError
+	}
+	writeError(w, r, e, statusCode, logger)
+}
 
-	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
-	httphelper.MarshalJSONWithStatus(w, e, statusError.statusCode)
+func writeError(w http.ResponseWriter, r *http.Request, err *oidc.Error, statusCode int, logger *slog.Logger) {
+	logger.Log(r.Context(), err.LogLevel(), "request error", "oidc_error", err, "status_code", statusCode)
+	httphelper.MarshalJSONWithStatus(w, err, statusCode)
 }
