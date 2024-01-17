@@ -157,16 +157,29 @@ func (e StatusError) Is(err error) bool {
 		e.statusCode == target.statusCode
 }
 
-// WriteError asserts for a StatusError containing an [oidc.Error].
-// If no StatusError is found, the status code will default to [http.StatusBadRequest].
-// If no [oidc.Error] was found in the parent, the error type defaults to [oidc.ServerError].
-// When the final oidc Error is a server error, the status code is adjusted to [http.StatusInternalServerError].
+// WriteError asserts for a [StatusError] containing an [oidc.Error].
+// If no `StatusError` is found, the status code will default to [http.StatusBadRequest].
+// If no `oidc.Error` was found in the parent, the error type defaults to [oidc.ServerError].
+// When there was no `StatusError` and the `oidc.Error` is of type `oidc.ServerError`,
+// the status code will be set to [http.StatusInternalServerError]
 func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
-	statusError := AsStatusError(err, http.StatusBadRequest)
-	e := oidc.DefaultToServerError(statusError.parent, statusError.parent.Error())
-	if e.ErrorType == oidc.ServerError {
-		statusError.statusCode = http.StatusInternalServerError
+	var statusError StatusError
+	if errors.As(err, &statusError) {
+		writeError(w, r,
+			oidc.DefaultToServerError(statusError.parent, statusError.parent.Error()),
+			statusError.statusCode, logger,
+		)
+		return
 	}
-	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e, "status_code", statusError.statusCode)
-	httphelper.MarshalJSONWithStatus(w, e, statusError.statusCode)
+	statusCode := http.StatusBadRequest
+	e := oidc.DefaultToServerError(err, err.Error())
+	if e.ErrorType == oidc.ServerError {
+		statusCode = http.StatusInternalServerError
+	}
+	writeError(w, r, e, statusCode, logger)
+}
+
+func writeError(w http.ResponseWriter, r *http.Request, err *oidc.Error, statusCode int, logger *slog.Logger) {
+	logger.Log(r.Context(), err.LogLevel(), "request error", "oidc_error", err, "status_code", statusCode)
+	httphelper.MarshalJSONWithStatus(w, err, statusCode)
 }

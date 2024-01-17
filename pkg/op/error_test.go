@@ -579,7 +579,7 @@ func TestWriteError(t *testing.T) {
 		{
 			name:       "not a status or oidc error",
 			err:        io.ErrClosedPipe,
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantBody: `{
 				"error":"server_error",
 				"error_description":"io: read/write on closed pipe"
@@ -592,6 +592,7 @@ func TestWriteError(t *testing.T) {
 					"parent":"io: read/write on closed pipe",
 					"type":"server_error"
 				},
+				"status_code":500,
 				"time":"not"
 			}`,
 		},
@@ -611,6 +612,7 @@ func TestWriteError(t *testing.T) {
 					"parent":"io: read/write on closed pipe",
 					"type":"server_error"
 				},
+				"status_code":500,
 				"time":"not"
 			}`,
 		},
@@ -629,6 +631,7 @@ func TestWriteError(t *testing.T) {
 					"description":"oops",
 					"type":"invalid_request"
 				},
+				"status_code":400,
 				"time":"not"
 			}`,
 		},
@@ -650,6 +653,7 @@ func TestWriteError(t *testing.T) {
 					"description":"oops",
 					"type":"unauthorized_client"
 				},
+				"status_code":401,
 				"time":"not"
 			}`,
 		},
