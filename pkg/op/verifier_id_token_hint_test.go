@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -55,6 +56,13 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_IDTokenHintExpiredError(t *testing.T) {
+	var err error = IDTokenHintExpiredError{oidc.ErrExpired}
+	assert.True(t, errors.Unwrap(err) == oidc.ErrExpired)
+	assert.ErrorIs(t, err, oidc.ErrExpired)
+	assert.ErrorAs(t, err, &IDTokenHintExpiredError{})
 }
 
 func TestVerifyIDTokenHint(t *testing.T) {
