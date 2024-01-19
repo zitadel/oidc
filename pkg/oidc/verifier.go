@@ -57,7 +57,7 @@ var (
 	ErrNonceInvalid            = errors.New("nonce does not match")
 	ErrAcrInvalid              = errors.New("acr is invalid")
 	ErrAuthTimeNotPresent      = errors.New("claim `auth_time` of token is missing")
-	ErrAuthTimeToOld           = errors.New("auth time of token is to old")
+	ErrAuthTimeToOld           = errors.New("auth time of token is too old")
 	ErrAtHash                  = errors.New("at_hash does not correspond to access token")
 )
 

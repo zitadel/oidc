@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"path"
@@ -68,7 +69,7 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 	}
 	if req.IdTokenHint != "" {
 		claims, err := VerifyIDTokenHint[*oidc.IDTokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))
-		if err != nil {
+		if err != nil && !errors.As(err, &IDTokenHintExpiredError{}) {
 			return nil, oidc.ErrInvalidRequest().WithDescription("id_token_hint invalid").WithParent(err)
 		}
 		session.UserID = claims.GetSubject()
