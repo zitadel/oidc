@@ -257,7 +257,7 @@ func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, op
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
 func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
-	keySet := &openIDKeySet{storage}
+	keySet := &OpenIDKeySet{storage}
 	o := &Provider{
 		config:            config,
 		storage:           storage,
@@ -469,13 +469,13 @@ func (o *Provider) HttpHandler() http.Handler {
 	return o
 }
 
-type openIDKeySet struct {
+type OpenIDKeySet struct {
 	Storage
 }
 
 // VerifySignature implements the oidc.KeySet interface
 // providing an implementation for the keys stored in the OP Storage interface
-func (o *openIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
+func (o *OpenIDKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
 	keySet, err := o.Storage.KeySet(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching keys: %w", err)
