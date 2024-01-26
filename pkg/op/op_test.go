@@ -58,8 +58,12 @@ func init() {
 }
 
 func newTestProvider(config *op.Config) op.OpenIDProvider {
-	provider, err := op.NewOpenIDProvider(testIssuer, config,
-		storage.NewStorage(storage.NewUserStore(testIssuer)), op.WithAllowInsecure(),
+	storage := storage.NewStorage(storage.NewUserStore(testIssuer))
+	keySet := &op.OpenIDKeySet{storage}
+	provider, err := op.NewOpenIDProvider(testIssuer, config, storage,
+		op.WithAllowInsecure(),
+		op.WithAccessTokenKeySet(keySet),
+		op.WithIDTokenHintKeySet(keySet),
 	)
 	if err != nil {
 		panic(err)
