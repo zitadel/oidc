@@ -391,9 +391,9 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 		return "", nil
 	}
 	claims, err := VerifyIDTokenHint[*oidc.TokenClaims](ctx, idTokenHint, verifier)
-	if err != nil {
+	if err != nil && !errors.As(err, &IDTokenHintExpiredError{}) {
 		return "", oidc.ErrLoginRequired().WithDescription("The id_token_hint is invalid. " +
-			"If you have any questions, you may contact the administrator of the application.")
+			"If you have any questions, you may contact the administrator of the application.").WithParent(err)
 	}
 	return claims.GetSubject(), nil
 }
