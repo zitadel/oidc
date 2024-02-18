@@ -100,6 +100,8 @@ type relyingParty struct {
 	httpClient    *http.Client
 	cookieHandler *httphelper.CookieHandler
 
+	oauthAuthStyle oauth2.AuthStyle
+
 	errorHandler        func(http.ResponseWriter, *http.Request, string, string, string)
 	unauthorizedHandler func(http.ResponseWriter, *http.Request, string, string)
 	idTokenVerifier     *IDTokenVerifier
@@ -187,6 +189,7 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 		httpClient:          httphelper.DefaultHTTPClient,
 		oauth2Only:          true,
 		unauthorizedHandler: DefaultUnauthorizedHandler,
+		oauthAuthStyle:      oauth2.AuthStyleAutoDetect,
 	}
 
 	for _, optFunc := range options {
@@ -194,6 +197,8 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 			return nil, err
 		}
 	}
+
+	rp.oauthConfig.Endpoint.AuthStyle = rp.oauthAuthStyle
 
 	// avoid races by calling these early
 	_ = rp.IDTokenVerifier() // sets idTokenVerifier
@@ -214,8 +219,9 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 			RedirectURL:  redirectURI,
 			Scopes:       scopes,
 		},
-		httpClient: httphelper.DefaultHTTPClient,
-		oauth2Only: false,
+		httpClient:     httphelper.DefaultHTTPClient,
+		oauth2Only:     false,
+		oauthAuthStyle: oauth2.AuthStyleAutoDetect,
 	}
 
 	for _, optFunc := range options {
@@ -231,6 +237,9 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
+
+	rp.oauthConfig.Endpoint.AuthStyle = rp.oauthAuthStyle
+	rp.endpoints.Endpoint.AuthStyle = rp.oauthAuthStyle
 
 	// avoid races by calling these early
 	_ = rp.IDTokenVerifier() // sets idTokenVerifier
@@ -286,6 +295,13 @@ func WithErrorHandler(errorHandler ErrorHandler) Option {
 func WithUnauthorizedHandler(unauthorizedHandler UnauthorizedHandler) Option {
 	return func(rp *relyingParty) error {
 		rp.unauthorizedHandler = unauthorizedHandler
+		return nil
+	}
+}
+
+func WithAuthStyle(oauthAuthStyle oauth2.AuthStyle) Option {
+	return func(rp *relyingParty) error {
+		rp.oauthAuthStyle = oauthAuthStyle
 		return nil
 	}
 }
@@ -589,9 +605,8 @@ type Endpoints struct {
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 	return Endpoints{
 		Endpoint: oauth2.Endpoint{
-			AuthURL:   discoveryConfig.AuthorizationEndpoint,
-			AuthStyle: oauth2.AuthStyleAutoDetect,
-			TokenURL:  discoveryConfig.TokenEndpoint,
+			AuthURL:  discoveryConfig.AuthorizationEndpoint,
+			TokenURL: discoveryConfig.TokenEndpoint,
 		},
 		IntrospectURL:          discoveryConfig.IntrospectionEndpoint,
 		UserinfoURL:            discoveryConfig.UserinfoEndpoint,
