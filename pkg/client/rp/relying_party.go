@@ -167,6 +167,9 @@ func (rp *relyingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, 
 }
 
 func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Request, string, string) {
+	if rp.unauthorizedHandler == nil {
+		rp.unauthorizedHandler = DefaultUnauthorizedHandler
+	}
 	return rp.unauthorizedHandler
 }
 
@@ -196,8 +199,9 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 	}
 
 	// avoid races by calling these early
-	_ = rp.IDTokenVerifier() // sets idTokenVerifier
-	_ = rp.ErrorHandler()    // sets errorHandler
+	_ = rp.IDTokenVerifier()     // sets idTokenVerifier
+	_ = rp.ErrorHandler()        // sets errorHandler
+	_ = rp.UnauthorizedHandler() // sets unauthorizedHandler
 
 	return rp, nil
 }
@@ -233,8 +237,9 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	rp.endpoints = endpoints
 
 	// avoid races by calling these early
-	_ = rp.IDTokenVerifier() // sets idTokenVerifier
-	_ = rp.ErrorHandler()    // sets errorHandler
+	_ = rp.IDTokenVerifier()     // sets idTokenVerifier
+	_ = rp.ErrorHandler()        // sets errorHandler
+	_ = rp.UnauthorizedHandler() // sets unauthorizedHandler
 
 	return rp, nil
 }
