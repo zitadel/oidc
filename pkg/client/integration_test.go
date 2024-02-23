@@ -217,6 +217,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		targetURL,
 		[]string{"openid", "email", "profile", "offline_access"},
 		rp.WithPKCE(cookieHandler),
+		rp.WithAuthStyle(oauth2.AuthStyleInHeader),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
 			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
@@ -307,6 +308,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}()
 	require.Less(t, capturedW.Code, 400, "token exchange response code")
 	// TODO: how to check the custom header was sent to the server?
+	// TODO: how to check the Autorization header was sent to the server? (AuthStyleInHeader)
 
 	//nolint:bodyclose
 	resp = capturedW.Result()
