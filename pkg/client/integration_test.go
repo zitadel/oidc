@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slog"
+	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -217,6 +218,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		targetURL,
 		[]string{"openid", "email", "profile", "offline_access"},
 		rp.WithPKCE(cookieHandler),
+		rp.WithAuthStyle(oauth2.AuthStyleInHeader),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
 			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
