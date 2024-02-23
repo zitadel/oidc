@@ -309,7 +309,6 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}()
 	require.Less(t, capturedW.Code, 400, "token exchange response code")
 	// TODO: how to check the custom header was sent to the server?
-	// TODO: how to check the Autorization header was sent to the server? (AuthStyleInHeader)
 
 	//nolint:bodyclose
 	resp = capturedW.Result()
