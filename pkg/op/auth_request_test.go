@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -1109,6 +1110,33 @@ func TestAuthResponseCode(t *testing.T) {
 				wantCode:           http.StatusFound,
 				wantLocationHeader: "/auth/callback/?code=id1",
 				wantBody:           "",
+			},
+		},
+		{
+			name: "success form_post",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					CallbackURI:   "https://example.com/callback",
+					TransferState: "state1",
+					ResponseMode:  "form_post",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusOK,
+				wantLocationHeader: "",
+				wantBody:           "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n</form>\n</body>\n</html>",
 			},
 		},
 	}
