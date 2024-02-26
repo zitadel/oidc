@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slog"
+	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -217,6 +218,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		targetURL,
 		[]string{"openid", "email", "profile", "offline_access"},
 		rp.WithPKCE(cookieHandler),
+		rp.WithAuthStyle(oauth2.AuthStyleInHeader),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
 			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
@@ -321,6 +323,31 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	assert.NotEmpty(t, email, "email")
 
 	return provider, tokens
+}
+
+func TestClientCredentials(t *testing.T) {
+	targetURL := "http://local-site"
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
+	var dh deferredHandler
+	opServer := httptest.NewServer(&dh)
+	defer opServer.Close()
+	t.Logf("auth server at %s", opServer.URL)
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, true)
+
+	provider, err := rp.NewRelyingPartyOIDC(
+		CTX,
+		opServer.URL,
+		"sid1",
+		"verysecret",
+		targetURL,
+		[]string{"openid"},
+	)
+	require.NoError(t, err, "new rp")
+
+	token, err := rp.ClientCredentials(CTX, provider, nil)
+	require.NoError(t, err, "ClientCredentials call")
+	require.NotNil(t, token)
+	assert.NotEmpty(t, token.AccessToken)
 }
 
 func TestErrorFromPromptNone(t *testing.T) {

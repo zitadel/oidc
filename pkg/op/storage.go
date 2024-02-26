@@ -168,15 +168,6 @@ type EndSessionRequest struct {
 
 var ErrDuplicateUserCode = errors.New("user code already exists")
 
-type DeviceAuthorizationState struct {
-	ClientID string
-	Scopes   []string
-	Expires  time.Time
-	Done     bool
-	Subject  string
-	Denied   bool
-}
-
 type DeviceAuthorizationStorage interface {
 	// StoreDeviceAuthorizationRequest stores a new device authorization request in the database.
 	// User code will be used by the user to complete the login flow and must be unique.

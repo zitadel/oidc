@@ -1,6 +1,7 @@
 package op
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -264,9 +265,10 @@ func TestIssuerFromHost(t *testing.T) {
 
 func TestIssuerFromForwardedOrHost(t *testing.T) {
 	type args struct {
-		path      string
-		target    string
-		forwarded []string
+		path   string
+		opts   []IssuerFromOption
+		target string
+		header map[string][]string
 	}
 	type res struct {
 		issuer string
@@ -279,9 +281,9 @@ func TestIssuerFromForwardedOrHost(t *testing.T) {
 		{
 			"header parse error",
 			args{
-				path:      "/custom/",
-				target:    "https://issuer.com",
-				forwarded: []string{"~~~"},
+				path:   "/custom/",
+				target: "https://issuer.com",
+				header: map[string][]string{"Forwarded": {"~~~~"}},
 			},
 			res{
 				issuer: "https://issuer.com/custom/",
@@ -303,9 +305,9 @@ func TestIssuerFromForwardedOrHost(t *testing.T) {
 			args{
 				path:   "/custom/",
 				target: "https://issuer.com",
-				forwarded: []string{
+				header: map[string][]string{"Forwarded": {
 					`by=identifier;for=identifier;proto=https`,
-				},
+				}},
 			},
 			res{
 				issuer: "https://issuer.com/custom/",
@@ -316,9 +318,9 @@ func TestIssuerFromForwardedOrHost(t *testing.T) {
 			args{
 				path:   "/custom/",
 				target: "https://issuer.com",
-				forwarded: []string{
+				header: map[string][]string{"Forwarded": {
 					`by=identifier;for=identifier;host=first.com;proto=https`,
-				},
+				}},
 			},
 			res{
 				issuer: "https://first.com/custom/",
@@ -329,9 +331,9 @@ func TestIssuerFromForwardedOrHost(t *testing.T) {
 			args{
 				path:   "/custom/",
 				target: "https://issuer.com",
-				forwarded: []string{
+				header: map[string][]string{"Forwarded": {
 					`by=identifier;for=identifier;host=first.com;proto=https,host=second.com`,
-				},
+				}},
 			},
 			res{
 				issuer: "https://first.com/custom/",
@@ -342,23 +344,45 @@ func TestIssuerFromForwardedOrHost(t *testing.T) {
 			args{
 				path:   "/custom/",
 				target: "https://issuer.com",
-				forwarded: []string{
+				header: map[string][]string{"Forwarded": {
 					`by=identifier;for=identifier;host=first.com;proto=https,host=second.com`,
 					`by=identifier;for=identifier;host=third.com;proto=https`,
-				},
+				}},
 			},
 			res{
 				issuer: "https://first.com/custom/",
 			},
 		},
+		{
+			"custom header first",
+			args{
+				path:   "/custom/",
+				target: "https://issuer.com",
+				header: map[string][]string{
+					"Forwarded": {
+						`by=identifier;for=identifier;host=first.com;proto=https,host=second.com`,
+						`by=identifier;for=identifier;host=third.com;proto=https`,
+					},
+					"X-Custom-Forwarded": {
+						`by=identifier;for=identifier;host=custom.com;proto=https,host=custom2.com`,
+					},
+				},
+				opts: []IssuerFromOption{
+					WithIssuerFromCustomHeaders("x-custom-forwarded"),
+				},
+			},
+			res{
+				issuer: "https://custom.com/custom/",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			issuer, err := IssuerFromForwardedOrHost(tt.args.path)(false)
+			issuer, err := IssuerFromForwardedOrHost(tt.args.path, tt.args.opts...)(false)
 			require.NoError(t, err)
 			req := httptest.NewRequest("", tt.args.target, nil)
-			if tt.args.forwarded != nil {
-				req.Header["Forwarded"] = tt.args.forwarded
+			for k, v := range tt.args.header {
+				req.Header[http.CanonicalHeaderKey(k)] = v
 			}
 			assert.Equal(t, tt.res.issuer, issuer(req))
 		})

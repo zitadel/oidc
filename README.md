@@ -72,7 +72,7 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 | Code Flow            | yes           | yes             | OpenID Connect Core 1.0, [Section 3.1][1] |
 | Implicit Flow        | no[^1]        | yes             | OpenID Connect Core 1.0, [Section 3.2][2] |
 | Hybrid Flow          | no            | not yet         | OpenID Connect Core 1.0, [Section 3.3][3] |
-| Client Credentials   | not yet       | yes             | OpenID Connect Core 1.0, [Section 9][4]   |
+| Client Credentials   | yes           | yes             | OpenID Connect Core 1.0, [Section 9][4]   |
 | Refresh Token        | yes           | yes             | OpenID Connect Core 1.0, [Section 12][5]  |
 | Discovery            | yes           | yes             | OpenID Connect [Discovery][6] 1.0         |
 | JWT Profile          | yes           | yes             | [RFC 7523][7]                             |

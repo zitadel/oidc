@@ -127,7 +127,7 @@ type Server interface {
 	// Introspect handles the OAuth 2.0 Token Introspection endpoint.
 	// https://datatracker.ietf.org/doc/html/rfc7662
 	// The recommended Response Data type is [oidc.IntrospectionResponse].
-	Introspect(context.Context, *ClientRequest[oidc.IntrospectionRequest]) (*Response, error)
+	Introspect(context.Context, *Request[IntrospectionRequest]) (*Response, error)
 
 	// UserInfo handles the UserInfo endpoint and returns Claims about the authenticated End-User.
 	// https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
@@ -329,7 +329,7 @@ func (UnimplementedServer) DeviceToken(ctx context.Context, r *ClientRequest[oid
 	return nil, unimplementedGrantError(oidc.GrantTypeDeviceCode)
 }
 
-func (UnimplementedServer) Introspect(ctx context.Context, r *ClientRequest[oidc.IntrospectionRequest]) (*Response, error) {
+func (UnimplementedServer) Introspect(ctx context.Context, r *Request[IntrospectionRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 

@@ -2,6 +2,7 @@ name: Release
 on:
   push:
     branches:
+      - "2.11.x"
       - main
       - next
     tags-ignore:
@@ -22,11 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v3.1.4
+      - uses: codecov/codecov-action@v4.0.1
         with:
           file: ./profile.cov
           name: codecov-go

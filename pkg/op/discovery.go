@@ -213,32 +213,12 @@ func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
 }
 
 func SupportedClaims(c Configuration) []string {
-	return []string{ // TODO: config
-		"sub",
-		"aud",
-		"exp",
-		"iat",
-		"iss",
-		"auth_time",
-		"nonce",
-		"acr",
-		"amr",
-		"c_hash",
-		"at_hash",
-		"act",
-		"scopes",
-		"client_id",
-		"azp",
-		"preferred_username",
-		"name",
-		"family_name",
-		"given_name",
-		"locale",
-		"email",
-		"email_verified",
-		"phone_number",
-		"phone_number_verified",
+	provider, ok := c.(*Provider)
+	if ok && provider.config.SupportedClaims != nil {
+		return provider.config.SupportedClaims
 	}
+
+	return DefaultSupportedClaims
 }
 
 func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {

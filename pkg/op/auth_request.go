@@ -7,10 +7,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	str "github.com/zitadel/oidc/v3/pkg/strings"
@@ -138,20 +138,20 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	}
 
 	if requestObject.ClientID != "" && requestObject.ClientID != authReq.ClientID {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong client id in request")
 	}
 	if requestObject.ResponseType != "" && requestObject.ResponseType != authReq.ResponseType {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong response type in request")
 	}
 	if requestObject.Issuer != requestObject.ClientID {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("missing or wrong issuer in request")
 	}
 	if !str.Contains(requestObject.Audience, issuer) {
-		return oidc.ErrInvalidRequest()
+		return oidc.ErrInvalidRequest().WithDescription("issuer missing in audience")
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
 	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
-		return err
+		return oidc.ErrInvalidRequest().WithParent(err).WithDescription(err.Error())
 	}
 	CopyRequestObjectToAuthRequest(authReq, requestObject)
 	return nil
@@ -283,7 +283,7 @@ func checkURIAgainstRedirects(client Client, uri string) error {
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.RedirectURIGlobs() {
-			isMatch, err := path.Match(uriGlob, uri)
+			isMatch, err := doublestar.Match(uriGlob, uri)
 			if err != nil {
 				return oidc.ErrServerError().WithParent(err)
 			}
@@ -391,9 +391,9 @@ func ValidateAuthReqIDTokenHint(ctx context.Context, idTokenHint string, verifie
 		return "", nil
 	}
 	claims, err := VerifyIDTokenHint[*oidc.TokenClaims](ctx, idTokenHint, verifier)
-	if err != nil {
+	if err != nil && !errors.As(err, &IDTokenHintExpiredError{}) {
 		return "", oidc.ErrLoginRequired().WithDescription("The id_token_hint is invalid. " +
-			"If you have any questions, you may contact the administrator of the application.")
+			"If you have any questions, you may contact the administrator of the application.").WithParent(err)
 	}
 	return claims.GetSubject(), nil
 }
