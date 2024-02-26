@@ -2,9 +2,9 @@ package rp
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/zitadel/logging"
-	"golang.org/x/exp/slog"
 )
 
 func logCtxWithRPData(ctx context.Context, rp RelyingParty, attrs ...any) context.Context {

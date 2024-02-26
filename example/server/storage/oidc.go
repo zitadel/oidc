@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"log/slog"
 	"time"
 
-	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
