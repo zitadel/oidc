@@ -49,6 +49,18 @@ AuthRequestError...
 
 TODO
 
+#### AuthRequestError
+
+`AuthRequestError` now takes the complete `Authorizer` as final argument, instead of only the encoder.
+This is to facilitate the use of the `Logger` as described above.
+
+```bash
+find . -type f -name '*.go' | xargs sed -i \
+    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g
+```
+
+Note: the sed regex might not find all uses if the local variables of the passed arguments use different names.
+
 #### AccessTokenVerifier
 
 `AccessTokenVerifier` interface has become a struct type. `NewAccessTokenVerifier` now returns a pointer to `AccessTokenVerifier`.
@@ -107,6 +119,9 @@ find . -type f -name '*.go' | xargs sed -i \
 find . -type f -name '*.go' | xargs sed -i \
     -e 's/op\.CreateDiscoveryConfig(/op.CreateDiscoveryConfig(context.TODO(), /g'
 ```
+
+It now takes the issuer out of the context using the [`IssuerFromContext`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#IssuerFromContext) functionality,
+instead of the `config.IssuerFromRequest()` method.
 
 #### CreateRouter
 
@@ -305,6 +320,7 @@ go get -u github.com/zitadel/oidc/v3
 find . -type f -name '*.go' | xargs sed -i \
     -e 's/github\.com\/zitadel\/oidc\/v2/github.com\/zitadel\/oidc\/v3/g' \
     -e 's/gopkg.in\/square\/go-jose\.v2/github.com\/go-jose\/go-jose\/v3/g' \
+    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g \
     -e 's/\bop\.AccessTokenVerifier\b/*op.AccessTokenVerifier/g' \
     -e 's/\bop\.JWTProfileVerifier\b/*op.JWTProfileVerifier/g' \
     -e 's/\bop\.IDTokenHintVerifier\b/*op.IDTokenHintVerifier/g' \
