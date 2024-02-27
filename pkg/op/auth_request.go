@@ -560,17 +560,14 @@ func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, respons
 }
 
 //go:embed form_post.html.tmpl
-var formPostTemplate string
+var formPostHtmlTemplate string
+
+var formPostTmpl = template.Must(template.New("form_post").Parse(formPostHtmlTemplate))
 
 // AuthResponseFormPost responds a html page that automatically submits the form which contains the auth response parameters
 func AuthResponseFormPost(w http.ResponseWriter, redirectURI string, response any, encoder httphelper.Encoder) error {
-	t, err := template.New("form_post").Parse(formPostTemplate)
-	if err != nil {
-		return oidc.ErrServerError().WithParent(err)
-	}
-
 	values := make(map[string][]string)
-	err = encoder.Encode(response, values)
+	err := encoder.Encode(response, values)
 	if err != nil {
 		return oidc.ErrServerError().WithParent(err)
 	}
@@ -583,7 +580,7 @@ func AuthResponseFormPost(w http.ResponseWriter, redirectURI string, response an
 		Params:      values,
 	}
 
-	err = t.Execute(w, params)
+	err = formPostTmpl.Execute(w, params)
 	if err != nil {
 		return oidc.ErrServerError().WithParent(err)
 	}
