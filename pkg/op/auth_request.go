@@ -1,6 +1,7 @@
 package op
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -468,12 +469,13 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 	}
 
 	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
-		err = AuthResponseFormPost(w, authReq.GetRedirectURI(), &codeResponse, authorizer.Encoder())
+		res, err := AuthResponseFormPost(authReq.GetRedirectURI(), &codeResponse, authorizer.Encoder())
 		if err != nil {
 			AuthRequestError(w, r, authReq, err, authorizer)
 			return
 		}
 
+		res.WriteTo(w)
 		return
 	}
 
@@ -499,12 +501,13 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 	}
 
 	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
-		err = AuthResponseFormPost(w, authReq.GetRedirectURI(), resp, authorizer.Encoder())
+		res, err := AuthResponseFormPost(authReq.GetRedirectURI(), resp, authorizer.Encoder())
 		if err != nil {
 			AuthRequestError(w, r, authReq, err, authorizer)
 			return
 		}
 
+		res.WriteTo(w)
 		return
 	}
 
@@ -565,11 +568,11 @@ var formPostHtmlTemplate string
 var formPostTmpl = template.Must(template.New("form_post").Parse(formPostHtmlTemplate))
 
 // AuthResponseFormPost responds a html page that automatically submits the form which contains the auth response parameters
-func AuthResponseFormPost(w http.ResponseWriter, redirectURI string, response any, encoder httphelper.Encoder) error {
+func AuthResponseFormPost(redirectURI string, response any, encoder httphelper.Encoder) (*bytes.Buffer, error) {
 	values := make(map[string][]string)
 	err := encoder.Encode(response, values)
 	if err != nil {
-		return oidc.ErrServerError().WithParent(err)
+		return nil, oidc.ErrServerError().WithParent(err)
 	}
 
 	params := &struct {
@@ -580,12 +583,13 @@ func AuthResponseFormPost(w http.ResponseWriter, redirectURI string, response an
 		Params:      values,
 	}
 
-	err = formPostTmpl.Execute(w, params)
+	var buf bytes.Buffer
+	err = formPostTmpl.Execute(&buf, params)
 	if err != nil {
-		return oidc.ErrServerError().WithParent(err)
+		return nil, oidc.ErrServerError().WithParent(err)
 	}
 
-	return nil
+	return &buf, nil
 }
 
 func setFragment(uri *url.URL, params url.Values) string {
