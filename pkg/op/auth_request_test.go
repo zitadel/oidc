@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,7 +22,6 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"github.com/zitadel/oidc/v3/pkg/op/mock"
 	"github.com/zitadel/schema"
-	"golang.org/x/exp/slog"
 )
 
 func TestAuthorize(t *testing.T) {
