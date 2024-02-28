@@ -3,10 +3,10 @@
 package oidc
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
 )
 
 func TestAuthRequest_LogValue(t *testing.T) {

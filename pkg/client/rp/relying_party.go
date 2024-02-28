@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/google/uuid"
 	"github.com/zitadel/logging"
-	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 

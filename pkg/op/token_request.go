@@ -2,12 +2,12 @@ package op
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"golang.org/x/exp/slog"
 )
 
 type Exchanger interface {

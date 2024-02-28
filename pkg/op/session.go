@@ -3,13 +3,13 @@ package op
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"golang.org/x/exp/slog"
 )
 
 type SessionEnder interface {

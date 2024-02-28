@@ -6,12 +6,12 @@ package mock
 
 import (
 	context "context"
+	slog "log/slog"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 	http "github.com/zitadel/oidc/v3/pkg/http"
 	op "github.com/zitadel/oidc/v3/pkg/op"
-	slog "golang.org/x/exp/slog"
 )
 
 // MockAuthorizer is a mock of Authorizer interface.

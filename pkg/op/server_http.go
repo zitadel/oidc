@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -11,7 +12,6 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/schema"
-	"golang.org/x/exp/slog"
 )
 
 // RegisterServer registers an implementation of Server.

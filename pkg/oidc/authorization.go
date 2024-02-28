@@ -1,7 +1,7 @@
 package oidc
 
 import (
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 const (
