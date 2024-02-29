@@ -2,10 +2,10 @@
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![Release](https://github.com/zitadel/oidc/workflows/Release/badge.svg)](https://github.com/zitadel/oidc/actions)
-[![GoDoc](https://godoc.org/github.com/zitadel/oidc?status.png)](https://pkg.go.dev/github.com/zitadel/oidc)
+[![Go Reference](https://pkg.go.dev/badge/github.com/zitadel/oidc/v3.svg)](https://pkg.go.dev/github.com/zitadel/oidc/v3)
 [![license](https://badgen.net/github/license/zitadel/oidc/)](https://github.com/zitadel/oidc/blob/master/LICENSE)
 [![release](https://badgen.net/github/release/zitadel/oidc/stable)](https://github.com/zitadel/oidc/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/zitadel/oidc)](https://goreportcard.com/report/github.com/zitadel/oidc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zitadel/oidc/v3)](https://goreportcard.com/report/github.com/zitadel/oidc/v3)
 [![codecov](https://codecov.io/gh/zitadel/oidc/branch/main/graph/badge.svg)](https://codecov.io/gh/zitadel/oidc)
 
 [![openid_certified](https://cloud.githubusercontent.com/assets/1454075/7611268/4d19de32-f97b-11e4-895b-31b2455a7ca6.png)](https://openid.net/certification/)
@@ -36,6 +36,11 @@ The most important packages of the library:
     /client/service    demonstration of JWT Profile Authorization Grant
     /server            examples of an OpenID Provider implementations (including dynamic) with some very basic login UI
 </pre>
+
+
+### Semver
+
+This package uses [semver](https://semver.org/) for [releases](https://github.com/zitadel/oidc/releases). Major releases ship breaking changes. Starting with the `v2` to `v3` increment we provide an [upgrade guide](UPGRADING.md) to ease migration to a newer version.
 
 ## How To Use It
 
