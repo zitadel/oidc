@@ -44,10 +44,14 @@ import "github.com/zitadel/oidc/v3/pkg/op"
 
 #### Logger
 
-RequestError...
-AuthRequestError...
+This version of OIDC adds logging to the framework. For this we use the new Go standard library `log/slog`. (Until v3.12.0 we used `x/exp/slog`).
+Mostly OIDC will use error level logs where it's returning an error through a HTTP handler. OIDC errors that are user facing don't carry much context, also for security reasons. With logging we are now able to print the error context, so that developers can more easily find the source of their issues. Previously we just discarded such context.
 
-TODO
+Most users of the OP package with the storage interface will not experience breaking changes. However if you use `RequestError()` directly in your code, you now need to give it a `Logger` as final argument.
+
+The `OpenIDProvider` and sub-interfaces like `Authorizer` and `Exchanger` got a `Logger()` method to return the configured logger. This logger is in turn used by `AuthRequestError()`. You configure the logger with the `WithLogger()` for the `Provider`. By default the `slog.Default()` is used.
+
+We also provide a new optional interface: [`LogAuthRequest`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#LogAuthRequest). If an `AuthRequest` implements this interface, it is completely passed into the logger after an error. Its `LogValue()` will be used by `slog` to print desired fields. This allows omitting sensitive fields you wish not no print. If the interface is not implemented, no `AuthRequest` details will ever be printed.
 
 #### AuthRequestError
 
