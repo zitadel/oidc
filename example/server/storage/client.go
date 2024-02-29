@@ -184,10 +184,10 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 		applicationType:                op.ApplicationTypeWeb,
 		authMethod:                     oidc.AuthMethodBasic,
 		loginURL:                       defaultLoginURL,
-		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
+		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode, oidc.ResponseTypeIDTokenOnly},
 		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeTokenExchange},
 		accessTokenType:                op.AccessTokenTypeBearer,
-		devMode:                        false,
+		devMode:                        true,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
 	}
