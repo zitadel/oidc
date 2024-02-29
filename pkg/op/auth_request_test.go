@@ -1135,8 +1135,9 @@ func TestAuthResponseCode(t *testing.T) {
 			res: res{
 				wantCode:           http.StatusOK,
 				wantLocationHeader: "",
-				wantBody:           "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n</form>\n</body>\n</html>",
-			}},
+				wantBody:           "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n\n</form>\n</body>\n</html>",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
