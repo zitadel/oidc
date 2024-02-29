@@ -3,8 +3,7 @@ package oidc
 import (
 	"errors"
 	"fmt"
-
-	"golang.org/x/exp/slog"
+	"log/slog"
 )
 
 type errorType string

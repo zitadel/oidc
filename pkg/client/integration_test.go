@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -20,7 +21,6 @@ import (
 	"github.com/jeremija/gosubmit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/example/server/exampleop"

@@ -3,13 +3,13 @@ package exampleop
 import (
 	"crypto/sha256"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/zitadel/logging"
-	"golang.org/x/exp/slog"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"
