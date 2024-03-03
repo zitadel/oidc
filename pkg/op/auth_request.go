@@ -589,7 +589,10 @@ func AuthResponseFormPost(res http.ResponseWriter, redirectURI string, response 
 
 	res.Header().Set("Cache-Control", "no-store")
 	res.WriteHeader(http.StatusOK)
-	buf.WriteTo(res)
+	_, err = buf.WriteTo(res)
+	if err != nil {
+		return oidc.ErrServerError().WithParent(err)
+	}
 
 	return nil
 }
