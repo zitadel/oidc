@@ -1027,9 +1027,10 @@ func TestAuthResponseCode(t *testing.T) {
 		authorizer func(*testing.T) op.Authorizer
 	}
 	type res struct {
-		wantCode           int
-		wantLocationHeader string
-		wantBody           string
+		wantCode               int
+		wantLocationHeader     string
+		wantCacheControlHeader string
+		wantBody               string
 	}
 	tests := []struct {
 		name string
@@ -1133,9 +1134,9 @@ func TestAuthResponseCode(t *testing.T) {
 				},
 			},
 			res: res{
-				wantCode:           http.StatusOK,
-				wantLocationHeader: "",
-				wantBody:           "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n\n</form>\n</body>\n</html>",
+				wantCode:               http.StatusOK,
+				wantCacheControlHeader: "no-store",
+				wantBody:               "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n\n</form>\n</body>\n</html>",
 			},
 		},
 	}
@@ -1148,6 +1149,7 @@ func TestAuthResponseCode(t *testing.T) {
 			defer resp.Body.Close()
 			assert.Equal(t, tt.res.wantCode, resp.StatusCode)
 			assert.Equal(t, tt.res.wantLocationHeader, resp.Header.Get("Location"))
+			assert.Equal(t, tt.res.wantCacheControlHeader, resp.Header.Get("Cache-Control"))
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, tt.res.wantBody, string(body))
