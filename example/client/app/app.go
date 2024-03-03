@@ -32,6 +32,7 @@ func main() {
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
+	responseMode := os.Getenv("RESPONSE_MODE")
 
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
@@ -77,12 +78,24 @@ func main() {
 		return uuid.New().String()
 	}
 
+	urlOptions := []rp.URLParamOpt{
+		rp.WithPromptURLParam("Welcome back!"),
+	}
+
+	if responseMode != "" {
+		urlOptions = append(urlOptions, rp.WithResponseModeURLParam(oidc.ResponseMode(responseMode)))
+	}
+
 	// register the AuthURLHandler at your preferred path.
 	// the AuthURLHandler creates the auth request and redirects the user to the auth server.
 	// including state handling with secure cookie and the possibility to use PKCE.
 	// Prompts can optionally be set to inform the server of
 	// any messages that need to be prompted back to the user.
-	http.Handle("/login", rp.AuthURLHandler(state, provider, rp.WithPromptURLParam("Welcome back!")))
+	http.Handle("/login", rp.AuthURLHandler(
+		state,
+		provider,
+		urlOptions...,
+	))
 
 	// for demonstration purposes the returned userinfo response is written as JSON object onto response
 	marshalUserinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
