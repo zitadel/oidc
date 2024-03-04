@@ -494,9 +494,8 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 			unauthorizedError(w, r, "failed to get state: "+err.Error(), state, rp)
 			return
 		}
-		params := r.URL.Query()
-		if params.Get("error") != "" {
-			rp.ErrorHandler()(w, r, params.Get("error"), params.Get("error_description"), state)
+		if errValue := r.FormValue("error"); errValue != "" {
+			rp.ErrorHandler()(w, r, errValue, r.FormValue("error_description"), state)
 			return
 		}
 		codeOpts := make([]CodeExchangeOpt, len(urlParam))
@@ -521,7 +520,7 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 			}
 			codeOpts = append(codeOpts, WithClientAssertionJWT(assertion))
 		}
-		tokens, err := CodeExchange[C](r.Context(), params.Get("code"), rp, codeOpts...)
+		tokens, err := CodeExchange[C](r.Context(), r.FormValue("code"), rp, codeOpts...)
 		if err != nil {
 			unauthorizedError(w, r, "failed to exchange token: "+err.Error(), state, rp)
 			return
