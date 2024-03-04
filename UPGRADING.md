@@ -8,7 +8,7 @@ Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 ## V2 to V3
 
 **TL;DR** at the [bottom](#full-script) of this chapter is a full `sed` script
-containing all automatic the steps at once.
+containing all automatic steps at once.
 
 
 As first steps we will:
@@ -65,7 +65,7 @@ This is to facilitate the use of the `Logger` as described above.
 
 ```bash
 find . -type f -name '*.go' | xargs sed -i \
-    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g
+    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g'
 ```
 
 Note: the sed regex might not find all uses if the local variables of the passed arguments use different names.
@@ -329,7 +329,7 @@ go get -u github.com/zitadel/oidc/v3
 find . -type f -name '*.go' | xargs sed -i \
     -e 's/github\.com\/zitadel\/oidc\/v2/github.com\/zitadel\/oidc\/v3/g' \
     -e 's/gopkg.in\/square\/go-jose\.v2/github.com\/go-jose\/go-jose\/v3/g' \
-    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g \
+    -e 's/\bAuthRequestError(w, r, authReq, err, authorizer.Encoder())/AuthRequestError(w, r, authReq, err, authorizer)/g' \
     -e 's/\bop\.AccessTokenVerifier\b/*op.AccessTokenVerifier/g' \
     -e 's/\bop\.JWTProfileVerifier\b/*op.JWTProfileVerifier/g' \
     -e 's/\bop\.IDTokenHintVerifier\b/*op.IDTokenHintVerifier/g' \
