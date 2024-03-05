@@ -1,9 +1,12 @@
 package op
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net"
 	"net/http"
@@ -464,6 +467,17 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 		Code:  code,
 		State: authReq.GetState(),
 	}
+
+	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
+		err := AuthResponseFormPost(w, authReq.GetRedirectURI(), &codeResponse, authorizer.Encoder())
+		if err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
+
+		return
+	}
+
 	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), &codeResponse, authorizer.Encoder())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer)
@@ -484,6 +498,17 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
+
+	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
+		err := AuthResponseFormPost(w, authReq.GetRedirectURI(), resp, authorizer.Encoder())
+		if err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
+
+		return
+	}
+
 	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), resp, authorizer.Encoder())
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer)
@@ -533,6 +558,43 @@ func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, respons
 	}
 	// if we get here it's code flow: defaults to query
 	return mergeQueryParams(uri, params), nil
+}
+
+//go:embed form_post.html.tmpl
+var formPostHtmlTemplate string
+
+var formPostTmpl = template.Must(template.New("form_post").Parse(formPostHtmlTemplate))
+
+// AuthResponseFormPost responds a html page that automatically submits the form which contains the auth response parameters
+func AuthResponseFormPost(res http.ResponseWriter, redirectURI string, response any, encoder httphelper.Encoder) error {
+	values := make(map[string][]string)
+	err := encoder.Encode(response, values)
+	if err != nil {
+		return oidc.ErrServerError().WithParent(err)
+	}
+
+	params := &struct {
+		RedirectURI string
+		Params      any
+	}{
+		RedirectURI: redirectURI,
+		Params:      values,
+	}
+
+	var buf bytes.Buffer
+	err = formPostTmpl.Execute(&buf, params)
+	if err != nil {
+		return oidc.ErrServerError().WithParent(err)
+	}
+
+	res.Header().Set("Cache-Control", "no-store")
+	res.WriteHeader(http.StatusOK)
+	_, err = buf.WriteTo(res)
+	if err != nil {
+		return oidc.ErrServerError().WithParent(err)
+	}
+
+	return nil
 }
 
 func setFragment(uri *url.URL, params url.Values) string {

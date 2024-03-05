@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><meta charset="UTF-8" /></head>
+<body onload="javascript:document.forms[0].submit()">
+<form method="post" action="{{ .RedirectURI }}">
+{{with .Params.state}}<input type="hidden" name="state" value="{{ index . 0 }}"/>{{end}}
+{{with .Params.code}}<input type="hidden" name="code" value="{{ index . 0 }}" />{{end}}
+{{with .Params.id_token}}<input type="hidden" name="id_token" value="{{ index . 0 }}"/>{{end}}
+{{with .Params.access_token}}<input type="hidden" name="access_token" value="{{ index . 0 }}" />{{end}}
+{{with .Params.token_type}}<input type="hidden" name="token_type" value="{{ index . 0 }}" />{{end}}
+{{with .Params.expires_in}}<input type="hidden" name="expires_in" value="{{ index . 0 }}" />{{end}}
+</form>
+</body>
+</html>
