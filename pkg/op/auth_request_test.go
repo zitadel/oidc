@@ -1027,9 +1027,10 @@ func TestAuthResponseCode(t *testing.T) {
 		authorizer func(*testing.T) op.Authorizer
 	}
 	type res struct {
-		wantCode           int
-		wantLocationHeader string
-		wantBody           string
+		wantCode               int
+		wantLocationHeader     string
+		wantCacheControlHeader string
+		wantBody               string
 	}
 	tests := []struct {
 		name string
@@ -1111,6 +1112,33 @@ func TestAuthResponseCode(t *testing.T) {
 				wantBody:           "",
 			},
 		},
+		{
+			name: "success form_post",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					CallbackURI:   "https://example.com/callback",
+					TransferState: "state1",
+					ResponseMode:  "form_post",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:               http.StatusOK,
+				wantCacheControlHeader: "no-store",
+				wantBody:               "<!doctype html>\n<html>\n<head><meta charset=\"UTF-8\" /></head>\n<body onload=\"javascript:document.forms[0].submit()\">\n<form method=\"post\" action=\"https://example.com/callback\">\n<input type=\"hidden\" name=\"state\" value=\"state1\"/>\n<input type=\"hidden\" name=\"code\" value=\"id1\" />\n\n\n\n\n</form>\n</body>\n</html>",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1121,6 +1149,7 @@ func TestAuthResponseCode(t *testing.T) {
 			defer resp.Body.Close()
 			assert.Equal(t, tt.res.wantCode, resp.StatusCode)
 			assert.Equal(t, tt.res.wantLocationHeader, resp.Header.Get("Location"))
+			assert.Equal(t, tt.res.wantCacheControlHeader, resp.Header.Get("Cache-Control"))
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, tt.res.wantBody, string(body))
