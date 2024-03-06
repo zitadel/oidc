@@ -12,6 +12,9 @@ import (
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
 // https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
 func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier) (claims C, err error) {
+	ctx, span := tracer.Start(ctx, "VerifyTokens")
+	defer span.End()
+
 	var nilClaims C
 
 	claims, err = VerifyIDToken[C](ctx, idToken, v)
@@ -27,6 +30,9 @@ func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken str
 // VerifyIDToken validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier) (claims C, err error) {
+	ctx, span := tracer.Start(ctx, "VerifyIDToken")
+	defer span.End()
+
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)

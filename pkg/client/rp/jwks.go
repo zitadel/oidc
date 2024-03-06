@@ -83,6 +83,9 @@ func (i *inflight) result() ([]jose.JSONWebKey, error) {
 }
 
 func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
+	ctx, span := tracer.Start(ctx, "VerifySignature")
+	defer span.End()
+
 	keyID, alg := oidc.GetKeyIDAndAlg(jws)
 	if alg == "" {
 		alg = r.defaultAlg
@@ -135,6 +138,9 @@ func (r *remoteKeySet) exactMatch(jwkID, jwsID string) bool {
 }
 
 func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
+	ctx, span := tracer.Start(ctx, "verifySignatureRemote")
+	defer span.End()
+
 	keys, err := r.keysFromRemote(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch key for signature validation: %w", err)
@@ -159,6 +165,9 @@ func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
 // keysFromRemote syncs the key set from the remote set, records the values in the
 // cache, and returns the key set.
 func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, error) {
+	ctx, span := tracer.Start(ctx, "keysFromRemote")
+	defer span.End()
+
 	// Need to lock to inspect the inflight request field.
 	r.mu.Lock()
 	// If there's not a current inflight request, create one.
@@ -182,6 +191,9 @@ func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, e
 }
 
 func (r *remoteKeySet) updateKeys(ctx context.Context) {
+	ctx, span := tracer.Start(ctx, "updateKeys")
+	defer span.End()
+
 	// Sync keys and finish inflight when that's done.
 	keys, err := r.fetchRemoteKeys(ctx)
 
@@ -201,6 +213,9 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 }
 
 func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, error) {
+	ctx, span := tracer.Start(ctx, "fetchRemoteKeys")
+	defer span.End()
+
 	req, err := http.NewRequest("GET", r.jwksURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("oidc: can't create request: %v", err)
