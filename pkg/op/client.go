@@ -92,6 +92,9 @@ type ClientJWTProfile interface {
 }
 
 func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier ClientJWTProfile) (clientID string, err error) {
+	ctx, span := tracer.Start(ctx, "ClientJWTAuth")
+	defer span.End()
+
 	if ca.ClientAssertion == "" {
 		return "", oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials)
 	}
@@ -104,6 +107,10 @@ func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier 
 }
 
 func ClientBasicAuth(r *http.Request, storage Storage) (clientID string, err error) {
+	ctx, span := tracer.Start(r.Context(), "ClientBasicAuth")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	clientID, clientSecret, ok := r.BasicAuth()
 	if !ok {
 		return "", oidc.ErrInvalidClient().WithParent(ErrNoClientCredentials)
@@ -146,6 +153,10 @@ type clientData struct {
 // If no client id can be obtained by any method, oidc.ErrInvalidClient
 // is returned with ErrMissingClientID wrapped in it.
 func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, authenticated bool, err error) {
+	ctx, span := tracer.Start(r.Context(), "ClientIDFromRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	err = r.ParseForm()
 	if err != nil {
 		return "", false, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
@@ -171,7 +182,7 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	}
 	// if the client did not send a Basic Auth Header, ignore the `ErrNoClientCredentials`
 	// but return other errors immediately
-	if err != nil && !errors.Is(err, ErrNoClientCredentials) {
+	if !errors.Is(err, ErrNoClientCredentials) {
 		return "", false, err
 	}
 

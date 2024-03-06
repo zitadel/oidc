@@ -24,6 +24,10 @@ func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter
 }
 
 func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoProvider) {
+	ctx, span := tracer.Start(r.Context(), "Userinfo")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	accessToken, err := ParseUserinfoRequest(r, userinfoProvider.Decoder())
 	if err != nil {
 		http.Error(w, "access token missing", http.StatusUnauthorized)
@@ -44,6 +48,10 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 }
 
 func ParseUserinfoRequest(r *http.Request, decoder httphelper.Decoder) (string, error) {
+	ctx, span := tracer.Start(r.Context(), "ParseUserinfoRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	accessToken, err := getAccessToken(r)
 	if err == nil {
 		return accessToken, nil
@@ -61,6 +69,10 @@ func ParseUserinfoRequest(r *http.Request, decoder httphelper.Decoder) (string, 
 }
 
 func getAccessToken(r *http.Request) (string, error) {
+	ctx, span := tracer.Start(r.Context(), "RefreshTokens")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	authHeader := r.Header.Get("authorization")
 	if authHeader == "" {
 		return "", errors.New("no auth header")
@@ -73,6 +85,9 @@ func getAccessToken(r *http.Request) (string, error) {
 }
 
 func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
+	ctx, span := tracer.Start(ctx, "getTokenIDAndSubject")
+	defer span.End()
+
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err == nil {
 		splitToken := strings.Split(tokenIDSubject, ":")
