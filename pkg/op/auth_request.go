@@ -79,7 +79,6 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
-	ctx = r.Context()
 	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
 		err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
 		if err != nil {
@@ -452,7 +451,7 @@ func ParseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
 
 // AuthResponse creates the successful authentication response (either code or tokens)
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "ValidateAuthRequest")
+	ctx, span := tracer.Start(r.Context(), "AuthResponse")
 	r = r.WithContext(ctx)
 	defer span.End()
 

@@ -69,7 +69,7 @@ func ParseUserinfoRequest(r *http.Request, decoder httphelper.Decoder) (string, 
 }
 
 func getAccessToken(r *http.Request) (string, error) {
-	ctx, span := tracer.Start(r.Context(), "RefreshTokens")
+	ctx, span := tracer.Start(r.Context(), "getAccessToken")
 	r = r.WithContext(ctx)
 	defer span.End()
 

@@ -156,7 +156,7 @@ func RevocationError(err error) StatusError {
 }
 
 func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
-	ctx, span := tracer.Start(ctx, "getTokenIDAndSubjectFromRevocation")
+	ctx, span := tracer.Start(ctx, "getTokenIDAndSubjectForRevocation")
 	defer span.End()
 
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)

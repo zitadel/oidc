@@ -299,7 +299,7 @@ func (r *DeviceAuthorizationState) GetSubject() string {
 }
 
 func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode string, exchanger Exchanger) (*DeviceAuthorizationState, error) {
-	ctx, span := tracer.Start(ctx, "CheckDeviceAuthorization")
+	ctx, span := tracer.Start(ctx, "CheckDeviceAuthorizationState")
 	defer span.End()
 
 	storage, err := assertDeviceStorage(exchanger.Storage())
