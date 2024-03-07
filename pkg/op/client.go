@@ -153,14 +153,14 @@ type clientData struct {
 // If no client id can be obtained by any method, oidc.ErrInvalidClient
 // is returned with ErrMissingClientID wrapped in it.
 func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, authenticated bool, err error) {
-	ctx, span := tracer.Start(r.Context(), "ClientIDFromRequest")
-	r = r.WithContext(ctx)
-	defer span.End()
-
 	err = r.ParseForm()
 	if err != nil {
 		return "", false, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
 	}
+
+	ctx, span := tracer.Start(r.Context(), "ClientIDFromRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
 
 	data := new(clientData)
 	if err = p.Decoder().Decode(data, r.Form); err != nil {
