@@ -3,6 +3,7 @@ package oidc
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	jose "github.com/go-jose/go-jose/v3"
@@ -57,13 +58,7 @@ var AllTokenTypes = []TokenType{
 type TokenType string
 
 func (t TokenType) IsSupported() bool {
-	for _, tt := range AllTokenTypes {
-		if t == tt {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(AllTokenTypes, t)
 }
 
 type TokenRequest interface {
