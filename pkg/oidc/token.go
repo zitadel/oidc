@@ -34,19 +34,20 @@ type Tokens[C IDClaims] struct {
 // TokenClaims implements the Claims interface,
 // and can be used to extend larger claim types by embedding.
 type TokenClaims struct {
-	Issuer                              string   `json:"iss,omitempty"`
-	Subject                             string   `json:"sub,omitempty"`
-	Audience                            Audience `json:"aud,omitempty"`
-	Expiration                          Time     `json:"exp,omitempty"`
-	IssuedAt                            Time     `json:"iat,omitempty"`
-	AuthTime                            Time     `json:"auth_time,omitempty"`
-	NotBefore                           Time     `json:"nbf,omitempty"`
-	Nonce                               string   `json:"nonce,omitempty"`
-	AuthenticationContextClassReference string   `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string `json:"amr,omitempty"`
-	AuthorizedParty                     string   `json:"azp,omitempty"`
-	ClientID                            string   `json:"client_id,omitempty"`
-	JWTID                               string   `json:"jti,omitempty"`
+	Issuer                              string       `json:"iss,omitempty"`
+	Subject                             string       `json:"sub,omitempty"`
+	Audience                            Audience     `json:"aud,omitempty"`
+	Expiration                          Time         `json:"exp,omitempty"`
+	IssuedAt                            Time         `json:"iat,omitempty"`
+	AuthTime                            Time         `json:"auth_time,omitempty"`
+	NotBefore                           Time         `json:"nbf,omitempty"`
+	Nonce                               string       `json:"nonce,omitempty"`
+	AuthenticationContextClassReference string       `json:"acr,omitempty"`
+	AuthenticationMethodsReferences     []string     `json:"amr,omitempty"`
+	AuthorizedParty                     string       `json:"azp,omitempty"`
+	ClientID                            string       `json:"client_id,omitempty"`
+	JWTID                               string       `json:"jti,omitempty"`
+	Actor                               *ActorClaims `json:"act,omitempty"`
 
 	// Additional information set by this framework
 	SignatureAlg jose.SignatureAlgorithm `json:"-"`
@@ -204,6 +205,28 @@ func (i *IDTokenClaims) UnmarshalJSON(data []byte) error {
 	return unmarshalJSONMulti(data, (*itcAlias)(i), &i.Claims)
 }
 
+// ActorClaims provides the `act` claims used for impersonation or delegation Token Exchange.
+//
+// An actor can be nested in case an obtained token is used as actor token to obtain impersonation or delegation.
+// This allows creating a chain of actors.
+// See [RFC 8693, section 4.1](https://www.rfc-editor.org/rfc/rfc8693#name-act-actor-claim).
+type ActorClaims struct {
+	Actor   *ActorClaims   `json:"act,omitempty"`
+	Issuer  string         `json:"iss,omitempty"`
+	Subject string         `json:"sub,omitempty"`
+	Claims  map[string]any `json:"-"`
+}
+
+type acAlias ActorClaims
+
+func (c *ActorClaims) MarshalJSON() ([]byte, error) {
+	return mergeAndMarshalClaims((*acAlias)(c), c.Claims)
+}
+
+func (c *ActorClaims) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONMulti(data, (*acAlias)(c), &c.Claims)
+}
+
 type AccessTokenResponse struct {
 	AccessToken  string `json:"access_token,omitempty" schema:"access_token,omitempty"`
 	TokenType    string `json:"token_type,omitempty" schema:"token_type,omitempty"`
@@ -352,4 +375,8 @@ type TokenExchangeResponse struct {
 	ExpiresIn       uint64              `json:"expires_in,omitempty"`
 	Scopes          SpaceDelimitedArray `json:"scope,omitempty"`
 	RefreshToken    string              `json:"refresh_token,omitempty"`
+
+	// IDToken field allows returning an additional ID token
+	// if the requested_token_type was Access Token and scope contained openid.
+	IDToken string `json:"id_token,omitempty"`
 }

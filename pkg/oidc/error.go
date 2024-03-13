@@ -27,6 +27,11 @@ const (
 	SlowDown             errorType = "slow_down"
 	AccessDenied         errorType = "access_denied"
 	ExpiredToken         errorType = "expired_token"
+
+	// InvalidTarget error is returned by Token Exchange if
+	// the requested target or audience is invalid.
+	// [RFC 8693, Section 2.2.2: Error Response](https://www.rfc-editor.org/rfc/rfc8693#section-2.2.2)
+	InvalidTarget errorType = "invalid_target"
 )
 
 var (
@@ -110,6 +115,14 @@ var (
 		return &Error{
 			ErrorType:   ExpiredToken,
 			Description: "The \"device_code\" has expired.",
+		}
+	}
+
+	// Token exchange error
+	ErrInvalidTarget = func() *Error {
+		return &Error{
+			ErrorType:   InvalidTarget,
+			Description: "The requested audience or target is invalid.",
 		}
 	}
 )
