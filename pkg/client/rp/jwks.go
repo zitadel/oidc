@@ -9,6 +9,7 @@ import (
 
 	jose "github.com/go-jose/go-jose/v3"
 
+	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -83,7 +84,7 @@ func (i *inflight) result() ([]jose.JSONWebKey, error) {
 }
 
 func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
-	ctx, span := tracer.Start(ctx, "VerifySignature")
+	ctx, span := client.Tracer.Start(ctx, "VerifySignature")
 	defer span.End()
 
 	keyID, alg := oidc.GetKeyIDAndAlg(jws)
@@ -138,7 +139,7 @@ func (r *remoteKeySet) exactMatch(jwkID, jwsID string) bool {
 }
 
 func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSONWebSignature, keyID, alg string) ([]byte, error) {
-	ctx, span := tracer.Start(ctx, "verifySignatureRemote")
+	ctx, span := client.Tracer.Start(ctx, "verifySignatureRemote")
 	defer span.End()
 
 	keys, err := r.keysFromRemote(ctx)
@@ -165,7 +166,7 @@ func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
 // keysFromRemote syncs the key set from the remote set, records the values in the
 // cache, and returns the key set.
 func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, error) {
-	ctx, span := tracer.Start(ctx, "keysFromRemote")
+	ctx, span := client.Tracer.Start(ctx, "keysFromRemote")
 	defer span.End()
 
 	// Need to lock to inspect the inflight request field.
@@ -191,7 +192,7 @@ func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, e
 }
 
 func (r *remoteKeySet) updateKeys(ctx context.Context) {
-	ctx, span := tracer.Start(ctx, "updateKeys")
+	ctx, span := client.Tracer.Start(ctx, "updateKeys")
 	defer span.End()
 
 	// Sync keys and finish inflight when that's done.
@@ -213,7 +214,7 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 }
 
 func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, error) {
-	ctx, span := tracer.Start(ctx, "fetchRemoteKeys")
+	ctx, span := client.Tracer.Start(ctx, "fetchRemoteKeys")
 	defer span.End()
 
 	req, err := http.NewRequest("GET", r.jwksURL, nil)

@@ -101,6 +101,9 @@ func ExchangeToken(
 	Scopes []string,
 	RequestedTokenType oidc.TokenType,
 ) (*oidc.TokenExchangeResponse, error) {
+	ctx, span := client.Tracer.Start(ctx, "ExchangeToken")
+	defer span.End()
+
 	if SubjectToken == "" {
 		return nil, errors.New("empty subject_token")
 	}

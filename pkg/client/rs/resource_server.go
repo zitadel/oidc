@@ -123,6 +123,9 @@ func WithStaticEndpoints(tokenURL, introspectURL string) Option {
 //
 // [RFC7662]: https://www.rfc-editor.org/rfc/rfc7662
 func Introspect[R any](ctx context.Context, rp ResourceServer, token string) (resp R, err error) {
+	ctx, span := client.Tracer.Start(ctx, "Introspect")
+	defer span.End()
+
 	if rp.IntrospectionURL() == "" {
 		return resp, errors.New("resource server: introspection URL is empty")
 	}
