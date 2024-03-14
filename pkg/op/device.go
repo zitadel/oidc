@@ -64,6 +64,10 @@ func DeviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *htt
 }
 
 func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
+	ctx, span := tracer.Start(r.Context(), "DeviceAuthorization")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	req, err := ParseDeviceCodeRequest(r, o)
 	if err != nil {
 		return err
@@ -78,6 +82,9 @@ func DeviceAuthorization(w http.ResponseWriter, r *http.Request, o OpenIDProvide
 }
 
 func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizationRequest, clientID string, o OpenIDProvider) (*oidc.DeviceAuthorizationResponse, error) {
+	ctx, span := tracer.Start(ctx, "createDeviceAuthorization")
+	defer span.End()
+
 	storage, err := assertDeviceStorage(o.Storage())
 	if err != nil {
 		return nil, err
@@ -127,6 +134,10 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 }
 
 func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuthorizationRequest, error) {
+	ctx, span := tracer.Start(r.Context(), "ParseDeviceCodeRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	clientID, _, err := ClientIDFromRequest(r, o)
 	if err != nil {
 		return nil, err
@@ -288,6 +299,9 @@ func (r *DeviceAuthorizationState) GetSubject() string {
 }
 
 func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode string, exchanger Exchanger) (*DeviceAuthorizationState, error) {
+	ctx, span := tracer.Start(ctx, "CheckDeviceAuthorizationState")
+	defer span.End()
+
 	storage, err := assertDeviceStorage(exchanger.Storage())
 	if err != nil {
 		return nil, err

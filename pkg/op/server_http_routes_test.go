@@ -177,7 +177,7 @@ func TestServerRoutes(t *testing.T) {
 			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
 		},
 		{
-			// This call will fail. A successfull test is already
+			// This call will fail. A successful test is already
 			// part of device_test.go
 			name:      "device token",
 			method:    http.MethodPost,

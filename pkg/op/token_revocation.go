@@ -32,6 +32,10 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 }
 
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
+	ctx, span := tracer.Start(r.Context(), "Revoke")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	token, tokenTypeHint, clientID, err := ParseTokenRevocationRequest(r, revoker)
 	if err != nil {
 		RevocationRequestError(w, r, err)
@@ -68,6 +72,10 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 }
 
 func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, tokenTypeHint, clientID string, err error) {
+	ctx, span := tracer.Start(r.Context(), "ParseTokenRevocationRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	err = r.ParseForm()
 	if err != nil {
 		return "", "", "", oidc.ErrInvalidRequest().WithDescription("unable to parse request").WithParent(err)
@@ -148,6 +156,9 @@ func RevocationError(err error) StatusError {
 }
 
 func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
+	ctx, span := tracer.Start(ctx, "getTokenIDAndSubjectForRevocation")
+	defer span.End()
+
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err == nil {
 		splitToken := strings.Split(tokenIDSubject, ":")

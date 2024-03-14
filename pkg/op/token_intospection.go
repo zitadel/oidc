@@ -28,6 +28,10 @@ func introspectionHandler(introspector Introspector) func(http.ResponseWriter, *
 }
 
 func Introspect(w http.ResponseWriter, r *http.Request, introspector Introspector) {
+	ctx, span := tracer.Start(r.Context(), "Introspect")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	response := new(oidc.IntrospectionResponse)
 	token, clientID, err := ParseTokenIntrospectionRequest(r, introspector)
 	if err != nil {

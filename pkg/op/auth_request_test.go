@@ -1072,7 +1072,7 @@ func TestAuthResponseCode(t *testing.T) {
 				authorizer: func(t *testing.T) op.Authorizer {
 					ctrl := gomock.NewController(t)
 					storage := mock.NewMockStorage(ctrl)
-					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
 
 					authorizer := mock.NewMockAuthorizer(ctrl)
 					authorizer.EXPECT().Storage().Return(storage)
@@ -1097,7 +1097,7 @@ func TestAuthResponseCode(t *testing.T) {
 				authorizer: func(t *testing.T) op.Authorizer {
 					ctrl := gomock.NewController(t)
 					storage := mock.NewMockStorage(ctrl)
-					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
 
 					authorizer := mock.NewMockAuthorizer(ctrl)
 					authorizer.EXPECT().Storage().Return(storage)
@@ -1124,7 +1124,7 @@ func TestAuthResponseCode(t *testing.T) {
 				authorizer: func(t *testing.T) op.Authorizer {
 					ctrl := gomock.NewController(t)
 					storage := mock.NewMockStorage(ctrl)
-					storage.EXPECT().SaveAuthCode(context.Background(), "id1", "id1")
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
 
 					authorizer := mock.NewMockAuthorizer(ctrl)
 					authorizer.EXPECT().Storage().Return(storage)

@@ -30,6 +30,9 @@ func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTok
 
 // VerifyAccessToken validates the access token (issuer, signature and expiration).
 func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v *AccessTokenVerifier) (claims C, err error) {
+	ctx, span := tracer.Start(ctx, "VerifyAccessToken")
+	defer span.End()
+
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)

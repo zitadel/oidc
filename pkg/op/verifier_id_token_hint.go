@@ -46,6 +46,9 @@ func (e IDTokenHintExpiredError) Is(err error) bool {
 // is returned of type [IDTokenHintExpiredError]. In that case the caller can choose to still
 // trust the token for cases like logout, as signature and other verifications succeeded.
 func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v *IDTokenHintVerifier) (claims C, err error) {
+	ctx, span := tracer.Start(ctx, "VerifyIDTokenHint")
+	defer span.End()
+
 	var nilClaims C
 
 	decrypted, err := oidc.DecryptToken(token)

@@ -69,6 +69,9 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 }
 
 func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, err error) {
+	ctx, span := tracer.Start(ctx, "createTokens")
+	defer span.End()
+
 	if needsRefreshToken(tokenRequest, client) {
 		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}

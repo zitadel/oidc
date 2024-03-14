@@ -124,7 +124,13 @@ func (s *webServer) createRouter() {
 
 func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {
 	if e != nil {
-		s.router.HandleFunc(e.Relative(), hf)
+		traceHandler := func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := tracer.Start(r.Context(), e.Relative())
+			r = r.WithContext(ctx)
+			hf(w, r)
+			defer span.End()
+		}
+		s.router.HandleFunc(e.Relative(), traceHandler)
 		s.logger.Info("registered route", "endpoint", e.Relative())
 	}
 }
@@ -133,6 +139,10 @@ type clientHandler func(w http.ResponseWriter, r *http.Request, client Client)
 
 func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := tracer.Start(r.Context(), r.URL.Path)
+		defer span.End()
+		r = r.WithContext(ctx)
+
 		client, err := s.verifyRequestClient(r)
 		if err != nil {
 			WriteError(w, r, err, s.getLogger(r.Context()))

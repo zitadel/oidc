@@ -108,7 +108,7 @@ func TestClientBasicAuth(t *testing.T) {
 			},
 			storage: func() op.Storage {
 				s := mock.NewMockStorage(gomock.NewController(t))
-				s.EXPECT().AuthorizeClientIDSecret(context.Background(), "foo", "wrong").Return(errWrong)
+				s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "foo", "wrong").Return(errWrong)
 				return s
 			}(),
 			wantErr: errWrong,
@@ -121,7 +121,7 @@ func TestClientBasicAuth(t *testing.T) {
 			},
 			storage: func() op.Storage {
 				s := mock.NewMockStorage(gomock.NewController(t))
-				s.EXPECT().AuthorizeClientIDSecret(context.Background(), "foo", "bar").Return(nil)
+				s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "foo", "bar").Return(nil)
 				return s
 			}(),
 			wantClientID: "foo",
@@ -207,7 +207,7 @@ func TestClientIDFromRequest(t *testing.T) {
 				p: testClientProvider{
 					storage: func() op.Storage {
 						s := mock.NewMockStorage(gomock.NewController(t))
-						s.EXPECT().AuthorizeClientIDSecret(context.Background(), "foo", "bar").Return(nil)
+						s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "foo", "bar").Return(nil)
 						return s
 					}(),
 				},

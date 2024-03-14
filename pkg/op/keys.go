@@ -20,6 +20,10 @@ func keysHandler(k KeyProvider) func(http.ResponseWriter, *http.Request) {
 }
 
 func Keys(w http.ResponseWriter, r *http.Request, k KeyProvider) {
+	ctx, span := tracer.Start(r.Context(), "Keys")
+	r = r.WithContext(ctx)
+	defer span.End()
+
 	keySet, err := k.KeySet(r.Context())
 	if err != nil {
 		httphelper.MarshalJSONWithStatus(w, err, http.StatusInternalServerError)

@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/google/uuid"
-	"github.com/zitadel/logging"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
+	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -428,6 +428,9 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 var ErrMissingIDToken = errors.New("id_token missing")
 
 func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Token, rp RelyingParty) (*oidc.Tokens[C], error) {
+	ctx, span := client.Tracer.Start(ctx, "verifyTokenResponse")
+	defer span.End()
+
 	if rp.IsOAuth2Only() {
 		return &oidc.Tokens[C]{Token: token}, nil
 	}
@@ -445,6 +448,9 @@ func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Tok
 // CodeExchange handles the oauth2 code exchange, extracting and validating the id_token
 // returning it parsed together with the oauth2 tokens (access, refresh)
 func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingParty, opts ...CodeExchangeOpt) (tokens *oidc.Tokens[C], err error) {
+	ctx, codeExchangeSpan := client.Tracer.Start(ctx, "CodeExchange")
+	defer codeExchangeSpan.End()
+
 	ctx = logCtxWithRPData(ctx, rp, "function", "CodeExchange")
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
@@ -452,10 +458,12 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 		codeOpts = append(codeOpts, opt()...)
 	}
 
+	ctx, oauthExchangeSpan := client.Tracer.Start(ctx, "OAuthExchange")
 	token, err := rp.OAuthConfig().Exchange(ctx, code, codeOpts...)
 	if err != nil {
 		return nil, err
 	}
+	oauthExchangeSpan.End()
 	return verifyTokenResponse[C](ctx, token, rp)
 }
 
@@ -469,6 +477,9 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 // [RFC 6749, section 4.4]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.Values) (token *oauth2.Token, err error) {
 	ctx = logCtxWithRPData(ctx, rp, "function", "ClientCredentials")
+	ctx, span := client.Tracer.Start(ctx, "ClientCredentials")
+	defer span.End()
+
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	config := clientcredentials.Config{
 		ClientID:       rp.OAuthConfig().ClientID,
@@ -489,6 +500,10 @@ type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.R
 // Custom parameters can optionally be set to the token URL.
 func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := client.Tracer.Start(r.Context(), "CodeExchangeHandler")
+		r = r.WithContext(ctx)
+		defer span.End()
+
 		state, err := tryReadStateCookie(w, r, rp)
 		if err != nil {
 			unauthorizedError(w, r, "failed to get state: "+err.Error(), state, rp)
@@ -540,6 +555,10 @@ type CodeExchangeUserinfoCallback[C oidc.IDClaims, U SubjectGetter] func(w http.
 // on success it will pass the userinfo into its callback function as well
 func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCallback[C, U]) CodeExchangeCallback[C] {
 	return func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty) {
+		ctx, span := client.Tracer.Start(r.Context(), "UserinfoCallback")
+		r = r.WithContext(ctx)
+		defer span.End()
+
 		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
 		if err != nil {
 			unauthorizedError(w, r, "userinfo failed: "+err.Error(), state, rp)
@@ -558,6 +577,8 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject string, rp RelyingParty) (userinfo U, err error) {
 	var nilU U
 	ctx = logCtxWithRPData(ctx, rp, "function", "Userinfo")
+	ctx, span := client.Tracer.Start(ctx, "Userinfo")
+	defer span.End()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rp.UserinfoEndpoint(), nil)
 	if err != nil {
@@ -716,6 +737,9 @@ type RefreshTokenRequest struct {
 // the IDToken and AccessToken will be verfied
 // and the IDToken and IDTokenClaims fields will be populated in the returned object.
 func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oidc.Tokens[C], error) {
+	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	defer span.End()
+
 	ctx = logCtxWithRPData(ctx, rp, "function", "RefreshTokens")
 	request := RefreshTokenRequest{
 		RefreshToken:        refreshToken,
@@ -741,6 +765,9 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 
 func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
 	ctx = logCtxWithRPData(ctx, rp, "function", "EndSession")
+	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	defer span.End()
+
 	request := oidc.EndSessionRequest{
 		IdTokenHint:           idToken,
 		ClientID:              rp.OAuthConfig().ClientID,
@@ -757,6 +784,8 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 // tokenTypeHint should be either "id_token" or "refresh_token".
 func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHint string) error {
 	ctx = logCtxWithRPData(ctx, rp, "function", "RevokeToken")
+	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	defer span.End()
 	request := client.RevokeRequest{
 		Token:         token,
 		TokenTypeHint: tokenTypeHint,
