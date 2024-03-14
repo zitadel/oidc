@@ -135,6 +135,9 @@ func SubjectTypes(c Configuration) []string {
 }
 
 func SigAlgorithms(ctx context.Context, storage DiscoverStorage) []string {
+	ctx, span := tracer.Start(ctx, "SigAlgorithms")
+	defer span.End()
+
 	algorithms, err := storage.SignatureAlgorithms(ctx)
 	if err != nil {
 		return nil

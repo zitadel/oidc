@@ -201,7 +201,7 @@ func TestIntrospect(t *testing.T) {
 		{
 			name: "missing-introspect-url",
 			args: args{
-				ctx:   nil,
+				ctx:   context.Background(),
 				rp:    rp,
 				token: "my-token",
 			},

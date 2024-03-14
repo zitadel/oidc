@@ -141,6 +141,9 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 // RefreshTokenRequestByRefreshToken returns the RefreshTokenRequest (data representing the original auth request)
 // corresponding to the refresh_token from Storage or an error
 func RefreshTokenRequestByRefreshToken(ctx context.Context, storage Storage, refreshToken string) (RefreshTokenRequest, error) {
+	ctx, span := tracer.Start(ctx, "RefreshTokenRequestByRefreshToken")
+	defer span.End()
+
 	request, err := storage.TokenRequestByRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, oidc.ErrInvalidGrant().WithParent(err)

@@ -193,6 +193,9 @@ func ValidateTokenExchangeRequest(
 	clientID, clientSecret string,
 	exchanger Exchanger,
 ) (TokenExchangeRequest, Client, error) {
+	ctx, span := tracer.Start(ctx, "ValidateTokenExchangeRequest")
+	defer span.End()
+
 	if oidcTokenExchangeRequest.SubjectToken == "" {
 		return nil, nil, oidc.ErrInvalidRequest().WithDescription("subject_token missing")
 	}
@@ -231,6 +234,9 @@ func CreateTokenExchangeRequest(
 	client Client,
 	exchanger Exchanger,
 ) (TokenExchangeRequest, error) {
+	ctx, span := tracer.Start(ctx, "CreateTokenExchangeRequest")
+	defer span.End()
+
 	teStorage, ok := exchanger.Storage().(TokenExchangeStorage)
 	if !ok {
 		return nil, unimplementedGrantError(oidc.GrantTypeTokenExchange)
@@ -294,6 +300,9 @@ func GetTokenIDAndSubjectFromToken(
 	tokenType oidc.TokenType,
 	isActor bool,
 ) (tokenIDOrToken, subject string, claims map[string]any, ok bool) {
+	ctx, span := tracer.Start(ctx, "GetTokenIDAndSubjectFromToken")
+	defer span.End()
+
 	switch tokenType {
 	case oidc.AccessTokenType:
 		var accessTokenClaims *oidc.AccessTokenClaims
@@ -341,6 +350,9 @@ func GetTokenIDAndSubjectFromToken(
 
 // AuthorizeTokenExchangeClient authorizes a client by validating the client_id and client_secret
 func AuthorizeTokenExchangeClient(ctx context.Context, clientID, clientSecret string, exchanger Exchanger) (client Client, err error) {
+	ctx, span := tracer.Start(ctx, "AuthorizeTokenExchangeClient")
+	defer span.End()
+
 	if err := AuthorizeClientIDSecret(ctx, clientID, clientSecret, exchanger.Storage()); err != nil {
 		return nil, err
 	}
@@ -359,6 +371,8 @@ func CreateTokenExchangeResponse(
 	client Client,
 	creator TokenCreator,
 ) (_ *oidc.TokenExchangeResponse, err error) {
+	ctx, span := tracer.Start(ctx, "CreateTokenExchangeResponse")
+	defer span.End()
 
 	var (
 		token, refreshToken, tokenType string
