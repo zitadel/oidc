@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 var DefaultHTTPClient = &http.Client{
@@ -66,7 +68,12 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http status not ok: %s %s", resp.Status, body)
+		var oidcErr oidc.Error
+		err = json.Unmarshal(body, &oidcErr)
+		if err != nil || oidcErr.ErrorType == "" {
+			return fmt.Errorf("http status not ok: %s %s", resp.Status, body)
+		}
+		return &oidcErr
 	}
 
 	err = json.Unmarshal(body, response)
