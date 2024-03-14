@@ -121,6 +121,10 @@ func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
 	return crypto.Encrypt(tokenID + ":" + subject)
 }
 
+type TokenActorRequest interface {
+	GetActor() *oidc.ActorClaims
+}
+
 func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client AccessTokenClient, storage Storage) (string, error) {
 	ctx, span := tracer.Start(ctx, "CreateJWT")
 	defer span.End()
@@ -149,6 +153,9 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 			return "", err
 		}
 		claims.Claims = privateClaims
+	}
+	if actorReq, ok := tokenRequest.(TokenActorRequest); ok {
+		claims.Actor = actorReq.GetActor()
 	}
 	signingKey, err := storage.SigningKey(ctx)
 	if err != nil {
@@ -181,6 +188,10 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		nonce = authRequest.GetNonce()
 	}
 	claims := oidc.NewIDTokenClaims(issuer, request.GetSubject(), request.GetAudience(), exp, request.GetAuthTime(), nonce, acr, request.GetAMR(), request.GetClientID(), client.ClockSkew())
+	if actorReq, ok := request.(TokenActorRequest); ok {
+		claims.Actor = actorReq.GetActor()
+	}
+
 	scopes := client.RestrictAdditionalIdTokenScopes()(request.GetScopes())
 	signingKey, err := storage.SigningKey(ctx)
 	if err != nil {
