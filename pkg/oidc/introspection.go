@@ -16,18 +16,21 @@ type ClientAssertionParams struct {
 // https://www.rfc-editor.org/rfc/rfc7662.html#section-2.2.
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type IntrospectionResponse struct {
-	Active     bool                `json:"active"`
-	Scope      SpaceDelimitedArray `json:"scope,omitempty"`
-	ClientID   string              `json:"client_id,omitempty"`
-	TokenType  string              `json:"token_type,omitempty"`
-	Expiration Time                `json:"exp,omitempty"`
-	IssuedAt   Time                `json:"iat,omitempty"`
-	NotBefore  Time                `json:"nbf,omitempty"`
-	Subject    string              `json:"sub,omitempty"`
-	Audience   Audience            `json:"aud,omitempty"`
-	Issuer     string              `json:"iss,omitempty"`
-	JWTID      string              `json:"jti,omitempty"`
-	Username   string              `json:"username,omitempty"`
+	Active                          bool                `json:"active"`
+	Scope                           SpaceDelimitedArray `json:"scope,omitempty"`
+	ClientID                        string              `json:"client_id,omitempty"`
+	TokenType                       string              `json:"token_type,omitempty"`
+	Expiration                      Time                `json:"exp,omitempty"`
+	IssuedAt                        Time                `json:"iat,omitempty"`
+	AuthTime                        Time                `json:"auth_time,omitempty"`
+	NotBefore                       Time                `json:"nbf,omitempty"`
+	Subject                         string              `json:"sub,omitempty"`
+	Audience                        Audience            `json:"aud,omitempty"`
+	AuthenticationMethodsReferences []string            `json:"amr,omitempty"`
+	Issuer                          string              `json:"iss,omitempty"`
+	JWTID                           string              `json:"jti,omitempty"`
+	Username                        string              `json:"username,omitempty"`
+	Actor                           *ActorClaims        `json:"act,omitempty"`
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone
