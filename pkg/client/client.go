@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -251,25 +250,11 @@ func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTok
 		req.SetBasicAuth(request.ClientID, request.ClientSecret)
 	}
 
-	httpResp, err := caller.HttpClient().Do(req)
-	if err != nil {
+	resp := new(oidc.AccessTokenResponse)
+	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
 		return nil, err
 	}
-	defer httpResp.Body.Close()
-
-	resp := new(struct {
-		*oidc.AccessTokenResponse
-		*oidc.Error
-	})
-	if err = json.NewDecoder(httpResp.Body).Decode(resp); err != nil {
-		return nil, err
-	}
-
-	if httpResp.StatusCode == http.StatusOK {
-		return resp.AccessTokenResponse, nil
-	}
-
-	return nil, resp.Error
+	return resp, nil
 }
 
 func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
