@@ -45,8 +45,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/zitadel/oidc/v3/pkg/client/rp"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 )
 
 var (

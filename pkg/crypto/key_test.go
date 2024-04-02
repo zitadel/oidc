@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/zitadel/oidc/v3/pkg/crypto"
+	"github.com/zitadel/oidc/v4/pkg/crypto"
 )
 
 func TestBytesToPrivateKey(tt *testing.T) {

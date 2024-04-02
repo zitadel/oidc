@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/securecookie"
 	"github.com/sirupsen/logrus"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 type deviceAuthenticate interface {

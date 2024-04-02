@@ -8,8 +8,8 @@ import (
 	jose "github.com/go-jose/go-jose/v3"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v3/pkg/client"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/client"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 type TokenSource interface {

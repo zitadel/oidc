@@ -1,4 +1,4 @@
-module github.com/zitadel/oidc/v3
+module github.com/zitadel/oidc/v4
 
 go 1.21
 

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/zitadel/oidc/v3/example/server/exampleop"
-	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v4/example/server/exampleop"
+	"github.com/zitadel/oidc/v4/example/server/storage"
 )
 
 func main() {

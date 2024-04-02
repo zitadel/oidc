@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
-	str "github.com/zitadel/oidc/v3/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
+	str "github.com/zitadel/oidc/v4/pkg/strings"
 )
 
 type AuthRequest interface {

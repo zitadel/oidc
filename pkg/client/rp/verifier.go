@@ -6,8 +6,8 @@ import (
 
 	jose "github.com/go-jose/go-jose/v3"
 
-	"github.com/zitadel/oidc/v3/pkg/client"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/client"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification

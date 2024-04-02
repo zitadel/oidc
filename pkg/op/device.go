@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
-	strs "github.com/zitadel/oidc/v3/pkg/strings"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
+	strs "github.com/zitadel/oidc/v4/pkg/strings"
 )
 
 type DeviceAuthorizationConfig struct {

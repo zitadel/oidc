@@ -12,8 +12,8 @@ import (
 	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v3/example/server/storage"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v4/example/server/storage"
+	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	jose "github.com/go-jose/go-jose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tu "github.com/zitadel/oidc/v3/internal/testutil"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	tu "github.com/zitadel/oidc/v4/internal/testutil"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 func TestVerifyTokens(t *testing.T) {

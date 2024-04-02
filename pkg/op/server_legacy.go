@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 // ExtendedLegacyServer allows embedding [LegacyServer] in a struct,
