@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 
 	str "github.com/zitadel/oidc/v3/pkg/strings"
 )
@@ -148,8 +148,13 @@ func CheckAuthorizedParty(claims Claims, clientID string) error {
 }
 
 func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
-	jws, err := jose.ParseSigned(token)
+	jws, err := jose.ParseSigned(token, toJoseSignatureAlgorithms(supportedSigAlgs))
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "go-jose/go-jose: unexpected signature algorithm") {
+			// TODO(v4): we should wrap errors instead of returning static ones.
+			// This is a workaround so we keep returning the same error for now.
+			return ErrSignatureUnsupportedAlg
+		}
 		return ErrParse
 	}
 	if len(jws.Signatures) == 0 {
@@ -159,12 +164,6 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 		return ErrSignatureMultiple
 	}
 	sig := jws.Signatures[0]
-	if len(supportedSigAlgs) == 0 {
-		supportedSigAlgs = []string{"RS256"}
-	}
-	if !str.Contains(supportedSigAlgs, sig.Header.Algorithm) {
-		return fmt.Errorf("%w: id token signed with unsupported algorithm, expected %q got %q", ErrSignatureUnsupportedAlg, supportedSigAlgs, sig.Header.Algorithm)
-	}
 
 	signedPayload, err := set.VerifySignature(ctx, jws)
 	if err != nil {
@@ -178,6 +177,18 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 	claims.SetSignatureAlgorithm(jose.SignatureAlgorithm(sig.Header.Algorithm))
 
 	return nil
+}
+
+// TODO(v4): Use the new jose.SignatureAlgorithm type directly, instead of string.
+func toJoseSignatureAlgorithms(algorithms []string) []jose.SignatureAlgorithm {
+	out := make([]jose.SignatureAlgorithm, len(algorithms))
+	for i := range algorithms {
+		out[i] = jose.SignatureAlgorithm(algorithms[i])
+	}
+	if len(out) == 0 {
+		out = append(out, jose.RS256)
+	}
+	return out
 }
 
 func CheckExpiration(claims Claims, offset time.Duration) error {

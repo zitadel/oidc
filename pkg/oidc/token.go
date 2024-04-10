@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	"golang.org/x/oauth2"
 
 	"github.com/muhlemmer/gu"

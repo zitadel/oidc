@@ -7,7 +7,7 @@ package mock
 import (
 	reflect "reflect"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	gomock "github.com/golang/mock/gomock"
 )
 
