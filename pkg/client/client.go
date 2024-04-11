@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"

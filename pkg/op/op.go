@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/rs/cors"
 	"github.com/zitadel/schema"
 	"go.opentelemetry.io/otel"
