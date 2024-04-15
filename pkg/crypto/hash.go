@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"hash"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 )
 
 var ErrUnsupportedAlgorithm = errors.New("unsupported signing algorithm")
