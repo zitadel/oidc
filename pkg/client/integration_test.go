@@ -111,6 +111,92 @@ func testRelyingPartySession(t *testing.T, wrapServer bool) {
 	}
 }
 
+func TestRelyingPartyWithSigningAlgsFromDiscovery(t *testing.T) {
+	targetURL := "http://local-site"
+	localURL, err := url.Parse(targetURL + "/login?requestID=1234")
+	require.NoError(t, err, "local url")
+
+	t.Log("------- start example OP ------")
+	seed := rand.New(rand.NewSource(int64(os.Getpid()) + time.Now().UnixNano()))
+	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
+	clientSecret := "secret"
+	client := storage.WebClient(clientID, clientSecret, targetURL)
+	storage.RegisterClients(client)
+	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
+	var dh deferredHandler
+	opServer := httptest.NewServer(&dh)
+	defer opServer.Close()
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, true)
+
+	t.Log("------- create RP ------")
+	provider, err := rp.NewRelyingPartyOIDC(
+		CTX,
+		opServer.URL,
+		clientID,
+		clientSecret,
+		targetURL,
+		[]string{"openid"},
+		rp.WithSigningAlgsFromDiscovery(),
+	)
+	require.NoError(t, err, "new rp")
+
+	t.Log("------- run authorization code flow ------")
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err, "create cookie jar")
+	httpClient := &http.Client{
+		Timeout: time.Second * 5,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Jar: jar,
+	}
+	state := "state-" + strconv.FormatInt(seed.Int63(), 25)
+	capturedW := httptest.NewRecorder()
+	get := httptest.NewRequest("GET", localURL.String(), nil)
+	rp.AuthURLHandler(func() string { return state }, provider,
+		rp.WithPromptURLParam("Hello, World!", "Goodbye, World!"),
+		rp.WithURLParam("custom", "param"),
+	)(capturedW, get)
+	defer func() {
+		if t.Failed() {
+			t.Log("response body (redirect from RP to OP)", capturedW.Body.String())
+		}
+	}()
+	resp := capturedW.Result()
+	startAuthURL, err := resp.Location()
+	require.NoError(t, err, "get redirect")
+	loginPageURL := getRedirect(t, "get redirect to login page", httpClient, startAuthURL)
+	form := getForm(t, "get login form", httpClient, loginPageURL)
+	defer func() {
+		if t.Failed() {
+			t.Logf("login form (unfilled): %s", string(form))
+		}
+	}()
+	postLoginRedirectURL := fillForm(t, "fill login form", httpClient, form, loginPageURL,
+		gosubmit.Set("username", "test-user@local-site"),
+		gosubmit.Set("password", "verysecure"),
+	)
+	codeBearingURL := getRedirect(t, "get redirect with code", httpClient, postLoginRedirectURL)
+	capturedW = httptest.NewRecorder()
+	get = httptest.NewRequest("GET", codeBearingURL.String(), nil)
+	var idToken string
+	redirect := func(w http.ResponseWriter, r *http.Request, newTokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp rp.RelyingParty, info *oidc.UserInfo) {
+		idToken = newTokens.IDToken
+		http.Redirect(w, r, targetURL, http.StatusFound)
+	}
+	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider)(capturedW, get)
+	defer func() {
+		if t.Failed() {
+			t.Log("token exchange response body", capturedW.Body.String())
+			require.GreaterOrEqual(t, capturedW.Code, 200, "captured response code")
+		}
+	}()
+
+	t.Log("------- verify id token ------")
+	_, err = rp.VerifyIDToken[*oidc.IDTokenClaims](CTX, idToken, provider.IDTokenVerifier())
+	require.NoError(t, err, "verify id token")
+}
+
 func TestResourceServerTokenExchange(t *testing.T) {
 	for _, wrapServer := range []bool{false, true} {
 		t.Run(fmt.Sprint("wrapServer ", wrapServer), func(t *testing.T) {
