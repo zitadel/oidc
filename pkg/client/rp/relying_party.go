@@ -90,12 +90,13 @@ var DefaultUnauthorizedHandler UnauthorizedHandler = func(w http.ResponseWriter,
 }
 
 type relyingParty struct {
-	issuer            string
-	DiscoveryEndpoint string
-	endpoints         Endpoints
-	oauthConfig       *oauth2.Config
-	oauth2Only        bool
-	pkce              bool
+	issuer                      string
+	DiscoveryEndpoint           string
+	endpoints                   Endpoints
+	oauthConfig                 *oauth2.Config
+	oauth2Only                  bool
+	pkce                        bool
+	useSigningAlgsFromDiscovery bool
 
 	httpClient    *http.Client
 	cookieHandler *httphelper.CookieHandler
@@ -238,6 +239,9 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	if err != nil {
 		return nil, err
 	}
+	if rp.useSigningAlgsFromDiscovery {
+		rp.verifierOpts = append(rp.verifierOpts, WithSupportedSigningAlgorithms(discoveryConfiguration.IDTokenSigningAlgValuesSupported...))
+	}
 	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
@@ -344,6 +348,15 @@ func WithJWTProfile(signerFromKey SignerFromKey) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(rp *relyingParty) error {
 		rp.logger = logger
+		return nil
+	}
+}
+
+// WithSigningAlgsFromDiscovery appends the [WithSupportedSigningAlgorithms] option to the Verifier Options.
+// The algorithms returned in the `id_token_signing_alg_values_supported` from the discovery response will be set.
+func WithSigningAlgsFromDiscovery() Option {
+	return func(rp *relyingParty) error {
+		rp.useSigningAlgsFromDiscovery = true
 		return nil
 	}
 }
