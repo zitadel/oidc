@@ -60,7 +60,7 @@ type RelyingParty interface {
 	// UserinfoEndpoint returns the userinfo
 	UserinfoEndpoint() string
 
-	// GetDeviceAuthorizationEndpoint returns the enpoint which can
+	// GetDeviceAuthorizationEndpoint returns the endpoint which can
 	// be used to start a DeviceAuthorization flow.
 	GetDeviceAuthorizationEndpoint() string
 
@@ -388,7 +388,7 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 
 // AuthURLHandler extends the `AuthURL` method with a http redirect handler
 // including handling setting cookie for secure `state` transfer.
-// Custom paramaters can optionally be set to the redirect URL.
+// Custom parameters can optionally be set to the redirect URL.
 func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		opts := make([]AuthURLOpt, len(urlParam))
@@ -642,7 +642,7 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 	}
 }
 
-// withURLParam sets custom url paramaters.
+// withURLParam sets custom url parameters.
 // This is the generalized, unexported, function used by both
 // URLParamOpt and AuthURLOpt.
 func withURLParam(key, value string) func() []oauth2.AuthCodeOption {
@@ -734,7 +734,7 @@ type RefreshTokenRequest struct {
 // the old one should be considered invalid.
 //
 // In case the RP is not OAuth2 only and an IDToken was part of the response,
-// the IDToken and AccessToken will be verfied
+// the IDToken and AccessToken will be verified
 // and the IDToken and IDTokenClaims fields will be populated in the returned object.
 func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oidc.Tokens[C], error) {
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")

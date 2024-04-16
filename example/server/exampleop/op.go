@@ -56,7 +56,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("signed out successfully"))
-		// no need to check/log error, this will be handeled by the middleware.
+		// no need to check/log error, this will be handled by the middleware.
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
