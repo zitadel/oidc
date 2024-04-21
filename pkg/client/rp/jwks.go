@@ -217,7 +217,7 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 	ctx, span := client.Tracer.Start(ctx, "fetchRemoteKeys")
 	defer span.End()
 
-	req, err := http.NewRequest("GET", r.jwksURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", r.jwksURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("oidc: can't create request: %v", err)
 	}
