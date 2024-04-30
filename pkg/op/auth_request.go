@@ -61,7 +61,7 @@ func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Req
 	}
 }
 
-func authorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
+func AuthorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		AuthorizeCallback(w, r, authorizer)
 	}

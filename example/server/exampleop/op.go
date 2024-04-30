@@ -80,7 +80,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 
 	handler := http.Handler(provider)
 	if wrapServer {
-		handler = op.RegisterLegacyServer(op.NewLegacyServer(provider, *op.DefaultEndpoints))
+		handler = op.RegisterLegacyServer(op.NewLegacyServer(provider, *op.DefaultEndpoints), op.AuthorizeCallbackHandler(provider))
 	}
 
 	// we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)

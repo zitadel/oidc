@@ -32,7 +32,7 @@ func jwtProfile() (string, error) {
 }
 
 func TestServerRoutes(t *testing.T) {
-	server := op.RegisterLegacyServer(op.NewLegacyServer(testProvider, *op.DefaultEndpoints))
+	server := op.RegisterLegacyServer(op.NewLegacyServer(testProvider, *op.DefaultEndpoints), op.AuthorizeCallbackHandler(testProvider))
 
 	storage := testProvider.Storage().(routesTestStorage)
 	ctx := op.ContextWithIssuer(context.Background(), testIssuer)
