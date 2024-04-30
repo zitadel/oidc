@@ -22,17 +22,16 @@ type ExtendedLegacyServer interface {
 }
 
 // RegisterLegacyServer registers a [LegacyServer] or an extension thereof.
-// It takes care of registering the IssuerFromRequest middleware
-// and Authorization Callback Routes.
+// It takes care of registering the IssuerFromRequest middleware.
+// The authorizeCallbackHandler is registered on `/callback` under the authorization endpoint.
 // Neither are part of the bare [Server] interface.
 //
 // EXPERIMENTAL: may change until v4
-func RegisterLegacyServer(s ExtendedLegacyServer, options ...ServerOption) http.Handler {
-	provider := s.Provider()
+func RegisterLegacyServer(s ExtendedLegacyServer, authorizeCallbackHandler http.HandlerFunc, options ...ServerOption) http.Handler {
 	options = append(options,
-		WithHTTPMiddleware(intercept(provider.IssuerFromRequest)),
+		WithHTTPMiddleware(intercept(s.Provider().IssuerFromRequest)),
 		WithSetRouter(func(r chi.Router) {
-			r.HandleFunc(s.Endpoints().Authorization.Relative()+authCallbackPathSuffix, authorizeCallbackHandler(provider))
+			r.HandleFunc(s.Endpoints().Authorization.Relative()+authCallbackPathSuffix, authorizeCallbackHandler)
 		}),
 	)
 	return RegisterServer(s, s.Endpoints(), options...)
