@@ -737,8 +737,8 @@ type RefreshTokenRequest struct {
 	Scopes              oidc.SpaceDelimitedArray `schema:"scope"`
 	ClientID            string                   `schema:"client_id"`
 	ClientSecret        string                   `schema:"client_secret"`
-	ClientAssertion     string                   `schema:"client_assertion"`
-	ClientAssertionType string                   `schema:"client_assertion_type"`
+	ClientAssertion     string                   `schema:"client_assertion,omitempty"`
+	ClientAssertionType string                   `schema:"client_assertion_type,omitempty"`
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
