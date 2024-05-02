@@ -73,8 +73,10 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
-		return nilClaims, err
+	if v.Nonce != nil {
+		if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
+			return nilClaims, err
+		}
 	}
 
 	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR); err != nil {
