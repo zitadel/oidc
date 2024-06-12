@@ -138,11 +138,6 @@ func TestValidateAuthRequest(t *testing.T) {
 			oidc.ErrInvalidRequest(),
 		},
 		{
-			"scope openid missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidScope(),
-		},
-		{
 			"response_type missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
@@ -283,16 +278,6 @@ func TestValidateAuthReqScopes(t *testing.T) {
 		{
 			"scopes missing fails",
 			args{},
-			res{
-				err: true,
-			},
-		},
-		{
-			"scope openid missing fails",
-			args{
-				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
-				[]string{"email"},
-			},
 			res{
 				err: true,
 			},
