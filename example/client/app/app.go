@@ -108,6 +108,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("content-type", "application/json")
 		w.Write(data)
 	}
 
