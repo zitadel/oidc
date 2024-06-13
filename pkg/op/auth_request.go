@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -250,37 +251,23 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 	return maxAge, nil
 }
 
-// ValidateAuthReqScopes validates the passed scopes
+// ValidateAuthReqScopes validates the passed scopes and deletes any unsupported scopes.
+// An error is returned if scopes is empty.
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
 		return nil, oidc.ErrInvalidRequest().
 			WithDescription("The scope of your request is missing. Please ensure some scopes are requested. " +
 				"If you have any questions, you may contact the administrator of the application.")
 	}
-	openID := false
-	for i := len(scopes) - 1; i >= 0; i-- {
-		scope := scopes[i]
-		if scope == oidc.ScopeOpenID {
-			openID = true
-			continue
-		}
-		if !(scope == oidc.ScopeProfile ||
+	scopes = slices.DeleteFunc(scopes, func(scope string) bool {
+		return !(scope == oidc.ScopeOpenID ||
+			scope == oidc.ScopeProfile ||
 			scope == oidc.ScopeEmail ||
 			scope == oidc.ScopePhone ||
 			scope == oidc.ScopeAddress ||
 			scope == oidc.ScopeOfflineAccess) &&
-			!client.IsScopeAllowed(scope) {
-			scopes[i] = scopes[len(scopes)-1]
-			scopes[len(scopes)-1] = ""
-			scopes = scopes[:len(scopes)-1]
-		}
-	}
-	if !openID {
-		return nil, oidc.ErrInvalidScope().WithDescription("The scope openid is missing in your request. " +
-			"Please ensure the scope openid is added to the request. " +
-			"If you have any questions, you may contact the administrator of the application.")
-	}
-
+			!client.IsScopeAllowed(scope)
+	})
 	return scopes, nil
 }
 
