@@ -9,6 +9,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/muhlemmer/gu"
+
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 )
 
@@ -344,12 +345,12 @@ func AppendClientIDToAudience(clientID string, audience []string) []string {
 }
 
 func GenerateJWTProfileToken(assertion *JWTProfileAssertionClaims) (string, error) {
-	privateKey, err := crypto.BytesToPrivateKey(assertion.PrivateKey)
+	privateKey, algorithm, err := crypto.BytesToPrivateKey(assertion.PrivateKey)
 	if err != nil {
 		return "", err
 	}
 	key := jose.SigningKey{
-		Algorithm: jose.RS256,
+		Algorithm: algorithm,
 		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: assertion.PrivateKeyID},
 	}
 	signer, err := jose.NewSigner(key, &jose.SignerOptions{})

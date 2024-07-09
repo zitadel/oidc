@@ -12,11 +12,12 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
+	"go.opentelemetry.io/otel"
+	"golang.org/x/oauth2"
+
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"go.opentelemetry.io/otel"
-	"golang.org/x/oauth2"
 )
 
 var (
@@ -196,12 +197,12 @@ func CallTokenExchangeEndpoint(ctx context.Context, request any, authFn any, cal
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
-	privateKey, err := crypto.BytesToPrivateKey(key)
+	privateKey, algorithm, err := crypto.BytesToPrivateKey(key)
 	if err != nil {
 		return nil, err
 	}
 	signingKey := jose.SigningKey{
-		Algorithm: jose.RS256,
+		Algorithm: algorithm,
 		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: keyID},
 	}
 	return jose.NewSigner(signingKey, &jose.SignerOptions{})
