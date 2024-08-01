@@ -184,6 +184,13 @@ func (e *Error) WithParent(err error) *Error {
 	return e
 }
 
+// WithReturnParentToClient allows returning the set parent error to the HTTP client.
+// Currently it only supports setting the parent inside JSON responses, not redirect URLs.
+// As Go errors don't unmarshal well, only the marshaller is implemented for the moment.
+//
+// Warning: parent errors may contain sensitive data or unwanted details about the server status.
+// Also, the `parent` field is not a standard error field and might confuse certain clients
+// that require fully compliant responses.
 func (e *Error) WithReturnParentToClient(b bool) *Error {
 	e.returnParent = b
 	return e
