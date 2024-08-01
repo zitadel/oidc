@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -133,6 +134,24 @@ type Error struct {
 	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
 	State            string    `json:"state,omitempty" schema:"state,omitempty"`
 	redirectDisabled bool      `schema:"-"`
+	returnParent     bool      `schema:"-"`
+}
+
+func (e *Error) MarshalJSON() ([]byte, error) {
+	m := struct {
+		Error            errorType `json:"error"`
+		ErrorDescription string    `json:"error_description,omitempty"`
+		State            string    `json:"state,omitempty"`
+		Parent           string    `json:"parent,omitempty"`
+	}{
+		Error:            e.ErrorType,
+		ErrorDescription: e.Description,
+		State:            e.State,
+	}
+	if e.returnParent {
+		m.Parent = e.Parent.Error()
+	}
+	return json.Marshal(m)
 }
 
 func (e *Error) Error() string {
@@ -162,6 +181,11 @@ func (e *Error) Is(target error) bool {
 
 func (e *Error) WithParent(err error) *Error {
 	e.Parent = err
+	return e
+}
+
+func (e *Error) WithReturnParentToClient(b bool) *Error {
+	e.returnParent = b
 	return e
 }
 
