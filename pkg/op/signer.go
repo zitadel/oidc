@@ -3,7 +3,7 @@ package op
 import (
 	"errors"
 
-	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/go-jose/go-jose.v2"
 )
 
 var ErrSignerCreationFailed = errors.New("signer creation failed")

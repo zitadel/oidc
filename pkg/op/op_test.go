@@ -214,7 +214,7 @@ func TestRoutes(t *testing.T) {
 			wantCode: http.StatusOK,
 			contains: []string{
 				`{"access_token":"`,
-				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer","expires_in":299,"scope":"openid offline_access","refresh_token":"`,
+				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer","expires_in":300,"scope":"openid offline_access","refresh_token":"`,
 			},
 		},
 		{
@@ -227,7 +227,7 @@ func TestRoutes(t *testing.T) {
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.Encode(),
 			},
 			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
+			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":300}`},
 		},
 		{
 			// This call will fail. A successfull test is already
@@ -298,7 +298,7 @@ func TestRoutes(t *testing.T) {
 			contains: []string{
 				`{"access_token":"`,
 				`","token_type":"Bearer","refresh_token":"`,
-				`","expires_in":299,"id_token":"`,
+				`","expires_in":300,"id_token":"`,
 			},
 		},
 		{
