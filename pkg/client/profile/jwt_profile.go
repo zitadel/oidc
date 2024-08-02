@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/go-jose/go-jose.v2"
 
 	"github.com/zitadel/oidc/v2/pkg/client"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
