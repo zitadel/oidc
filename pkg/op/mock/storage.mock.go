@@ -12,7 +12,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	oidc "github.com/zitadel/oidc/v2/pkg/oidc"
 	op "github.com/zitadel/oidc/v2/pkg/op"
-	jose "gopkg.in/square/go-jose.v2"
+	jose "gopkg.in/go-jose/go-jose.v2"
 )
 
 // MockStorage is a mock of Storage interface.
