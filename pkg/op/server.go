@@ -246,7 +246,7 @@ func NewRedirect(url string) *Redirect {
 }
 
 func (red *Redirect) writeOut(w http.ResponseWriter, r *http.Request) {
-	gu.MapMerge(r.Header, w.Header())
+	gu.MapMerge(red.Header, w.Header())
 	http.Redirect(w, r, red.URL, http.StatusFound)
 }
 
