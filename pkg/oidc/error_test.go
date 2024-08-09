@@ -1,11 +1,14 @@
 package oidc
 
 import (
+	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultToServerError(t *testing.T) {
@@ -148,6 +151,42 @@ func TestError_LogValue(t *testing.T) {
 			}
 			got := e.LogValue()
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestError_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		e    *Error
+		want string
+	}{
+		{
+			name: "simple error",
+			e:    ErrAccessDenied(),
+			want: `{"error":"access_denied","error_description":"The authorization request was denied."}`,
+		},
+		{
+			name: "with description",
+			e:    ErrAccessDenied().WithDescription("oops"),
+			want: `{"error":"access_denied","error_description":"oops"}`,
+		},
+		{
+			name: "with parent",
+			e:    ErrServerError().WithParent(errors.New("oops")),
+			want: `{"error":"server_error"}`,
+		},
+		{
+			name: "with return parent",
+			e:    ErrServerError().WithParent(errors.New("oops")).WithReturnParentToClient(true),
+			want: `{"error":"server_error","parent":"oops"}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(tt.e)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.want, string(got))
 		})
 	}
 }
