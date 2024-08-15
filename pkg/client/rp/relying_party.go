@@ -541,7 +541,7 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 			rp.CookieHandler().DeleteCookie(w, pkceCode)
 		}
 		if rp.Signer() != nil {
-			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer(), rp.OAuthConfig().Endpoint.TokenURL}, time.Hour, rp.Signer())
 			if err != nil {
 				unauthorizedError(w, r, "failed to build assertion: "+err.Error(), state, rp)
 				return
