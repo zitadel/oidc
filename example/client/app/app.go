@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
@@ -53,7 +54,23 @@ func main() {
 
 	options := []rp.Option{
 		rp.WithCookieHandler(cookieHandler),
-		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
+		rp.WithVerifierOpts(
+			rp.WithIssuedAtOffset(5*time.Second),
+			// When the OP uses other signing algorithms then RS256,
+			// We need to tell the RP to accept them.
+			// The actual handshake is done with the "kid" and "alg" header claims.
+			// However, [jose.ParseSigned] needs a list of algorithms we are willing to accept.
+			// This example sets all the algorithms the ZITADEL product supports.
+			rp.WithSupportedSigningAlgorithms(
+				string(jose.EdDSA),
+				string(jose.RS256),
+				string(jose.RS384),
+				string(jose.RS512),
+				string(jose.ES256),
+				string(jose.ES384),
+				string(jose.ES512),
+			),
+		),
 		rp.WithHTTPClient(client),
 		rp.WithLogger(logger),
 	}
