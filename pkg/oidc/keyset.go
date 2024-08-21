@@ -6,6 +6,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"errors"
+	"strings"
 
 	jose "github.com/go-jose/go-jose/v4"
 )
@@ -92,17 +93,17 @@ func FindMatchingKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (k
 }
 
 func algToKeyType(key any, alg string) bool {
-	switch alg[0] {
-	case 'R', 'P':
+	if strings.HasPrefix(alg, "RS") || strings.HasPrefix(alg, "PS") {
 		_, ok := key.(*rsa.PublicKey)
 		return ok
-	case 'E':
+	}
+	if strings.HasPrefix(alg, "ES") {
 		_, ok := key.(*ecdsa.PublicKey)
 		return ok
-	case 'O':
-		_, ok := key.(*ed25519.PublicKey)
-		return ok
-	default:
-		return false
 	}
+	if alg == string(jose.EdDSA) {
+		_, ok := key.(ed25519.PublicKey)
+		return ok
+	}
+	return false
 }
