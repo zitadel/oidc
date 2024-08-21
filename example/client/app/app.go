@@ -56,6 +56,7 @@ func main() {
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
 		rp.WithHTTPClient(client),
 		rp.WithLogger(logger),
+		rp.WithSigningAlgsFromDiscovery(),
 	}
 	if clientSecret == "" {
 		options = append(options, rp.WithPKCE(cookieHandler))
