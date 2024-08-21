@@ -132,27 +132,22 @@ func TestValidateAuthRequest(t *testing.T) {
 	}{
 		{
 			"scope missing fails",
-			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
+			args{&oidc.AuthRequest{ClientID: "client_id", RedirectURI: "https://registered.com/callback"}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
 		},
 		{
 			"scope openid missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
+			args{&oidc.AuthRequest{ClientID: "client_id", RedirectURI: "https://registered.com/callback", Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidScope(),
 		},
 		{
 			"response_type missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidRequest(),
-		},
-		{
-			"client_id missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
+			args{&oidc.AuthRequest{ClientID: "client_id", RedirectURI: "https://registered.com/callback", Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
 		},
 		{
 			"redirect_uri missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
+			args{&oidc.AuthRequest{ClientID: "client_id", Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
 		},
 	}

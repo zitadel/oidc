@@ -75,19 +75,27 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
 		authReq, err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
 		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer.Encoder())
+			AuthRequestError(w, r, nil, err, authorizer.Encoder())
 			return
 		}
 	}
 	if authReq.ClientID == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing client_id"), authorizer.Encoder())
+		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing client_id"), authorizer.Encoder())
 		return
 	}
 	if authReq.RedirectURI == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing redirect_uri"), authorizer.Encoder())
+		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing redirect_uri"), authorizer.Encoder())
 		return
 	}
-	validation := ValidateAuthRequest
+
+	var client Client
+	validation := func(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (sub string, err error) {
+		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
+		if err != nil {
+			return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+		}
+		return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+	}
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
@@ -103,11 +111,6 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer.Encoder())
-		return
-	}
-	client, err := authorizer.Storage().GetClientByClientID(ctx, req.GetClientID())
-	if err != nil {
-		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer.Encoder())
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
@@ -204,21 +207,35 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 	authReq.RequestParam = ""
 }
 
-// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
+// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed.
+//
+// Deprecated: Use [ValidateAuthRequestClient] to prevent querying for the Client twice.
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier IDTokenHintVerifier) (sub string, err error) {
+	ctx, span := tracer.Start(ctx, "ValidateAuthRequest")
+	defer span.End()
+
+	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
+	if err != nil {
+		return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+	}
+	return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+}
+
+// ValidateAuthRequestClient validates the Auth request against the passed client.
+// If id_token_hint is part of the request, the subject of the token is returned.
+func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, client Client, verifier IDTokenHintVerifier) (sub string, err error) {
+	ctx, span := tracer.Start(ctx, "ValidateAuthRequestClient")
+	defer span.End()
+
+	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
+		return "", err
+	}
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return "", err
 	}
-	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
-	if err != nil {
-		return "", oidc.DefaultToServerError(err, "unable to retrieve client by id")
-	}
 	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
 	if err != nil {
-		return "", err
-	}
-	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return "", err
 	}
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
