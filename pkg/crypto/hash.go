@@ -21,6 +21,14 @@ func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 		return sha512.New384(), nil
 	case jose.RS512, jose.ES512, jose.PS512:
 		return sha512.New(), nil
+
+	// There is no published spec for this yet, but we have confirmation it will get published.
+	// There is consensus here: https://bitbucket.org/openid/connect/issues/1125/_hash-algorithm-for-eddsa-id-tokens
+	// Currently Go and go-jose only supports the ed25519 curve key for EdDSA, so we can safely assume sha512 here.
+	// It is unlikely ed448 will ever be supported: https://github.com/golang/go/issues/29390
+	case jose.EdDSA:
+		return sha512.New(), nil
+
 	default:
 		return nil, fmt.Errorf("%w: %q", ErrUnsupportedAlgorithm, sigAlgorithm)
 	}
