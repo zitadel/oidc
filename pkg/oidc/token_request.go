@@ -72,8 +72,8 @@ type AccessTokenRequest struct {
 	Code                string `schema:"code"`
 	RedirectURI         string `schema:"redirect_uri"`
 	ClientID            string `schema:"client_id"`
-	ClientSecret        string `schema:"client_secret"`
-	CodeVerifier        string `schema:"code_verifier"`
+	ClientSecret        string `schema:"client_secret,omitempty"`
+	CodeVerifier        string `schema:"code_verifier,omitempty"`
 	ClientAssertion     string `schema:"client_assertion,omitempty"`
 	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
 }
