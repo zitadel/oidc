@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v2/internal/testutil"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
-	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/go-jose/go-jose.v2"
 )
 
 func TestVerifyTokens(t *testing.T) {

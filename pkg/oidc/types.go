@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/muhlemmer/gu"
 	"golang.org/x/text/language"
-	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/go-jose/go-jose.v2"
 )
 
 type Audience []string
