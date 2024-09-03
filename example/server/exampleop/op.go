@@ -12,21 +12,12 @@ import (
 	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v3/example/server/storage"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 const (
 	pathLoggedOut = "/logged-out"
 )
-
-func init() {
-	storage.RegisterClients(
-		storage.NativeClient("native"),
-		storage.WebClient("web", "secret"),
-		storage.WebClient("api", "secret"),
-	)
-}
 
 type Storage interface {
 	op.Storage
