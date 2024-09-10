@@ -145,6 +145,7 @@ func TestNewAccessTokenClaims(t *testing.T) {
 			Subject:    "hello@me.com",
 			Audience:   Audience{"foo"},
 			Expiration: 12345,
+			ClientID:   "foo",
 			JWTID:      "900",
 		},
 	}
