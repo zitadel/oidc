@@ -117,6 +117,7 @@ func NewAccessTokenClaims(issuer, subject string, audience []string, expiration 
 			Expiration: FromTime(expiration),
 			IssuedAt:   FromTime(now),
 			NotBefore:  FromTime(now),
+			ClientID:   clientID,
 			JWTID:      jwtid,
 		},
 	}
