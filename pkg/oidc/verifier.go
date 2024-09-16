@@ -40,6 +40,7 @@ type IDClaims interface {
 
 var (
 	ErrParse                   = errors.New("parsing of request failed")
+	ErrDiscoveryFailed         = errors.New("OpenID Provider Configuration Discovery is failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
 	ErrSubjectMissing          = errors.New("subject missing")
 	ErrAudience                = errors.New("audience is not valid")
