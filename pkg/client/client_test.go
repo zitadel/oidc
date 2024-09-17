@@ -40,9 +40,6 @@ func TestDiscover(t *testing.T) {
 			args: args{
 				issuer: "https://example.com",
 			},
-			wantFields: &wantFields{
-				UILocalesSupported: true,
-			},
 			wantErr: oidc.ErrDiscoveryFailed,
 		},
 	}
