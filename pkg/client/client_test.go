@@ -46,12 +46,7 @@ func TestDiscover(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := Discover(context.Background(), tt.args.issuer, http.DefaultClient, tt.args.wellKnownUrl...)
-			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
-				return
-			}
-
-			require.NoError(t, err)
+			require.ErrorIs(t, err, tt.wantErr)
 			if tt.wantFields == nil {
 				return
 			}
