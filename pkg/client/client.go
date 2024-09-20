@@ -42,7 +42,7 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
 	err = httphelper.HttpRequest(httpClient, req, &discoveryConfig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(oidc.ErrDiscoveryFailed, err)
 	}
 	if logger, ok := logging.FromContext(ctx); ok {
 		logger.Debug("discover", "config", discoveryConfig)

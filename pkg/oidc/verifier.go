@@ -41,6 +41,7 @@ type IDClaims interface {
 var (
 	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
+	ErrDiscoveryFailed         = errors.New("OpenID Provider Configuration Discovery has failed")
 	ErrSubjectMissing          = errors.New("subject missing")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
