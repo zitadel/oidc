@@ -51,6 +51,11 @@ type Client interface {
 	ClockSkew() time.Duration
 }
 
+type ClientBackChannelLogout interface {
+	Client
+	BackChannelLogoutURI() string
+}
+
 // HasRedirectGlobs is an optional interface that can be implemented by implementors of
 // Client. See https://pkg.go.dev/path#Match for glob
 // interpretation. Redirect URIs that match either the non-glob version or the

@@ -78,6 +78,34 @@ func (mr *MockConfigurationMockRecorder) AuthorizationEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).AuthorizationEndpoint))
 }
 
+// BackChannelLogoutSessionSupported mocks base method.
+func (m *MockConfiguration) BackChannelLogoutSessionSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BackChannelLogoutSessionSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// BackChannelLogoutSessionSupported indicates an expected call of BackChannelLogoutSessionSupported.
+func (mr *MockConfigurationMockRecorder) BackChannelLogoutSessionSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackChannelLogoutSessionSupported", reflect.TypeOf((*MockConfiguration)(nil).BackChannelLogoutSessionSupported))
+}
+
+// BackChannelLogoutSupported mocks base method.
+func (m *MockConfiguration) BackChannelLogoutSupported() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BackChannelLogoutSupported")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// BackChannelLogoutSupported indicates an expected call of BackChannelLogoutSupported.
+func (mr *MockConfigurationMockRecorder) BackChannelLogoutSupported() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackChannelLogoutSupported", reflect.TypeOf((*MockConfiguration)(nil).BackChannelLogoutSupported))
+}
+
 // CodeMethodS256Supported mocks base method.
 func (m *MockConfiguration) CodeMethodS256Supported() bool {
 	m.ctrl.T.Helper()
