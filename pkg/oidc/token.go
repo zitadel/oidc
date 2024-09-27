@@ -382,3 +382,40 @@ type TokenExchangeResponse struct {
 	// if the requested_token_type was Access Token and scope contained openid.
 	IDToken string `json:"id_token,omitempty"`
 }
+
+type LogoutTokenClaims struct {
+	Issuer     string         `json:"iss,omitempty"`
+	Subject    string         `json:"sub,omitempty"`
+	Audience   Audience       `json:"aud,omitempty"`
+	IssuedAt   Time           `json:"iat,omitempty"`
+	Expiration Time           `json:"exp,omitempty"`
+	JWTID      string         `json:"jti,omitempty"`
+	Events     map[string]any `json:"events,omitempty"`
+	SessionID  string         `json:"sid,omitempty"`
+	Claims     map[string]any `json:"-"`
+}
+
+type ltcAlias LogoutTokenClaims
+
+func (i *LogoutTokenClaims) MarshalJSON() ([]byte, error) {
+	return mergeAndMarshalClaims((*ltcAlias)(i), i.Claims)
+}
+
+func (i *LogoutTokenClaims) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONMulti(data, (*ltcAlias)(i), &i.Claims)
+}
+
+func NewLogoutTokenClaims(issuer, subject string, audience Audience, expiration time.Time, jwtID, sessionID string, skew time.Duration) *LogoutTokenClaims {
+	return &LogoutTokenClaims{
+		Issuer:     issuer,
+		Subject:    subject,
+		Audience:   audience,
+		IssuedAt:   FromTime(time.Now().Add(-skew)),
+		Expiration: FromTime(expiration),
+		JWTID:      jwtID,
+		Events: map[string]any{
+			"http://schemas.openid.net/event/backchannel-logout": struct{}{},
+		},
+		SessionID: sessionID,
+	}
+}
