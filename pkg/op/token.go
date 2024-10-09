@@ -65,6 +65,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    exp,
 		State:        state,
+		Scope:        request.GetScopes(),
 	}, nil
 }
 
