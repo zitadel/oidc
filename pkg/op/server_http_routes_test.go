@@ -145,7 +145,7 @@ func TestServerRoutes(t *testing.T) {
 				"assertion":  jwtProfileToken,
 			},
 			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":`, `"token_type":"Bearer","expires_in":299}`},
+			contains: []string{`{"access_token":`, `"token_type":"Bearer","expires_in":299,"scope":"openid"}`},
 		},
 		{
 			name:      "Token exchange",
@@ -174,7 +174,7 @@ func TestServerRoutes(t *testing.T) {
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
+			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
 		},
 		{
 			// This call will fail. A successful test is already
