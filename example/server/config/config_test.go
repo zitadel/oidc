@@ -26,11 +26,13 @@ func TestFromEnvVars(t *testing.T) {
 				Port:         "6666",
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
+				Issuer:       "123",
 			},
 			want: &Config{
 				Port:         "6666",
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
+				Issuer:       "123",
 			},
 		},
 		{
@@ -39,16 +41,19 @@ func TestFromEnvVars(t *testing.T) {
 				"PORT":          "1234",
 				"USERS_FILE":    "/path/to/users",
 				"REDIRECT_URIS": "http://redirect/redirect",
+				"ISSUER":        "someissuer",
 			},
 			defaults: &Config{
 				Port:         "6666",
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
+				Issuer:       "someissuer",
 			},
 			want: &Config{
 				Port:         "1234",
 				UsersFile:    "/path/to/users",
 				RedirectURIs: []string{"http://redirect/redirect"},
+				Issuer:       "someissuer",
 			},
 		},
 		{

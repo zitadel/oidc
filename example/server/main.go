@@ -13,22 +13,19 @@ import (
 
 func getUserStore(cfg *config.Config) (storage.UserStore, error) {
 	if cfg.UsersFile == "" {
-		return storage.NewUserStore(fmt.Sprintf("http://localhost:%s/", cfg.Port)), nil
+		return storage.NewUserStore(fmt.Sprintf("http://zitadel:%s/", cfg.Port)), nil
 	}
 	return storage.StoreFromFile(cfg.UsersFile)
 }
 
 func main() {
-	cfg := config.FromEnvVars(&config.Config{Port: "9998"})
+	cfg := config.FromEnvVars(&config.Config{Port: "9998", Issuer: "http://localhost:9998"})
 	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     slog.LevelDebug,
 		}),
 	)
-
-	//which gives us the issuer: http://localhost:9998/
-	issuer := fmt.Sprintf("http://localhost:%s/", cfg.Port)
 
 	storage.RegisterClients(
 		storage.NativeClient("native", cfg.RedirectURIs...),
@@ -45,13 +42,13 @@ func main() {
 		os.Exit(1)
 	}
 	storage := storage.NewStorage(store)
-	router := exampleop.SetupServer(issuer, storage, logger, false)
+	router := exampleop.SetupServer(cfg.Issuer, storage, logger, false)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
 	}
-	logger.Info("server listening, press ctrl+c to stop", "addr", issuer)
+	logger.Info("server listening, press ctrl+c to stop", "addr", cfg.Issuer)
 	if server.ListenAndServe() != http.ErrServerClosed {
 		logger.Error("server terminated", "error", err)
 		os.Exit(1)
