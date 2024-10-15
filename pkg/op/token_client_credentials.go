@@ -120,5 +120,6 @@ func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest Toke
 		AccessToken: accessToken,
 		TokenType:   oidc.BearerToken,
 		ExpiresIn:   uint64(validity.Seconds()),
+		Scope:       tokenRequest.GetScopes(),
 	}, nil
 }

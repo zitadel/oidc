@@ -344,6 +344,7 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		RefreshToken: refreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    uint64(validity.Seconds()),
+		Scope:        tokenRequest.GetScopes(),
 	}
 
 	// TODO(v4): remove type assertion
