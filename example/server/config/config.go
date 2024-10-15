@@ -15,6 +15,7 @@ type Config struct {
 	RedirectURIs []string
 	UsersFile    string
 	Issuer       string
+	DevMode      bool
 }
 
 // FromEnvVars loads configuration parameters from environment variables.
@@ -28,6 +29,7 @@ func FromEnvVars(defaults *Config) *Config {
 		RedirectURIs: defaults.RedirectURIs,
 		UsersFile:    defaults.UsersFile,
 		Issuer:       defaults.Issuer,
+		DevMode:      defaults.DevMode,
 	}
 	if value, ok := os.LookupEnv("PORT"); ok {
 		cfg.Port = value
@@ -40,6 +42,9 @@ func FromEnvVars(defaults *Config) *Config {
 	}
 	if value, ok := os.LookupEnv("ISSUER"); ok {
 		cfg.Issuer = value
+	}
+	if value, ok := os.LookupEnv("DEV_MODE"); ok {
+		cfg.DevMode = value == "true"
 	}
 	return cfg
 }

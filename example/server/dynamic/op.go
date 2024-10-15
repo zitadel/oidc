@@ -28,7 +28,7 @@ var (
 
 func init() {
 	storage.RegisterClients(
-		storage.NativeClient("native"),
+		storage.NativeClient("native", false),
 		storage.WebClient("web", "secret"),
 		storage.WebClient("api", "secret"),
 	)

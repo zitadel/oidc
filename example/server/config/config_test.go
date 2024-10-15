@@ -27,12 +27,14 @@ func TestFromEnvVars(t *testing.T) {
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
 				Issuer:       "123",
+				DevMode:      true,
 			},
 			want: &Config{
 				Port:         "6666",
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
 				Issuer:       "123",
+				DevMode:      true,
 			},
 		},
 		{
@@ -42,18 +44,21 @@ func TestFromEnvVars(t *testing.T) {
 				"USERS_FILE":    "/path/to/users",
 				"REDIRECT_URIS": "http://redirect/redirect",
 				"ISSUER":        "someissuer",
+				"DEV_MODE":      "true",
 			},
 			defaults: &Config{
 				Port:         "6666",
 				UsersFile:    "/default/user/path",
 				RedirectURIs: []string{"re", "direct", "uris"},
 				Issuer:       "someissuer",
+				DevMode:      false,
 			},
 			want: &Config{
 				Port:         "1234",
 				UsersFile:    "/path/to/users",
 				RedirectURIs: []string{"http://redirect/redirect"},
 				Issuer:       "someissuer",
+				DevMode:      true,
 			},
 		},
 		{
@@ -75,7 +80,7 @@ func TestFromEnvVars(t *testing.T) {
 			}
 			cfg := FromEnvVars(tc.defaults)
 			if fmt.Sprint(cfg) != fmt.Sprint(tc.want) {
-				t.Errorf("Expected FromEnvVars()=%q, but got %q", tc.want, cfg)
+				t.Errorf("Expected FromEnvVars()=%v, but got %v", tc.want, cfg)
 			}
 		})
 	}

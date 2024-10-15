@@ -28,7 +28,7 @@ func main() {
 	)
 
 	storage.RegisterClients(
-		storage.NativeClient("native", cfg.RedirectURIs...),
+		storage.NativeClient("native", cfg.DevMode, cfg.RedirectURIs...),
 		storage.WebClient("web", "secret"),
 		storage.WebClient("api", "secret"),
 	)
