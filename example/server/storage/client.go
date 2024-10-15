@@ -144,7 +144,7 @@ func RegisterClients(registerClients ...*Client) {
 // - http://localhost without port specification (e.g. http://localhost/auth/callback)
 // - custom protocol (e.g. custom://auth/callback)
 // (the examples will be used as default, if none is provided)
-func NativeClient(id string, redirectURIs ...string) *Client {
+func NativeClient(id string, devMode bool, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
 			"http://localhost/auth/callback",
@@ -161,7 +161,7 @@ func NativeClient(id string, redirectURIs ...string) *Client {
 		responseTypes:                  []oidc.ResponseType{oidc.ResponseTypeCode},
 		grantTypes:                     []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken},
 		accessTokenType:                op.AccessTokenTypeBearer,
-		devMode:                        false,
+		devMode:                        devMode,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
 	}
