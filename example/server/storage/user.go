@@ -2,6 +2,8 @@ package storage
 
 import (
 	"crypto/rsa"
+	"encoding/json"
+	"os"
 	"strings"
 
 	"golang.org/x/text/language"
@@ -33,6 +35,18 @@ type UserStore interface {
 
 type userStore struct {
 	users map[string]*User
+}
+
+func StoreFromFile(path string) (UserStore, error) {
+	users := map[string]*User{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, &users); err != nil {
+		return nil, err
+	}
+	return userStore{users}, nil
 }
 
 func NewUserStore(issuer string) UserStore {

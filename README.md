@@ -23,7 +23,7 @@ Whenever possible we tried to reuse / extend existing packages like `OAuth2 for 
 The most important packages of the library:
 <pre>
 /pkg
-    /client            clients using the OP for retrieving, exchanging and verifying tokens       
+    /client            clients using the OP for retrieving, exchanging and verifying tokens
         /rp            definition and implementation of an OIDC Relying Party (client)
         /rs            definition and implementation of an OAuth Resource Server (API)
     /op                definition and implementation of an OIDC OpenID Provider (server)
@@ -55,20 +55,50 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://localhost:9998/ SCOPES="openid 
 ```
 
 - open http://localhost:9999/login in your browser
-- you will be redirected to op server and the login UI 
+- you will be redirected to op server and the login UI
 - login with user `test-user@localhost` and password `verysecure`
 - the OP will redirect you to the client app, which displays the user info
 
 for the dynamic issuer, just start it with:
 ```bash
 go run github.com/zitadel/oidc/v3/example/server/dynamic
-``` 
+```
 the oidc web client above will still work, but if you add `oidc.local` (pointing to 127.0.0.1) in your hosts file you can also start it with:
 ```bash
 CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid profile" PORT=9999 go run github.com/zitadel/oidc/v3/example/client/app
 ```
 
 > Note: Usernames are suffixed with the hostname (`test-user@localhost` or `test-user@oidc.local`)
+
+### Server configuration
+
+Example server allows extra configuration using environment variables and could be used for end to
+end testing of your services.
+
+| Name          | Format                               | Description                           |
+|---------------|--------------------------------------|---------------------------------------|
+| PORT          | Number between 1 and 65535           | OIDC listen port                      |
+| REDIRECT_URI  | Comma-separated URIs                 | List of allowed redirect URIs         |
+| USERS_FILE    | Path to json in local filesystem     | Users with their data and credentials |
+
+Here is json equivalent for one of the default users
+```json
+{
+    "id2": {
+        "ID":                "id2",
+        "Username":          "test-user2",
+        "Password":          "verysecure",
+        "FirstName":         "Test",
+        "LastName":          "User2",
+        "Email":             "test-user2@zitadel.ch",
+        "EmailVerified":     true,
+        "Phone":             "",
+        "PhoneVerified":     false,
+        "PreferredLanguage": "DE",
+        "IsAdmin":           false
+    }
+}
+```
 
 ## Features
 
@@ -115,7 +145,7 @@ For your convenience you can find the relevant guides linked below.
 
 ## Supported Go Versions
 
-For security reasons, we only support and recommend the use of one of the latest two Go versions (:white_check_mark:).  
+For security reasons, we only support and recommend the use of one of the latest two Go versions (:white_check_mark:).
 Versions that also build are marked with :warning:.
 
 | Version | Supported          |
