@@ -75,29 +75,29 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 Example server allows extra configuration using environment variables and could be used for end to
 end testing of your services.
 
-| Name          | Format                               | Description                           |	
-|---------------|--------------------------------------|---------------------------------------|	
-| PORT          | Number between 1 and 65535           | OIDC listen port                      |	
-| REDIRECT_URI  | Comma-separated URIs                 | List of allowed redirect URIs         |	
-| USERS_FILE    | Path to json in local filesystem     | Users with their data and credentials |	
+| Name          | Format                               | Description                           |
+|---------------|--------------------------------------|---------------------------------------|
+| PORT          | Number between 1 and 65535           | OIDC listen port                      |
+| REDIRECT_URI  | Comma-separated URIs                 | List of allowed redirect URIs         |
+| USERS_FILE    | Path to json in local filesystem     | Users with their data and credentials |
 
 Here is json equivalent for one of the default users
-```json	
-{	
-    "id2": {	
-        "ID":                "id2",	
-        "Username":          "test-user2",	
-        "Password":          "verysecure",	
-        "FirstName":         "Test",	
-        "LastName":          "User2",	
-        "Email":             "test-user2@zitadel.ch",	
-        "EmailVerified":     true,	
-        "Phone":             "",	
-        "PhoneVerified":     false,	
-        "PreferredLanguage": "DE",	
-        "IsAdmin":           false	
-    }	
-}	
+```json
+{
+    "id2": {
+        "ID":                "id2",
+        "Username":          "test-user2",
+        "Password":          "verysecure",
+        "FirstName":         "Test",
+        "LastName":          "User2",
+        "Email":             "test-user2@zitadel.ch",
+        "EmailVerified":     true,
+        "Phone":             "",
+        "PhoneVerified":     false,
+        "PreferredLanguage": "DE",
+        "IsAdmin":           false
+    }
+}
 ```
 
 ## Features
