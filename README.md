@@ -70,6 +70,36 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 
 > Note: Usernames are suffixed with the hostname (`test-user@localhost` or `test-user@oidc.local`)
 
+### Server configuration
+
+Example server allows extra configuration using environment variables and could be used for end to
+end testing of your services.
+
+| Name          | Format                               | Description                           |	
+|---------------|--------------------------------------|---------------------------------------|	
+| PORT          | Number between 1 and 65535           | OIDC listen port                      |	
+| REDIRECT_URI  | Comma-separated URIs                 | List of allowed redirect URIs         |	
+| USERS_FILE    | Path to json in local filesystem     | Users with their data and credentials |	
+
+Here is json equivalent for one of the default users
+```json	
+{	
+    "id2": {	
+        "ID":                "id2",	
+        "Username":          "test-user2",	
+        "Password":          "verysecure",	
+        "FirstName":         "Test",	
+        "LastName":          "User2",	
+        "Email":             "test-user2@zitadel.ch",	
+        "EmailVerified":     true,	
+        "Phone":             "",	
+        "PhoneVerified":     false,	
+        "PreferredLanguage": "DE",	
+        "IsAdmin":           false	
+    }	
+}	
+```
+
 ## Features
 
 |                      | Relying party | OpenID Provider | Specification                                |
@@ -117,7 +147,7 @@ For your convenience you can find the relevant guides linked below.
 
 ## Supported Go Versions
 
-For security reasons, we only support and recommend the use of one of the latest two Go versions (:white_check_mark:).  
+For security reasons, we only support and recommend the use of one of the latest two Go versions (:white_check_mark:).
 Versions that also build are marked with :warning:.
 
 | Version | Supported          |
