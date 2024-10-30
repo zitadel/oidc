@@ -61,6 +61,8 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
+		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
+		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
 	}
 }
 
@@ -92,6 +94,8 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
+		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
+		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
 	}
 }
 

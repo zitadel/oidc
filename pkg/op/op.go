@@ -158,16 +158,18 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	CryptoKey                [32]byte
-	DefaultLogoutRedirectURI string
-	CodeMethodS256           bool
-	AuthMethodPost           bool
-	AuthMethodPrivateKeyJWT  bool
-	GrantTypeRefreshToken    bool
-	RequestObjectSupported   bool
-	SupportedUILocales       []language.Tag
-	SupportedClaims          []string
-	DeviceAuthorization      DeviceAuthorizationConfig
+	CryptoKey                         [32]byte
+	DefaultLogoutRedirectURI          string
+	CodeMethodS256                    bool
+	AuthMethodPost                    bool
+	AuthMethodPrivateKeyJWT           bool
+	GrantTypeRefreshToken             bool
+	RequestObjectSupported            bool
+	SupportedUILocales                []language.Tag
+	SupportedClaims                   []string
+	DeviceAuthorization               DeviceAuthorizationConfig
+	BackChannelLogoutSupported        bool
+	BackChannelLogoutSessionSupported bool
 }
 
 // Endpoints defines endpoint routes.
@@ -409,6 +411,14 @@ func (o *Provider) SupportedUILocales() []language.Tag {
 
 func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
 	return o.config.DeviceAuthorization
+}
+
+func (o *Provider) BackChannelLogoutSupported() bool {
+	return o.config.BackChannelLogoutSupported
+}
+
+func (o *Provider) BackChannelLogoutSessionSupported() bool {
+	return o.config.BackChannelLogoutSessionSupported
 }
 
 func (o *Provider) Storage() Storage {

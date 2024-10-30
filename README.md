@@ -102,19 +102,20 @@ Here is json equivalent for one of the default users
 
 ## Features
 
-|                      | Relying party | OpenID Provider | Specification                             |
-| -------------------- | ------------- | --------------- | ----------------------------------------- |
-| Code Flow            | yes           | yes             | OpenID Connect Core 1.0, [Section 3.1][1] |
-| Implicit Flow        | no[^1]        | yes             | OpenID Connect Core 1.0, [Section 3.2][2] |
-| Hybrid Flow          | no            | not yet         | OpenID Connect Core 1.0, [Section 3.3][3] |
-| Client Credentials   | yes           | yes             | OpenID Connect Core 1.0, [Section 9][4]   |
-| Refresh Token        | yes           | yes             | OpenID Connect Core 1.0, [Section 12][5]  |
-| Discovery            | yes           | yes             | OpenID Connect [Discovery][6] 1.0         |
-| JWT Profile          | yes           | yes             | [RFC 7523][7]                             |
-| PKCE                 | yes           | yes             | [RFC 7636][8]                             |
-| Token Exchange       | yes           | yes             | [RFC 8693][9]                             |
-| Device Authorization | yes           | yes             | [RFC 8628][10]                            |
-| mTLS                 | not yet       | not yet         | [RFC 8705][11]                            |
+|                      | Relying party | OpenID Provider | Specification                                |
+|----------------------| ------------- | --------------- |----------------------------------------------|
+| Code Flow            | yes           | yes             | OpenID Connect Core 1.0, [Section 3.1][1]    |
+| Implicit Flow        | no[^1]        | yes             | OpenID Connect Core 1.0, [Section 3.2][2]    |
+| Hybrid Flow          | no            | not yet         | OpenID Connect Core 1.0, [Section 3.3][3]    |
+| Client Credentials   | yes           | yes             | OpenID Connect Core 1.0, [Section 9][4]      |
+| Refresh Token        | yes           | yes             | OpenID Connect Core 1.0, [Section 12][5]     |
+| Discovery            | yes           | yes             | OpenID Connect [Discovery][6] 1.0            |
+| JWT Profile          | yes           | yes             | [RFC 7523][7]                                |
+| PKCE                 | yes           | yes             | [RFC 7636][8]                                |
+| Token Exchange       | yes           | yes             | [RFC 8693][9]                                |
+| Device Authorization | yes           | yes             | [RFC 8628][10]                               |
+| mTLS                 | not yet       | not yet         | [RFC 8705][11]                               |
+| Back-Channel Logout  | not yet       | yes             | OpenID Connect [Back-Channel Logout][12] 1.0 |
 
 [1]: <https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth> "3.1. Authentication using the Authorization Code Flow"
 [2]: <https://openid.net/specs/openid-connect-core-1_0.html#ImplicitFlowAuth> "3.2. Authentication using the Implicit Flow"
@@ -127,6 +128,7 @@ Here is json equivalent for one of the default users
 [9]: <https://www.rfc-editor.org/rfc/rfc8693.html> "OAuth 2.0 Token Exchange"
 [10]: <https://www.rfc-editor.org/rfc/rfc8628.html> "OAuth 2.0 Device Authorization Grant"
 [11]: <https://www.rfc-editor.org/rfc/rfc8705.html> "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"
+[12]: <https://openid.net/specs/openid-connect-backchannel-1_0.html> "OpenID Connect Back-Channel Logout 1.0 incorporating errata set 1"
 
 ## Contributors
 

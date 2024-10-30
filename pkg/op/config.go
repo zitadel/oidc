@@ -49,6 +49,9 @@ type Configuration interface {
 
 	SupportedUILocales() []language.Tag
 	DeviceAuthorization() DeviceAuthorizationConfig
+
+	BackChannelLogoutSupported() bool
+	BackChannelLogoutSessionSupported() bool
 }
 
 type IssuerFromRequest func(r *http.Request) string
