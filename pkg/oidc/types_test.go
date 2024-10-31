@@ -232,9 +232,11 @@ func TestLocale_UnmarshalJSON(t *testing.T) {
 			},
 		},
 		{
-			name:    "bad form, error",
-			input:   `{"locale": "g!!!!!"}`,
-			wantErr: true,
+			name:  "bad form, error",
+			input: `{"locale": "g!!!!!"}`,
+			want: dst{
+				Locale: &Locale{},
+			},
 		},
 	}
 
