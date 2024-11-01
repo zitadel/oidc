@@ -3,7 +3,6 @@ package oidc
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -78,22 +77,16 @@ func (l *Locale) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-// When [language.ValueError] is encountered, the containing tag will be set
+// All unmarshal errors for are ignored.
+// When an error is encountered, the containing tag will be set
 // to an empty value (language "und") and no error will be returned.
 // This state can be checked with the `l.Tag().IsRoot()` method.
 func (l *Locale) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &l.tag)
-	if err == nil {
-		return nil
-	}
-
-	// catch "well-formed but unknown" errors
-	var target language.ValueError
-	if errors.As(err, &target) {
+	if err != nil {
 		l.tag = language.Tag{}
-		return nil
 	}
-	return err
+	return nil
 }
 
 type Locales []language.Tag
