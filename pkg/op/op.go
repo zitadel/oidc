@@ -167,6 +167,7 @@ type Config struct {
 	RequestObjectSupported            bool
 	SupportedUILocales                []language.Tag
 	SupportedClaims                   []string
+	SupportedScopes                   []string
 	DeviceAuthorization               DeviceAuthorizationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
