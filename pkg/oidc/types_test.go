@@ -218,6 +218,30 @@ func TestLocale_UnmarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name:    "value not present",
+			input:   `{}`,
+			wantErr: false,
+			want: dst{
+				Locale: nil,
+			},
+		},
+		{
+			name:    "null",
+			input:   `{"locale": null}`,
+			wantErr: false,
+			want: dst{
+				Locale: nil,
+			},
+		},
+		{
+			name:    "empty, ignored",
+			input:   `{"locale": ""}`,
+			wantErr: false,
+			want: dst{
+				Locale: &Locale{},
+			},
+		},
+		{
 			name:  "afrikaans, ok",
 			input: `{"locale": "af"}`,
 			want: dst{
@@ -237,16 +261,17 @@ func TestLocale_UnmarshalJSON(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
-		var got dst
-		err := json.Unmarshal([]byte(tt.input), &got)
-		if tt.wantErr {
-			require.Error(t, err)
-			return
-		}
-		require.NoError(t, err)
-		assert.Equal(t, tt.want, got)
+		t.Run(tt.name, func(t *testing.T) {
+			var got dst
+			err := json.Unmarshal([]byte(tt.input), &got)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
 	}
 }
 

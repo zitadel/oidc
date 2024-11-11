@@ -82,6 +82,9 @@ func (l *Locale) MarshalJSON() ([]byte, error) {
 // to an empty value (language "und") and no error will be returned.
 // This state can be checked with the `l.Tag().IsRoot()` method.
 func (l *Locale) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "\"\"" {
+		return nil
+	}
 	err := json.Unmarshal(data, &l.tag)
 	if err == nil {
 		return nil
