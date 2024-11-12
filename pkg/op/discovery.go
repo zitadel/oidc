@@ -100,7 +100,11 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 }
 
 func Scopes(c Configuration) []string {
-	return DefaultSupportedScopes // TODO: config
+	provider, ok := c.(*Provider)
+	if ok && provider.config.SupportedScopes != nil {
+		return provider.config.SupportedScopes
+	}
+	return DefaultSupportedScopes
 }
 
 func ResponseTypes(c Configuration) []string {
@@ -135,7 +139,7 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 }
 
 func SubjectTypes(c Configuration) []string {
-	return []string{"public"} //TODO: config
+	return []string{"public"} // TODO: config
 }
 
 func SigAlgorithms(ctx context.Context, storage DiscoverStorage) []string {
