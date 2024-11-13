@@ -18,7 +18,6 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	str "github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type AuthRequest interface {
@@ -156,7 +155,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	if requestObject.Issuer != requestObject.ClientID {
 		return oidc.ErrInvalidRequest().WithDescription("missing or wrong issuer in request")
 	}
-	if !str.Contains(requestObject.Audience, issuer) {
+	if !slices.Contains(requestObject.Audience, issuer) {
 		return oidc.ErrInvalidRequest().WithDescription("issuer missing in audience")
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
@@ -170,7 +169,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 // CopyRequestObjectToAuthRequest overwrites present values from the Request Object into the auth request
 // and clears the `RequestParam` of the auth request
 func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oidc.RequestObject) {
-	if str.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
+	if slices.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
 		authReq.Scopes = requestObject.Scopes
 	}
 	if requestObject.RedirectURI != "" {
@@ -288,7 +287,7 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 // checkURIAgainstRedirects just checks aginst the valid redirect URIs and ignores
 // other factors.
 func checkURIAgainstRedirects(client Client, uri string) error {
-	if str.Contains(client.RedirectURIs(), uri) {
+	if slices.Contains(client.RedirectURIs(), uri) {
 		return nil
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
