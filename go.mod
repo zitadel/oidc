@@ -15,7 +15,7 @@ require (
 	github.com/muhlemmer/httpforwarded v0.1.0
 	github.com/rs/cors v1.11.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/zitadel/logging v0.6.1
 	github.com/zitadel/schema v1.3.0
 	go.opentelemetry.io/otel v1.29.0
