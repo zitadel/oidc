@@ -312,11 +312,11 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
-	if strings.HasPrefix(uri, "https://") {
-		return checkURIAgainstRedirects(client, uri)
-	}
 	if client.ApplicationType() == ApplicationTypeNative {
 		return validateAuthReqRedirectURINative(client, uri)
+	}
+	if strings.HasPrefix(uri, "https://") {
+		return checkURIAgainstRedirects(client, uri)
 	}
 	if err := checkURIAgainstRedirects(client, uri); err != nil {
 		return err
@@ -338,12 +338,15 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 // ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
 func validateAuthReqRedirectURINative(client Client, uri string) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
-	isCustomSchema := !strings.HasPrefix(uri, "http://")
+	isCustomSchema := !(strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://"))
 	if err := checkURIAgainstRedirects(client, uri); err == nil {
 		if client.DevMode() {
 			return nil
 		}
-		// The RedirectURIs are only valid for native clients when localhost or non-"http://"
+		if !isLoopback && strings.HasPrefix(uri, "https://") {
+			return nil
+		}
+		// The RedirectURIs are only valid for native clients when localhost or non-"http://" and "https://"
 		if isLoopback || isCustomSchema {
 			return nil
 		}
@@ -373,11 +376,11 @@ func HTTPLoopbackOrLocalhost(rawURL string) (*url.URL, bool) {
 	if err != nil {
 		return nil, false
 	}
-	if parsedURL.Scheme != "http" {
-		return nil, false
+	if parsedURL.Scheme == "http" || parsedURL.Scheme == "https" {
+		hostName := parsedURL.Hostname()
+		return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 	}
-	hostName := parsedURL.Hostname()
-	return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
+	return nil, false
 }
 
 // ValidateAuthReqResponseType validates the passed response_type to the registered response types
