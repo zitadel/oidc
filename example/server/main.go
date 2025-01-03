@@ -32,8 +32,8 @@ func main() {
 
 	storage.RegisterClients(
 		storage.NativeClient("native", cfg.RedirectURI...),
-		storage.WebClient("web", "secret"),
-		storage.WebClient("api", "secret"),
+		storage.WebClient("web", "secret", cfg.RedirectURI...),
+		storage.WebClient("api", "secret", cfg.RedirectURI...),
 	)
 
 	// the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
