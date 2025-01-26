@@ -615,7 +615,7 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 			break
 		}
 	}
-	if refreshToken.Expiration.After(time.Now()) {
+	if refreshToken.Expiration.Before(time.Now()) {
 		return "", "", fmt.Errorf("expired refresh token")
 	}
 	// creates a new refresh token based on the current one
