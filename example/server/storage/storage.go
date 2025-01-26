@@ -619,6 +619,7 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	token := uuid.NewString()
 	refreshToken.Token = token
 	refreshToken.ID = token
+	refreshToken.Expiration = time.Now().Add(5 * time.Hour)
 	s.refreshTokens[token] = refreshToken
 	return token, refreshToken.ID, nil
 }
