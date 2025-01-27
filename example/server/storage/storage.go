@@ -596,6 +596,10 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 }
 
 // renewRefreshToken checks the provided refresh_token and creates a new one based on the current
+//
+// [Refresh Token Rotation] is implemented.
+//
+// [Refresh Token Rotation]: https://www.rfc-editor.org/rfc/rfc6819#section-5.2.2.3
 func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
