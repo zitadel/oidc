@@ -151,6 +151,9 @@ func (s *Storage) CheckUsernamePassword(username, password, id string) error {
 		// in this example we'll simply check the username / password and set a boolean to true
 		// therefore we will also just check this boolean if the request / login has been finished
 		request.done = true
+
+		request.authTime = time.Now()
+
 		return nil
 	}
 	return fmt.Errorf("username or password wrong")
