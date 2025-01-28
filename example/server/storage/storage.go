@@ -615,10 +615,14 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 			break
 		}
 	}
+	if refreshToken.Expiration.Before(time.Now()) {
+		return "", "", fmt.Errorf("expired refresh token")
+	}
 	// creates a new refresh token based on the current one
 	token := uuid.NewString()
 	refreshToken.Token = token
 	refreshToken.ID = token
+	refreshToken.Expiration = time.Now().Add(5 * time.Hour)
 	s.refreshTokens[token] = refreshToken
 	return token, refreshToken.ID, nil
 }
