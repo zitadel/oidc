@@ -619,7 +619,7 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	// delete the access token which was issued based on this refresh token
 	delete(s.tokens, refreshToken.AccessToken)
 
-  if refreshToken.Expiration.Before(time.Now()) {
+	if refreshToken.Expiration.Before(time.Now()) {
 		return "", "", fmt.Errorf("expired refresh token")
 	}
 
