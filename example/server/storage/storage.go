@@ -298,15 +298,19 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 
 	// if we get here, the currentRefreshToken was not empty, so the call is a refresh token request
 	// we therefore will have to check the currentRefreshToken and renew the refresh token
-	refreshToken, refreshTokenID, err := s.renewRefreshToken(currentRefreshToken)
+
+	newRefreshToken = uuid.NewString()
+
+	accessToken, err := s.accessToken(applicationID, newRefreshToken, request.GetSubject(), request.GetAudience(), request.GetScopes())
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
-	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
-	if err != nil {
+
+	if err := s.renewRefreshToken(currentRefreshToken, newRefreshToken, accessToken.ID); err != nil {
 		return "", "", time.Time{}, err
 	}
-	return accessToken.ID, refreshToken, accessToken.Expiration, nil
+
+	return accessToken.ID, newRefreshToken, accessToken.Expiration, nil
 }
 
 func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExchangeRequest) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
@@ -606,12 +610,12 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 // [Refresh Token Rotation] is implemented.
 //
 // [Refresh Token Rotation]: https://www.rfc-editor.org/rfc/rfc6819#section-5.2.2.3
-func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string, error) {
+func (s *Storage) renewRefreshToken(currentRefreshToken, newRefreshToken, newAccessToken string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	refreshToken, ok := s.refreshTokens[currentRefreshToken]
 	if !ok {
-		return "", "", fmt.Errorf("invalid refresh token")
+		return fmt.Errorf("invalid refresh token")
 	}
 	// deletes the refresh token
 	delete(s.refreshTokens, currentRefreshToken)
@@ -620,16 +624,16 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	delete(s.tokens, refreshToken.AccessToken)
 
 	if refreshToken.Expiration.Before(time.Now()) {
-		return "", "", fmt.Errorf("expired refresh token")
+		return fmt.Errorf("expired refresh token")
 	}
 
 	// creates a new refresh token based on the current one
-	token := uuid.NewString()
-	refreshToken.Token = token
-	refreshToken.ID = token
+	refreshToken.Token = newRefreshToken
+	refreshToken.ID = newRefreshToken
 	refreshToken.Expiration = time.Now().Add(5 * time.Hour)
-	s.refreshTokens[token] = refreshToken
-	return token, refreshToken.ID, nil
+	refreshToken.AccessToken = newAccessToken
+	s.refreshTokens[newRefreshToken] = refreshToken
+	return nil
 }
 
 // accessToken will store an access_token in-memory based on the provided information
