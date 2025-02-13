@@ -486,6 +486,9 @@ func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserI
 	//		return err
 	//	}
 	//}
+	if token.Expiration.Before(time.Now()) {
+		return fmt.Errorf("token is expired")
+	}
 	return s.setUserinfo(ctx, userinfo, token.Subject, token.ApplicationID, token.Scopes)
 }
 
