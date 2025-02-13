@@ -388,14 +388,9 @@ func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID
 	if refreshToken.ApplicationID != clientID {
 		return oidc.ErrInvalidClient().WithDescription("token was not issued for this client")
 	}
-	// if it is a refresh token, you will have to remove the access token as well
 	delete(s.refreshTokens, refreshToken.ID)
-	for _, accessToken := range s.tokens {
-		if accessToken.RefreshTokenID == refreshToken.ID {
-			delete(s.tokens, accessToken.ID)
-			return nil
-		}
-	}
+	// if it is a refresh token, you will have to remove the access token as well
+	delete(s.tokens, refreshToken.AccessToken)
 	return nil
 }
 
@@ -597,12 +592,17 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 		Audience:      accessToken.Audience,
 		Expiration:    time.Now().Add(5 * time.Hour),
 		Scopes:        accessToken.Scopes,
+		AccessToken:   accessToken.ID,
 	}
 	s.refreshTokens[token.ID] = token
 	return token.Token, nil
 }
 
 // renewRefreshToken checks the provided refresh_token and creates a new one based on the current
+//
+// [Refresh Token Rotation] is implemented.
+//
+// [Refresh Token Rotation]: https://www.rfc-editor.org/rfc/rfc6819#section-5.2.2.3
 func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -610,14 +610,10 @@ func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string,
 	if !ok {
 		return "", "", fmt.Errorf("invalid refresh token")
 	}
-	// deletes the refresh token and all access tokens which were issued based on this refresh token
+	// deletes the refresh token
 	delete(s.refreshTokens, currentRefreshToken)
-	for _, token := range s.tokens {
-		if token.RefreshTokenID == currentRefreshToken {
-			delete(s.tokens, token.ID)
-			break
-		}
-	}
+	// delete the access token which was issued based on this refresh token
+	delete(s.tokens, refreshToken.AccessToken)
 	// creates a new refresh token based on the current one
 	token := uuid.NewString()
 	refreshToken.Token = token
