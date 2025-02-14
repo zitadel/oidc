@@ -56,6 +56,7 @@ func main() {
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
 		rp.WithHTTPClient(client),
 		rp.WithLogger(logger),
+		rp.WithSigningAlgsFromDiscovery(),
 	}
 	if clientSecret == "" {
 		options = append(options, rp.WithPKCE(cookieHandler))
@@ -108,6 +109,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("content-type", "application/json")
 		w.Write(data)
 	}
 

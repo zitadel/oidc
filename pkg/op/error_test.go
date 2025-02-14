@@ -428,7 +428,8 @@ func TestTryErrorRedirect(t *testing.T) {
 				parent: oidc.ErrInteractionRequired().WithDescription("sign in"),
 			},
 			want: &Redirect{
-				URL: "http://example.com/callback?error=interaction_required&error_description=sign+in&state=state1",
+				Header: make(http.Header),
+				URL:    "http://example.com/callback?error=interaction_required&error_description=sign+in&state=state1",
 			},
 			wantLog: `{
 						"level":"WARN",

@@ -138,11 +138,6 @@ func TestValidateAuthRequest(t *testing.T) {
 			oidc.ErrInvalidRequest(),
 		},
 		{
-			"scope openid missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"profile"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidScope(),
-		},
-		{
 			"response_type missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
@@ -283,16 +278,6 @@ func TestValidateAuthReqScopes(t *testing.T) {
 		{
 			"scopes missing fails",
 			args{},
-			res{
-				err: true,
-			},
-		},
-		{
-			"scope openid missing fails",
-			args{
-				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
-				[]string{"email"},
-			},
 			res{
 				err: true,
 			},
@@ -444,6 +429,24 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			args{
 				"http://[::1]:4200/callback",
 				mock.NewClientWithConfig(t, []string{"http://[::1]/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow registered https loopback v4 native ok",
+			args{
+				"https://127.0.0.1:4200/callback",
+				mock.NewClientWithConfig(t, []string{"https://127.0.0.1/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow registered https loopback v6 native ok",
+			args{
+				"https://[::1]:4200/callback",
+				mock.NewClientWithConfig(t, []string{"https://[::1]/callback"}, op.ApplicationTypeNative, nil, false),
 				oidc.ResponseTypeCode,
 			},
 			false,

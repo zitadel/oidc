@@ -218,7 +218,8 @@ type Response struct {
 // without custom headers.
 func NewResponse(data any) *Response {
 	return &Response{
-		Data: data,
+		Header: make(http.Header),
+		Data:   data,
 	}
 }
 
@@ -242,11 +243,14 @@ type Redirect struct {
 }
 
 func NewRedirect(url string) *Redirect {
-	return &Redirect{URL: url}
+	return &Redirect{
+		Header: make(http.Header),
+		URL:    url,
+	}
 }
 
 func (red *Redirect) writeOut(w http.ResponseWriter, r *http.Request) {
-	gu.MapMerge(r.Header, w.Header())
+	gu.MapMerge(red.Header, w.Header())
 	http.Redirect(w, r, red.URL, http.StatusFound)
 }
 

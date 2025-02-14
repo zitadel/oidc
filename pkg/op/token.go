@@ -2,11 +2,11 @@ package op
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type TokenCreator interface {
@@ -65,6 +65,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    exp,
 		State:        state,
+		Scope:        request.GetScopes(),
 	}, nil
 }
 
@@ -82,13 +83,13 @@ func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storag
 func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool {
 	switch req := tokenRequest.(type) {
 	case AuthRequest:
-		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
+		return slices.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && req.GetResponseType() == oidc.ResponseTypeCode && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
 	case TokenExchangeRequest:
 		return req.GetRequestedTokenType() == oidc.RefreshTokenType
 	case RefreshTokenRequest:
 		return true
 	case *DeviceAuthorizationState:
-		return strings.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
+		return slices.Contains(req.GetScopes(), oidc.ScopeOfflineAccess) && ValidateGrantType(client, oidc.GrantTypeRefreshToken)
 	default:
 		return false
 	}

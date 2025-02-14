@@ -7,12 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
-
-	str "github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type Claims interface {
@@ -41,6 +40,7 @@ type IDClaims interface {
 var (
 	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
+	ErrDiscoveryFailed         = errors.New("OpenID Provider Configuration Discovery has failed")
 	ErrSubjectMissing          = errors.New("subject missing")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
@@ -83,7 +83,7 @@ type ACRVerifier func(string) error
 // if none of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
-		if !str.Contains(possibleValues, acr) {
+		if !slices.Contains(possibleValues, acr) {
 			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, acr)
 		}
 		return nil
@@ -122,7 +122,7 @@ func CheckIssuer(claims Claims, issuer string) error {
 }
 
 func CheckAudience(claims Claims, clientID string) error {
-	if !str.Contains(claims.GetAudience(), clientID) {
+	if !slices.Contains(claims.GetAudience(), clientID) {
 		return fmt.Errorf("%w: Audience must contain client_id %q", ErrAudience, clientID)
 	}
 

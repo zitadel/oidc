@@ -145,6 +145,7 @@ func TestNewAccessTokenClaims(t *testing.T) {
 			Subject:    "hello@me.com",
 			Audience:   Audience{"foo"},
 			Expiration: 12345,
+			ClientID:   "foo",
 			JWTID:      "900",
 		},
 	}
@@ -239,5 +240,41 @@ func TestIDTokenClaims_GetUserInfo(t *testing.T) {
 		Claims:          idTokenData.Claims,
 	}
 	got := idTokenData.GetUserInfo()
+	assert.Equal(t, want, got)
+}
+
+func TestNewLogoutTokenClaims(t *testing.T) {
+	want := &LogoutTokenClaims{
+		Issuer:     "zitadel",
+		Subject:    "hello@me.com",
+		Audience:   Audience{"foo", "just@me.com"},
+		Expiration: 12345,
+		JWTID:      "jwtID",
+		Events: map[string]any{
+			"http://schemas.openid.net/event/backchannel-logout": struct{}{},
+		},
+		SessionID: "sessionID",
+		Claims:    nil,
+	}
+
+	got := NewLogoutTokenClaims(
+		want.Issuer,
+		want.Subject,
+		want.Audience,
+		want.Expiration.AsTime(),
+		want.JWTID,
+		want.SessionID,
+		1*time.Second,
+	)
+
+	// test if the dynamic timestamp is around now,
+	// allowing for a delta of 1, just in case we flip on
+	// either side of a second boundry.
+	nowMinusSkew := NowTime() - 1
+	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
+
+	// Make equal not fail on dynamic timestamp
+	got.IssuedAt = 0
+
 	assert.Equal(t, want, got)
 }

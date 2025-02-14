@@ -61,6 +61,8 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
+		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
+		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
 	}
 }
 
@@ -92,11 +94,17 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
+		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
+		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
 	}
 }
 
 func Scopes(c Configuration) []string {
-	return DefaultSupportedScopes // TODO: config
+	provider, ok := c.(*Provider)
+	if ok && provider.config.SupportedScopes != nil {
+		return provider.config.SupportedScopes
+	}
+	return DefaultSupportedScopes
 }
 
 func ResponseTypes(c Configuration) []string {
@@ -131,7 +139,7 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 }
 
 func SubjectTypes(c Configuration) []string {
-	return []string{"public"} //TODO: config
+	return []string{"public"} // TODO: config
 }
 
 func SigAlgorithms(ctx context.Context, storage DiscoverStorage) []string {

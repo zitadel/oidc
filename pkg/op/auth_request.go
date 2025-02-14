@@ -11,13 +11,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	str "github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type AuthRequest interface {
@@ -82,19 +82,27 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
 		err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
 		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer)
+			AuthRequestError(w, r, nil, err, authorizer)
 			return
 		}
 	}
 	if authReq.ClientID == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing client_id"), authorizer)
+		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing client_id"), authorizer)
 		return
 	}
 	if authReq.RedirectURI == "" {
-		AuthRequestError(w, r, authReq, fmt.Errorf("auth request is missing redirect_uri"), authorizer)
+		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing redirect_uri"), authorizer)
 		return
 	}
-	validation := ValidateAuthRequest
+
+	var client Client
+	validation := func(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
+		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
+		if err != nil {
+			return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+		}
+		return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+	}
 	if validater, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validater.ValidateAuthRequest
 	}
@@ -110,11 +118,6 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
-		return
-	}
-	client, err := authorizer.Storage().GetClientByClientID(ctx, req.GetClientID())
-	if err != nil {
-		AuthRequestError(w, r, req, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer)
 		return
 	}
 	RedirectToLogin(req.GetID(), client, w, r)
@@ -152,7 +155,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	if requestObject.Issuer != requestObject.ClientID {
 		return oidc.ErrInvalidRequest().WithDescription("missing or wrong issuer in request")
 	}
-	if !str.Contains(requestObject.Audience, issuer) {
+	if !slices.Contains(requestObject.Audience, issuer) {
 		return oidc.ErrInvalidRequest().WithDescription("issuer missing in audience")
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
@@ -166,7 +169,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 // CopyRequestObjectToAuthRequest overwrites present values from the Request Object into the auth request
 // and clears the `RequestParam` of the auth request
 func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oidc.RequestObject) {
-	if str.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
+	if slices.Contains(authReq.Scopes, oidc.ScopeOpenID) && len(requestObject.Scopes) > 0 {
 		authReq.Scopes = requestObject.Scopes
 	}
 	if requestObject.RedirectURI != "" {
@@ -211,24 +214,35 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 	authReq.RequestParam = ""
 }
 
-// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed
+// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed.
+//
+// Deprecated: Use [ValidateAuthRequestClient] to prevent querying for the Client twice.
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
 	ctx, span := tracer.Start(ctx, "ValidateAuthRequest")
 	defer span.End()
 
+	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
+	if err != nil {
+		return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+	}
+	return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+}
+
+// ValidateAuthRequestClient validates the Auth request against the passed client.
+// If id_token_hint is part of the request, the subject of the token is returned.
+func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, client Client, verifier *IDTokenHintVerifier) (sub string, err error) {
+	ctx, span := tracer.Start(ctx, "ValidateAuthRequestClient")
+	defer span.End()
+
+	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
+		return "", err
+	}
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return "", err
 	}
-	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
-	if err != nil {
-		return "", oidc.DefaultToServerError(err, "unable to retrieve client by id")
-	}
 	authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
 	if err != nil {
-		return "", err
-	}
-	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return "", err
 	}
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
@@ -250,44 +264,30 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 	return maxAge, nil
 }
 
-// ValidateAuthReqScopes validates the passed scopes
+// ValidateAuthReqScopes validates the passed scopes and deletes any unsupported scopes.
+// An error is returned if scopes is empty.
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
 		return nil, oidc.ErrInvalidRequest().
 			WithDescription("The scope of your request is missing. Please ensure some scopes are requested. " +
 				"If you have any questions, you may contact the administrator of the application.")
 	}
-	openID := false
-	for i := len(scopes) - 1; i >= 0; i-- {
-		scope := scopes[i]
-		if scope == oidc.ScopeOpenID {
-			openID = true
-			continue
-		}
-		if !(scope == oidc.ScopeProfile ||
+	scopes = slices.DeleteFunc(scopes, func(scope string) bool {
+		return !(scope == oidc.ScopeOpenID ||
+			scope == oidc.ScopeProfile ||
 			scope == oidc.ScopeEmail ||
 			scope == oidc.ScopePhone ||
 			scope == oidc.ScopeAddress ||
 			scope == oidc.ScopeOfflineAccess) &&
-			!client.IsScopeAllowed(scope) {
-			scopes[i] = scopes[len(scopes)-1]
-			scopes[len(scopes)-1] = ""
-			scopes = scopes[:len(scopes)-1]
-		}
-	}
-	if !openID {
-		return nil, oidc.ErrInvalidScope().WithDescription("The scope openid is missing in your request. " +
-			"Please ensure the scope openid is added to the request. " +
-			"If you have any questions, you may contact the administrator of the application.")
-	}
-
+			!client.IsScopeAllowed(scope)
+	})
 	return scopes, nil
 }
 
 // checkURIAgainstRedirects just checks aginst the valid redirect URIs and ignores
 // other factors.
 func checkURIAgainstRedirects(client Client, uri string) error {
-	if str.Contains(client.RedirectURIs(), uri) {
+	if slices.Contains(client.RedirectURIs(), uri) {
 		return nil
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
@@ -312,11 +312,11 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
-	if strings.HasPrefix(uri, "https://") {
-		return checkURIAgainstRedirects(client, uri)
-	}
 	if client.ApplicationType() == ApplicationTypeNative {
 		return validateAuthReqRedirectURINative(client, uri)
+	}
+	if strings.HasPrefix(uri, "https://") {
+		return checkURIAgainstRedirects(client, uri)
 	}
 	if err := checkURIAgainstRedirects(client, uri); err != nil {
 		return err
@@ -338,12 +338,15 @@ func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.Res
 // ValidateAuthReqRedirectURINative validates the passed redirect_uri and response_type to the registered uris and client type
 func validateAuthReqRedirectURINative(client Client, uri string) error {
 	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
-	isCustomSchema := !strings.HasPrefix(uri, "http://")
+	isCustomSchema := !(strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://"))
 	if err := checkURIAgainstRedirects(client, uri); err == nil {
 		if client.DevMode() {
 			return nil
 		}
-		// The RedirectURIs are only valid for native clients when localhost or non-"http://"
+		if !isLoopback && strings.HasPrefix(uri, "https://") {
+			return nil
+		}
+		// The RedirectURIs are only valid for native clients when localhost or non-"http://" and "https://"
 		if isLoopback || isCustomSchema {
 			return nil
 		}
@@ -373,11 +376,11 @@ func HTTPLoopbackOrLocalhost(rawURL string) (*url.URL, bool) {
 	if err != nil {
 		return nil, false
 	}
-	if parsedURL.Scheme != "http" {
-		return nil, false
+	if parsedURL.Scheme == "http" || parsedURL.Scheme == "https" {
+		hostName := parsedURL.Hostname()
+		return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 	}
-	hostName := parsedURL.Hostname()
-	return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
+	return nil, false
 }
 
 // ValidateAuthReqResponseType validates the passed response_type to the registered response types

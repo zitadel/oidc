@@ -81,6 +81,11 @@ func Test_scopes(t *testing.T) {
 			args{},
 			op.DefaultSupportedScopes,
 		},
+		{
+			"custom scopes",
+			args{newTestProvider(&op.Config{SupportedScopes: []string{"test1", "test2"}})},
+			[]string{"test1", "test2"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

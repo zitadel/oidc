@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -133,6 +134,24 @@ type Error struct {
 	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
 	State            string    `json:"state,omitempty" schema:"state,omitempty"`
 	redirectDisabled bool      `schema:"-"`
+	returnParent     bool      `schema:"-"`
+}
+
+func (e *Error) MarshalJSON() ([]byte, error) {
+	m := struct {
+		Error            errorType `json:"error"`
+		ErrorDescription string    `json:"error_description,omitempty"`
+		State            string    `json:"state,omitempty"`
+		Parent           string    `json:"parent,omitempty"`
+	}{
+		Error:            e.ErrorType,
+		ErrorDescription: e.Description,
+		State:            e.State,
+	}
+	if e.returnParent {
+		m.Parent = e.Parent.Error()
+	}
+	return json.Marshal(m)
 }
 
 func (e *Error) Error() string {
@@ -162,6 +181,18 @@ func (e *Error) Is(target error) bool {
 
 func (e *Error) WithParent(err error) *Error {
 	e.Parent = err
+	return e
+}
+
+// WithReturnParentToClient allows returning the set parent error to the HTTP client.
+// Currently it only supports setting the parent inside JSON responses, not redirect URLs.
+// As Go errors don't unmarshal well, only the marshaller is implemented for the moment.
+//
+// Warning: parent errors may contain sensitive data or unwanted details about the server status.
+// Also, the `parent` field is not a standard error field and might confuse certain clients
+// that require fully compliant responses.
+func (e *Error) WithReturnParentToClient(b bool) *Error {
+	e.returnParent = b
 	return e
 }
 

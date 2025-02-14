@@ -9,12 +9,12 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	strs "github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type DeviceAuthorizationConfig struct {
@@ -276,7 +276,7 @@ func (r *DeviceAuthorizationState) GetAMR() []string {
 }
 
 func (r *DeviceAuthorizationState) GetAudience() []string {
-	if !strs.Contains(r.Audience, r.ClientID) {
+	if !slices.Contains(r.Audience, r.ClientID) {
 		r.Audience = append(r.Audience, r.ClientID)
 	}
 	return r.Audience
@@ -344,10 +344,11 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		RefreshToken: refreshToken,
 		TokenType:    oidc.BearerToken,
 		ExpiresIn:    uint64(validity.Seconds()),
+		Scope:        tokenRequest.GetScopes(),
 	}
 
 	// TODO(v4): remove type assertion
-	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && strs.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
+	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
 		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
 		if err != nil {
 			return nil, err
