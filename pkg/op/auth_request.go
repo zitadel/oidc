@@ -38,6 +38,13 @@ type AuthRequest interface {
 	Done() bool
 }
 
+// AuthRequestSessionState should be implemented if OpenID Connect Session Management is supported
+type AuthRequestSessionState interface {
+	// GetSessionState returns session_state.
+	// session_state is related to OpenID Connect Session Management.
+	GetSessionState() string
+}
+
 type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
@@ -103,8 +110,8 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		}
 		return ValidateAuthRequestClient(ctx, authReq, client, verifier)
 	}
-	if validater, ok := authorizer.(AuthorizeValidator); ok {
-		validation = validater.ValidateAuthRequest
+	if validator, ok := authorizer.(AuthorizeValidator); ok {
+		validation = validator.ValidateAuthRequest
 	}
 	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
 	if err != nil {
@@ -481,12 +488,19 @@ func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthReques
 		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
+	var sessionState string
+	authRequestSessionState, ok := authReq.(AuthRequestSessionState)
+	if ok {
+		sessionState = authRequestSessionState.GetSessionState()
+	}
 	codeResponse := struct {
-		Code  string `schema:"code"`
-		State string `schema:"state,omitempty"`
+		Code         string `schema:"code"`
+		State        string `schema:"state,omitempty"`
+		SessionState string `schema:"session_state,omitempty"`
 	}{
-		Code:  code,
-		State: authReq.GetState(),
+		Code:         code,
+		State:        authReq.GetState(),
+		SessionState: sessionState,
 	}
 
 	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
