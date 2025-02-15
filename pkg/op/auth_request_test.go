@@ -1091,6 +1091,34 @@ func TestAuthResponseCode(t *testing.T) {
 			},
 		},
 		{
+			name: "success with state and session_state",
+			args: args{
+				authReq: &storage.AuthRequestWithSessionState{
+					AuthRequest: &storage.AuthRequest{
+						ID:            "id1",
+						TransferState: "state1",
+					},
+					SessionState: "session_state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusFound,
+				wantLocationHeader: "/auth/callback/?code=id1&session_state=session_state1&state=state1",
+				wantBody:           "",
+			},
+		},
+		{
 			name: "success without state", // reproduce issue #415
 			args: args{
 				authReq: &storage.AuthRequest{
