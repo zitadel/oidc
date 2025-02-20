@@ -2,7 +2,7 @@ package client
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 )
 
 const (
@@ -24,7 +24,7 @@ type KeyFile struct {
 }
 
 func ConfigFromKeyFile(path string) (*KeyFile, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
