@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -93,20 +94,60 @@ func URLEncodeParams(resp any, encoder Encoder) (url.Values, error) {
 }
 
 func StartServer(ctx context.Context, port string) {
+	c := make(chan error)
+	StartServer2(ctx, port, WithStartServerErrorChannel(&c))
+	err := <-c
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+type startServerOpts struct {
+	errorChannel *chan error
+	timeout      time.Duration
+}
+
+func WithStartServerErrorChannel(errorChannel *chan error) func(*startServerOpts) {
+	return func(opts *startServerOpts) {
+		opts.errorChannel = errorChannel
+	}
+}
+
+func WithTimeout(timeout time.Duration) func(*startServerOpts) {
+	return func(opts *startServerOpts) {
+		opts.timeout = timeout
+	}
+}
+
+var ErrStartServerListenAndServe = errors.New("server.ListenAndServe():")
+var ErrStartServerShutdown = errors.New("server.Shutdown():")
+
+func StartServer2(ctx context.Context, port string, opts ...func(*startServerOpts)) {
+	options := &startServerOpts{
+		timeout: 5 * time.Second,
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	server := &http.Server{Addr: port}
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("ListenAndServe(): %v", err)
+			if options.errorChannel != nil {
+				*options.errorChannel <- fmt.Errorf("%w %v", ErrStartServerListenAndServe, err)
+			}
 		}
 	}()
 
 	go func() {
 		<-ctx.Done()
-		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), options.timeout)
 		defer cancelShutdown()
 		err := server.Shutdown(ctxShutdown)
 		if err != nil {
-			log.Fatalf("Shutdown(): %v", err)
+			if options.errorChannel != nil {
+				*options.errorChannel <- fmt.Errorf("%w %v", ErrStartServerShutdown, err)
+			}
 		}
 	}()
 }
