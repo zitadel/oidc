@@ -164,6 +164,15 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 	}
 }
 
+type AuthRequestWithSessionState struct {
+	*AuthRequest
+	SessionState string
+}
+
+func (a *AuthRequestWithSessionState) GetSessionState() string {
+	return a.SessionState
+}
+
 type OIDCCodeChallenge struct {
 	Challenge string
 	Method    string

@@ -133,6 +133,7 @@ type Error struct {
 	ErrorType        errorType `json:"error" schema:"error"`
 	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
 	State            string    `json:"state,omitempty" schema:"state,omitempty"`
+	SessionState     string    `json:"session_state,omitempty" schema:"session_state,omitempty"`
 	redirectDisabled bool      `schema:"-"`
 	returnParent     bool      `schema:"-"`
 }
@@ -142,11 +143,13 @@ func (e *Error) MarshalJSON() ([]byte, error) {
 		Error            errorType `json:"error"`
 		ErrorDescription string    `json:"error_description,omitempty"`
 		State            string    `json:"state,omitempty"`
+		SessionState     string    `json:"session_state,omitempty"`
 		Parent           string    `json:"parent,omitempty"`
 	}{
 		Error:            e.ErrorType,
 		ErrorDescription: e.Description,
 		State:            e.State,
+		SessionState:     e.SessionState,
 	}
 	if e.returnParent {
 		m.Parent = e.Parent.Error()
@@ -176,7 +179,8 @@ func (e *Error) Is(target error) bool {
 	}
 	return e.ErrorType == t.ErrorType &&
 		(e.Description == t.Description || t.Description == "") &&
-		(e.State == t.State || t.State == "")
+		(e.State == t.State || t.State == "") &&
+		(e.SessionState == t.SessionState || t.SessionState == "")
 }
 
 func (e *Error) WithParent(err error) *Error {
@@ -241,6 +245,9 @@ func (e *Error) LogValue() slog.Value {
 	}
 	if e.State != "" {
 		attrs = append(attrs, slog.String("state", e.State))
+	}
+	if e.SessionState != "" {
+		attrs = append(attrs, slog.String("session_state", e.SessionState))
 	}
 	if e.redirectDisabled {
 		attrs = append(attrs, slog.Bool("redirect_disabled", e.redirectDisabled))

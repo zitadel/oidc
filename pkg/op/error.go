@@ -46,6 +46,12 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 		return
 	}
 	e.State = authReq.GetState()
+	var sessionState string
+	authRequestSessionState, ok := authReq.(AuthRequestSessionState)
+	if ok {
+		sessionState = authRequestSessionState.GetSessionState()
+	}
+	e.SessionState = sessionState
 	var responseMode oidc.ResponseMode
 	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
 		responseMode = rm.GetResponseMode()
@@ -92,6 +98,12 @@ func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error,
 	}
 
 	e.State = authReq.GetState()
+	var sessionState string
+	authRequestSessionState, ok := authReq.(AuthRequestSessionState)
+	if ok {
+		sessionState = authRequestSessionState.GetSessionState()
+	}
+	e.SessionState = sessionState
 	var responseMode oidc.ResponseMode
 	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
 		responseMode = rm.GetResponseMode()
