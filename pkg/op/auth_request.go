@@ -38,7 +38,7 @@ type AuthRequest interface {
 	Done() bool
 }
 
-// AuthRequestSessionState should be implemented if OpenID Connect Session Management is supported
+// AuthRequestSessionState should be implemented if [OpenID Connect Session Management](https://openid.net/specs/openid-connect-session-1_0.html) is supported
 type AuthRequestSessionState interface {
 	// GetSessionState returns session_state.
 	// session_state is related to OpenID Connect Session Management.
