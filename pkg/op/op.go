@@ -339,6 +339,10 @@ func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
 }
 
+func (o *Provider) CheckSessionIframe() *Endpoint {
+	return o.endpoints.CheckSessionIframe
+}
+
 func (o *Provider) KeysEndpoint() *Endpoint {
 	return o.endpoints.JwksURI
 }

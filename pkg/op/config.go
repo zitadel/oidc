@@ -30,6 +30,7 @@ type Configuration interface {
 	EndSessionEndpoint() *Endpoint
 	KeysEndpoint() *Endpoint
 	DeviceAuthorizationEndpoint() *Endpoint
+	CheckSessionIframe() *Endpoint
 
 	AuthMethodPostSupported() bool
 	CodeMethodS256Supported() bool
