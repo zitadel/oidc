@@ -7,7 +7,7 @@ type JWTProfileGrantRequest struct {
 }
 
 // NewJWTProfileGrantRequest creates an oauth2 `JSON Web Token (JWT) Profile` Grant
-//`urn:ietf:params:oauth:grant-type:jwt-bearer`
+// `urn:ietf:params:oauth:grant-type:jwt-bearer`
 // sending a self-signed jwt as assertion
 func NewJWTProfileGrantRequest(assertion string, scopes ...string) *JWTProfileGrantRequest {
 	return &JWTProfileGrantRequest{
