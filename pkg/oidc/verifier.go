@@ -186,7 +186,7 @@ func toJoseSignatureAlgorithms(algorithms []string) []jose.SignatureAlgorithm {
 		out[i] = jose.SignatureAlgorithm(algorithms[i])
 	}
 	if len(out) == 0 {
-		out = append(out, jose.RS256, jose.ES256, jose.PS256)
+		out = append(out, jose.RS256, jose.ES256, jose.PS256, jose.RS256)
 	}
 	return out
 }

@@ -255,7 +255,11 @@ func TestVerifyIDToken(t *testing.T) {
 
 func TestVerifyAccessToken(t *testing.T) {
 	token, _ := tu.ValidAccessToken()
-	hash, err := oidc.ClaimHash(token, tu.SignatureAlgorithm)
+	sigAlgoRS256 := jose.RS256
+	hashRS256, err := oidc.ClaimHash(token, sigAlgoRS256)
+	require.NoError(t, err)
+	sigAlgoHS256 := jose.HS256
+	hashHS256, err := oidc.ClaimHash(token, sigAlgoHS256)
 	require.NoError(t, err)
 
 	type args struct {
@@ -272,18 +276,26 @@ func TestVerifyAccessToken(t *testing.T) {
 			name: "empty hash",
 		},
 		{
-			name: "success",
+			name: "success RS256",
 			args: args{
 				accessToken:  token,
-				atHash:       hash,
-				sigAlgorithm: tu.SignatureAlgorithm,
+				atHash:       hashRS256,
+				sigAlgorithm: sigAlgoRS256,
+			},
+		},
+		{
+			name: "success HS256",
+			args: args{
+				accessToken:  token,
+				atHash:       hashHS256,
+				sigAlgorithm: sigAlgoHS256,
 			},
 		},
 		{
 			name: "invalid algorithm",
 			args: args{
 				accessToken:  token,
-				atHash:       hash,
+				atHash:       hashRS256,
 				sigAlgorithm: "foo",
 			},
 			wantErr: true,
@@ -293,7 +305,7 @@ func TestVerifyAccessToken(t *testing.T) {
 			args: args{
 				accessToken:  token,
 				atHash:       "~~",
-				sigAlgorithm: tu.SignatureAlgorithm,
+				sigAlgorithm: sigAlgoRS256,
 			},
 			wantErr: true,
 		},

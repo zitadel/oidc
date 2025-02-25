@@ -15,11 +15,11 @@ var ErrUnsupportedAlgorithm = errors.New("unsupported signing algorithm")
 
 func GetHashAlgorithm(sigAlgorithm jose.SignatureAlgorithm) (hash.Hash, error) {
 	switch sigAlgorithm {
-	case jose.RS256, jose.ES256, jose.PS256:
+	case jose.RS256, jose.ES256, jose.PS256, jose.HS256:
 		return sha256.New(), nil
-	case jose.RS384, jose.ES384, jose.PS384:
+	case jose.RS384, jose.ES384, jose.PS384, jose.HS384:
 		return sha512.New384(), nil
-	case jose.RS512, jose.ES512, jose.PS512:
+	case jose.RS512, jose.ES512, jose.PS512, jose.HS512:
 		return sha512.New(), nil
 
 	// There is no published spec for this yet, but we have confirmation it will get published.
