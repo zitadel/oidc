@@ -84,6 +84,16 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 			return nil, nil, err
 		}
 		request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
+
+		codeChallenge := request.GetCodeChallenge()
+		if codeChallenge != nil && codeChallenge.Challenge != "" {
+			err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, request.GetCodeChallenge())
+
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
 		return request, client, err
 	}
 	client, err = exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
@@ -109,6 +119,16 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 		return nil, nil, err
 	}
 	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
+
+	codeChallenge := request.GetCodeChallenge()
+	if codeChallenge != nil && codeChallenge.Challenge != "" {
+		err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, request.GetCodeChallenge())
+
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	return request, client, err
 }
 
