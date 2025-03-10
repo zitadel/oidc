@@ -167,7 +167,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
 	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
-		return oidc.ErrInvalidRequest().WithParent(err).WithDescription(err.Error())
+		return oidc.ErrInvalidRequest().WithParent(err).WithDescription("%s", err.Error())
 	}
 	CopyRequestObjectToAuthRequest(authReq, requestObject)
 	return nil

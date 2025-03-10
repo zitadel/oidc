@@ -138,7 +138,7 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 		}
 	}
 	if r.Data.ClientID == "" {
-		return nil, oidc.ErrInvalidRequest().WithParent(ErrAuthReqMissingClientID).WithDescription(ErrAuthReqMissingClientID.Error())
+		return nil, oidc.ErrInvalidRequest().WithParent(ErrAuthReqMissingClientID).WithDescription("%s", ErrAuthReqMissingClientID.Error())
 	}
 	client, err := s.provider.Storage().GetClientByClientID(ctx, r.Data.ClientID)
 	if err != nil {
