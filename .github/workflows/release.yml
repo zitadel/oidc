@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.21', '1.22']
+        go: ['1.21', '1.22', '1.23']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v4.6.0
+      - uses: codecov/codecov-action@v5.4.0
         with:
           file: ./profile.cov
           name: codecov-go

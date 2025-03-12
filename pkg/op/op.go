@@ -167,6 +167,7 @@ type Config struct {
 	RequestObjectSupported            bool
 	SupportedUILocales                []language.Tag
 	SupportedClaims                   []string
+	SupportedScopes                   []string
 	DeviceAuthorization               DeviceAuthorizationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
@@ -336,6 +337,10 @@ func (o *Provider) EndSessionEndpoint() *Endpoint {
 
 func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
+}
+
+func (o *Provider) CheckSessionIframe() *Endpoint {
+	return o.endpoints.CheckSessionIframe
 }
 
 func (o *Provider) KeysEndpoint() *Endpoint {

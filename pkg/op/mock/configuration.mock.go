@@ -106,6 +106,20 @@ func (mr *MockConfigurationMockRecorder) BackChannelLogoutSupported() *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackChannelLogoutSupported", reflect.TypeOf((*MockConfiguration)(nil).BackChannelLogoutSupported))
 }
 
+// CheckSessionIframe mocks base method.
+func (m *MockConfiguration) CheckSessionIframe() *op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckSessionIframe")
+	ret0, _ := ret[0].(*op.Endpoint)
+	return ret0
+}
+
+// CheckSessionIframe indicates an expected call of CheckSessionIframe.
+func (mr *MockConfigurationMockRecorder) CheckSessionIframe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSessionIframe", reflect.TypeOf((*MockConfiguration)(nil).CheckSessionIframe))
+}
+
 // CodeMethodS256Supported mocks base method.
 func (m *MockConfiguration) CodeMethodS256Supported() bool {
 	m.ctrl.T.Helper()

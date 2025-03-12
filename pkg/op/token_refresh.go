@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"time"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"github.com/zitadel/oidc/v3/pkg/strings"
 )
 
 type RefreshTokenRequest interface {
@@ -85,7 +85,7 @@ func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTok
 		return nil
 	}
 	for _, scope := range requestedScopes {
-		if !strings.Contains(authRequest.GetScopes(), scope) {
+		if !slices.Contains(authRequest.GetScopes(), scope) {
 			return oidc.ErrInvalidScope()
 		}
 	}

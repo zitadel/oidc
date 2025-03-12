@@ -434,6 +434,24 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			false,
 		},
 		{
+			"code flow registered https loopback v4 native ok",
+			args{
+				"https://127.0.0.1:4200/callback",
+				mock.NewClientWithConfig(t, []string{"https://127.0.0.1/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
+			"code flow registered https loopback v6 native ok",
+			args{
+				"https://[::1]:4200/callback",
+				mock.NewClientWithConfig(t, []string{"https://[::1]/callback"}, op.ApplicationTypeNative, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
+		{
 			"code flow unregistered http native fails",
 			args{
 				"http://unregistered.com/callback",
@@ -1069,6 +1087,34 @@ func TestAuthResponseCode(t *testing.T) {
 			res: res{
 				wantCode:           http.StatusFound,
 				wantLocationHeader: "/auth/callback/?code=id1&state=state1",
+				wantBody:           "",
+			},
+		},
+		{
+			name: "success with state and session_state",
+			args: args{
+				authReq: &storage.AuthRequestWithSessionState{
+					AuthRequest: &storage.AuthRequest{
+						ID:            "id1",
+						TransferState: "state1",
+					},
+					SessionState: "session_state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusFound,
+				wantLocationHeader: "/auth/callback/?code=id1&session_state=session_state1&state=state1",
 				wantBody:           "",
 			},
 		},
