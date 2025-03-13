@@ -143,6 +143,14 @@ func MaxAgeToInternal(maxAge *uint) *time.Duration {
 }
 
 func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthRequest {
+	var codeChallenge *OIDCCodeChallenge
+	if authReq.CodeChallenge != "" {
+		codeChallenge = &OIDCCodeChallenge{
+			Challenge: authReq.CodeChallenge,
+			Method:    string(authReq.CodeChallengeMethod),
+		}
+	}
+
 	return &AuthRequest{
 		CreationDate:  time.Now(),
 		ApplicationID: authReq.ClientID,
@@ -157,10 +165,7 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 		ResponseType:  authReq.ResponseType,
 		ResponseMode:  authReq.ResponseMode,
 		Nonce:         authReq.Nonce,
-		CodeChallenge: &OIDCCodeChallenge{
-			Challenge: authReq.CodeChallenge,
-			Method:    string(authReq.CodeChallengeMethod),
-		},
+		CodeChallenge: codeChallenge,
 	}
 }
 
