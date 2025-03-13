@@ -34,11 +34,15 @@ func main() {
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 	responseMode := os.Getenv("RESPONSE_MODE")
-	pkce, err := strconv.ParseBool(os.Getenv("PKCE"))
-	if err != nil {
-		logrus.Fatalf("error parsing PKCE %s", err.Error())
-	}
 
+	var pkce bool
+	if pkceEnv, ok := os.LookupEnv("PKCE"); ok {
+		var err error
+		pkce, err = strconv.ParseBool(pkceEnv)
+		if err != nil {
+			logrus.Fatalf("error parsing PKCE %s", err.Error())
+		}
+	}
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
