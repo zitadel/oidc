@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -34,6 +35,14 @@ func main() {
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 	responseMode := os.Getenv("RESPONSE_MODE")
 
+	var pkce bool
+	if pkceEnv, ok := os.LookupEnv("PKCE"); ok {
+		var err error
+		pkce, err = strconv.ParseBool(pkceEnv)
+		if err != nil {
+			logrus.Fatalf("error parsing PKCE %s", err.Error())
+		}
+	}
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
@@ -63,6 +72,9 @@ func main() {
 	}
 	if keyPath != "" {
 		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
+	}
+	if pkce {
+		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 
 	// One can add a logger to the context,
