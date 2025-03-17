@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -617,14 +618,19 @@ func trySetStateCookie(w http.ResponseWriter, state string, rp RelyingParty) err
 }
 
 func tryReadStateCookie(w http.ResponseWriter, r *http.Request, rp RelyingParty) (state string, err error) {
+	stateRemote := r.FormValue(stateParam)
 	if rp.CookieHandler() == nil {
-		return r.FormValue(stateParam), nil
+		// no cookie handler is not a good idea, but not a failure
+		return stateRemote, nil
 	}
 	state, err = rp.CookieHandler().CheckQueryCookie(r, stateParam)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("no state in cookie: %w", err)
 	}
 	rp.CookieHandler().DeleteCookie(w, stateParam)
+	if state != stateRemote {
+		return state, fmt.Errorf("states do not match!  cookie: %q remote: %q", state, stateRemote)
+	}
 	return state, nil
 }
 
