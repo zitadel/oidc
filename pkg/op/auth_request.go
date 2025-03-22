@@ -62,6 +62,12 @@ type AuthorizeValidator interface {
 	ValidateAuthRequest(context.Context, *oidc.AuthRequest, Storage, *IDTokenHintVerifier) (string, error)
 }
 
+type CodeResponseType struct {
+	Code         string `schema:"code"`
+	State        string `schema:"state,omitempty"`
+	SessionState string `schema:"session_state,omitempty"`
+}
+
 func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		Authorize(w, r, authorizer)
@@ -477,48 +483,70 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 	AuthResponseToken(w, r, authReq, authorizer, client)
 }
 
-// AuthResponseCode creates the successful code authentication response
+// AuthResponseCode handles the creation of a successful authentication response using an authorization code
 func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
 	ctx, span := tracer.Start(r.Context(), "AuthResponseCode")
-	r = r.WithContext(ctx)
 	defer span.End()
+	r = r.WithContext(ctx)
 
-	code, err := CreateAuthRequestCode(r.Context(), authReq, authorizer.Storage(), authorizer.Crypto())
+	var err error
+	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
+		err = handleFormPostResponse(w, r, authReq, authorizer)
+	} else {
+		err = handleRedirectResponse(w, r, authReq, authorizer)
+	}
+
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer)
-		return
 	}
-	var sessionState string
-	authRequestSessionState, ok := authReq.(AuthRequestSessionState)
-	if ok {
+}
+
+// handleFormPostResponse processes the authentication response using form post method
+func handleFormPostResponse(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) error {
+	codeResponse, err := BuildAuthResponseCodeResponsePayload(r.Context(), authReq, authorizer)
+	if err != nil {
+		return err
+	}
+	return AuthResponseFormPost(w, authReq.GetRedirectURI(), codeResponse, authorizer.Encoder())
+}
+
+// handleRedirectResponse processes the authentication response using the redirect method
+func handleRedirectResponse(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) error {
+	callbackURL, err := BuildAuthResponseCallbackURL(r.Context(), authReq, authorizer)
+	if err != nil {
+		return err
+	}
+	http.Redirect(w, r, callbackURL, http.StatusFound)
+	return nil
+}
+
+// BuildAuthResponseCodeResponsePayload generates the authorization code response payload for the authentication request
+func BuildAuthResponseCodeResponsePayload(ctx context.Context, authReq AuthRequest, authorizer Authorizer) (*CodeResponseType, error) {
+	code, err := CreateAuthRequestCode(ctx, authReq, authorizer.Storage(), authorizer.Crypto())
+	if err != nil {
+		return nil, err
+	}
+
+	sessionState := ""
+	if authRequestSessionState, ok := authReq.(AuthRequestSessionState); ok {
 		sessionState = authRequestSessionState.GetSessionState()
 	}
-	codeResponse := struct {
-		Code         string `schema:"code"`
-		State        string `schema:"state,omitempty"`
-		SessionState string `schema:"session_state,omitempty"`
-	}{
+
+	return &CodeResponseType{
 		Code:         code,
 		State:        authReq.GetState(),
 		SessionState: sessionState,
-	}
+	}, nil
+}
 
-	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
-		err := AuthResponseFormPost(w, authReq.GetRedirectURI(), &codeResponse, authorizer.Encoder())
-		if err != nil {
-			AuthRequestError(w, r, authReq, err, authorizer)
-			return
-		}
-
-		return
-	}
-
-	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), &codeResponse, authorizer.Encoder())
+// BuildAuthResponseCallbackURL generates the callback URL for a successful authorization code response
+func BuildAuthResponseCallbackURL(ctx context.Context, authReq AuthRequest, authorizer Authorizer) (string, error) {
+	codeResponse, err := BuildAuthResponseCodeResponsePayload(ctx, authReq, authorizer)
 	if err != nil {
-		AuthRequestError(w, r, authReq, err, authorizer)
-		return
+		return "", err
 	}
-	http.Redirect(w, r, callback, http.StatusFound)
+
+	return AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), codeResponse, authorizer.Encoder())
 }
 
 // AuthResponseToken creates the successful token(s) authentication response
