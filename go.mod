@@ -1,6 +1,7 @@
 module github.com/zitadel/oidc/v3
 
 go 1.23.7
+
 toolchain go1.24.1
 
 require (
