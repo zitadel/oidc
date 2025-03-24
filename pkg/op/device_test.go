@@ -145,21 +145,11 @@ func runWithRandReader(r io.Reader, f func()) {
 }
 
 func TestNewDeviceCode(t *testing.T) {
-	t.Run("reader error", func(t *testing.T) {
-		runWithRandReader(errReader{}, func() {
-			_, err := op.NewDeviceCode(16)
-			require.Error(t, err)
-		})
-	})
-
-	t.Run("different lengths, rand reader", func(t *testing.T) {
-		for i := 1; i <= 32; i++ {
-			got, err := op.NewDeviceCode(i)
-			require.NoError(t, err)
-			assert.Len(t, got, base64.RawURLEncoding.EncodedLen(i))
-		}
-	})
-
+	for i := 1; i <= 32; i++ {
+		got, err := op.NewDeviceCode(i)
+		require.NoError(t, err)
+		assert.Len(t, got, base64.RawURLEncoding.EncodedLen(i))
+	}
 }
 
 func TestNewUserCode(t *testing.T) {

@@ -147,7 +147,11 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 				tokenExchangeRequest,
 			)
 		} else {
-			privateClaims, err = storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
+			if fromRequest, ok := storage.(CanGetPrivateClaimsFromRequest); ok {
+				privateClaims, err = fromRequest.GetPrivateClaimsFromRequest(ctx, tokenRequest, removeUserinfoScopes(restrictedScopes))
+			} else {
+				privateClaims, err = storage.GetPrivateClaimsFromScopes(ctx, tokenRequest.GetSubject(), client.GetID(), removeUserinfoScopes(restrictedScopes))
+			}
 		}
 
 		if err != nil {
