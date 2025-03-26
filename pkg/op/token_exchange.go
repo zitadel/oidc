@@ -310,7 +310,9 @@ func GetTokenIDAndSubjectFromToken(
 		if !ok {
 			break
 		}
-		claims = accessTokenClaims.Claims
+		if accessTokenClaims != nil {
+			claims = accessTokenClaims.Claims
+		}
 	case oidc.RefreshTokenType:
 		refreshTokenRequest, err := exchanger.Storage().TokenRequestByRefreshToken(ctx, token)
 		if err != nil {
@@ -323,8 +325,11 @@ func GetTokenIDAndSubjectFromToken(
 		if err != nil {
 			break
 		}
-
-		tokenIDOrToken, subject, claims, ok = token, idTokenClaims.Subject, idTokenClaims.Claims, true
+		if idTokenClaims != nil {
+			claims = idTokenClaims.Claims
+			subject = idTokenClaims.Subject
+		}
+		tokenIDOrToken, ok = token, true
 	}
 
 	if !ok {

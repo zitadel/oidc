@@ -9,3 +9,7 @@ package mock
 //go:generate mockgen -package mock -destination ./discovery.mock.go github.com/zitadel/oidc/v3/pkg/op DiscoverStorage
 //go:generate mockgen -package mock -destination ./signer.mock.go github.com/zitadel/oidc/v3/pkg/op SigningKey,Key
 //go:generate mockgen -package mock -destination ./key.mock.go github.com/zitadel/oidc/v3/pkg/op KeyProvider
+//go:generate mockgen -package mock -destination ./exchanger.mock.go github.com/zitadel/oidc/v3/pkg/op Exchanger
+//go:generate mockgen -package mock -destination ./tokenexchangeverifierstorage.mock.go github.com/zitadel/oidc/v3/pkg/op TokenExchangeTokensVerifierStorage
+//go:generate mockgen -package mock -destination ./crypto.mock.go github.com/zitadel/oidc/v3/pkg/op Crypto
+//go:generate mockgen -package mock -destination ./token_refresh.mock.go github.com/zitadel/oidc/v3/pkg/op RefreshTokenRequest
