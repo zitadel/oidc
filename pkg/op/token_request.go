@@ -141,10 +141,10 @@ func AuthorizeCodeChallenge(codeVerifier string, challenge *oidc.CodeChallenge) 
 	}
 
 	if codeVerifier == "" {
-		return oidc.ErrInvalidRequest().WithDescription("code_challenge required")
+		return oidc.ErrInvalidRequest().WithDescription("code_verifier required")
 	}
 	if !oidc.VerifyCodeChallenge(challenge, codeVerifier) {
-		return oidc.ErrInvalidGrant().WithDescription("invalid code challenge")
+		return oidc.ErrInvalidGrant().WithDescription("invalid code_verifier")
 	}
 	return nil
 }
