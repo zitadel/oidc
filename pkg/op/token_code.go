@@ -80,12 +80,9 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	}
 
 	codeChallenge := request.GetCodeChallenge()
-	if codeChallenge != nil {
-		err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, codeChallenge)
-
-		if err != nil {
-			return nil, nil, err
-		}
+	err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, codeChallenge)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
