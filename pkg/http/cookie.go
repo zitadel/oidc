@@ -97,6 +97,10 @@ func (c *CookieHandler) CheckQueryCookie(r *http.Request, name string) (string, 
 }
 
 func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) error {
+	if c.IsRequestAware() {
+		return errors.New("Cookie handler is request aware")
+	}
+
 	encoded, err := c.securecookie.Encode(name, value)
 	if err != nil {
 		return err
