@@ -8,12 +8,13 @@ import (
 )
 
 type CookieHandler struct {
-	securecookie *securecookie.SecureCookie
-	secureOnly   bool
-	sameSite     http.SameSite
-	maxAge       int
-	domain       string
-	path         string
+	securecookie     *securecookie.SecureCookie
+	secureCookieFunc func(r *http.Request) (*securecookie.SecureCookie, error)
+	secureOnly       bool
+	sameSite         http.SameSite
+	maxAge           int
+	domain           string
+	path             string
 }
 
 func NewCookieHandler(hashKey, encryptKey []byte, opts ...CookieHandlerOpt) *CookieHandler {
