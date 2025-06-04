@@ -410,7 +410,7 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 		}
 
 		state := stateFn()
-		if err := trySetStateCookie(w, state, rp); err != nil {
+		if err := trySetStateCookie(r, w, state, rp); err != nil {
 			unauthorizedError(w, r, "failed to create state cookie: "+err.Error(), state, rp)
 			return
 		}
@@ -607,9 +607,16 @@ func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject st
 	return userinfo, nil
 }
 
-func trySetStateCookie(w http.ResponseWriter, state string, rp RelyingParty) error {
+func trySetStateCookie(r *http.Request, w http.ResponseWriter, state string, rp RelyingParty) error {
 	if rp.CookieHandler() != nil {
-		if err := rp.CookieHandler().SetCookie(w, stateParam, state); err != nil {
+		var err error
+		if rp.CookieHandler().IsRequestAware() {
+			err = rp.CookieHandler().SetRequestAwareCookie(r, w, stateParam, state)
+		} else {
+			err = rp.CookieHandler().SetCookie(w, stateParam, state)
+		}
+
+		if err != nil {
 			return err
 		}
 	}
