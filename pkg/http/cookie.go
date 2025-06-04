@@ -31,6 +31,21 @@ func NewCookieHandler(hashKey, encryptKey []byte, opts ...CookieHandlerOpt) *Coo
 	return c
 }
 
+func NewRequestAwareCookieHandler(secureCookieFunc func(r *http.Request) (*securecookie.SecureCookie, error), opts ...CookieHandlerOpt) *CookieHandler {
+	c := &CookieHandler{
+		secureCookieFunc: secureCookieFunc,
+		secureOnly:       true,
+		sameSite:         http.SameSiteLaxMode,
+		path:             "/",
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
 type CookieHandlerOpt func(*CookieHandler)
 
 func WithUnsecure() CookieHandlerOpt {
