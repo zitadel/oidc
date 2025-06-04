@@ -69,8 +69,17 @@ func (c *CookieHandler) CheckCookie(r *http.Request, name string) (string, error
 	if err != nil {
 		return "", err
 	}
+
+	secureCookie := c.securecookie
+	if c.IsRequestAware() {
+		secureCookie, err = c.secureCookieFunc(r)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	var value string
-	if err := c.securecookie.Decode(name, cookie.Value, &value); err != nil {
+	if err := secureCookie.Decode(name, cookie.Value, &value); err != nil {
 		return "", err
 	}
 	return value, nil
