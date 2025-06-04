@@ -117,3 +117,7 @@ func (c *CookieHandler) DeleteCookie(w http.ResponseWriter, name string) {
 		SameSite: c.sameSite,
 	})
 }
+
+func (c *CookieHandler) IsRequestAware() bool {
+	return c.secureCookieFunc != nil
+}
