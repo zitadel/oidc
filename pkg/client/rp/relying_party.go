@@ -436,6 +436,15 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 	return oidc.NewSHACodeChallenge(codeVerifier), nil
 }
 
+// GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
+func GenerateAndStoreCodeChallengeWithRequest(r *http.Request, w http.ResponseWriter, rp RelyingParty) (string, error) {
+	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	if err := rp.CookieHandler().SetRequestAwareCookie(r, w, pkceCode, codeVerifier); err != nil {
+		return "", err
+	}
+	return oidc.NewSHACodeChallenge(codeVerifier), nil
+}
+
 // ErrMissingIDToken is returned when an id_token was expected,
 // but not received in the token response.
 var ErrMissingIDToken = errors.New("id_token missing")
