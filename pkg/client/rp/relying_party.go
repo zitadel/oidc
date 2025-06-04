@@ -415,7 +415,14 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 			return
 		}
 		if rp.IsPKCE() {
-			codeChallenge, err := GenerateAndStoreCodeChallenge(w, rp)
+			var codeChallenge string
+			var err error
+			if rp.CookieHandler().IsRequestAware() {
+				codeChallenge, err = GenerateAndStoreCodeChallengeWithRequest(r, w, rp)
+			} else {
+				codeChallenge, err = GenerateAndStoreCodeChallenge(w, rp)
+			}
+
 			if err != nil {
 				unauthorizedError(w, r, "failed to create code challenge: "+err.Error(), state, rp)
 				return
