@@ -6,6 +6,7 @@ import (
 	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
+	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -170,6 +171,8 @@ type EndSessionRequest struct {
 	ClientID          string
 	IDTokenHintClaims *oidc.IDTokenClaims
 	RedirectURI       string
+	LogoutHint        string
+	UILocales         []language.Tag
 }
 
 var ErrDuplicateUserCode = errors.New("user code already exists")
