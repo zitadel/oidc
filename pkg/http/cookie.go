@@ -118,6 +118,35 @@ func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) err
 	return nil
 }
 
+func (c *CookieHandler) SetRequestAwareCookie(r *http.Request, w http.ResponseWriter, name string, value string) error {
+	if !c.IsRequestAware() {
+		return errors.New("Cookie handler is not request aware")
+	}
+
+	secureCookie, err := c.secureCookieFunc(r)
+	if err != nil {
+		return err
+	}
+
+	encoded, err := secureCookie.Encode(name, value)
+	if err != nil {
+		return err
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     name,
+		Value:    encoded,
+		Domain:   c.domain,
+		Path:     c.path,
+		MaxAge:   c.maxAge,
+		HttpOnly: true,
+		Secure:   c.secureOnly,
+		SameSite: c.sameSite,
+	})
+
+	return nil
+}
+
 func (c *CookieHandler) DeleteCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
