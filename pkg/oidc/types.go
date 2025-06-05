@@ -115,6 +115,14 @@ func ParseLocales(locales []string) Locales {
 	return out
 }
 
+func (l Locales) String() string {
+	tags := make([]string, len(l))
+	for i, tag := range l {
+		tags[i] = tag.String()
+	}
+	return strings.Join(tags, " ")
+}
+
 // UnmarshalText implements the [encoding.TextUnmarshaler] interface.
 // It decodes an unquoted space seperated string into Locales.
 // Undefined language tags in the input are ignored and ommited from
@@ -230,6 +238,9 @@ func NewEncoder() *schema.Encoder {
 	e := schema.NewEncoder()
 	e.RegisterEncoder(SpaceDelimitedArray{}, func(value reflect.Value) string {
 		return value.Interface().(SpaceDelimitedArray).String()
+	})
+	e.RegisterEncoder(Locales{}, func(value reflect.Value) string {
+		return value.Interface().(Locales).String()
 	})
 	return e
 }
