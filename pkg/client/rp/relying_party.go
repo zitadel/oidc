@@ -410,12 +410,19 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 		}
 
 		state := stateFn()
-		if err := trySetStateCookie(w, state, rp); err != nil {
+		if err := trySetStateCookie(r, w, state, rp); err != nil {
 			unauthorizedError(w, r, "failed to create state cookie: "+err.Error(), state, rp)
 			return
 		}
 		if rp.IsPKCE() {
-			codeChallenge, err := GenerateAndStoreCodeChallenge(w, rp)
+			var codeChallenge string
+			var err error
+			if rp.CookieHandler().IsRequestAware() {
+				codeChallenge, err = GenerateAndStoreCodeChallengeWithRequest(r, w, rp)
+			} else {
+				codeChallenge, err = GenerateAndStoreCodeChallenge(w, rp)
+			}
+
 			if err != nil {
 				unauthorizedError(w, r, "failed to create code challenge: "+err.Error(), state, rp)
 				return
@@ -431,6 +438,15 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
 	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
+		return "", err
+	}
+	return oidc.NewSHACodeChallenge(codeVerifier), nil
+}
+
+// GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
+func GenerateAndStoreCodeChallengeWithRequest(r *http.Request, w http.ResponseWriter, rp RelyingParty) (string, error) {
+	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	if err := rp.CookieHandler().SetRequestAwareCookie(r, w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}
 	return oidc.NewSHACodeChallenge(codeVerifier), nil
@@ -607,9 +623,16 @@ func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject st
 	return userinfo, nil
 }
 
-func trySetStateCookie(w http.ResponseWriter, state string, rp RelyingParty) error {
+func trySetStateCookie(r *http.Request, w http.ResponseWriter, state string, rp RelyingParty) error {
 	if rp.CookieHandler() != nil {
-		if err := rp.CookieHandler().SetCookie(w, stateParam, state); err != nil {
+		var err error
+		if rp.CookieHandler().IsRequestAware() {
+			err = rp.CookieHandler().SetRequestAwareCookie(r, w, stateParam, state)
+		} else {
+			err = rp.CookieHandler().SetCookie(w, stateParam, state)
+		}
+
+		if err != nil {
 			return err
 		}
 	}
