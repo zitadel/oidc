@@ -63,6 +63,10 @@ func WithSameSite(sameSite http.SameSite) CookieHandlerOpt {
 func WithMaxAge(maxAge int) CookieHandlerOpt {
 	return func(c *CookieHandler) {
 		c.maxAge = maxAge
+		if c.IsRequestAware() {
+			return
+		}
+
 		c.securecookie.MaxAge(maxAge)
 	}
 }
