@@ -22,7 +22,7 @@ require (
 	github.com/zitadel/schema v1.3.1
 	go.opentelemetry.io/otel v1.29.0
 	golang.org/x/oauth2 v0.30.0
-	golang.org/x/text v0.25.0
+	golang.org/x/text v0.26.0
 )
 
 require (
