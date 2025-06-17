@@ -2,6 +2,7 @@ name: Bug Report
 description: "Create a bug report to help us improve ZITADEL. Click [here](https://github.com/zitadel/zitadel/blob/main/CONTRIBUTING.md#product-management) to see how we process your issue."
 title: "[Bug]: "
 labels: ["bug"]
+type: Bug
 body:
   - type: markdown
     attributes:
