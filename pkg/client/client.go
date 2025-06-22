@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
-	"go.opentelemetry.io/otel"
+	"github.com/zitadel/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/pkg/crypto"
