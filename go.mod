@@ -6,7 +6,6 @@ toolchain go1.24.1
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.8.1
-	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-jose/go-jose/v4 v4.0.5
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0

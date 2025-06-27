@@ -8,10 +8,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
+	"github.com/zitadel/oidc/v3/pkg/http/mw"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
@@ -31,12 +31,12 @@ var counter atomic.Int64
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
 // Use one of the pre-made clients in storage/clients.go or register a new one.
-func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) chi.Router {
+func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) *http.ServeMux {
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 
-	router := chi.NewRouter()
+	router := mw.New()
 	router.Use(logging.Middleware(
 		logging.WithLogger(logger),
 		logging.WithIDFunc(func() slog.Attr {
@@ -63,11 +63,9 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 
 	// regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	// so we will direct all calls to /login to the login UI
-	router.Mount("/login/", http.StripPrefix("/login", l.router))
+	router.Handle("/login/", http.StripPrefix("/login", l.router))
 
-	router.Route("/device", func(r chi.Router) {
-		registerDeviceAuth(storage, r)
-	})
+	router.Handle("/device/", http.StripPrefix("/device", newDeviceAuth(storage)))
 
 	handler := http.Handler(provider)
 	if wrapServer {
@@ -79,9 +77,9 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	//
 	// if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	// then you would have to set the path prefix (/custom/path/)
-	router.Mount("/", handler)
+	router.Handle("/", handler)
 
-	return router
+	return router.ServeMux
 }
 
 // newOP will create an OpenID Provider for localhost on a specified port with a given encryption key

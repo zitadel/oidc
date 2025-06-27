@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -47,7 +46,7 @@ func main() {
 	//be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 
-	router := chi.NewRouter()
+	router := http.NewServeMux()
 
 	//for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
@@ -76,7 +75,7 @@ func main() {
 
 	//regardless of how many pages / steps there are in the process, the UI must be registered in the router,
 	//so we will direct all calls to /login to the login UI
-	router.Mount("/login/", http.StripPrefix("/login", l.router))
+	router.Handle("/login/", http.StripPrefix("/login", l.router))
 
 	//we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
 	//is served on the correct path
@@ -84,7 +83,7 @@ func main() {
 	//if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	//then you would have to set the path prefix (/custom/path/):
 	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider.HttpHandler()))
-	router.Mount("/", provider)
+	router.Handle("/", provider)
 
 	server := &http.Server{
 		Addr:    ":" + port,

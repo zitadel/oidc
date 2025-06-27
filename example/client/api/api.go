@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/zitadel/oidc/v3/pkg/client/rs"
@@ -33,7 +32,7 @@ func main() {
 		logrus.Fatalf("error creating provider %s", err.Error())
 	}
 
-	router := chi.NewRouter()
+	router := http.NewServeMux()
 
 	// public url accessible without any authorization
 	// will print `OK` and current timestamp
@@ -74,8 +73,8 @@ func main() {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		requestedClaim := chi.URLParam(r, "claim")
-		requestedValue := chi.URLParam(r, "value")
+		requestedClaim := r.PathValue("claim")
+		requestedValue := r.PathValue("value")
 
 		value, ok := resp.Claims[requestedClaim].(string)
 		if !ok || value == "" || value != requestedValue {

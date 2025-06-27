@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/zitadel/oidc/v3/pkg/http/mw"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -30,7 +30,7 @@ type ExtendedLegacyServer interface {
 func RegisterLegacyServer(s ExtendedLegacyServer, authorizeCallbackHandler http.HandlerFunc, options ...ServerOption) http.Handler {
 	options = append(options,
 		WithHTTPMiddleware(intercept(s.Provider().IssuerFromRequest)),
-		WithSetRouter(func(r chi.Router) {
+		WithSetRouter(func(r *mw.Chain) {
 			r.HandleFunc(s.Endpoints().Authorization.Relative()+authCallbackPathSuffix, authorizeCallbackHandler)
 		}),
 	)

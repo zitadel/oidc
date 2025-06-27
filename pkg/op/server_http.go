@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/cors"
 	"github.com/zitadel/logging"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/http/mw"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/schema"
 )
@@ -25,7 +25,7 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 	decoder.IgnoreUnknownKeys(true)
 
 	ws := &webServer{
-		router:    chi.NewRouter(),
+		router:    mw.New(),
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
@@ -56,7 +56,7 @@ func WithHTTPMiddleware(m ...func(http.Handler) http.Handler) ServerOption {
 }
 
 // WithSetRouter allows customization or the Server's router.
-func WithSetRouter(set func(chi.Router)) ServerOption {
+func WithSetRouter(set func(*mw.Chain)) ServerOption {
 	return func(s *webServer) {
 		set(s.router)
 	}
@@ -88,7 +88,7 @@ func WithFallbackLogger(logger *slog.Logger) ServerOption {
 
 type webServer struct {
 	server    Server
-	router    *chi.Mux
+	router    *mw.Chain
 	handler   http.Handler
 	endpoints Endpoints
 	decoder   httphelper.Decoder

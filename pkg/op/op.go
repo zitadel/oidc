@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/rs/cors"
 	"github.com/zitadel/schema"
@@ -15,6 +14,7 @@ import (
 	"golang.org/x/text/language"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/http/mw"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -121,15 +121,16 @@ type corsOptioner interface {
 	CORSOptions() *cors.Options
 }
 
-func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router {
-	router := chi.NewRouter()
-	if co, ok := o.(corsOptioner); ok {
+func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) *http.ServeMux {
+	router := mw.New()
+	if co, ok := o.(corsOptioner); !ok {
+		router.Use(cors.New(defaultCORSOptions).Handler)
+	} else {
 		if opts := co.CORSOptions(); opts != nil {
 			router.Use(cors.New(*opts).Handler)
 		}
-	} else {
-		router.Use(cors.New(defaultCORSOptions).Handler)
 	}
+
 	router.Use(intercept(o.IssuerFromRequest, interceptors...))
 	router.HandleFunc(healthEndpoint, healthHandler)
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
@@ -143,7 +144,8 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
-	return router
+
+	return router.ServeMux
 }
 
 // AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login

@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 type login struct {
 	authenticate authenticate
-	router       chi.Router
+	router       *http.ServeMux
 	callback     func(context.Context, string) string
 }
 
@@ -25,9 +24,9 @@ func NewLogin(authenticate authenticate, callback func(context.Context, string) 
 }
 
 func (l *login) createRouter(issuerInterceptor *op.IssuerInterceptor) {
-	l.router = chi.NewRouter()
-	l.router.Get("/username", l.loginHandler)
-	l.router.Post("/username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
+	l.router = http.NewServeMux()
+	l.router.HandleFunc(http.MethodGet+" /username", l.loginHandler)
+	l.router.Handle(http.MethodPost+" /username", issuerInterceptor.HandlerFunc(l.checkLoginHandler))
 }
 
 type authenticate interface {
