@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/securecookie"
 	"github.com/sirupsen/logrus"
 	"github.com/zitadel/oidc/v3/pkg/op"
@@ -36,15 +35,19 @@ type deviceLogin struct {
 	cookie  *securecookie.SecureCookie
 }
 
-func registerDeviceAuth(storage deviceAuthenticate, router chi.Router) {
+func newDeviceAuth(storage deviceAuthenticate) *http.ServeMux {
+	router := http.NewServeMux()
+
 	l := &deviceLogin{
 		storage: storage,
 		cookie:  securecookie.New(securecookie.GenerateRandomKey(32), nil),
 	}
 
 	router.HandleFunc("/", l.userCodeHandler)
-	router.Post("/login", l.loginHandler)
+	router.HandleFunc(http.MethodPost+" /login", l.loginHandler)
 	router.HandleFunc("/confirm", l.confirmHandler)
+
+	return router
 }
 
 func renderUserCode(w io.Writer, err error) {
