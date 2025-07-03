@@ -73,6 +73,15 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 
 > Note: Usernames are suffixed with the hostname (`test-user@localhost` or `test-user@oidc.local`)
 
+
+### Build Tags
+
+The library uses build tags to enable or disable features. The following build tags are available:
+
+| Build Tag | Description                                                                                                                                                              |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `nootel`  | Disables the OTel instrumentation, which is enabled by default. This is useful if you do not want to use OTel or if you want to use a different instrumentation library. |
+
 ### Server configuration
 
 Example server allows extra configuration using environment variables and could be used for end to
