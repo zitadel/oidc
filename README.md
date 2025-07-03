@@ -80,7 +80,7 @@ The library uses build tags to enable or disable features. The following build t
 
 | Build Tag | Description                                                                                                                                                              |
 |-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `nootel`  | Disables the OTel instrumentation, which is enabled by default. This is useful if you do not want to use OTel or if you want to use a different instrumentation library. |
+| `no_otel`  | Disables the OTel instrumentation, which is enabled by default. This is useful if you do not want to use OTel or if you want to use a different instrumentation library. |
 
 ### Server configuration
 
