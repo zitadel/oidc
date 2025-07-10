@@ -10,8 +10,8 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-// VerifyTokenOption is a custom verification option for use in [VerifyIDToken]
-type VerifyTokenOption func(o *VerifyIDTokenConfig)
+// VerifyIDTokenOption is a custom verification option for use in [VerifyIDToken]
+type VerifyIDTokenOption func(o *VerifyIDTokenConfig)
 
 type VerifyIDTokenConfig struct {
 	// CheckAuthorizedParty checks azp (authorized party) claim requirements.
@@ -21,7 +21,7 @@ type VerifyIDTokenConfig struct {
 
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
 // https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier, options ...VerifyTokenOption) (claims C, err error) {
+func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier, options ...VerifyIDTokenOption) (claims C, err error) {
 	ctx, span := client.Tracer.Start(ctx, "VerifyTokens")
 	defer span.End()
 
@@ -39,7 +39,7 @@ func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken str
 
 // VerifyIDToken validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier, options ...VerifyTokenOption) (claims C, err error) {
+func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier, options ...VerifyIDTokenOption) (claims C, err error) {
 	ctx, span := client.Tracer.Start(ctx, "VerifyIDToken")
 	defer span.End()
 
