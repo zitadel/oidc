@@ -10,24 +10,15 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-// VerifyIDTokenOption is a custom verification option for use in [VerifyIDToken]
-type VerifyIDTokenOption func(o *VerifyIDTokenConfig)
-
-type VerifyIDTokenConfig struct {
-	// CheckAuthorizedParty checks azp (authorized party) claim requirements.
-	// Defaults to [oidc.CheckAuthorizedParty].
-	CheckAuthorizedParty func(claims oidc.Claims, clientID string) error
-}
-
 // VerifyTokens implement the Token Response Validation as defined in OIDC specification
 // https://openid.net/specs/openid-connect-core-1_0.html#TokenResponseValidation
-func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier, options ...VerifyIDTokenOption) (claims C, err error) {
+func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken string, v *IDTokenVerifier) (claims C, err error) {
 	ctx, span := client.Tracer.Start(ctx, "VerifyTokens")
 	defer span.End()
 
 	var nilClaims C
 
-	claims, err = VerifyIDToken[C](ctx, idToken, v, options...)
+	claims, err = VerifyIDToken[C](ctx, idToken, v)
 	if err != nil {
 		return nilClaims, err
 	}
@@ -39,18 +30,11 @@ func VerifyTokens[C oidc.IDClaims](ctx context.Context, accessToken, idToken str
 
 // VerifyIDToken validates the id token according to
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier, options ...VerifyIDTokenOption) (claims C, err error) {
+func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenVerifier) (claims C, err error) {
 	ctx, span := client.Tracer.Start(ctx, "VerifyIDToken")
 	defer span.End()
 
 	var nilClaims C
-	config := &VerifyIDTokenConfig{
-		CheckAuthorizedParty: oidc.CheckAuthorizedParty,
-	}
-
-	for _, o := range options {
-		o(config)
-	}
 
 	decrypted, err := oidc.DecryptToken(token)
 	if err != nil {
@@ -73,10 +57,12 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if config.CheckAuthorizedParty != nil {
-		if err = config.CheckAuthorizedParty(claims, v.ClientID); err != nil {
-			return nilClaims, err
-		}
+	if v.AZP != nil {
+		v.AZP = oidc.DefaultAZPVerifier(v.ClientID)
+	}
+
+	if err = oidc.CheckAuthorizedParty(claims, v.AZP); err != nil {
+		return nilClaims, err
 	}
 
 	if err = oidc.CheckSignature(ctx, decrypted, payload, claims, v.SupportedSignAlgs, v.KeySet); err != nil {
@@ -106,11 +92,6 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 	}
 
 	return claims, nil
-}
-
-// WithCheckAuthorizedParty sets the authorized party check function.
-func WithCheckAuthorizedParty(o *VerifyIDTokenConfig, fn func(claims oidc.Claims, clientID string) error) {
-	o.CheckAuthorizedParty = fn
 }
 
 type IDTokenVerifier oidc.Verifier
@@ -180,6 +161,13 @@ func WithNonce(nonce func(context.Context) string) VerifierOption {
 func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
 	return func(v *IDTokenVerifier) {
 		v.ACR = verifier
+	}
+}
+
+// WithAZPVerifier sets the verifier for the azp claim
+func WithAZPVerifier(verifier oidc.AZPVerifier) VerifierOption {
+	return func(v *IDTokenVerifier) {
+		v.AZP = verifier
 	}
 }
 

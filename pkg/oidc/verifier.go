@@ -72,6 +72,7 @@ type Verifier struct {
 	SupportedSignAlgs []string
 	MaxAge            time.Duration
 	ACR               ACRVerifier
+	AZP               AZPVerifier
 	KeySet            KeySet
 	Nonce             func(ctx context.Context) string
 }
@@ -130,19 +131,34 @@ func CheckAudience(claims Claims, clientID string) error {
 	return nil
 }
 
+// AZPVerifier specifies the function to be used by the `DefaultVerifier` for validating the azp claim
+type AZPVerifier func(string) error
+
+// DefaultAZPVerifier implements `AZPVerifier` returning an error
+// if none of the provided values matches the azp claim
+func DefaultAZPVerifier(possibleValues ...string) AZPVerifier {
+	return func(azp string) error {
+		if !slices.Contains(possibleValues, azp) {
+			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, azp)
+		}
+		return nil
+	}
+}
+
 // CheckAuthorizedParty checks azp (authorized party) claim requirements.
 //
 // If the ID Token contains multiple audiences, the Client SHOULD verify that an azp Claim is present.
 // If an azp Claim is present, the Client MAY verify that its client_id is the Claim Value.
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
-func CheckAuthorizedParty(claims Claims, clientID string) error {
+func CheckAuthorizedParty(claims Claims, azp AZPVerifier) error {
 	if len(claims.GetAudience()) > 1 {
 		if claims.GetAuthorizedParty() == "" {
 			return ErrAzpMissing
 		}
 	}
-	if claims.GetAuthorizedParty() != "" && claims.GetAuthorizedParty() != clientID {
-		return fmt.Errorf("%w: azp %q must be equal to client_id %q", ErrAzpInvalid, claims.GetAuthorizedParty(), clientID)
+
+	if err := azp(claims.GetAuthorizedParty()); err != nil {
+		return fmt.Errorf("%w: %v", ErrAzpInvalid, err)
 	}
 	return nil
 }

@@ -67,10 +67,6 @@ type RelyingParty interface {
 	// IDTokenVerifier returns the verifier used for oidc id_token verification
 	IDTokenVerifier() *IDTokenVerifier
 
-	// GetVerifyIDTokenOptions returns custom verification option that this rp
-	// will use in calls to [VerifyIDToken].
-	GetVerifyIDTokenOptions() []VerifyIDTokenOption
-
 	// ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 
@@ -113,8 +109,6 @@ type relyingParty struct {
 	verifierOpts        []VerifierOption
 	signer              jose.Signer
 	logger              *slog.Logger
-
-	verifyIDTokenOptions []VerifyIDTokenOption
 }
 
 func (rp *relyingParty) OAuthConfig() *oauth2.Config {
@@ -166,10 +160,6 @@ func (rp *relyingParty) IDTokenVerifier() *IDTokenVerifier {
 		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
 	}
 	return rp.idTokenVerifier
-}
-
-func (rp *relyingParty) GetVerifyIDTokenOptions() []VerifyIDTokenOption {
-	return rp.verifyIDTokenOptions
 }
 
 func (rp *relyingParty) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
@@ -332,13 +322,6 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 	}
 }
 
-func WithVerifyIDTokenOptions(opts ...VerifyIDTokenOption) Option {
-	return func(rp *relyingParty) error {
-		rp.verifyIDTokenOptions = opts
-		return nil
-	}
-}
-
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
 // deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
@@ -468,7 +451,7 @@ func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Tok
 	if !ok {
 		return &oidc.Tokens[C]{Token: token}, ErrMissingIDToken
 	}
-	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier(), rp.GetVerifyIDTokenOptions()...)
+	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
 	if err != nil {
 		return nil, err
 	}
@@ -766,7 +749,7 @@ type RefreshTokenRequest struct {
 // In case the RP is not OAuth2 only and an IDToken was part of the response,
 // the IDToken and AccessToken will be verified
 // and the IDToken and IDTokenClaims fields will be populated in the returned object.
-func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string, options ...VerifyIDTokenOption) (*oidc.Tokens[C], error) {
+func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refreshToken, clientAssertion, clientAssertionType string) (*oidc.Tokens[C], error) {
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
 
