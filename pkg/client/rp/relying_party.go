@@ -64,6 +64,10 @@ type RelyingParty interface {
 	// be used to start a DeviceAuthorization flow.
 	GetDeviceAuthorizationEndpoint() string
 
+	// GetPushedAuthorizationRequestEndpoint returns the endpoint which can
+	// be used to start a PAR flow (RFC-9126).
+	GetPushedAuthorizationRequestEndpoint() string
+
 	// IDTokenVerifier returns the verifier used for oidc id_token verification
 	IDTokenVerifier() *IDTokenVerifier
 
@@ -145,6 +149,10 @@ func (rp *relyingParty) UserinfoEndpoint() string {
 
 func (rp *relyingParty) GetDeviceAuthorizationEndpoint() string {
 	return rp.endpoints.DeviceAuthorizationURL
+}
+
+func (rp *relyingParty) GetPushedAuthorizationRequestEndpoint() string {
+	return rp.endpoints.PushedAuthorizationRequestEndpoint
 }
 
 func (rp *relyingParty) GetEndSessionEndpoint() string {
@@ -632,12 +640,13 @@ type OptionFunc func(RelyingParty)
 
 type Endpoints struct {
 	oauth2.Endpoint
-	IntrospectURL          string
-	UserinfoURL            string
-	JKWsURL                string
-	EndSessionURL          string
-	RevokeURL              string
-	DeviceAuthorizationURL string
+	IntrospectURL                      string
+	UserinfoURL                        string
+	JKWsURL                            string
+	EndSessionURL                      string
+	RevokeURL                          string
+	DeviceAuthorizationURL             string
+	PushedAuthorizationRequestEndpoint string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -646,12 +655,13 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 			AuthURL:  discoveryConfig.AuthorizationEndpoint,
 			TokenURL: discoveryConfig.TokenEndpoint,
 		},
-		IntrospectURL:          discoveryConfig.IntrospectionEndpoint,
-		UserinfoURL:            discoveryConfig.UserinfoEndpoint,
-		JKWsURL:                discoveryConfig.JwksURI,
-		EndSessionURL:          discoveryConfig.EndSessionEndpoint,
-		RevokeURL:              discoveryConfig.RevocationEndpoint,
-		DeviceAuthorizationURL: discoveryConfig.DeviceAuthorizationEndpoint,
+		IntrospectURL:                      discoveryConfig.IntrospectionEndpoint,
+		UserinfoURL:                        discoveryConfig.UserinfoEndpoint,
+		JKWsURL:                            discoveryConfig.JwksURI,
+		EndSessionURL:                      discoveryConfig.EndSessionEndpoint,
+		RevokeURL:                          discoveryConfig.RevocationEndpoint,
+		DeviceAuthorizationURL:             discoveryConfig.DeviceAuthorizationEndpoint,
+		PushedAuthorizationRequestEndpoint: discoveryConfig.PushedAuthorizationRequestEndpoint,
 	}
 }
 
