@@ -441,10 +441,8 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 		}
 
 		authURL := AuthURL(state, rp, opts...)
-		if rp.GetPushedAuthorizationRequestEndpoint() != "" {
-			requestURI, err := pushedAuthorizationRequestAuthExtension(
-				rp.GetPushedAuthorizationRequestEndpoint(), authURL.Query(),
-			)
+		if parURL := rp.GetPushedAuthorizationRequestEndpoint(); parURL != "" {
+			requestURI, err := pushedAuthorizationRequestAuthExtension(parURL, authURL.Query())
 			if err != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.Write([]byte(err.Error()))
