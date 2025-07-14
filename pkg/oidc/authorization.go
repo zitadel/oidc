@@ -84,14 +84,14 @@ type AuthRequest struct {
 	LoginHint    string              `json:"login_hint,omitempty" schema:"login_hint"`
 	ACRValues    SpaceDelimitedArray `json:"acr_values,omitempty" schema:"acr_values"`
 
-	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
-	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
+	CodeChallenge       string              `json:"code_challenge,omitempty" schema:"code_challenge"`
+	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method,omitempty" schema:"code_challenge_method"`
 
 	// RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)
-	RequestParam string `schema:"request"`
+	RequestParam string `schema:"request,omitempty"`
 
 	// RequestParam enables OIDC requests to be passed via intermediate cache (RFC-9126)
-	RequestURI string `schema:"request_uri"`
+	RequestURI string `schema:"request_uri,omitempty"`
 }
 
 func (a *AuthRequest) LogValue() slog.Value {
