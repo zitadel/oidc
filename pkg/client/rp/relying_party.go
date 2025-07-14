@@ -3,7 +3,10 @@ package rp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -399,12 +402,18 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 
 // AuthURL returns the auth request url
 // (wrapping the oauth2 `AuthCodeURL`)
-func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
+func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) *url.URL {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
 		authOpts = append(authOpts, opt()...)
 	}
-	return rp.OAuthConfig().AuthCodeURL(state, authOpts...)
+
+	authURL, err := url.Parse(rp.OAuthConfig().AuthCodeURL(state, authOpts...))
+	if err != nil {
+		panic(err)
+	}
+
+	return authURL
 }
 
 // AuthURLHandler extends the `AuthURL` method with a http redirect handler
@@ -431,8 +440,53 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 			opts = append(opts, WithCodeChallenge(codeChallenge))
 		}
 
-		http.Redirect(w, r, AuthURL(state, rp, opts...), http.StatusFound)
+		authURL := AuthURL(state, rp, opts...)
+		if rp.GetPushedAuthorizationRequestEndpoint() != "" {
+			requestURI, err := pushedAuthorizationRequestAuthExtension(
+				rp.GetPushedAuthorizationRequestEndpoint(), authURL.Query(),
+			)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(err.Error()))
+				return
+			}
+
+			authURL.RawQuery = url.Values{"request_uri": []string{requestURI}}.Encode()
+		}
+
+		http.Redirect(w, r, authURL.String(), http.StatusFound)
 	}
+}
+
+// pushedAuthorizationRequestAuthExtention implements first step of PAR (RFC-9126) extention,
+// providing request_uri for auth redirect.
+func pushedAuthorizationRequestAuthExtension(url string, query url.Values) (string, error) {
+	resp, err := http.PostForm(url, query)
+	if err != nil {
+		return "", fmt.Errorf("post form: %v", err)
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		// TODO: provide functionality for custom error handling per-code.
+		// See https://openid.net/specs/openid-connect-core-1_0.html#AuthError.
+		return "", errors.New(string(bodyBytes))
+	}
+
+	var parResp struct {
+		RequestURI string `json:"request_uri"`
+	}
+
+	err = json.Unmarshal(bodyBytes, &parResp)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal body: %v", err)
+	}
+
+	return parResp.RequestURI, nil
 }
 
 // GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
