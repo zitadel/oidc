@@ -113,13 +113,14 @@ func (s *webServer) createRouter() {
 	s.router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
 
 	s.endpointRoute(s.endpoints.Authorization, s.authorizeHandler)
-	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
 	s.endpointRoute(s.endpoints.Token, s.tokensHandler)
 	s.endpointRoute(s.endpoints.Introspection, s.introspectionHandler)
 	s.endpointRoute(s.endpoints.Userinfo, s.userInfoHandler)
 	s.endpointRoute(s.endpoints.Revocation, s.withClient(s.revocationHandler))
 	s.endpointRoute(s.endpoints.EndSession, s.endSessionHandler)
 	s.endpointRoute(s.endpoints.JwksURI, simpleHandler(s, s.server.Keys))
+	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
+	s.endpointRoute(s.endpoints.PushedAuthorizationRequest, s.pushedAuthorizationRequestHandler)
 }
 
 func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {
@@ -130,8 +131,13 @@ func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {
 			hf(w, r)
 			defer span.End()
 		}
-		s.router.HandleFunc(e.Relative(), traceHandler)
-		s.logger.Info("registered route", "endpoint", e.Relative())
+		if e.Method() != "" {
+			s.router.MethodFunc(e.Method(), e.Relative(), traceHandler)
+			s.logger.Info("registered route", "method", e.Method(), "endpoint", e.Relative())
+		} else {
+			s.router.HandleFunc(e.Relative(), traceHandler)
+			s.logger.Info("registered route", "endpoint", e.Relative())
+		}
 	}
 }
 
@@ -247,6 +253,21 @@ func (s *webServer) deviceAuthorizationHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 	resp, err := s.server.DeviceAuthorization(r.Context(), newClientRequest(r, request, client))
+	if err != nil {
+		WriteError(w, r, err, s.getLogger(r.Context()))
+		return
+	}
+	resp.writeOut(w)
+}
+
+func (s *webServer) pushedAuthorizationRequestHandler(w http.ResponseWriter, r *http.Request) {
+	request, err := decodeRequest[oidc.PARRequest](s.decoder, r, true)
+	if err != nil {
+		WriteError(w, r, err, s.getLogger(r.Context()))
+		return
+	}
+
+	resp, err := s.server.PushedAuthorizationRequest(r.Context(), newRequest(r, request))
 	if err != nil {
 		WriteError(w, r, err, s.getLogger(r.Context()))
 		return
