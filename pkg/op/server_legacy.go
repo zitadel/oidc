@@ -133,9 +133,8 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 		if err != nil {
 			return nil, err
 		}
-		if stored != nil {
-			r.Data = stored
-		}
+
+		r.Data = stored
 	}
 
 	if r.Data.RequestParam != "" {
