@@ -30,18 +30,20 @@ const (
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 	defaultDeviceAuthzEndpoint   = "/device_authorization"
+	defaultPAREndpoint           = "/ext/par"
 )
 
 var (
 	DefaultEndpoints = &Endpoints{
-		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
-		Token:               NewEndpoint(defaultTokenEndpoint),
-		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:            NewEndpoint(defaultUserinfoEndpoint),
-		Revocation:          NewEndpoint(defaultRevocationEndpoint),
-		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:             NewEndpoint(defaultKeysEndpoint),
-		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
+		Authorization:              NewEndpoint(defaultAuthorizationEndpoint),
+		Token:                      NewEndpoint(defaultTokenEndpoint),
+		Introspection:              NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:                   NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:                 NewEndpoint(defaultRevocationEndpoint),
+		EndSession:                 NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:                    NewEndpoint(defaultKeysEndpoint),
+		DeviceAuthorization:        NewEndpoint(defaultDeviceAuthzEndpoint),
+		PushedAuthorizationRequest: NewEndpoint(defaultPAREndpoint, EndpointWithMethod(http.MethodPost)),
 	}
 
 	DefaultSupportedClaims = []string{
@@ -143,6 +145,12 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
+	router.MethodFunc(
+		o.PushedAuthorizationRequestEndpoint().Method(),
+		o.PushedAuthorizationRequestEndpoint().Relative(),
+		PushedAuthorizationRequestHandler(o),
+	)
+
 	return router
 }
 
@@ -169,21 +177,23 @@ type Config struct {
 	SupportedClaims                   []string
 	SupportedScopes                   []string
 	DeviceAuthorization               DeviceAuthorizationConfig
+	PushedAuthorizationRequest        PushedAuthorizationRequestConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
 }
 
 // Endpoints defines endpoint routes.
 type Endpoints struct {
-	Authorization       *Endpoint
-	Token               *Endpoint
-	Introspection       *Endpoint
-	Userinfo            *Endpoint
-	Revocation          *Endpoint
-	EndSession          *Endpoint
-	CheckSessionIframe  *Endpoint
-	JwksURI             *Endpoint
-	DeviceAuthorization *Endpoint
+	Authorization              *Endpoint
+	Token                      *Endpoint
+	Introspection              *Endpoint
+	Userinfo                   *Endpoint
+	Revocation                 *Endpoint
+	EndSession                 *Endpoint
+	CheckSessionIframe         *Endpoint
+	JwksURI                    *Endpoint
+	DeviceAuthorization        *Endpoint
+	PushedAuthorizationRequest *Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -339,6 +349,10 @@ func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
 }
 
+func (o *Provider) PushedAuthorizationRequestEndpoint() *Endpoint {
+	return o.endpoints.PushedAuthorizationRequest
+}
+
 func (o *Provider) CheckSessionIframe() *Endpoint {
 	return o.endpoints.CheckSessionIframe
 }
@@ -416,6 +430,10 @@ func (o *Provider) SupportedUILocales() []language.Tag {
 
 func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
 	return o.config.DeviceAuthorization
+}
+
+func (o *Provider) PushedAuthorizationRequest() PushedAuthorizationRequestConfig {
+	return o.config.PushedAuthorizationRequest
 }
 
 func (o *Provider) BackChannelLogoutSupported() bool {
@@ -583,6 +601,18 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 			return err
 		}
 		o.endpoints.DeviceAuthorization = endpoint
+		return nil
+	}
+}
+
+func WithCustomPushedAuthorizationRequestEndpoint(endpoint *Endpoint) Option {
+	return func(o *Provider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+
+		o.endpoints.PushedAuthorizationRequest = endpoint
+
 		return nil
 	}
 }

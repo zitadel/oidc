@@ -128,6 +128,16 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 	ctx, span := tracer.Start(ctx, "LegacyServer.VerifyAuthRequest")
 	defer span.End()
 
+	if r.Data.RequestURI != "" {
+		stored, err := s.provider.Storage().GetPARState(ctx, r.Data.RequestURI)
+		if err != nil {
+			return nil, err
+		}
+		if stored != nil {
+			r.Data = stored
+		}
+	}
+
 	if r.Data.RequestParam != "" {
 		if !s.provider.RequestObjectSupported() {
 			return nil, oidc.ErrRequestNotSupported()
@@ -175,6 +185,20 @@ func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest
 		return nil, AsStatusError(err, http.StatusInternalServerError)
 	}
 	return NewResponse(response), nil
+}
+
+func (s *LegacyServer) PushedAuthorizationRequest(
+	ctx context.Context, r *Request[oidc.PARRequest],
+) (*Response, error) {
+	ctx, span := tracer.Start(ctx, "LegacyServer.PushedAuthorizationRequest")
+	defer span.End()
+
+	resp, err := createPushedAuthorizationRequest(ctx, r.Data, s.provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewResponse(resp), nil
 }
 
 func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {

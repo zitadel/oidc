@@ -159,6 +159,7 @@ type CanGetPrivateClaimsFromRequest interface {
 type Storage interface {
 	AuthStorage
 	OPStorage
+	PARStorage
 	Health(context.Context) error
 }
 
@@ -198,5 +199,27 @@ func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 	if !ok {
 		return nil, oidc.ErrUnsupportedGrantType().WithDescription("device_code grant not supported")
 	}
+	return storage, nil
+}
+
+type PARStorage interface {
+	// StorePAR stores a new pushed authorization request in the database.
+	// RequestURI will be used by the user to complete the login flow and must be unique.
+	//
+	// Note that implementers of this interface must make sure that codes of
+	// expired authentication flows are purged, after some time.
+	StorePAR(ctx context.Context, requestURI string, request *oidc.AuthRequest, expires time.Time) error
+
+	// GetPARState returns the current state of the pushed authorization request flow in the database.
+	// Returned structure contains original auth request that should be used in auth API.
+	GetPARState(ctx context.Context, requestURI string) (*oidc.AuthRequest, error)
+}
+
+func assertPARStorage(s Storage) (PARStorage, error) {
+	storage, ok := s.(PARStorage)
+	if !ok {
+		return nil, oidc.ErrInvalidRequest().WithDescription("PAR not supported")
+	}
+
 	return storage, nil
 }

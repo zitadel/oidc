@@ -38,6 +38,9 @@ var (
 			UserFormPath: "/device",
 			UserCode:     op.UserCodeBase20,
 		},
+		PushedAuthorizationRequest: op.PushedAuthorizationRequestConfig{
+			Lifetime: time.Second,
+		},
 	}
 )
 
