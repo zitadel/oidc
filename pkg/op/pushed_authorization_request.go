@@ -52,7 +52,7 @@ func createPushedAuthorizationRequest(
 	}
 
 	// prevent misconfigured requests.
-	if req.RedirectURI != "" {
+	if req.RequestURI != "" {
 		return nil, oidc.ErrRequestNotSupported()
 	}
 
