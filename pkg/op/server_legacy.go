@@ -193,12 +193,12 @@ func (s *LegacyServer) PushedAuthorizationRequest(
 	ctx, span := tracer.Start(ctx, "LegacyServer.PushedAuthorizationRequest")
 	defer span.End()
 
-	resp, err := createPushedAuthorizationRequest(ctx, r.Data, s.provider)
+	res, err := createPushedAuthorizationRequest(ctx, r.Data, s.provider)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewResponse(resp), nil
+	return NewResponseWithStatus(http.StatusCreated, res), nil
 }
 
 func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {

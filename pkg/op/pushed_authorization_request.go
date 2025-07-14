@@ -38,7 +38,7 @@ func PushedAuthorizationRequest(w http.ResponseWriter, r *http.Request, o OpenID
 		return err
 	}
 
-	httphelper.MarshalJSON(w, resp)
+	httphelper.MarshalJSONWithStatus(w, resp, http.StatusCreated)
 
 	return nil
 }

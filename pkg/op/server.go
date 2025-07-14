@@ -205,6 +205,8 @@ func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientReq
 //
 // EXPERIMENTAL: may change until v4
 type Response struct {
+	Status int
+
 	// Header map will be merged with the
 	// header on the [http.ResponseWriter].
 	Header http.Header
@@ -222,7 +224,12 @@ type Response struct {
 // NewResponse creates a new response for data,
 // without custom headers.
 func NewResponse(data any) *Response {
+	return NewResponseWithStatus(http.StatusOK, data)
+}
+
+func NewResponseWithStatus(status int, data any) *Response {
 	return &Response{
+		Status: status,
 		Header: make(http.Header),
 		Data:   data,
 	}
@@ -230,7 +237,7 @@ func NewResponse(data any) *Response {
 
 func (resp *Response) writeOut(w http.ResponseWriter) {
 	gu.MapMerge(resp.Header, w.Header())
-	httphelper.MarshalJSON(w, resp.Data)
+	httphelper.MarshalJSONWithStatus(w, resp.Data, resp.Status)
 }
 
 // Redirect is a special response type which will

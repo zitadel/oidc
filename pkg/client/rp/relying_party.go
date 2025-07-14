@@ -469,7 +469,7 @@ func pushedAuthorizationRequestAuthExtension(url string, query url.Values) (stri
 		return "", fmt.Errorf("read body: %v", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		// TODO: provide functionality for custom error handling per-code.
 		// See https://openid.net/specs/openid-connect-core-1_0.html#AuthError.
 		return "", errors.New(string(bodyBytes))
