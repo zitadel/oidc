@@ -799,7 +799,7 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 	return nil, err
 }
 
-func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState string) (*url.URL, error) {
+func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState, optionalLogoutHint string, optionalLocales oidc.Locales) (*url.URL, error) {
 	ctx = logCtxWithRPData(ctx, rp, "function", "EndSession")
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
@@ -809,6 +809,8 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 		ClientID:              rp.OAuthConfig().ClientID,
 		PostLogoutRedirectURI: optionalRedirectURI,
 		State:                 optionalState,
+		LogoutHint:            optionalLogoutHint,
+		UILocales:             optionalLocales,
 	}
 	return client.CallEndSessionEndpoint(ctx, request, nil, rp)
 }

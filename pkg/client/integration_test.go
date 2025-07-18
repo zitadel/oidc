@@ -157,7 +157,7 @@ func testRelyingPartySession(t *testing.T, wrapServer bool, cookieSpec cookieSpe
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "", "", nil)
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -313,7 +313,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "", "", nil)
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -451,7 +451,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		t.Log("email", info.Email)
 
 		email = info.Email
-		http.Redirect(w, r, targetURL, 302)
+		http.Redirect(w, r, targetURL, http.StatusFound)
 	}
 	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider, rp.WithURLParam("custom", "param"))(capturedW, get)
 
