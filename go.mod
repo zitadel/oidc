@@ -1,11 +1,13 @@
 module github.com/zitadel/oidc/v3
 
-go 1.21
+go 1.23.7
+
+toolchain go1.24.1
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.8.1
-	github.com/go-chi/chi/v5 v5.2.1
-	github.com/go-jose/go-jose/v4 v4.0.4
+	github.com/bmatcuk/doublestar/v4 v4.9.0
+	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-jose/go-jose/v4 v4.0.5
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.6.0
@@ -16,11 +18,12 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	github.com/zitadel/logging v0.6.1
-	github.com/zitadel/schema v1.3.0
+	github.com/zitadel/logging v0.6.2
+	github.com/zitadel/schema v1.3.1
 	go.opentelemetry.io/otel v1.29.0
-	golang.org/x/oauth2 v0.26.0
-	golang.org/x/text v0.22.0
+	go.opentelemetry.io/otel/trace v1.29.0
+	golang.org/x/oauth2 v0.30.0
+	golang.org/x/text v0.27.0
 )
 
 require (
@@ -30,9 +33,8 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
-	go.opentelemetry.io/otel/trace v1.29.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

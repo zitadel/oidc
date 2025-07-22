@@ -14,11 +14,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.21', '1.22', '1.23']
+        go: ['1.23', '1.24']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +27,12 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v5.3.1
+      - uses: codecov/codecov-action@v5.4.3
         with:
           file: ./profile.cov
           name: codecov-go
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     needs: [test]
     if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' }}
     env:

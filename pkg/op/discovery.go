@@ -45,6 +45,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		EndSessionEndpoint:                         config.EndSessionEndpoint().Absolute(issuer),
 		JwksURI:                                    config.KeysEndpoint().Absolute(issuer),
 		DeviceAuthorizationEndpoint:                config.DeviceAuthorizationEndpoint().Absolute(issuer),
+		CheckSessionIframe:                         config.CheckSessionIframe().Absolute(issuer),
 		ScopesSupported:                            Scopes(config),
 		ResponseTypesSupported:                     ResponseTypes(config),
 		GrantTypesSupported:                        GrantTypes(config),
