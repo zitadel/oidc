@@ -640,6 +640,15 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"code flow encoded redirect_uri should pass after unescaping",
+			args{
+				"https%3A%2F%2Fregistered.com%2Fcallback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
