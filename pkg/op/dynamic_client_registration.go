@@ -115,12 +115,12 @@ func ClientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 	return nil
 }
 
-func ParseClientUpdateRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientUpdateRequest, error) {
+func ParseClientUpdateRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientRegistrationRequest, error) {
 	ctx, span := tracer.Start(r.Context(), "ParseClientUpdateRequest")
 	r = r.WithContext(ctx)
 	defer span.End()
 
-	req := new(oidc.ClientUpdateRequest)
+	req := new(oidc.ClientRegistrationRequest)
 	if err := o.Decoder().Decode(req, r.Form); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client update request").WithParent(err)
 	}

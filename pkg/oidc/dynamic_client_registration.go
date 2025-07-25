@@ -77,3 +77,26 @@ const (
 )
 
 type ClientInformationErrorResponseErrorCode string
+
+// ClientUpdateRequest implements https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
+// 2.2 Client Update Request.
+//
+// TODO: handle BCP 47
+type ClientUpdateRequest struct {
+	ClientID string `json:"client_id"`
+	ClientRegistrationRequest
+}
+
+// ClientReadRequest implements
+// https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
+// 2.1 Client Read Request.
+type ClientReadRequest struct {
+	ClientID string
+}
+
+// ClientDeleteRequest implements
+// https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3
+// 2.3 Client Delete Request.
+type ClientDeleteRequest struct {
+	ClientID string
+}

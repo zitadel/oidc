@@ -72,6 +72,9 @@ func TestClientRegistrationRequest(t *testing.T) {
 		err := json.Unmarshal(marshalled, &req)
 		require.NoError(t, err)
 	})
+}
+
+func TestClientUpdateRequest(t *testing.T) {
 	// from https://www.rfc-editor.org/rfc/rfc7592.html#page-7
 	t.Run("unmarshal Client Update Request example", func(t *testing.T) {
 		marshalled := []byte(`
@@ -91,7 +94,7 @@ func TestClientRegistrationRequest(t *testing.T) {
 	"logo_uri#fr": "https://client.example.org/fr/newlogo.png"
 }
 `)
-		var req ClientRegistrationRequest
+		var req ClientUpdateRequest
 		err := json.Unmarshal(marshalled, &req)
 		require.NoError(t, err)
 	})
@@ -124,7 +127,7 @@ func TestClientInformationResponse(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// example fromhttps://www.rfc-editor.org/rfc/rfc7592.html#page-11
+	// example from https://www.rfc-editor.org/rfc/rfc7592.html#page-11
 	t.Run("unmarshal example", func(t *testing.T) {
 		marshalled := []byte(`
 {
