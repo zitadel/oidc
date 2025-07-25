@@ -10,6 +10,8 @@ import (
 //
 // Can also be used for https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
 // 2.2 Client Update Request.
+//
+// TODO: handle BCP 47
 type ClientRegistrationRequest struct {
 	RedirectURIs            []string           `json:"redirect_uris"`              // Array of redirection URI strings for use in redirect-based flows such as the authorization code and implicit flows.
 	TokenEndpointAuthMethod AuthMethod         `json:"token_endpoint_auth_method"` // String indicator of the requested authentication method for the token endpoint.
