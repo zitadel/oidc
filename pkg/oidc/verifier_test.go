@@ -145,6 +145,7 @@ func TestCheckAuthorizedParty(t *testing.T) {
 	tests := []struct {
 		name    string
 		claims  Claims
+		azp     AZPVerifier
 		wantErr error
 	}{
 		{
@@ -175,6 +176,17 @@ func TestCheckAuthorizedParty(t *testing.T) {
 			},
 		},
 		{
+			name: "custom azp",
+			claims: &TokenClaims{
+				Audience:        []string{"not-client-id"},
+				AuthorizedParty: clientID,
+			},
+			azp: func(s string) error {
+				// skip check.
+				return nil
+			},
+		},
+		{
 			name: "wrong azp",
 			claims: &TokenClaims{
 				AuthorizedParty: "wrong",
@@ -184,7 +196,11 @@ func TestCheckAuthorizedParty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckAuthorizedParty(tt.claims, clientID)
+			azp := tt.azp
+			if azp == nil {
+				azp = DefaultAZPVerifier(clientID)
+			}
+			err := CheckAZPVerifier(tt.claims, azp)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}

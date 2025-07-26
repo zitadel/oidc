@@ -61,7 +61,7 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		v.AZP = oidc.DefaultAZPVerifier(v.ClientID)
 	}
 
-	if err = oidc.CheckAuthorizedParty(claims, v.AZP); err != nil {
+	if err = oidc.CheckAZPVerifier(claims, v.AZP); err != nil {
 		return nilClaims, err
 	}
 
