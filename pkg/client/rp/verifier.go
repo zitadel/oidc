@@ -57,7 +57,11 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckAuthorizedParty(claims, v.ClientID); err != nil {
+	if v.AZP != nil {
+		v.AZP = oidc.DefaultAZPVerifier(v.ClientID)
+	}
+
+	if err = oidc.CheckAZPVerifier(claims, v.AZP); err != nil {
 		return nilClaims, err
 	}
 
@@ -86,6 +90,7 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 	if err = oidc.CheckAuthTime(claims, v.MaxAge); err != nil {
 		return nilClaims, err
 	}
+
 	return claims, nil
 }
 
@@ -156,6 +161,13 @@ func WithNonce(nonce func(context.Context) string) VerifierOption {
 func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
 	return func(v *IDTokenVerifier) {
 		v.ACR = verifier
+	}
+}
+
+// WithAZPVerifier sets the verifier for the azp claim
+func WithAZPVerifier(verifier oidc.AZPVerifier) VerifierOption {
+	return func(v *IDTokenVerifier) {
+		v.AZP = verifier
 	}
 }
 
