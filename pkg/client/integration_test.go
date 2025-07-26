@@ -3,6 +3,9 @@ package client_test
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	cryptoRand "crypto/rand"
+	"crypto/sha512"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/securecookie"
 	"github.com/jeremija/gosubmit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,6 +47,15 @@ var Logger = slog.New(
 
 var CTX context.Context
 
+type cookieSpec struct {
+	cookieHandler *httphelper.CookieHandler
+	extraCookies  []*http.Cookie
+}
+
+var defaultCookieSpec = cookieSpec{
+	cookieHandler: httphelper.NewCookieHandler([]byte("test1234test1234"), []byte("test1234test1234"), httphelper.WithUnsecure()),
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
@@ -53,14 +67,65 @@ func TestMain(m *testing.M) {
 }
 
 func TestRelyingPartySession(t *testing.T) {
-	for _, wrapServer := range []bool{false, true} {
-		t.Run(fmt.Sprint("wrapServer ", wrapServer), func(t *testing.T) {
-			testRelyingPartySession(t, wrapServer)
-		})
+	secret := make([]byte, 64)
+	_, _ = cryptoRand.Read(secret)
+	hashFunc := sha512.New
+	requestAwareCookieHandler := httphelper.NewRequestAwareCookieHandler(func(r *http.Request) (*securecookie.SecureCookie, error) {
+		// Expect a login ID cookie to be set.
+		loginIDCookie, err := r.Cookie("login_id")
+		require.NoError(t, err)
+
+		// Login ID cookie will contain a UUID.
+		loginID, err := uuid.Parse(loginIDCookie.Value)
+		require.NoError(t, err)
+
+		// Use a HMAC hash of the secret and login ID (salt).
+		h := hmac.New(hashFunc, secret)
+		_, err = h.Write(loginID[:])
+		require.NoError(t, err)
+
+		// Write a separator for the hash key.
+		_, err = h.Write([]byte("INTEGRITY"))
+		require.NoError(t, err)
+		hash := h.Sum(nil) // 64 bytes
+
+		// Write a separator for the block key.
+		_, err = h.Write([]byte("ENCRYPTION"))
+		require.NoError(t, err)
+		block := h.Sum(nil)[:32] // Sum is 64 bytes but we only want 32 for AES-256.
+
+		return securecookie.New(hash, block), nil
+	}, httphelper.WithUnsecure())
+
+	loginID := uuid.New()
+	loginIDCookie := &http.Cookie{
+		Name:     "login_id",
+		Value:    loginID.String(),
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	}
+
+	cookieCases := []cookieSpec{
+		defaultCookieSpec,
+		{
+			cookieHandler: requestAwareCookieHandler,
+			extraCookies: []*http.Cookie{
+				loginIDCookie,
+			},
+		},
+	}
+
+	for _, cookieCase := range cookieCases {
+		for _, wrapServer := range []bool{false, true} {
+			t.Run(fmt.Sprint("wrapServer ", wrapServer, " requestAwareCookieHandler ", cookieCase.cookieHandler.IsRequestAware()), func(t *testing.T) {
+				testRelyingPartySession(t, wrapServer, cookieCase)
+			})
+		}
 	}
 }
 
-func testRelyingPartySession(t *testing.T, wrapServer bool) {
+func testRelyingPartySession(t *testing.T, wrapServer bool, cookieSpec cookieSpec) {
 	t.Log("------- start example OP ------")
 	targetURL := "http://local-site"
 	exampleStorage := storage.NewStorage(storage.NewUserStore(targetURL))
@@ -74,7 +139,7 @@ func testRelyingPartySession(t *testing.T, wrapServer bool) {
 	clientID := t.Name() + "-" + strconv.FormatInt(seed.Int63(), 25)
 
 	t.Log("------- run authorization code flow ------")
-	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, "secret")
+	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, "secret", cookieSpec)
 
 	t.Log("------- refresh tokens  ------")
 
@@ -92,7 +157,7 @@ func testRelyingPartySession(t *testing.T, wrapServer bool) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "", "", nil)
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -220,7 +285,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 	clientSecret := "secret"
 
 	t.Log("------- run authorization code flow ------")
-	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, clientSecret)
+	provider, tokens := RunAuthorizationCodeFlow(t, opServer, clientID, clientSecret, defaultCookieSpec)
 
 	resourceServer, err := rs.NewResourceServerClientCredentials(CTX, opServer.URL, clientID, clientSecret)
 	require.NoError(t, err, "new resource server")
@@ -248,7 +313,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 
 	t.Log("------ end session (logout) ------")
 
-	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "")
+	newLoc, err := rp.EndSession(CTX, provider, tokens.IDToken, "", "", "", nil)
 	require.NoError(t, err, "logout")
 	if newLoc != nil {
 		t.Logf("redirect to %s", newLoc)
@@ -275,7 +340,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 	require.Nil(t, tokenExchangeResponse, "token exchange response")
 }
 
-func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID, clientSecret string) (provider rp.RelyingParty, tokens *oidc.Tokens[*oidc.IDTokenClaims]) {
+func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID, clientSecret string, cookieSpec cookieSpec) (provider rp.RelyingParty, tokens *oidc.Tokens[*oidc.IDTokenClaims]) {
 	targetURL := "http://local-site"
 	localURL, err := url.Parse(targetURL + "/login?requestID=1234")
 	require.NoError(t, err, "local url")
@@ -294,8 +359,6 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	}
 
 	t.Log("------- create RP ------")
-	key := []byte("test1234test1234")
-	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 	provider, err = rp.NewRelyingPartyOIDC(
 		CTX,
 		opServer.URL,
@@ -303,7 +366,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		clientSecret,
 		targetURL,
 		[]string{"openid", "email", "profile", "offline_access"},
-		rp.WithPKCE(cookieHandler),
+		rp.WithPKCE(cookieSpec.cookieHandler),
 		rp.WithAuthStyle(oauth2.AuthStyleInHeader),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
@@ -317,6 +380,11 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	state := "state-" + strconv.FormatInt(seed.Int63(), 25)
 	capturedW := httptest.NewRecorder()
 	get := httptest.NewRequest("GET", localURL.String(), nil)
+	for _, cookie := range cookieSpec.extraCookies {
+		get.AddCookie(cookie)
+		http.SetCookie(capturedW, cookie)
+	}
+
 	rp.AuthURLHandler(func() string { return state }, provider,
 		rp.WithPromptURLParam("Hello, World!", "Goodbye, World!"),
 		rp.WithURLParam("custom", "param"),
@@ -383,7 +451,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		t.Log("email", info.Email)
 
 		email = info.Email
-		http.Redirect(w, r, targetURL, 302)
+		http.Redirect(w, r, targetURL, http.StatusFound)
 	}
 	rp.CodeExchangeHandler(rp.UserinfoCallback(redirect), provider, rp.WithURLParam("custom", "param"))(capturedW, get)
 

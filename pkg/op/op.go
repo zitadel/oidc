@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/cors"
+	"github.com/zitadel/oidc/v3/internal/otel"
 	"github.com/zitadel/schema"
-	"go.opentelemetry.io/otel"
 	"golang.org/x/text/language"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
