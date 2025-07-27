@@ -155,9 +155,9 @@ type CanGetPrivateClaimsFromRequest interface {
 //
 // In addition to the embedded interfaces below,
 //
-// 	- if the passed Storage implements ClientCredentialsStorage then the grant type "client_credentials" will be
-//	supported. In that case, the access token returned by CreateAccessToken should be a JWT.
-// 	- if the passed Storage implemenets ClientsStorage, then dynamic client registration will be supported.
+//   - if the passed Storage implements ClientCredentialsStorage then the grant type "client_credentials" will be
+//     supported. In that case, the access token returned by CreateAccessToken should be a JWT.
+//   - if the passed Storage implemenets ClientsStorage, then dynamic client registration will be supported.
 //
 // See https://datatracker.ietf.org/doc/html/rfc6749#section-1.3.4 for context.
 type Storage interface {
@@ -207,7 +207,7 @@ func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 
 // ClientsStorage is required to implement dynamic client registration.
 type ClientsStorage interface {
-	CreateClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (clientID string, err error)
+	RegisterClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (clientID string, err error)
 	ReadClient(ctx context.Context, clientID string) (*oidc.ClientInformationResponse, error)
 	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) error
 	DeleteClient(ctx context.Context, clientID string) error

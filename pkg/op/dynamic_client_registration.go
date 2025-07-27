@@ -1,7 +1,9 @@
 package op
 
 import (
+	"errors"
 	"fmt"
+	"github.com/go-jose/go-jose/v4/json"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"net/http"
@@ -42,22 +44,40 @@ func ClientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 	r = r.WithContext(ctx)
 	defer span.End()
 
-	req, err := ParseClientRegistrationRequest(r, o)
+	req, err := ParseClientRegistrationRequest(r)
 	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
-	_ = req
-	httphelper.MarshalJSON(w, oidc.ClientInformationResponse{})
+
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return errors.New("dynamic client registration unsupported")
+	}
+
+	clientID, err := storage.RegisterClient(ctx, req)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	res, err := storage.ReadClient(ctx, clientID)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	httphelper.MarshalJSON(w, res)
 	return nil
 }
 
-func ParseClientRegistrationRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientRegistrationRequest, error) {
+func ParseClientRegistrationRequest(r *http.Request) (*oidc.ClientRegistrationRequest, error) {
 	ctx, span := tracer.Start(r.Context(), "ParseClientRegistrationRequest")
 	r = r.WithContext(ctx)
 	defer span.End()
 
 	req := new(oidc.ClientRegistrationRequest)
-	if err := o.Decoder().Decode(req, r.Form); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client registration request").WithParent(err)
 	}
 
@@ -76,10 +96,22 @@ func ClientRead(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error 
 
 	req, err := ParseClientReadRequest(r, o)
 	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
-	_ = req
-	httphelper.MarshalJSON(w, oidc.ClientInformationResponse{})
+
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return errors.New("dynamic client registration unsupported")
+	}
+
+	res, err := storage.ReadClient(r.Context(), req.ClientID)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	httphelper.MarshalJSON(w, res)
 	return nil
 }
 
@@ -108,10 +140,27 @@ func ClientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 
 	req, err := ParseClientUpdateRequest(r, o)
 	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
-	_ = req
-	httphelper.MarshalJSON(w, oidc.ClientInformationResponse{})
+
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return errors.New("dynamic client registration unsupported")
+	}
+
+	if err := storage.UpdateClient(ctx, req); err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	res, err := storage.ReadClient(ctx, req.ClientID)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	httphelper.MarshalJSON(w, res)
 	return nil
 }
 
@@ -140,10 +189,20 @@ func ClientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 
 	req, err := ParseClientDeleteRequest(r, o)
 	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
-	_ = req
-	httphelper.MarshalJSON(w, oidc.ClientInformationResponse{})
+
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return errors.New("dynamic client registration unsupported")
+	}
+
+	if err := storage.DeleteClient(ctx, req.ClientID); err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
 	return nil
 }
 
