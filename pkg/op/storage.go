@@ -151,10 +151,14 @@ type CanGetPrivateClaimsFromRequest interface {
 	GetPrivateClaimsFromRequest(ctx context.Context, request TokenRequest, restrictedScopes []string) (map[string]any, error)
 }
 
-// Storage is a required parameter for NewOpenIDProvider(). In addition to the
-// embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
-// then the grant type "client_credentials" will be supported. In that case, the access
-// token returned by CreateAccessToken should be a JWT.
+// Storage is a required parameter for NewOpenIDProvider().
+//
+// In addition to the embedded interfaces below,
+//
+// 	- if the passed Storage implements ClientCredentialsStorage then the grant type "client_credentials" will be
+//	supported. In that case, the access token returned by CreateAccessToken should be a JWT.
+// 	- if the passed Storage implemenets ClientsStorage, then dynamic client registration will be supported.
+//
 // See https://datatracker.ietf.org/doc/html/rfc6749#section-1.3.4 for context.
 type Storage interface {
 	AuthStorage
@@ -197,6 +201,22 @@ func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 	storage, ok := s.(DeviceAuthorizationStorage)
 	if !ok {
 		return nil, oidc.ErrUnsupportedGrantType().WithDescription("device_code grant not supported")
+	}
+	return storage, nil
+}
+
+// ClientsStorage is required to implement dynamic client registration.
+type ClientsStorage interface {
+	CreateClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (clientID string, err error)
+	ReadClient(ctx context.Context, clientID string) (*oidc.ClientInformationResponse, error)
+	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) error
+	DeleteClient(ctx context.Context, clientID string) error
+}
+
+func assertClientStorage(s Storage) (ClientsStorage, error) {
+	storage, ok := s.(ClientsStorage)
+	if !ok {
+		return nil, oidc.ErrUnsupportedGrantType().WithDescription("Dynamic client registration not supported")
 	}
 	return storage, nil
 }
