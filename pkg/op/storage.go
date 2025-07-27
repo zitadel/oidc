@@ -207,9 +207,21 @@ func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 
 // ClientsStorage is required to implement dynamic client registration.
 type ClientsStorage interface {
+	// RegisterClient handles the Client Registration Request according to [RFC7591].
+	//
+	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591#section-3.1
 	RegisterClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (clientID string, err error)
+	// ReadClient handles the Client Read Request according to [RFC7592].
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
 	ReadClient(ctx context.Context, clientID string) (*oidc.ClientInformationResponse, error)
+	// UpdateClient handles the Client Update Request according to [RFC7592].
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.2
 	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) error
+	// DeleteClient handles the Client Delete Request according to [RFC7592].
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3
 	DeleteClient(ctx context.Context, clientID string) error
 }
 
