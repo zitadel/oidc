@@ -31,6 +31,7 @@ var serviceKey1 = &rsa.PublicKey{
 var (
 	_ op.Storage                  = &Storage{}
 	_ op.ClientCredentialsStorage = &Storage{}
+	_ op.ClientsStorage           = &Storage{}
 )
 
 // storage implements the op.Storage interface
@@ -930,4 +931,88 @@ func (s *Storage) ClientCredentialsTokenRequest(ctx context.Context, clientID st
 		Audience: []string{clientID},
 		Scopes:   scopes,
 	}, nil
+}
+
+func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRequest) (string, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client := Client{
+		id:                             uuid.New().String(),
+		secret:                         uuid.New().String(),
+		redirectURIs:                   c.RedirectURIs,
+		applicationType:                0,
+		authMethod:                     c.TokenEndpointAuthMethod,
+		loginURL:                       nil,
+		responseTypes:                  c.ResponseTypes,
+		grantTypes:                     c.GrantTypes,
+		accessTokenType:                0,
+		devMode:                        false,
+		idTokenUserinfoClaimsAssertion: false,
+		clockSkew:                      0,
+		postLogoutRedirectURIGlobs:     nil,
+		redirectURIGlobs:               nil,
+	}
+	s.clients[client.id] = &client
+
+	return client.id, nil
+}
+
+func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientInformationResponse, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client, ok := s.clients[clientID]
+	if !ok {
+		return nil, errors.New("client not found")
+	}
+	return &oidc.ClientInformationResponse{
+		ClientID:     client.id,
+		ClientSecret: client.secret,
+		//ClientIDIssuedAt:        0,
+		//ClientSecretExpiresAt:   0,
+		RedirectURIs:            client.RedirectURIs(),
+		TokenEndpointAuthMethod: client.AuthMethod(),
+		GrantTypes:              client.GrantTypes(),
+		ResponseTypes:           client.ResponseTypes(),
+		//ClientName:              "",
+		//ClientURI:               "",
+		//LogoURI:                 "",
+		Scope:           "",
+		Contacts:        nil,
+		TOSURI:          "",
+		PolicyURI:       "",
+		JWKSURI:         "",
+		JWKS:            jose.JSONWebKeySet{},
+		SoftwareID:      "",
+		SoftwareVersion: "",
+	}, nil
+}
+
+func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client, ok := s.clients[c.ClientID]
+	if !ok {
+		return errors.New("client not found")
+	}
+	client.redirectURIs = c.RedirectURIs
+	client.applicationType = 0
+	client.authMethod = c.TokenEndpointAuthMethod
+	client.loginURL = nil
+	client.responseTypes = c.ResponseTypes
+	client.grantTypes = c.GrantTypes
+	client.accessTokenType = 0
+	client.devMode = false
+	client.idTokenUserinfoClaimsAssertion = false
+	client.clockSkew = 0
+	client.postLogoutRedirectURIGlobs = nil
+	client.redirectURIGlobs = nil
+	return nil
+}
+
+func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	// TODO(mqf20):    If possible, the authorization server SHOULD immediately invalidate all existing authorization grants and currently active access tokens, all refresh tokens, and all other tokens associated with this client.
+	delete(s.clients, clientID)
+	return nil
 }
