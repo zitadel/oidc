@@ -203,6 +203,7 @@ func ClientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 		return err
 	}
 
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
