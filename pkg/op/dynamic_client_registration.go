@@ -67,7 +67,7 @@ func ClientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 		return err
 	}
 
-	httphelper.MarshalJSON(w, res)
+	httphelper.MarshalJSONWithStatus(w, res, http.StatusCreated)
 	return nil
 }
 
