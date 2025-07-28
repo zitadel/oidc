@@ -167,3 +167,10 @@ const (
 var AllAuthMethods = []AuthMethod{
 	AuthMethodBasic, AuthMethodPost, AuthMethodNone, AuthMethodPrivateKeyJWT,
 }
+
+var AuthMethodMap = map[string]AuthMethod{
+	string(AuthMethodBasic):         AuthMethodBasic,
+	string(AuthMethodPost):          AuthMethodPost,
+	string(AuthMethodNone):          AuthMethodNone,
+	string(AuthMethodPrivateKeyJWT): AuthMethodPrivateKeyJWT,
+}
