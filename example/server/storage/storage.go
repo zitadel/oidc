@@ -965,25 +965,33 @@ func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientIn
 		return nil, errors.New("client not found")
 	}
 	return &oidc.ClientInformationResponse{
-		ClientID:     client.id,
-		ClientSecret: client.secret,
+		ClientID:              client.id,
+		ClientSecret:          client.secret,
+		ClientIDIssuedAt:      0,
+		ClientSecretExpiresAt: 0,
 		//ClientIDIssuedAt:        0,
 		//ClientSecretExpiresAt:   0,
 		RedirectURIs:            client.RedirectURIs(),
 		TokenEndpointAuthMethod: client.AuthMethod(),
 		GrantTypes:              client.GrantTypes(),
 		ResponseTypes:           client.ResponseTypes(),
+		ClientName:              nil,
+		ClientURI:               nil,
+		LogoURI:                 nil,
 		//ClientName:              "",
 		//ClientURI:               "",
 		//LogoURI:                 "",
-		Scope:           "",
-		Contacts:        nil,
-		TOSURI:          "",
-		PolicyURI:       "",
-		JWKSURI:         "",
-		JWKS:            jose.JSONWebKeySet{},
-		SoftwareID:      "",
-		SoftwareVersion: "",
+		Scope:                   "",
+		Contacts:                nil,
+		TOSURI:                  nil,
+		PolicyURI:               nil,
+		JWKSURI:                 "",
+		JWKS:                    jose.JSONWebKeySet{},
+		SoftwareID:              "",
+		SoftwareVersion:         "",
+		RegistrationAccessToken: "",
+		RegistrationClientURI:   "",
+		ExtraParameters:         nil,
 	}, nil
 }
 
@@ -994,18 +1002,26 @@ func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) e
 	if !ok {
 		return errors.New("client not found")
 	}
+	//client.id = ""
+	client.secret = c.ClientSecret
+	//client.??? = c.ClientIDIssuedAt
+	//client.??? = c.ClientSecretExpiresAt
 	client.redirectURIs = c.RedirectURIs
-	client.applicationType = 0
 	client.authMethod = c.TokenEndpointAuthMethod
-	client.loginURL = nil
-	client.responseTypes = c.ResponseTypes
 	client.grantTypes = c.GrantTypes
-	client.accessTokenType = 0
-	client.devMode = false
-	client.idTokenUserinfoClaimsAssertion = false
-	client.clockSkew = 0
-	client.postLogoutRedirectURIGlobs = nil
-	client.redirectURIGlobs = nil
+	client.responseTypes = c.ResponseTypes
+	//client.??? = c.ClientName
+	//client.??? = c.ClientURI
+	//client.??? = c.LogoURI
+	//client.??? = c.Scope
+	//client.??? = c.Contacts
+	//client.??? = c.TOSURI
+	//client.??? = c.PolicyURI
+	//client.??? = c.JWKSURI
+	//client.??? = c.JWKS
+	//client.??? = c.SoftwareID
+	//client.??? = c.SoftwareVersion
+
 	return nil
 }
 
