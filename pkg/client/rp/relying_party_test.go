@@ -2,14 +2,20 @@ package rp
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
+
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"golang.org/x/oauth2"
 )
 
 func Test_verifyTokenResponse(t *testing.T) {
@@ -104,5 +110,84 @@ func Test_verifyTokenResponse(t *testing.T) {
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, want, got)
 		})
+	}
+}
+
+func Test_PKCEFromDiscovery(t *testing.T) {
+	tests := []struct {
+		name     string
+		methods  []string
+		expected bool
+	}{
+		{name: "nil", methods: nil, expected: false},
+		{name: "empty", methods: []string{}, expected: false},
+		{name: "invalid", methods: []string{"invalid"}, expected: false},
+		{name: "plain", methods: []string{"plain"}, expected: true},
+		{name: "S256", methods: []string{"S256"}, expected: true},
+		{name: "both", methods: []string{"plain", "S256"}, expected: true},
+		{name: "mixed", methods: []string{"invalid", "S256"}, expected: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path != oidc.DiscoveryEndpoint {
+						w.WriteHeader(http.StatusNotFound)
+						return
+					}
+
+					if err := json.NewEncoder(w).Encode(map[string]interface{}{
+						"issuer":                           "http://" + r.Host,
+						"code_challenge_methods_supported": tt.methods,
+					}); err != nil {
+						t.Fatalf("unexpected error encoding '%v' to JSON: %v", tt.methods, err)
+					}
+				}))
+			defer server.Close()
+
+			t.Log("issuer", server.URL)
+
+			clientID := t.Name() + "-client"
+			clientSecret := t.Name() + "-secret"
+			targetURL := "http://local-site"
+			rp, err := NewRelyingPartyOIDC(
+				t.Context(),
+				server.URL,
+				clientID,
+				clientSecret,
+				targetURL,
+				nil,
+				WithPKCEFromDiscovery(nil),
+			)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if rp == nil {
+				t.Fatalf("relying party is nil")
+			}
+
+			if rp.IsPKCE() != tt.expected {
+				t.Fatalf("expected PKCE to be %v, got %v", tt.expected, rp.IsPKCE())
+			}
+		})
+	}
+}
+
+func Test_Oauth2OnlyRPWithPKCEFromDiscovery(t *testing.T) {
+	rp, err := NewRelyingPartyOAuth(&oauth2.Config{}, WithPKCEFromDiscovery(nil))
+
+	if !errors.Is(err, ErrInvalidOption) {
+		t.Fatal("Oauth2 only RP should return an invalid option error when called with 'WithPKCEFromDiscovery'")
+	}
+
+	if !strings.Contains(err.Error(), "PKCE from discovery is not supported for OAuth2 only relying parties") {
+		t.Fatal("Wrong error message returned when calling 'WithPKCEFromDiscovery' on an OAuth2 only relying party")
+	}
+
+	if rp != nil {
+		t.Fatal("RP should be nil when calling 'WithPKCEFromDiscovery' on an OAuth2 only relying party")
 	}
 }
