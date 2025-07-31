@@ -249,12 +249,12 @@ func (s *multiStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID, c
 
 // GetKeyByIDAndClientID implements the op.Storage interface
 // it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
-func (s *multiStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
+func (s *multiStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return storage.GetKeyByIDAndClientID(ctx, keyID, userID)
+	return storage.GetKeyByIDAndClientID(ctx, keyID, clientID)
 }
 
 // ValidateJWTProfileScopes implements the op.Storage interface
