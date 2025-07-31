@@ -57,10 +57,6 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if v.AZP != nil {
-		v.AZP = oidc.DefaultAZPVerifier(v.ClientID)
-	}
-
 	if err = oidc.CheckAZPVerifier(claims, v.AZP); err != nil {
 		return nilClaims, err
 	}
@@ -123,6 +119,7 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 		Nonce: func(_ context.Context) string {
 			return ""
 		},
+		AZP: oidc.DefaultAZPVerifier(clientID),
 	}
 
 	for _, opts := range options {
