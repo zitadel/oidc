@@ -21,6 +21,7 @@ func TestVerifyTokens(t *testing.T) {
 		KeySet:            tu.KeySet{},
 		MaxAge:            2 * time.Minute,
 		ACR:               tu.ACRVerify,
+		AZP:               oidc.DefaultAZPVerifier(tu.ValidClientID),
 		Nonce:             func(context.Context) string { return tu.ValidNonce },
 		ClientID:          tu.ValidClientID,
 	}
@@ -99,6 +100,7 @@ func TestVerifyIDToken(t *testing.T) {
 		KeySet:            tu.KeySet{},
 		MaxAge:            2 * time.Minute,
 		ACR:               tu.ACRVerify,
+		AZP:               oidc.DefaultAZPVerifier(tu.ValidClientID),
 		Nonce:             func(context.Context) string { return tu.ValidNonce },
 		ClientID:          tu.ValidClientID,
 	}
@@ -333,6 +335,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 					WithIssuedAtMaxAge(time.Hour),
 					WithNonce(nil), // otherwise assert.Equal will fail on the function
 					WithACRVerifier(nil),
+					WithAZPVerifier(nil),
 					WithAuthTimeMaxAge(2 * time.Hour),
 					WithSupportedSigningAlgorithms("ABC", "DEF"),
 				},
