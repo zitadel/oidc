@@ -259,6 +259,7 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
+		crypto:            NewAESCrypto(config.CryptoKey),
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,
@@ -279,9 +280,6 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
 	o.encoder = oidc.NewEncoder()
-	if o.crypto == nil {
-		o.crypto = NewAESCrypto(config.CryptoKey)
-	}
 	return o, nil
 }
 
