@@ -1,6 +1,7 @@
 package exampleop
 
 import (
+	"crypto/sha256"
 	"log"
 	"log/slog"
 	"net/http"
@@ -33,7 +34,7 @@ var counter atomic.Int64
 func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer bool, extraOptions ...op.Option) chi.Router {
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
-	//key := sha256.Sum256([]byte("test"))
+	key := sha256.Sum256([]byte("test"))
 
 	router := chi.NewRouter()
 	router.Use(logging.Middleware(
@@ -53,7 +54,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	provider, err := newOP(
 		storage,
 		issuer,
-		//key,
+		key,
 		logger,
 		extraOptions...,
 	)
@@ -95,12 +96,12 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 func newOP(
 	storage op.Storage,
 	issuer string,
-	//key [32]byte, // encryption key
+	key [32]byte, // encryption key
 	logger *slog.Logger,
 	extraOptions ...op.Option,
 ) (op.OpenIDProvider, error) {
 	config := &op.Config{
-		//CryptoKey: key,
+		CryptoKey: key,
 
 		// will be used if the end_session endpoint is called without a post_logout_redirect_uri
 		DefaultLogoutRedirectURI: pathLoggedOut,

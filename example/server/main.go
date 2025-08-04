@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"github.com/zitadel/oidc/v3/example/server/config"
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
-	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func getUserStore(cfg *config.Config) (storage.UserStore, error) {
@@ -53,7 +51,7 @@ func main() {
 		stor,
 		logger,
 		false,
-		op.WithCrypto(newMyCrypto(sha256.Sum256([]byte("test")), logger)),
+		//op.WithCrypto(newMyCrypto(sha256.Sum256([]byte("test")), logger)),
 	)
 
 	server := &http.Server{
