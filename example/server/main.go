@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/zitadel/oidc/v3/pkg/op"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"github.com/zitadel/oidc/v3/example/server/config"
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func getUserStore(cfg *config.Config) (storage.UserStore, error) {
