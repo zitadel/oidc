@@ -22,6 +22,7 @@ func Test_verifyTokenResponse(t *testing.T) {
 		KeySet:            tu.KeySet{},
 		MaxAge:            2 * time.Minute,
 		ACR:               tu.ACRVerify,
+		AZP:               oidc.DefaultAZPVerifier(tu.ValidClientID),
 		Nonce:             func(context.Context) string { return tu.ValidNonce },
 	}
 	tests := []struct {
