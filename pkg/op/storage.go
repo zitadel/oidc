@@ -223,6 +223,35 @@ type ClientsStorage interface {
 	//
 	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3
 	DeleteClient(ctx context.Context, clientID string) error
+
+	// AuthorizeClientRegistration will check if a Client Registration Request ([RFC7591]) is authorized by parsing
+	// either:
+	//
+	//	- an initial access token (OAuth 2.0 access token optionally issued by an authorization server to a developer
+	//		or client and used to authorize calls to the client registration endpoint.), or
+	//	- a software statement (A digitally signed or MACed JSON Web Token (JWT) [RFC7519] that asserts metadata
+	// 		values about the client software.)
+	//
+	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591
+	// [RFC7519]: https://www.rfc-editor.org/rfc/rfc7519
+	AuthorizeClientRegistration(ctx context.Context, clientID, initialAccessToken string, c *oidc.ClientRegistrationRequest) error
+
+	// AuthorizeClientRead will check if a Client Read Request ([RFC7592]) is authorized for
+	// [Protected Dynamic Client Registration].
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	// [Protected Dynamic Client Registration]: https://www.rfc-editor.org/rfc/rfc7591#appendix-A.1.2
+	AuthorizeClientRead(ctx context.Context, clientID, registrationAccessToken string) error
+
+	// AuthorizeClientUpdate will check if a Client Update Request ([RFC7592]) is authorized.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	AuthorizeClientUpdate(ctx context.Context, clientID, registrationAccessToken string) error
+
+	// AuthorizeClientDelete will check if a Client Delete Request ([RFC7592]) is authorized.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	AuthorizeClientDelete(ctx context.Context, clientID, registrationAccessToken string) error
 }
 
 func assertClientStorage(s Storage) (ClientsStorage, error) {

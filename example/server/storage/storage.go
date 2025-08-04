@@ -34,7 +34,7 @@ var (
 	_ op.ClientsStorage           = &Storage{}
 )
 
-// storage implements the op.Storage interface
+// Storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
 type Storage struct {
@@ -1031,4 +1031,26 @@ func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
 	// TODO(mqf20):    If possible, the authorization server SHOULD immediately invalidate all existing authorization grants and currently active access tokens, all refresh tokens, and all other tokens associated with this client.
 	delete(s.clients, clientID)
 	return nil
+}
+
+func (s *Storage) AuthorizeClientRegistration(ctx context.Context, clientID, initialAccessToken string, c *oidc.ClientRegistrationRequest) error {
+	if initialAccessToken != "verysecure" {
+		return errors.New("invalid initial access token")
+	}
+	return nil
+}
+
+func (s *Storage) AuthorizeClientRead(ctx context.Context, clientID, registrationAccessToken string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *Storage) AuthorizeClientUpdate(ctx context.Context, clientID, registrationAccessToken string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *Storage) AuthorizeClientDelete(ctx context.Context, clientID, registrationAccessToken string) error {
+	//TODO implement me
+	panic("implement me")
 }
