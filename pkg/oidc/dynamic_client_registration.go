@@ -1158,19 +1158,39 @@ func (c ClientRegistrationResponse) MarshalJSON() ([]byte, error) {
 
 // ClientInformationErrorResponse implements
 // https://www.rfc-editor.org/rfc/rfc7591#section-3.2.1,
-// 3.2.1. Client Information Response and
+// 3.2.1. Client Information Response,
 // https://www.rfc-editor.org/rfc/rfc7592.html#section-3
-// 3. Client Information Response.
+// 3. Client Information Response, and
+// https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+// 3.3.  Client Registration Error Response.
 type ClientInformationErrorResponse struct {
-	Error            ClientInformationErrorResponseErrorCode `json:"error"`                       // Single ASCII error code string.
-	ErrorDescription string                                  `json:"error_description,omitempty"` // Human-readable ASCII text description of the error used for debugging.
+	// Error is a single ASCII error code string.
+	//
+	// REQUIRED.
+	Error ClientInformationErrorResponseErrorCode `json:"error"`
+
+	// ErrorDescription is a human-readable ASCII text description of the error used for debugging.
+	//
+	// OPTIONAL.
+	ErrorDescription string `json:"error_description,omitempty"`
 }
 
 const (
-	ClientInformationErrorResponseErrorCodeInvalidRedirectURI          ClientInformationErrorResponseErrorCode = "invalid_redirect_uri"          // The value of one or more redirection URIs is invalid.
-	ClientInformationErrorResponseErrorCodeInvalidClientMetadata       ClientInformationErrorResponseErrorCode = "invalid_client_metadata"       // The value of one of the client metadata fields is invalid and the server has rejected this request.
-	ClientInformationErrorResponseErrorCodeInvalidSoftwareStatement    ClientInformationErrorResponseErrorCode = "invalid_software_statement"    // The software statement presented is invalid.
-	ClientInformationErrorResponseErrorCodeUnapprovedSoftwareStatement ClientInformationErrorResponseErrorCode = "unapproved_software_statement" // The software statement presented is not approved for use by this authorization server.
+	// ClientInformationErrorResponseErrorCodeInvalidRedirectURI indicates that
+	// the value of one or more redirection URIs is invalid.
+	ClientInformationErrorResponseErrorCodeInvalidRedirectURI ClientInformationErrorResponseErrorCode = "invalid_redirect_uri"
+
+	// ClientInformationErrorResponseErrorCodeInvalidClientMetadata indicates that
+	// the value of one of the client metadata fields is invalid and the server has rejected this request.
+	ClientInformationErrorResponseErrorCodeInvalidClientMetadata ClientInformationErrorResponseErrorCode = "invalid_client_metadata"
+
+	// ClientInformationErrorResponseErrorCodeInvalidSoftwareStatement indicates that
+	// the software statement presented is invalid.
+	ClientInformationErrorResponseErrorCodeInvalidSoftwareStatement ClientInformationErrorResponseErrorCode = "invalid_software_statement"
+
+	// ClientInformationErrorResponseErrorCodeUnapprovedSoftwareStatement indicates that
+	// the software statement presented is not approved for use by this authorization server.
+	ClientInformationErrorResponseErrorCodeUnapprovedSoftwareStatement ClientInformationErrorResponseErrorCode = "unapproved_software_statement"
 )
 
 type ClientInformationErrorResponseErrorCode string
