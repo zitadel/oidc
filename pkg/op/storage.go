@@ -216,15 +216,18 @@ type ClientsStorage interface {
 	// RegisterClient handles the Client Registration Request according to [RFC7591].
 	//
 	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591#section-3.1
-	RegisterClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (clientID string, err error)
+	RegisterClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (*oidc.ClientRegistrationResponse, error)
+
 	// ReadClient handles the Client Read Request according to [RFC7592].
 	//
 	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
-	ReadClient(ctx context.Context, clientID string) (*oidc.ClientInformationResponse, error)
+	ReadClient(ctx context.Context, clientID string) (*oidc.ClientReadResponse, error)
+
 	// UpdateClient handles the Client Update Request according to [RFC7592].
 	//
 	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.2
-	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) error
+	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) (*oidc.ClientInformationResponse, error)
+
 	// DeleteClient handles the Client Delete Request according to [RFC7592].
 	//
 	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3

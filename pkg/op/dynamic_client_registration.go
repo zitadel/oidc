@@ -16,7 +16,7 @@ var (
 	errInvalidHeader              = errors.New("invalid header")
 )
 
-func getToken(r *http.Request) (string, error) {
+func getBearerToken(r *http.Request) (string, error) {
 	auth := r.Header.Get("authorization")
 	if auth == "" {
 		return "", errMissingAuthorizationHeader
@@ -61,7 +61,7 @@ func clientRead(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error 
 		return errors.New("dynamic client registration unsupported")
 	}
 
-	registrationAccessToken, err := getToken(r)
+	registrationAccessToken, err := getBearerToken(r)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 
 	var initialAccessToken string
 	if auth := r.Header.Get("authorization"); auth == "" {
-		iat, err := getToken(r)
+		iat, err := getBearerToken(r)
 		if err != nil && !errors.Is(err, errMissingAuthorizationHeader) {
 			return err
 		}
@@ -149,13 +149,7 @@ func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 		return err
 	}
 
-	clientID, err := storage.RegisterClient(ctx, req)
-	if err != nil {
-		// TODO(mqf20): be able to return the proper error codes?
-		return err
-	}
-
-	res, err := storage.ReadClient(ctx, clientID)
+	res, err := storage.RegisterClient(ctx, req)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
@@ -199,7 +193,7 @@ func clientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 		return errors.New("dynamic client registration unsupported")
 	}
 
-	registrationAccessToken, err := getToken(r)
+	registrationAccessToken, err := getBearerToken(r)
 	if err != nil {
 		return err
 	}
@@ -208,12 +202,7 @@ func clientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 		return err
 	}
 
-	if err := storage.UpdateClient(ctx, req); err != nil {
-		// TODO(mqf20): be able to return the proper error codes?
-		return err
-	}
-
-	res, err := storage.ReadClient(ctx, req.ClientID)
+	res, err := storage.UpdateClient(ctx, req)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
@@ -257,7 +246,7 @@ func clientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 		return errors.New("dynamic client registration unsupported")
 	}
 
-	registrationAccessToken, err := getToken(r)
+	registrationAccessToken, err := getBearerToken(r)
 	if err != nil {
 		return err
 	}
