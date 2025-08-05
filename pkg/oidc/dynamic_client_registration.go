@@ -957,10 +957,6 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		// The "jwks_uri" and "jwks" parameters MUST NOT both be present in the same request or response.
 		return nil, errors.New("jwks_uri and jwks cannot both be present")
 	}
-	if c.JWKSURI != "" {
-		// Force jwks to be omitted if jwks_uri is set
-		c.JWKS.Keys = nil
-	}
 
 	return json.Marshal(res)
 }
