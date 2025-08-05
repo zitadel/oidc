@@ -100,7 +100,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v *JWTProfileVeri
 }
 
 type JWTProfileKeyStorage interface {
-	GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
+	GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 }
 
 // SubjectIsIssuer
