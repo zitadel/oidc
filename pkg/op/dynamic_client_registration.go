@@ -16,6 +16,16 @@ var (
 	errInvalidHeader              = errors.New("invalid header")
 )
 
+// getBearerToken extracts a bearer token from a HTTP request.
+//
+// For example, getBearerToken returns
+// `this.is.an.access.token.value.ffx83`
+// from the request below:
+//
+//	GET /connect/register?client_id=s6BhdRkqt3 HTTP/1.1
+//	Accept: application/json
+//	Host: server.example.com
+//	Authorization: Bearer this.is.an.access.token.value.ffx83
 func getBearerToken(r *http.Request) (string, error) {
 	auth := r.Header.Get("authorization")
 	if auth == "" {
@@ -155,6 +165,11 @@ func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
+
+	// Upon a successful registration request, the authorization server
+	// returns a client identifier for the client.  The server responds with
+	// an HTTP 201 Created status code and a body of type "application/json"
+	// containing a Client Information Response.
 
 	httphelper.MarshalJSONWithStatus(w, res, http.StatusCreated)
 	return nil
