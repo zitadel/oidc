@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-jose/go-jose/v4"
 	"strings"
@@ -744,6 +745,32 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			// If the key didn't match any of the above, it's an extra parameter.
 			c.ExtraParameters[key] = value
 		}
+	}
+
+	// Set default values
+
+	if c.TokenEndpointAuthMethod == "" {
+		// If unspecified or omitted,
+		// the default is "client_secret_basic", denoting the HTTP Basic
+		// authentication scheme as specified in [Section 2.3.1] of OAuth 2.0.
+		//
+		// [Section 2.3.1]: https://www.rfc-editor.org/rfc/rfc7591#section-2.3.1
+		c.TokenEndpointAuthMethod = AuthMethodBasic
+	}
+
+	if len(c.GrantTypes) == 0 {
+		// If omitted, the default behavior is that the client will use only the "authorization_code" Grant Type.
+		c.GrantTypes = []GrantType{GrantTypeCode}
+	}
+
+	if len(c.ResponseTypes) == 0 {
+		// If omitted, the default is that the client will use only the "code" response type.
+		c.ResponseTypes = []ResponseType{ResponseTypeCode}
+	}
+
+	if c.JWKSURI != "" && len(c.JWKS.Keys) > 0 {
+		// The "jwks_uri" and "jwks" parameters MUST NOT both be present in the same request or response.
+		return errors.New("jwks_uri and jwks cannot both be present")
 	}
 
 	return nil
