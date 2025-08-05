@@ -1178,6 +1178,9 @@ type ClientInformationErrorResponseErrorCode string
 // ClientReadResponse implements
 // https://openid.net/specs/openid-connect-registration-1_0.html#ReadResponse
 // 4.3.  Client Read Response.
+//
+// The Authorization Server need not include the registration_access_token or registration_client_uri value in this
+// response unless they have been updated.
 type ClientReadResponse struct {
 	ClientRegistrationResponse
 }
