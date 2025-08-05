@@ -933,7 +933,7 @@ func (s *Storage) ClientCredentialsTokenRequest(ctx context.Context, clientID st
 	}, nil
 }
 
-func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRequest) (string, error) {
+func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRequest) (*oidc.ClientRegistrationResponse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	client := Client{
@@ -954,53 +954,119 @@ func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRe
 	}
 	s.clients[client.id] = &client
 
-	return client.id, nil
+	return &oidc.ClientRegistrationResponse{
+		ClientInformationResponse: oidc.ClientInformationResponse{
+			ClientMetadata: oidc.ClientMetadata{
+				RedirectURIs:                 nil,
+				TokenEndpointAuthMethod:      "",
+				GrantTypes:                   nil,
+				ResponseTypes:                nil,
+				ClientName:                   nil,
+				ClientURI:                    nil,
+				LogoURI:                      nil,
+				Scope:                        "",
+				Contacts:                     nil,
+				TOSURI:                       nil,
+				PolicyURI:                    nil,
+				JWKSURI:                      "",
+				JWKS:                         jose.JSONWebKeySet{},
+				SoftwareID:                   "",
+				SoftwareVersion:              "",
+				ApplicationType:              "",
+				SectorIdentifierURI:          "",
+				SubjectType:                  "",
+				IDTokenSignedResponseAlg:     "",
+				IDTokenEncryptedResponseAlg:  "",
+				IDTokenEncryptedResponseEnc:  "",
+				UserinfoSignedResponseAlg:    "",
+				UserinfoEncryptedResponseAlg: "",
+				UserinfoEncryptedResponseEnc: "",
+				RequestObjectSigningAlg:      "",
+				RequestObjectEncryptionAlg:   "",
+				RequestObjectEncryptionEnc:   "",
+				TokenEndpointAuthSigningAlg:  "",
+				DefaultMaxAge:                0,
+				RequireAuthTime:              false,
+				DefaultACRValues:             nil,
+				InitiateLoginURI:             "",
+				RequestURIs:                  nil,
+				PostLogoutRedirectURIs:       nil,
+				ExtraParameters:              nil,
+			},
+			ClientID:              "",
+			ClientSecret:          "",
+			ClientIDIssuedAt:      0,
+			ClientSecretExpiresAt: 0,
+		},
+		RegistrationAccessToken: "",
+		RegistrationClientURI:   "",
+	}, nil
 }
 
-func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientInformationResponse, error) {
+func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientReadResponse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	client, ok := s.clients[clientID]
 	if !ok {
 		return nil, errors.New("client not found")
 	}
-	return &oidc.ClientInformationResponse{
-		ClientID:              client.id,
-		ClientSecret:          client.secret,
-		ClientIDIssuedAt:      0,
-		ClientSecretExpiresAt: 0,
-		//ClientIDIssuedAt:        0,
-		//ClientSecretExpiresAt:   0,
-		RedirectURIs:            client.RedirectURIs(),
-		TokenEndpointAuthMethod: client.AuthMethod(),
-		GrantTypes:              client.GrantTypes(),
-		ResponseTypes:           client.ResponseTypes(),
-		ClientName:              nil,
-		ClientURI:               nil,
-		LogoURI:                 nil,
-		//ClientName:              "",
-		//ClientURI:               "",
-		//LogoURI:                 "",
-		Scope:                   "",
-		Contacts:                nil,
-		TOSURI:                  nil,
-		PolicyURI:               nil,
-		JWKSURI:                 "",
-		JWKS:                    jose.JSONWebKeySet{},
-		SoftwareID:              "",
-		SoftwareVersion:         "",
-		RegistrationAccessToken: "",
-		RegistrationClientURI:   "",
-		ExtraParameters:         nil,
+	return &oidc.ClientReadResponse{
+		ClientRegistrationResponse: oidc.ClientRegistrationResponse{
+			ClientInformationResponse: oidc.ClientInformationResponse{
+				ClientMetadata: oidc.ClientMetadata{
+					RedirectURIs:                 client.redirectURIs,
+					TokenEndpointAuthMethod:      client.authMethod,
+					GrantTypes:                   nil,
+					ResponseTypes:                nil,
+					ClientName:                   nil,
+					ClientURI:                    nil,
+					LogoURI:                      nil,
+					Scope:                        "",
+					Contacts:                     nil,
+					TOSURI:                       nil,
+					PolicyURI:                    nil,
+					JWKSURI:                      "",
+					JWKS:                         jose.JSONWebKeySet{},
+					SoftwareID:                   "",
+					SoftwareVersion:              "",
+					ApplicationType:              "",
+					SectorIdentifierURI:          "",
+					SubjectType:                  "",
+					IDTokenSignedResponseAlg:     "",
+					IDTokenEncryptedResponseAlg:  "",
+					IDTokenEncryptedResponseEnc:  "",
+					UserinfoSignedResponseAlg:    "",
+					UserinfoEncryptedResponseAlg: "",
+					UserinfoEncryptedResponseEnc: "",
+					RequestObjectSigningAlg:      "",
+					RequestObjectEncryptionAlg:   "",
+					RequestObjectEncryptionEnc:   "",
+					TokenEndpointAuthSigningAlg:  "",
+					DefaultMaxAge:                0,
+					RequireAuthTime:              false,
+					DefaultACRValues:             nil,
+					InitiateLoginURI:             "",
+					RequestURIs:                  nil,
+					PostLogoutRedirectURIs:       nil,
+					ExtraParameters:              nil,
+				},
+				ClientID:              "",
+				ClientSecret:          "",
+				ClientIDIssuedAt:      0,
+				ClientSecretExpiresAt: 0,
+			},
+			RegistrationAccessToken: "",
+			RegistrationClientURI:   "",
+		},
 	}, nil
 }
 
-func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) error {
+func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) (*oidc.ClientInformationResponse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	client, ok := s.clients[c.ClientID]
 	if !ok {
-		return errors.New("client not found")
+		return nil, errors.New("client not found")
 	}
 	//client.id = ""
 	client.secret = c.ClientSecret
@@ -1022,7 +1088,49 @@ func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) e
 	//client.??? = c.SoftwareID
 	//client.??? = c.SoftwareVersion
 
-	return nil
+	return &oidc.ClientInformationResponse{
+		ClientMetadata: oidc.ClientMetadata{
+			RedirectURIs:                 nil,
+			TokenEndpointAuthMethod:      "",
+			GrantTypes:                   nil,
+			ResponseTypes:                nil,
+			ClientName:                   nil,
+			ClientURI:                    nil,
+			LogoURI:                      nil,
+			Scope:                        "",
+			Contacts:                     nil,
+			TOSURI:                       nil,
+			PolicyURI:                    nil,
+			JWKSURI:                      "",
+			JWKS:                         jose.JSONWebKeySet{},
+			SoftwareID:                   "",
+			SoftwareVersion:              "",
+			ApplicationType:              "",
+			SectorIdentifierURI:          "",
+			SubjectType:                  "",
+			IDTokenSignedResponseAlg:     "",
+			IDTokenEncryptedResponseAlg:  "",
+			IDTokenEncryptedResponseEnc:  "",
+			UserinfoSignedResponseAlg:    "",
+			UserinfoEncryptedResponseAlg: "",
+			UserinfoEncryptedResponseEnc: "",
+			RequestObjectSigningAlg:      "",
+			RequestObjectEncryptionAlg:   "",
+			RequestObjectEncryptionEnc:   "",
+			TokenEndpointAuthSigningAlg:  "",
+			DefaultMaxAge:                0,
+			RequireAuthTime:              false,
+			DefaultACRValues:             nil,
+			InitiateLoginURI:             "",
+			RequestURIs:                  nil,
+			PostLogoutRedirectURIs:       nil,
+			ExtraParameters:              nil,
+		},
+		//ClientID:              "",
+		//ClientSecret:          "",
+		//ClientIDIssuedAt:      0,
+		//ClientSecretExpiresAt: 0,
+	}, nil
 }
 
 func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
@@ -1033,7 +1141,7 @@ func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
 	return nil
 }
 
-func (s *Storage) AuthorizeClientRegistration(ctx context.Context, clientID, initialAccessToken string, c *oidc.ClientRegistrationRequest) error {
+func (s *Storage) AuthorizeClientRegistration(ctx context.Context, initialAccessToken string, c *oidc.ClientRegistrationRequest) error {
 	if initialAccessToken != "verysecure" {
 		return errors.New("invalid initial access token")
 	}
