@@ -3,29 +3,35 @@ package op
 import (
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-jose/go-jose/v4/json"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"net/http"
+	"strings"
 )
 
-func RegistrationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
+var (
+	errMissingAuthorizationHeader = errors.New("missing authorization header")
+	errInvalidHeader              = errors.New("invalid header")
+)
+
+func getToken(r *http.Request) (string, error) {
+	auth := r.Header.Get("authorization")
+	if auth == "" {
+		return "", errMissingAuthorizationHeader
+	}
+	if !strings.HasPrefix(auth, oidc.PrefixBearer) {
+		return "", errInvalidHeader
+	}
+	return strings.TrimPrefix(auth, oidc.PrefixBearer), nil
+}
+
+func clientReadHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case http.MethodPost:
-			if err := ClientRegistration(w, r, o); err != nil {
-				RequestError(w, r, err, o.Logger())
-			}
 		case http.MethodGet:
-			if err := ClientRead(w, r, o); err != nil {
-				RequestError(w, r, err, o.Logger())
-			}
-		case http.MethodPut:
-			if err := ClientUpdate(w, r, o); err != nil {
-				RequestError(w, r, err, o.Logger())
-			}
-		case http.MethodDelete:
-			if err := ClientDelete(w, r, o); err != nil {
+			if err := clientRead(w, r, o); err != nil {
 				RequestError(w, r, err, o.Logger())
 			}
 		default:
@@ -34,13 +40,88 @@ func RegistrationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Reque
 	}
 }
 
-// ClientRegistration handles [client registration requests] as part of the
+// clientRead handles [client read requests] as part of the
+// [OAuth 2.0 Dynamic Client Registration Management Protocol].
+//
+// [client read requests]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
+// [OAuth 2.0 Dynamic Client Registration Management Protocol]: https://www.rfc-editor.org/rfc/rfc7592.html
+func clientRead(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
+	ctx, span := tracer.Start(r.Context(), "clientRead")
+	r = r.WithContext(ctx)
+	defer span.End()
+
+	req, err := ParseClientReadRequest(r, o)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return errors.New("dynamic client registration unsupported")
+	}
+
+	registrationAccessToken, err := getToken(r)
+	if err != nil {
+		return err
+	}
+
+	if err := storage.AuthorizeClientRead(ctx, req.ClientID, registrationAccessToken); err != nil {
+		return err
+	}
+
+	res, err := storage.ReadClient(r.Context(), req.ClientID)
+	if err != nil {
+		// TODO(mqf20): be able to return the proper error codes?
+		return err
+	}
+
+	httphelper.MarshalJSON(w, res)
+	return nil
+}
+
+func ParseClientReadRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientReadRequest, error) {
+	ctx, span := tracer.Start(r.Context(), "ParseClientReadRequest")
+	r = r.WithContext(ctx)
+	defer span.End()
+
+	req := new(oidc.ClientReadRequest)
+	if err := o.Decoder().Decode(req, r.Form); err != nil {
+		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client read request").WithParent(err)
+	}
+
+	req.ClientID = chi.URLParam(r, "client_id")
+	return req, nil
+}
+
+func clientRegistrationUpdateDeleteHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			if err := clientRegistration(w, r, o); err != nil {
+				RequestError(w, r, err, o.Logger())
+			}
+		case http.MethodPut:
+			if err := clientUpdate(w, r, o); err != nil {
+				RequestError(w, r, err, o.Logger())
+			}
+		case http.MethodDelete:
+			if err := clientDelete(w, r, o); err != nil {
+				RequestError(w, r, err, o.Logger())
+			}
+		default:
+			RequestError(w, r, fmt.Errorf("unsupported method: %s", r.Method), o.Logger())
+		}
+	}
+}
+
+// clientRegistration handles [client registration requests] as part of the
 // [OAuth 2.0 Dynamic Client Registration Protocol].
 //
 // [client registration requests]: https://www.rfc-editor.org/rfc/rfc7591#section-3.1
 // [OAuth 2.0 Dynamic Client Registration Protocol]: https://www.rfc-editor.org/rfc/rfc7591
-func ClientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
-	ctx, span := tracer.Start(r.Context(), "ClientRegistration")
+func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
+	ctx, span := tracer.Start(r.Context(), "clientRegistration")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -53,6 +134,19 @@ func ClientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 	storage, err := assertClientStorage(o.Storage())
 	if err != nil {
 		return errors.New("dynamic client registration unsupported")
+	}
+
+	var initialAccessToken string
+	if auth := r.Header.Get("authorization"); auth == "" {
+		iat, err := getToken(r)
+		if err != nil && !errors.Is(err, errMissingAuthorizationHeader) {
+			return err
+		}
+		initialAccessToken = iat
+	}
+
+	if err := storage.AuthorizeClientRegistration(ctx, initialAccessToken, req); err != nil {
+		return err
 	}
 
 	clientID, err := storage.RegisterClient(ctx, req)
@@ -84,57 +178,13 @@ func ParseClientRegistrationRequest(r *http.Request) (*oidc.ClientRegistrationRe
 	return req, nil
 }
 
-// ClientRead handles [client read requests] as part of the
-// [OAuth 2.0 Dynamic Client Registration Management Protocol].
-//
-// [client read requests]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
-// [OAuth 2.0 Dynamic Client Registration Management Protocol]: https://www.rfc-editor.org/rfc/rfc7592.html
-func ClientRead(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
-	ctx, span := tracer.Start(r.Context(), "ClientRead")
-	r = r.WithContext(ctx)
-	defer span.End()
-
-	req, err := ParseClientReadRequest(r, o)
-	if err != nil {
-		// TODO(mqf20): be able to return the proper error codes?
-		return err
-	}
-
-	storage, err := assertClientStorage(o.Storage())
-	if err != nil {
-		return errors.New("dynamic client registration unsupported")
-	}
-
-	res, err := storage.ReadClient(r.Context(), req.ClientID)
-	if err != nil {
-		// TODO(mqf20): be able to return the proper error codes?
-		return err
-	}
-
-	httphelper.MarshalJSON(w, res)
-	return nil
-}
-
-func ParseClientReadRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientReadRequest, error) {
-	ctx, span := tracer.Start(r.Context(), "ParseClientReadRequest")
-	r = r.WithContext(ctx)
-	defer span.End()
-
-	req := new(oidc.ClientReadRequest)
-	if err := o.Decoder().Decode(req, r.Form); err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client read request").WithParent(err)
-	}
-
-	return req, nil
-}
-
-// ClientUpdate handles [client update requests] as part of the
+// clientUpdate handles [client update requests] as part of the
 // [OAuth 2.0 Dynamic Client Registration Management Protocol].
 //
 // [client update requests]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.2
 // [OAuth 2.0 Dynamic Client Registration Management Protocol]: https://www.rfc-editor.org/rfc/rfc7592.html
-func ClientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
-	ctx, span := tracer.Start(r.Context(), "ClientUpdate")
+func clientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
+	ctx, span := tracer.Start(r.Context(), "clientUpdate")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -147,6 +197,15 @@ func ClientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 	storage, err := assertClientStorage(o.Storage())
 	if err != nil {
 		return errors.New("dynamic client registration unsupported")
+	}
+
+	registrationAccessToken, err := getToken(r)
+	if err != nil {
+		return err
+	}
+
+	if err := storage.AuthorizeClientUpdate(ctx, req.ClientID, registrationAccessToken); err != nil {
+		return err
 	}
 
 	if err := storage.UpdateClient(ctx, req); err != nil {
@@ -177,13 +236,13 @@ func ParseClientUpdateRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientUp
 	return req, nil
 }
 
-// ClientDelete handles [client delete requests] as part of the
+// clientDelete handles [client delete requests] as part of the
 // [OAuth 2.0 Dynamic Client Registration Management Protocol].
 //
 // [client delete requests]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3
 // [OAuth 2.0 Dynamic Client Registration Management Protocol]: https://www.rfc-editor.org/rfc/rfc7592.html
-func ClientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
-	ctx, span := tracer.Start(r.Context(), "ClientDelete")
+func clientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error {
+	ctx, span := tracer.Start(r.Context(), "clientDelete")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -196,6 +255,15 @@ func ClientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 	storage, err := assertClientStorage(o.Storage())
 	if err != nil {
 		return errors.New("dynamic client registration unsupported")
+	}
+
+	registrationAccessToken, err := getToken(r)
+	if err != nil {
+		return err
+	}
+
+	if err := storage.AuthorizeClientDelete(ctx, req.ClientID, registrationAccessToken); err != nil {
+		return err
 	}
 
 	if err := storage.DeleteClient(ctx, req.ClientID); err != nil {

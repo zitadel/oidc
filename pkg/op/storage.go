@@ -240,7 +240,7 @@ type ClientsStorage interface {
 	//
 	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591
 	// [RFC7519]: https://www.rfc-editor.org/rfc/rfc7519
-	AuthorizeClientRegistration(ctx context.Context, clientID, initialAccessToken string, c *oidc.ClientRegistrationRequest) error
+	AuthorizeClientRegistration(ctx context.Context, initialAccessToken string, c *oidc.ClientRegistrationRequest) error
 
 	// AuthorizeClientRead will check if a Client Read Request ([RFC7592]) is authorized for
 	// [Protected Dynamic Client Registration].

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -145,7 +146,8 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
-	router.HandleFunc(o.RegistrationEndpoint().Relative(), RegistrationHandler(o))
+	router.HandleFunc(o.RegistrationEndpoint().Relative(), clientRegistrationUpdateDeleteHandler(o))
+	router.HandleFunc(path.Join(o.RegistrationEndpoint().Relative(), "{client_id}"), clientReadHandler(o))
 	return router
 }
 
