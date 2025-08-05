@@ -41,8 +41,14 @@ type AuthStorage interface {
 	//   registered the refresh_token grant type in advance
 	//
 	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
-	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
-	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
+	//
+	// CreateAccessAndRefreshToken creates both access and refresh tokens.
+	// The returned refresh token is the actual token value that will be passed
+	// directly to the client. The storage implementation is responsible for
+	// creating the complete refresh token (JWT or opaque format). For refresh tokens,
+	// in either format, the token itself serves as both the identifier and the credential.
+	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error)
+	TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (RefreshTokenRequest, error)
 
 	TerminateSession(ctx context.Context, userID string, clientID string) error
 

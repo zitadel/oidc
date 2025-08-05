@@ -69,6 +69,13 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 	}, nil
 }
 
+// createTokens delegates token creation to the appropriate storage method based on
+// the request type and requirements. It returns an access token ID and expiration
+// in all cases, but the refresh token handling varies:
+//   - When needsRefreshToken() returns true: calls CreateAccessAndRefreshTokens,
+//     which returns both tokens. The newRefreshToken will contain the actual token value.
+//   - When needsRefreshToken() returns false: calls CreateAccessToken only.
+//     The newRefreshToken will be an empty string in this case.
 func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, err error) {
 	ctx, span := tracer.Start(ctx, "createTokens")
 	defer span.End()
@@ -77,7 +84,7 @@ func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storag
 		return storage.CreateAccessAndRefreshTokens(ctx, tokenRequest, refreshToken)
 	}
 	id, exp, err = storage.CreateAccessToken(ctx, tokenRequest)
-	return
+	return id, "", exp, err
 }
 
 func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool {
@@ -95,6 +102,15 @@ func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool
 	}
 }
 
+// CreateAccessToken creates an access token and may return a refresh token from storage.
+// This function always creates the access token using the ID returned from storage.
+// The refresh token is obtained from the storage layer and passed through unchanged.
+// Whether a refresh token is included depends on the request:
+//   - Authorization code flow with offline_access scope: returns refresh token
+//   - Refresh token grant (rotation): returns new refresh token
+//   - Client credentials, implicit flow: returns empty string
+//
+// The function returns both tokens to support all flows with a single signature.
 func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
 	ctx, span := tracer.Start(ctx, "CreateAccessToken")
 	defer span.End()
@@ -110,12 +126,12 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	validity = exp.Add(clockSkew).Sub(time.Now().UTC())
 	if accessTokenType == AccessTokenTypeJWT {
 		accessToken, err = CreateJWT(ctx, IssuerFromContext(ctx), tokenRequest, exp, id, client, creator.Storage())
-		return
+		return accessToken, newRefreshToken, validity, err
 	}
 	_, span = tracer.Start(ctx, "CreateBearerToken")
 	accessToken, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
 	span.End()
-	return
+	return accessToken, newRefreshToken, validity, err
 }
 
 func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
