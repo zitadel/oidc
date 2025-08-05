@@ -50,15 +50,15 @@ func clientRead(w http.ResponseWriter, r *http.Request, o OpenIDProvider) error 
 	r = r.WithContext(ctx)
 	defer span.End()
 
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return err
+	}
+
 	req, err := ParseClientReadRequest(r, o)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
-	}
-
-	storage, err := assertClientStorage(o.Storage())
-	if err != nil {
-		return errors.New("dynamic client registration unsupported")
 	}
 
 	registrationAccessToken, err := getBearerToken(r)
@@ -125,21 +125,22 @@ func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 	r = r.WithContext(ctx)
 	defer span.End()
 
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return err
+	}
+
 	req, err := ParseClientRegistrationRequest(r)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
 	}
 
-	storage, err := assertClientStorage(o.Storage())
-	if err != nil {
-		return errors.New("dynamic client registration unsupported")
-	}
-
 	var initialAccessToken string
 	if auth := r.Header.Get("authorization"); auth == "" {
 		iat, err := getBearerToken(r)
 		if err != nil && !errors.Is(err, errMissingAuthorizationHeader) {
+			// allow for missing authorization header, in case the software statement is used for authentication
 			return err
 		}
 		initialAccessToken = iat
@@ -182,15 +183,15 @@ func clientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 	r = r.WithContext(ctx)
 	defer span.End()
 
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return err
+	}
+
 	req, err := ParseClientUpdateRequest(r, o)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
-	}
-
-	storage, err := assertClientStorage(o.Storage())
-	if err != nil {
-		return errors.New("dynamic client registration unsupported")
 	}
 
 	registrationAccessToken, err := getBearerToken(r)
@@ -235,15 +236,15 @@ func clientDelete(w http.ResponseWriter, r *http.Request, o OpenIDProvider) erro
 	r = r.WithContext(ctx)
 	defer span.End()
 
+	storage, err := assertClientStorage(o.Storage())
+	if err != nil {
+		return err
+	}
+
 	req, err := ParseClientDeleteRequest(r, o)
 	if err != nil {
 		// TODO(mqf20): be able to return the proper error codes?
 		return err
-	}
-
-	storage, err := assertClientStorage(o.Storage())
-	if err != nil {
-		return errors.New("dynamic client registration unsupported")
 	}
 
 	registrationAccessToken, err := getBearerToken(r)
