@@ -71,6 +71,10 @@ type Server interface {
 	// The recommended Response Data type is [oidc.DeviceAuthorizationResponse].
 	DeviceAuthorization(context.Context, *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error)
 
+	// PushedAuthorizationRequest initiates the PAR OIDC extension flow.
+	// https://datatracker.ietf.org/doc/html/rfc9126
+	PushedAuthorizationRequest(context.Context, *Request[oidc.PARRequest]) (*Response, error)
+
 	// VerifyClient is called on most oauth/token handlers to authenticate,
 	// using either a secret (POST, Basic) or assertion (JWT).
 	// If no secrets are provided, the client must be public.
@@ -200,6 +204,8 @@ func newClientRequest[T any](r *http.Request, data *T, client Client) *ClientReq
 //
 // EXPERIMENTAL: may change until v4
 type Response struct {
+	Status int
+
 	// Header map will be merged with the
 	// header on the [http.ResponseWriter].
 	Header http.Header
@@ -217,7 +223,12 @@ type Response struct {
 // NewResponse creates a new response for data,
 // without custom headers.
 func NewResponse(data any) *Response {
+	return NewResponseWithStatus(http.StatusOK, data)
+}
+
+func NewResponseWithStatus(status int, data any) *Response {
 	return &Response{
+		Status: status,
 		Header: make(http.Header),
 		Data:   data,
 	}
@@ -225,7 +236,7 @@ func NewResponse(data any) *Response {
 
 func (resp *Response) writeOut(w http.ResponseWriter) {
 	gu.MapMerge(resp.Header, w.Header())
-	httphelper.MarshalJSON(w, resp.Data)
+	httphelper.MarshalJSONWithStatus(w, resp.Data, resp.Status)
 }
 
 // Redirect is a special response type which will
@@ -302,6 +313,10 @@ func (UnimplementedServer) Authorize(ctx context.Context, r *ClientRequest[oidc.
 }
 
 func (UnimplementedServer) DeviceAuthorization(ctx context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
+	return nil, unimplementedError(r)
+}
+
+func (UnimplementedServer) PushedAuthorizationRequest(ctx context.Context, r *Request[oidc.PARRequest]) (*Response, error) {
 	return nil, unimplementedError(r)
 }
 

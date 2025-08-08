@@ -330,6 +330,34 @@ func (mr *MockConfigurationMockRecorder) KeysEndpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeysEndpoint", reflect.TypeOf((*MockConfiguration)(nil).KeysEndpoint))
 }
 
+// PushedAuthorizationRequest mocks base method.
+func (m *MockConfiguration) PushedAuthorizationRequest() op.PushedAuthorizationRequestConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PushedAuthorizationRequest")
+	ret0, _ := ret[0].(op.PushedAuthorizationRequestConfig)
+	return ret0
+}
+
+// PushedAuthorizationRequest indicates an expected call of PushedAuthorizationRequest.
+func (mr *MockConfigurationMockRecorder) PushedAuthorizationRequest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PushedAuthorizationRequest", reflect.TypeOf((*MockConfiguration)(nil).PushedAuthorizationRequest))
+}
+
+// PushedAuthorizationRequestEndpoint mocks base method.
+func (m *MockConfiguration) PushedAuthorizationRequestEndpoint() *op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PushedAuthorizationRequestEndpoint")
+	ret0, _ := ret[0].(*op.Endpoint)
+	return ret0
+}
+
+// PushedAuthorizationRequestEndpoint indicates an expected call of PushedAuthorizationRequestEndpoint.
+func (mr *MockConfigurationMockRecorder) PushedAuthorizationRequestEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PushedAuthorizationRequestEndpoint", reflect.TypeOf((*MockConfiguration)(nil).PushedAuthorizationRequestEndpoint))
+}
+
 // RequestObjectSigningAlgorithmsSupported mocks base method.
 func (m *MockConfiguration) RequestObjectSigningAlgorithmsSupported() []string {
 	m.ctrl.T.Helper()

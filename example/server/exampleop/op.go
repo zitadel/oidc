@@ -130,6 +130,10 @@ func newOP(
 			UserFormPath: "/device",
 			UserCode:     op.UserCodeBase20,
 		},
+
+		PushedAuthorizationRequest: op.PushedAuthorizationRequestConfig{
+			Lifetime: time.Minute,
+		},
 	}
 	handler, err := op.NewOpenIDProvider(issuer, config, storage,
 		append([]op.Option{
