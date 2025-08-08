@@ -73,7 +73,6 @@ type Server interface {
 
 	// PushedAuthorizationRequest initiates the PAR OIDC extension flow.
 	// https://datatracker.ietf.org/doc/html/rfc9126
-	// The recommended Response Data type is [oidc.DeviceAuthorizationResponse].
 	PushedAuthorizationRequest(context.Context, *Request[oidc.PARRequest]) (*Response, error)
 
 	// VerifyClient is called on most oauth/token handlers to authenticate,

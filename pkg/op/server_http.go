@@ -272,6 +272,9 @@ func (s *webServer) pushedAuthorizationRequestHandler(w http.ResponseWriter, r *
 		WriteError(w, r, err, s.getLogger(r.Context()))
 		return
 	}
+
+	// NOTE: ensure proper resp status according to RFC-9126.
+	resp.Status = http.StatusCreated
 	resp.writeOut(w)
 }
 

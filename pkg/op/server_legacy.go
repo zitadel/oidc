@@ -186,20 +186,6 @@ func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest
 	return NewResponse(response), nil
 }
 
-func (s *LegacyServer) PushedAuthorizationRequest(
-	ctx context.Context, r *Request[oidc.PARRequest],
-) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.PushedAuthorizationRequest")
-	defer span.End()
-
-	res, err := createPushedAuthorizationRequest(ctx, r.Data, s.provider)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewResponseWithStatus(http.StatusCreated, res), nil
-}
-
 func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
 	ctx, span := tracer.Start(ctx, "LegacyServer.VerifyClient")
 	defer span.End()
