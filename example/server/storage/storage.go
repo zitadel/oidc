@@ -951,54 +951,55 @@ func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRe
 		clockSkew:                      0,
 		postLogoutRedirectURIGlobs:     nil,
 		redirectURIGlobs:               nil,
+		registrationAccessToken:        uuid.New().String(),
 	}
 	s.clients[client.id] = &client
 
 	return &oidc.ClientRegistrationResponse{
 		ClientInformationResponse: oidc.ClientInformationResponse{
 			ClientMetadata: oidc.ClientMetadata{
-				RedirectURIs:                 nil,
-				TokenEndpointAuthMethod:      "",
-				GrantTypes:                   nil,
-				ResponseTypes:                nil,
-				ClientName:                   nil,
-				ClientURI:                    nil,
-				LogoURI:                      nil,
-				Scope:                        "",
-				Contacts:                     nil,
-				TOSURI:                       nil,
-				PolicyURI:                    nil,
-				JWKSURI:                      "",
-				JWKS:                         jose.JSONWebKeySet{},
-				SoftwareID:                   "",
-				SoftwareVersion:              "",
-				ApplicationType:              "",
-				SectorIdentifierURI:          "",
-				SubjectType:                  "",
-				IDTokenSignedResponseAlg:     "",
-				IDTokenEncryptedResponseAlg:  "",
-				IDTokenEncryptedResponseEnc:  "",
-				UserinfoSignedResponseAlg:    "",
-				UserinfoEncryptedResponseAlg: "",
-				UserinfoEncryptedResponseEnc: "",
-				RequestObjectSigningAlg:      "",
-				RequestObjectEncryptionAlg:   "",
-				RequestObjectEncryptionEnc:   "",
-				TokenEndpointAuthSigningAlg:  "",
-				DefaultMaxAge:                0,
-				RequireAuthTime:              false,
-				DefaultACRValues:             nil,
-				InitiateLoginURI:             "",
-				RequestURIs:                  nil,
-				PostLogoutRedirectURIs:       nil,
-				ExtraParameters:              nil,
+				RedirectURIs:            client.redirectURIs,
+				TokenEndpointAuthMethod: client.authMethod,
+				GrantTypes:              client.grantTypes,
+				ResponseTypes:           client.responseTypes,
+				ClientName:              map[string]string{"default": client.id},
+				//ClientURI:                    nil,
+				//LogoURI:                      nil,
+				//Scope:                        "",
+				//Contacts:                     nil,
+				//TOSURI:                       nil,
+				//PolicyURI:                    nil,
+				//JWKSURI:                      "",
+				//JWKS:                         jose.JSONWebKeySet{},
+				//SoftwareID:                   "",
+				//SoftwareVersion:              "",
+				//ApplicationType:              "",
+				//SectorIdentifierURI:          "",
+				//SubjectType:                  "",
+				//IDTokenSignedResponseAlg:     "",
+				//IDTokenEncryptedResponseAlg:  "",
+				//IDTokenEncryptedResponseEnc:  "",
+				//UserinfoSignedResponseAlg:    "",
+				//UserinfoEncryptedResponseAlg: "",
+				//UserinfoEncryptedResponseEnc: "",
+				//RequestObjectSigningAlg:      "",
+				//RequestObjectEncryptionAlg:   "",
+				//RequestObjectEncryptionEnc:   "",
+				//TokenEndpointAuthSigningAlg:  "",
+				//DefaultMaxAge:                0,
+				//RequireAuthTime:              false,
+				//DefaultACRValues:             nil,
+				//InitiateLoginURI:             "",
+				//RequestURIs:                  nil,
+				//PostLogoutRedirectURIs:       nil,
+				//ExtraParameters:              nil,
 			},
-			ClientID:              "",
-			ClientSecret:          "",
-			ClientIDIssuedAt:      0,
-			ClientSecretExpiresAt: 0,
+			ClientID:     client.id,
+			ClientSecret: client.secret,
+			//ClientIDIssuedAt:      0,
+			//ClientSecretExpiresAt: 0,
 		},
-		RegistrationAccessToken: "",
+		RegistrationAccessToken: client.registrationAccessToken,
 		RegistrationClientURI:   "",
 	}, nil
 }
@@ -1014,48 +1015,48 @@ func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientRe
 		ClientRegistrationResponse: oidc.ClientRegistrationResponse{
 			ClientInformationResponse: oidc.ClientInformationResponse{
 				ClientMetadata: oidc.ClientMetadata{
-					RedirectURIs:                 client.redirectURIs,
-					TokenEndpointAuthMethod:      client.authMethod,
-					GrantTypes:                   nil,
-					ResponseTypes:                nil,
-					ClientName:                   nil,
-					ClientURI:                    nil,
-					LogoURI:                      nil,
-					Scope:                        "",
-					Contacts:                     nil,
-					TOSURI:                       nil,
-					PolicyURI:                    nil,
-					JWKSURI:                      "",
-					JWKS:                         jose.JSONWebKeySet{},
-					SoftwareID:                   "",
-					SoftwareVersion:              "",
-					ApplicationType:              "",
-					SectorIdentifierURI:          "",
-					SubjectType:                  "",
-					IDTokenSignedResponseAlg:     "",
-					IDTokenEncryptedResponseAlg:  "",
-					IDTokenEncryptedResponseEnc:  "",
-					UserinfoSignedResponseAlg:    "",
-					UserinfoEncryptedResponseAlg: "",
-					UserinfoEncryptedResponseEnc: "",
-					RequestObjectSigningAlg:      "",
-					RequestObjectEncryptionAlg:   "",
-					RequestObjectEncryptionEnc:   "",
-					TokenEndpointAuthSigningAlg:  "",
-					DefaultMaxAge:                0,
-					RequireAuthTime:              false,
-					DefaultACRValues:             nil,
-					InitiateLoginURI:             "",
-					RequestURIs:                  nil,
-					PostLogoutRedirectURIs:       nil,
-					ExtraParameters:              nil,
+					RedirectURIs:            client.redirectURIs,
+					TokenEndpointAuthMethod: client.authMethod,
+					GrantTypes:              client.grantTypes,
+					ResponseTypes:           client.responseTypes,
+					ClientName:              map[string]string{"default": client.id},
+					//ClientURI:                    nil,
+					//LogoURI:                      nil,
+					//Scope:                        "",
+					//Contacts:                     nil,
+					//TOSURI:                       nil,
+					//PolicyURI:                    nil,
+					//JWKSURI:                      "",
+					//JWKS:                         jose.JSONWebKeySet{},
+					//SoftwareID:                   "",
+					//SoftwareVersion:              "",
+					//ApplicationType:              "",
+					//SectorIdentifierURI:          "",
+					//SubjectType:                  "",
+					//IDTokenSignedResponseAlg:     "",
+					//IDTokenEncryptedResponseAlg:  "",
+					//IDTokenEncryptedResponseEnc:  "",
+					//UserinfoSignedResponseAlg:    "",
+					//UserinfoEncryptedResponseAlg: "",
+					//UserinfoEncryptedResponseEnc: "",
+					//RequestObjectSigningAlg:      "",
+					//RequestObjectEncryptionAlg:   "",
+					//RequestObjectEncryptionEnc:   "",
+					//TokenEndpointAuthSigningAlg:  "",
+					//DefaultMaxAge:                0,
+					//RequireAuthTime:              false,
+					//DefaultACRValues:             nil,
+					//InitiateLoginURI:             "",
+					//RequestURIs:                  nil,
+					//PostLogoutRedirectURIs:       nil,
+					//ExtraParameters:              nil,
 				},
-				ClientID:              "",
-				ClientSecret:          "",
-				ClientIDIssuedAt:      0,
-				ClientSecretExpiresAt: 0,
+				ClientID:     client.id,
+				ClientSecret: client.secret,
+				//ClientIDIssuedAt:      0,
+				//ClientSecretExpiresAt: 0,
 			},
-			RegistrationAccessToken: "",
+			RegistrationAccessToken: client.registrationAccessToken,
 			RegistrationClientURI:   "",
 		},
 	}, nil
@@ -1068,66 +1069,52 @@ func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) (
 	if !ok {
 		return nil, errors.New("client not found")
 	}
-	//client.id = ""
 	client.secret = c.ClientSecret
-	//client.??? = c.ClientIDIssuedAt
-	//client.??? = c.ClientSecretExpiresAt
 	client.redirectURIs = c.RedirectURIs
 	client.authMethod = c.TokenEndpointAuthMethod
 	client.grantTypes = c.GrantTypes
 	client.responseTypes = c.ResponseTypes
-	//client.??? = c.ClientName
-	//client.??? = c.ClientURI
-	//client.??? = c.LogoURI
-	//client.??? = c.Scope
-	//client.??? = c.Contacts
-	//client.??? = c.TOSURI
-	//client.??? = c.PolicyURI
-	//client.??? = c.JWKSURI
-	//client.??? = c.JWKS
-	//client.??? = c.SoftwareID
-	//client.??? = c.SoftwareVersion
 
 	return &oidc.ClientInformationResponse{
 		ClientMetadata: oidc.ClientMetadata{
-			RedirectURIs:                 nil,
-			TokenEndpointAuthMethod:      "",
-			GrantTypes:                   nil,
-			ResponseTypes:                nil,
-			ClientName:                   nil,
-			ClientURI:                    nil,
-			LogoURI:                      nil,
-			Scope:                        "",
-			Contacts:                     nil,
-			TOSURI:                       nil,
-			PolicyURI:                    nil,
-			JWKSURI:                      "",
-			JWKS:                         jose.JSONWebKeySet{},
-			SoftwareID:                   "",
-			SoftwareVersion:              "",
-			ApplicationType:              "",
-			SectorIdentifierURI:          "",
-			SubjectType:                  "",
-			IDTokenSignedResponseAlg:     "",
-			IDTokenEncryptedResponseAlg:  "",
-			IDTokenEncryptedResponseEnc:  "",
-			UserinfoSignedResponseAlg:    "",
-			UserinfoEncryptedResponseAlg: "",
-			UserinfoEncryptedResponseEnc: "",
-			RequestObjectSigningAlg:      "",
-			RequestObjectEncryptionAlg:   "",
-			RequestObjectEncryptionEnc:   "",
-			TokenEndpointAuthSigningAlg:  "",
-			DefaultMaxAge:                0,
-			RequireAuthTime:              false,
-			DefaultACRValues:             nil,
-			InitiateLoginURI:             "",
-			RequestURIs:                  nil,
-			PostLogoutRedirectURIs:       nil,
-			ExtraParameters:              nil,
+			RedirectURIs:            client.redirectURIs,
+			TokenEndpointAuthMethod: client.authMethod,
+			GrantTypes:              client.grantTypes,
+			ResponseTypes:           client.responseTypes,
+			ClientName:              map[string]string{"default": client.id},
+			//ClientURI:                    nil,
+			//LogoURI:                      nil,
+			//Scope:                        "",
+			//Contacts:                     nil,
+			//TOSURI:                       nil,
+			//PolicyURI:                    nil,
+			//JWKSURI:                      "",
+			//JWKS:                         jose.JSONWebKeySet{},
+			//SoftwareID:                   "",
+			//SoftwareVersion:              "",
+			//ApplicationType:              "",
+			//SectorIdentifierURI:          "",
+			//SubjectType:                  "",
+			//IDTokenSignedResponseAlg:     "",
+			//IDTokenEncryptedResponseAlg:  "",
+			//IDTokenEncryptedResponseEnc:  "",
+			//UserinfoSignedResponseAlg:    "",
+			//UserinfoEncryptedResponseAlg: "",
+			//UserinfoEncryptedResponseEnc: "",
+			//RequestObjectSigningAlg:      "",
+			//RequestObjectEncryptionAlg:   "",
+			//RequestObjectEncryptionEnc:   "",
+			//TokenEndpointAuthSigningAlg:  "",
+			//DefaultMaxAge:                0,
+			//RequireAuthTime:              false,
+			//DefaultACRValues:             nil,
+			//InitiateLoginURI:             "",
+			//RequestURIs:                  nil,
+			//PostLogoutRedirectURIs:       nil,
+			//ExtraParameters:              nil,
 		},
-		//ClientID:              "",
-		//ClientSecret:          "",
+		ClientID:     client.id,
+		ClientSecret: client.secret,
 		//ClientIDIssuedAt:      0,
 		//ClientSecretExpiresAt: 0,
 	}, nil
@@ -1143,22 +1130,32 @@ func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
 
 func (s *Storage) AuthorizeClientRegistration(ctx context.Context, initialAccessToken string, c *oidc.ClientRegistrationRequest) error {
 	if initialAccessToken != "verysecure" {
-		return errors.New("invalid initial access token")
+		return op.ErrInvalidInitialAccessToken
+	}
+	return nil
+}
+
+func (s *Storage) authorizeClient(clientID, registrationAccessToken string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	c, ok := s.clients[clientID]
+	if !ok {
+		return op.ErrInvalidClient
+	}
+	if registrationAccessToken != c.registrationAccessToken {
+		return op.ErrInvalidRegistrationAccessToken
 	}
 	return nil
 }
 
 func (s *Storage) AuthorizeClientRead(ctx context.Context, clientID, registrationAccessToken string) error {
-	//TODO implement me
-	panic("implement me")
+	return s.authorizeClient(clientID, registrationAccessToken)
 }
 
 func (s *Storage) AuthorizeClientUpdate(ctx context.Context, clientID, registrationAccessToken string) error {
-	//TODO implement me
-	panic("implement me")
+	return s.authorizeClient(clientID, registrationAccessToken)
 }
 
 func (s *Storage) AuthorizeClientDelete(ctx context.Context, clientID, registrationAccessToken string) error {
-	//TODO implement me
-	panic("implement me")
+	return s.authorizeClient(clientID, registrationAccessToken)
 }
