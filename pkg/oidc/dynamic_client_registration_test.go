@@ -232,8 +232,8 @@ func TestClientRegistrationRequest(t *testing.T) {
 }
 func TestClientReadResponse(t *testing.T) {
 	// example from https://openid.net/specs/openid-connect-registration-1_0.html#ReadResponse
-	t.Run("unmarshal, marshal and unmarshal example", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"client_id": "s6BhdRkqt3",
 	"client_secret": "OylyaC56ijpAQ7G5ZZGL7MMQ6Ap6mEeuhSTFVps2N4Q",
@@ -253,108 +253,130 @@ func TestClientReadResponse(t *testing.T) {
 	"contacts": ["ve7jtb@example.org", "mary@example.org"],
 	"request_uris": ["https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA"]
 }
-`)
-		var req1 ClientReadResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientReadResponse{
+			ClientRegistrationResponse: ClientRegistrationResponse{
+				ClientInformationResponse: ClientInformationResponse{
+					ClientMetadata: ClientMetadata{
+						RedirectURIs: []string{
+							"https://client.example.org/callback",
+							"https://client.example.org/callback2",
+						},
+						TokenEndpointAuthMethod: AuthMethodBasic,
+						GrantTypes:              nil,
+						ResponseTypes:           nil,
+						ClientName: map[string]string{
+							"default":    "My Example",
+							"ja-Jpan-JP": "クライアント名",
+						},
+						ClientURI: nil,
+						LogoURI: map[string]string{
+							"default": "https://client.example.org/logo.png",
+						},
+						//Scope:                        "",
+						Contacts: []string{"ve7jtb@example.org", "mary@example.org"},
+						//TOSURI:                       nil,
+						//PolicyURI:                    nil,
+						JWKSURI: "https://client.example.org/my_public_keys.jwks",
+						//JWKS:                         jose.JSONWebKeySet{},
+						//SoftwareID:                   "",
+						//SoftwareVersion:              "",
+						ApplicationType:     "web", // cannot use op.ApplicationTypeWeb because of cyclic imports
+						SectorIdentifierURI: "https://other.example.net/file_of_redirect_uris.json",
+						SubjectType:         "pairwise",
+						//IDTokenSignedResponseAlg:     "",
+						//IDTokenEncryptedResponseAlg:  "",
+						//IDTokenEncryptedResponseEnc:  "",
+						//UserinfoSignedResponseAlg:    "",
+						UserinfoEncryptedResponseAlg: "RSA-OAEP-256",
+						UserinfoEncryptedResponseEnc: "A128CBC-HS256",
+						//RequestObjectSigningAlg:      "",
+						//RequestObjectEncryptionAlg:   "",
+						//RequestObjectEncryptionEnc:   "",
+						//TokenEndpointAuthSigningAlg:  "",
+						//DefaultMaxAge:                0,
+						//RequireAuthTime:              false,
+						//DefaultACRValues:             nil,
+						//InitiateLoginURI:             "",
+						RequestURIs: []string{"https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA"},
+						//PostLogoutRedirectURIs:       nil,
+						//ExtraParameters:              nil,
+					},
+					ClientID:     "s6BhdRkqt3",
+					ClientSecret: "OylyaC56ijpAQ7G5ZZGL7MMQ6Ap6mEeuhSTFVps2N4Q",
+					//ClientIDIssuedAt:      0,
+					ClientSecretExpiresAt: int64(17514165600),
+				},
+				//RegistrationAccessToken: "",
+				RegistrationClientURI: "https://server.example.com/connect/register?client_id=s6BhdRkqt3",
+			},
+		}
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		var req3 ClientReadResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, "s6BhdRkqt3", req3.ClientID)
-		assert.Equal(t, "OylyaC56ijpAQ7G5ZZGL7MMQ6Ap6mEeuhSTFVps2N4Q", req3.ClientSecret)
-		assert.Equal(t, int64(17514165600), req3.ClientSecretExpiresAt)
-		assert.Equal(t, "https://server.example.com/connect/register?client_id=s6BhdRkqt3", req3.RegistrationClientURI)
-		assert.Equal(t, AuthMethodBasic, req3.TokenEndpointAuthMethod)
-		assert.Equal(t, "web", req3.ApplicationType) // cannot use op.ApplicationTypeWeb because of cyclic imports
-		assert.Len(t, req3.RedirectURIs, 2)
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback")
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback2")
-		assert.Equal(t, "My Example", req3.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req3.ClientName["ja-Jpan-JP"])
-		assert.Len(t, req3.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req3.LogoURI["default"])
-		assert.Equal(t, "pairwise", req3.SubjectType)
-		assert.Equal(t, "https://other.example.net/file_of_redirect_uris.json", req3.SectorIdentifierURI)
-		assert.Equal(t, "RSA-OAEP-256", req3.UserinfoEncryptedResponseAlg)
-		assert.Equal(t, "A128CBC-HS256", req3.UserinfoEncryptedResponseEnc)
-		assert.Len(t, req3.Contacts, 2)
-		assert.Contains(t, req3.Contacts, "ve7jtb@example.org")
-		assert.Contains(t, req3.Contacts, "mary@example.org")
-		assert.Len(t, req3.RequestURIs, 1)
-		assert.Contains(t, req3.RequestURIs, "https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA")
+		assert.JSONEq(t, want, string(marshalled))
 	})
 }
 
 func TestClientInformationErrorResponse(t *testing.T) {
 	// example from https://www.rfc-editor.org/rfc/rfc7591#page-23
-	t.Run("unmarshal, marshal and unmarshal example", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"error": "invalid_redirect_uri",
 	"error_description": "The redirection URI http://sketchy.example.com is not allowed by this server."
 }
-`)
-		var req1 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientInformationErrorResponse{
+			Error:            ClientInformationErrorResponseErrorCodeInvalidRedirectURI,
+			ErrorDescription: "The redirection URI http://sketchy.example.com is not allowed by this server.",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, ClientInformationErrorResponseErrorCodeInvalidRedirectURI, req3.Error)
-		assert.Equal(t, "The redirection URI http://sketchy.example.com is not allowed by this server.", req3.ErrorDescription)
+		assert.JSONEq(t, want, string(marshalled))
 	})
 	// example from https://www.rfc-editor.org/rfc/rfc7591#page-23
-	t.Run("unmarshal, marshal and unmarshal example", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"error": "invalid_client_metadata",
 	"error_description": "The grant type 'authorization_code' must be registered along with the response type 'code' but found only 'implicit' instead."
 }
-`)
-		var req1 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientInformationErrorResponse{
+			Error:            ClientInformationErrorResponseErrorCodeInvalidClientMetadata,
+			ErrorDescription: "The grant type 'authorization_code' must be registered along with the response type 'code' but found only 'implicit' instead.",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, ClientInformationErrorResponseErrorCodeInvalidClientMetadata, req3.Error)
-		assert.Equal(t, "The grant type 'authorization_code' must be registered along with the response type 'code' but found only 'implicit' instead.", req3.ErrorDescription)
+		assert.JSONEq(t, want, string(marshalled))
 	})
 	// example from https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
 	t.Run("unmarshal, marshal and unmarshal example", func(t *testing.T) {
-		marshalled1 := []byte(`
+		want := `
  {
 	"error": "invalid_redirect_uri",
 	"error_description": "One or more redirect_uri values are invalid"
 }
-`)
-		var req1 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientInformationErrorResponse{
+			Error:            ClientInformationErrorResponseErrorCodeInvalidRedirectURI,
+			ErrorDescription: "One or more redirect_uri values are invalid",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientInformationErrorResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, ClientInformationErrorResponseErrorCodeInvalidRedirectURI, req3.Error)
-		assert.Equal(t, "One or more redirect_uri values are invalid", req3.ErrorDescription)
+		assert.JSONEq(t, want, string(marshalled))
 	})
 }
 
 func TestClientRegistrationResponse(t *testing.T) {
 	// from https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationResponse
-	t.Run("unmarshal, marshal and unmarshal example", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"client_id": "s6BhdRkqt3",
 	"client_secret": "ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
@@ -375,43 +397,75 @@ func TestClientRegistrationResponse(t *testing.T) {
 	"contacts": ["ve7jtb@example.org", "mary@example.org"],
 	"request_uris": ["https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA"]
 }
-`)
-		var req1 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientRegistrationResponse{
+			ClientInformationResponse: ClientInformationResponse{
+				ClientMetadata: ClientMetadata{
+					RedirectURIs: []string{
+						"https://client.example.org/callback",
+						"https://client.example.org/callback2",
+					},
+					TokenEndpointAuthMethod: AuthMethodBasic,
+					//GrantTypes:              nil,
+					//ResponseTypes:           nil,
+					ClientName: map[string]string{
+						"default":    "My Example",
+						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					},
+					//ClientURI: nil,
+					LogoURI: map[string]string{
+						"default": "https://client.example.org/logo.png",
+					},
+					//Scope: "",
+					Contacts: []string{
+						"ve7jtb@example.org",
+						"mary@example.org",
+					},
+					//TOSURI:                       nil,
+					//PolicyURI:                    nil,
+					JWKSURI: "https://client.example.org/my_public_keys.jwks",
+					JWKS:    jose.JSONWebKeySet{},
+					//SoftwareID:                   "",
+					//SoftwareVersion:              "",
+					ApplicationType:     "web", // cannot use op.ApplicationTypeWeb because of cyclic imports
+					SectorIdentifierURI: "https://other.example.net/file_of_redirect_uris.json",
+					SubjectType:         "pairwise",
+					//IDTokenSignedResponseAlg:     "",
+					//IDTokenEncryptedResponseAlg:  "",
+					//IDTokenEncryptedResponseEnc:  "",
+					//UserinfoSignedResponseAlg:    "",
+					UserinfoEncryptedResponseAlg: "RSA-OAEP-256",
+					UserinfoEncryptedResponseEnc: "A128CBC-HS256",
+					//RequestObjectSigningAlg:      "",
+					//RequestObjectEncryptionAlg:   "",
+					//RequestObjectEncryptionEnc:   "",
+					//TokenEndpointAuthSigningAlg:  "",
+					//DefaultMaxAge:                0,
+					//RequireAuthTime:              false,
+					//DefaultACRValues:             nil,
+					//InitiateLoginURI:             "",
+					RequestURIs: []string{
+						"https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA",
+					},
+					//PostLogoutRedirectURIs: nil,
+					//ExtraParameters:        nil,
+				},
+				ClientID:     "s6BhdRkqt3",
+				ClientSecret: "ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk",
+				//ClientIDIssuedAt:      0,
+				ClientSecretExpiresAt: int64(1577858400),
+			},
+			RegistrationAccessToken: "this.is.an.access.token.value.ffx83",
+			RegistrationClientURI:   "https://server.example.com/connect/register?client_id=s6BhdRkqt3",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, "s6BhdRkqt3", req3.ClientID)
-		assert.Equal(t, "ZJYCqe3GGRvdrudKyZS0XhGv_Z45DuKhCUk0gBR1vZk", req3.ClientSecret)
-		assert.Equal(t, int64(1577858400), req3.ClientSecretExpiresAt)
-		assert.Equal(t, "this.is.an.access.token.value.ffx83", req3.RegistrationAccessToken)
-		assert.Equal(t, "https://server.example.com/connect/register?client_id=s6BhdRkqt3", req3.RegistrationClientURI)
-		assert.Equal(t, AuthMethodBasic, req3.TokenEndpointAuthMethod)
-		assert.Equal(t, "web", req3.ApplicationType) // cannot use op.ApplicationTypeWeb because of cyclic imports
-		assert.Len(t, req3.RedirectURIs, 2)
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback")
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback2")
-		assert.Equal(t, "My Example", req3.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req3.ClientName["ja-Jpan-JP"])
-		assert.Len(t, req3.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req3.LogoURI["default"])
-		assert.Equal(t, "pairwise", req3.SubjectType)
-		assert.Equal(t, "https://other.example.net/file_of_redirect_uris.json", req3.SectorIdentifierURI)
-		assert.Equal(t, "RSA-OAEP-256", req3.UserinfoEncryptedResponseAlg)
-		assert.Equal(t, "A128CBC-HS256", req3.UserinfoEncryptedResponseEnc)
-		assert.Len(t, req3.Contacts, 2)
-		assert.Contains(t, req3.Contacts, "ve7jtb@example.org")
-		assert.Contains(t, req3.Contacts, "mary@example.org")
-		assert.Len(t, req3.RequestURIs, 1)
-		assert.Contains(t, req3.RequestURIs, "https://client.example.org/rf.txt#qpXaRLh_n93TTR9F252ValdatUQvQiJi5BDub2BeznA")
+		assert.JSONEq(t, want, string(marshalled))
 	})
 	// example from https://www.rfc-editor.org/rfc/rfc7591#page-21
-	t.Run("unmarshal example, then marshal, unmarshal again", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"client_id": "s6BhdRkqt3",
 	"client_secret": "cf136dc3c1fc93f31185e5885805d",
@@ -429,41 +483,76 @@ func TestClientRegistrationResponse(t *testing.T) {
 	"jwks_uri": "https://client.example.org/my_public_keys.jwks",
 	"example_extension_parameter": "example_value"
 }
-`)
-		var req1 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
+`
+		res := ClientRegistrationResponse{
+			ClientInformationResponse: ClientInformationResponse{
+				ClientMetadata: ClientMetadata{
+					RedirectURIs: []string{
+						"https://client.example.org/callback",
+						"https://client.example.org/callback2",
+					},
+					TokenEndpointAuthMethod: AuthMethodBasic,
+					GrantTypes: []GrantType{
+						GrantTypeCode,
+						GrantTypeRefreshToken,
+					},
+					//ResponseTypes: nil,
+					ClientName: map[string]string{
+						"default":    "My Example Client",
+						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					},
+					//ClientURI: nil,
+					LogoURI: map[string]string{
+						"default": "https://client.example.org/logo.png",
+					},
+					//Scope: "",
+					//Contacts: nil,
+					//TOSURI:    nil,
+					//PolicyURI: nil,
+					JWKSURI: "https://client.example.org/my_public_keys.jwks",
+					//JWKS:                         jose.JSONWebKeySet{},
+					//SoftwareID:                   "",
+					//SoftwareVersion:              "",
+					//ApplicationType: "",
+					//SectorIdentifierURI:          "",
+					//SubjectType:                  "",
+					//IDTokenSignedResponseAlg:     "",
+					//IDTokenEncryptedResponseAlg:  "",
+					//IDTokenEncryptedResponseEnc:  "",
+					//UserinfoSignedResponseAlg:    "",
+					//UserinfoEncryptedResponseAlg: "",
+					//UserinfoEncryptedResponseEnc: "",
+					//RequestObjectSigningAlg:      "",
+					//RequestObjectEncryptionAlg:   "",
+					//RequestObjectEncryptionEnc:   "",
+					//TokenEndpointAuthSigningAlg:  "",
+					//DefaultMaxAge:                0,
+					//RequireAuthTime:              false,
+					//DefaultACRValues:             nil,
+					//InitiateLoginURI:             "",
+					//RequestURIs:            nil,
+					//PostLogoutRedirectURIs: nil,
+					ExtraParameters: map[string]interface{}{
+						"example_extension_parameter": "example_value",
+					},
+				},
+				ClientID:              "s6BhdRkqt3",
+				ClientSecret:          "cf136dc3c1fc93f31185e5885805d",
+				ClientIDIssuedAt:      int64(2893256800),
+				ClientSecretExpiresAt: int64(2893276800),
+			},
+			//RegistrationAccessToken: "",
+			//RegistrationClientURI:   "",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		assert.Equal(t, "s6BhdRkqt3", req3.ClientID)
-		assert.Equal(t, "cf136dc3c1fc93f31185e5885805d", req3.ClientSecret)
-		assert.Equal(t, int64(2893256800), req3.ClientIDIssuedAt)
-		assert.Equal(t, int64(2893276800), req3.ClientSecretExpiresAt)
-		assert.Len(t, req3.RedirectURIs, 2)
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback")
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback2")
-		assert.Len(t, req3.GrantTypes, 2)
-		assert.Contains(t, req3.GrantTypes, GrantTypeCode)
-		assert.Contains(t, req3.GrantTypes, GrantTypeRefreshToken)
-		assert.Len(t, req3.ClientName, 2)
-		assert.Equal(t, "My Example Client", req3.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req3.ClientName["ja-Jpan-JP"])
-		assert.Equal(t, AuthMethodBasic, req3.TokenEndpointAuthMethod)
-		assert.Len(t, req3.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req3.LogoURI["default"])
-		assert.Equal(t, "https://client.example.org/my_public_keys.jwks", req3.JWKSURI)
-		assert.Len(t, req3.ExtraParameters, 1)
-		assert.Contains(t, req3.ExtraParameters, "example_extension_parameter")
-		assert.Equal(t, "example_value", req3.ExtraParameters["example_extension_parameter"])
+		assert.JSONEq(t, want, string(marshalled))
 	})
 
 	// example from https://www.rfc-editor.org/rfc/rfc7592.html#page-11
-	t.Run("unmarshal example, then marshal, unmarshal again", func(t *testing.T) {
-		marshalled1 := []byte(`
+	t.Run("marshal example", func(t *testing.T) {
+		want := `
 {
 	"registration_access_token": "reg-23410913-abewfq.123483",
 	"registration_client_uri": "https://server.example.com/register/s6BhdRkqt3",
@@ -482,36 +571,69 @@ func TestClientRegistrationResponse(t *testing.T) {
 	"logo_uri": "https://client.example.org/logo.png",
 	"jwks_uri": "https://client.example.org/my_public_keys.jwks"
 }
-`)
-		var req ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req))
+`
+		res := ClientRegistrationResponse{
+			ClientInformationResponse: ClientInformationResponse{
+				ClientMetadata: ClientMetadata{
+					RedirectURIs: []string{
+						"https://client.example.org/callback",
+						"https://client.example.org/callback2",
+					},
+					TokenEndpointAuthMethod: AuthMethodBasic,
+					GrantTypes: []GrantType{
+						GrantTypeCode,
+						GrantTypeRefreshToken,
+					},
+					ResponseTypes: nil,
+					ClientName: map[string]string{
+						"default":    "My Example Client",
+						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					},
+					//ClientURI: nil,
+					LogoURI: map[string]string{
+						"default": "https://client.example.org/logo.png",
+					},
+					//Scope: "",
+					//Contacts: nil,
+					//TOSURI:    nil,
+					//PolicyURI: nil,
+					JWKSURI: "https://client.example.org/my_public_keys.jwks",
+					//JWKS:                         jose.JSONWebKeySet{},
+					//SoftwareID:                   "",
+					//SoftwareVersion:              "",
+					//ApplicationType: "",
+					//SectorIdentifierURI:          "",
+					//SubjectType:                  "",
+					//IDTokenSignedResponseAlg:     "",
+					//IDTokenEncryptedResponseAlg:  "",
+					//IDTokenEncryptedResponseEnc:  "",
+					//UserinfoSignedResponseAlg:    "",
+					//UserinfoEncryptedResponseAlg: "",
+					//UserinfoEncryptedResponseEnc: "",
+					//RequestObjectSigningAlg:      "",
+					//RequestObjectEncryptionAlg:   "",
+					//RequestObjectEncryptionEnc:   "",
+					//TokenEndpointAuthSigningAlg:  "",
+					//DefaultMaxAge:                0,
+					//RequireAuthTime:              false,
+					//DefaultACRValues:             nil,
+					//InitiateLoginURI:             "",
+					//RequestURIs:            nil,
+					//PostLogoutRedirectURIs: nil,
+					//ExtraParameters: nil,
+				},
+				ClientID:              "s6BhdRkqt3",
+				ClientSecret:          "cf136dc3c1fc93f31185e5885805d",
+				ClientIDIssuedAt:      int64(2893256800),
+				ClientSecretExpiresAt: int64(2893276800),
+			},
+			RegistrationAccessToken: "reg-23410913-abewfq.123483",
+			RegistrationClientURI:   "https://server.example.com/register/s6BhdRkqt3",
+		}
+		marshalled, err := json.Marshal(res)
+		require.NoError(t, err)
 
-		var req1 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled1, &req1))
-
-		marshalled2, err2 := json.Marshal(req1)
-		require.NoError(t, err2)
-
-		var req3 ClientRegistrationResponse
-		require.NoError(t, json.Unmarshal(marshalled2, &req3))
-
-		//assert.Equal(t, "reg-23410913-abewfq.123483", req3.RegistrationAccessToken)
-		//assert.Equal(t, "https://server.example.com/register/s6BhdRkqt3", req3.RegistrationClientURI)
-		assert.Equal(t, "s6BhdRkqt3", req3.ClientID)
-		assert.Equal(t, int64(2893256800), req3.ClientIDIssuedAt)
-		assert.Equal(t, int64(2893276800), req3.ClientSecretExpiresAt)
-		assert.Len(t, req3.ClientName, 2)
-		assert.Equal(t, "My Example Client", req3.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req3.ClientName["ja-Jpan-JP"])
-		assert.Len(t, req3.RedirectURIs, 2)
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback")
-		assert.Contains(t, req3.RedirectURIs, "https://client.example.org/callback2")
-		assert.Len(t, req3.GrantTypes, 2)
-		assert.Contains(t, req3.GrantTypes, GrantTypeCode)
-		assert.Contains(t, req3.GrantTypes, GrantTypeRefreshToken)
-		assert.Len(t, req3.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req3.LogoURI["default"])
-		assert.Equal(t, "https://client.example.org/my_public_keys.jwks", req3.JWKSURI)
+		assert.JSONEq(t, want, string(marshalled))
 	})
 }
 
