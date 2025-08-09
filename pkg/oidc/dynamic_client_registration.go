@@ -749,6 +749,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 
 	// Set default values
 
+	if c.ApplicationType == "" {
+		// The default, if omitted, is op.ApplicationTypeWeb.
+		c.ApplicationType = "web"
+	}
+
 	if c.TokenEndpointAuthMethod == "" {
 		// If unspecified or omitted,
 		// the default is "client_secret_basic", denoting the HTTP Basic
@@ -949,13 +954,6 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 
 	for key, value := range c.ExtraParameters {
 		res[key] = value
-	}
-
-	// Sanity checks
-
-	if c.JWKSURI != "" && len(c.JWKS.Keys) > 0 {
-		// The "jwks_uri" and "jwks" parameters MUST NOT both be present in the same request or response.
-		return nil, errors.New("jwks_uri and jwks cannot both be present")
 	}
 
 	return json.Marshal(res)
