@@ -966,7 +966,7 @@ func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRe
 				ResponseTypes:           client.responseTypes,
 				ClientName: internationalizedfield.InternationalizedField{
 					FieldName: "client_name",
-					Items: map[language.Tag]string{
+					Entries: map[language.Tag]string{
 						language.Und: client.id,
 					},
 				},
@@ -1028,7 +1028,7 @@ func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientRe
 					ResponseTypes:           client.responseTypes,
 					ClientName: internationalizedfield.InternationalizedField{
 						FieldName: "client_name",
-						Items: map[language.Tag]string{
+						Entries: map[language.Tag]string{
 							language.Und: client.id,
 						},
 					},
@@ -1095,7 +1095,7 @@ func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) (
 			ResponseTypes:           client.responseTypes,
 			ClientName: internationalizedfield.InternationalizedField{
 				FieldName: "client_name",
-				Items: map[language.Tag]string{
+				Entries: map[language.Tag]string{
 					language.Und: client.id,
 				},
 			},

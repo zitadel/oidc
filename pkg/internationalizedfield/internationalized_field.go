@@ -1,7 +1,10 @@
 package internationalizedfield
 
 import (
+	"encoding/json"
+	"fmt"
 	"golang.org/x/text/language"
+	"strings"
 )
 
 type languageMap = map[language.Tag]string
@@ -26,12 +29,48 @@ type languageMap = map[language.Tag]string
 // [Human-Readable Client Metadata]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
 type InternationalizedField struct {
 	FieldName string
-	Items     languageMap
+	Entries   languageMap
 }
 
 func New(fieldName string) InternationalizedField {
 	return InternationalizedField{
 		FieldName: fieldName,
-		Items:     make(languageMap),
+		Entries:   make(languageMap),
+	}
+}
+
+func (i InternationalizedField) InsertEntry(key string, value []byte) error {
+	var valStr string
+	if err := json.Unmarshal(value, &valStr); err != nil {
+		return fmt.Errorf("invalid value type for %s, expected string: %e", i.FieldName, err)
+	}
+	if key == i.FieldName {
+		i.Entries[language.Und] = valStr
+		return nil
+	}
+	if !strings.HasPrefix(key, i.FieldName+"#") {
+		return fmt.Errorf("invalid format for %s: %q", i.FieldName, key)
+	}
+	// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
+	// Split the key at the first '#' to get the language tag.
+	parts := strings.SplitN(key, "#", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid format for %s: %q", i.FieldName, key)
+	}
+	langTag, err := language.Parse(parts[1])
+	if err != nil {
+		return fmt.Errorf("failed to parse language tag for %s: %w", i.FieldName, err)
+	}
+	i.Entries[langTag] = valStr
+	return nil
+}
+
+func (i InternationalizedField) ExportEntries(res map[string]interface{}) {
+	for lang, name := range i.Entries {
+		if lang == language.Und {
+			res[i.FieldName] = name
+		} else {
+			res[fmt.Sprintf("%s#%s", i.FieldName, lang)] = name
+		}
 	}
 }

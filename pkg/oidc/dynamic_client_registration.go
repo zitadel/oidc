@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v3/pkg/internationalizedfield"
-	"golang.org/x/text/language"
 	"strings"
 )
 
@@ -532,74 +531,17 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 				// should we check against ResponseTypeMap if response_types is valid?
 				return err
 			}
-		case key == "client_name":
-			var name string
-			if err := json.Unmarshal(value, &name); err != nil {
+		case strings.HasPrefix(key, c.ClientName.FieldName):
+			if err := c.ClientName.InsertEntry(key, value); err != nil {
 				return err
 			}
-			c.ClientName.Items[language.Und] = name
-		case strings.HasPrefix(key, "client_name#"):
-			var name string
-			if err := json.Unmarshal(value, &name); err != nil {
+		case strings.HasPrefix(key, c.ClientURI.FieldName):
+			if err := c.ClientURI.InsertEntry(key, value); err != nil {
 				return err
 			}
-			// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
-			// Split the key at the first '#' to get the language tag.
-			parts := strings.SplitN(key, "#", 2)
-			if len(parts) == 2 {
-				langTag, err := language.Parse(parts[1])
-				if err != nil {
-					return fmt.Errorf("failed to parse language tag for client_name: %w", err)
-				}
-				c.ClientName.Items[langTag] = name
-			} else {
-				return fmt.Errorf("invalid client_name format: %q", key)
-			}
-		case key == "client_uri":
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
+		case strings.HasPrefix(key, c.LogoURI.FieldName):
+			if err := c.LogoURI.InsertEntry(key, value); err != nil {
 				return err
-			}
-			c.ClientURI.Items[language.Und] = uri
-		case strings.HasPrefix(key, "client_uri#"):
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
-				return err
-			}
-			// This is a tagged name, e.g., "client_uri#ja-Jpan-JP"
-			// Split the key at the first '#' to get the language tag.
-			parts := strings.SplitN(key, "#", 2)
-			if len(parts) == 2 {
-				langTag, err := language.Parse(parts[1])
-				if err != nil {
-					return fmt.Errorf("failed to parse language tag for client_uri: %w", err)
-				}
-				c.ClientURI.Items[langTag] = uri
-			} else {
-				return fmt.Errorf("invalid client_uri format: %q", key)
-			}
-		case key == "logo_uri":
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
-				return err
-			}
-			c.LogoURI.Items[language.Und] = uri
-		case strings.HasPrefix(key, "logo_uri#"):
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
-				return err
-			}
-			// This is a tagged name, e.g., "logo_uri#ja-Jpan-JP"
-			// Split the key at the first '#' to get the language tag.
-			parts := strings.SplitN(key, "#", 2)
-			if len(parts) == 2 {
-				langTag, err := language.Parse(parts[1])
-				if err != nil {
-					return fmt.Errorf("failed to parse language tag for logo_uri: %w", err)
-				}
-				c.LogoURI.Items[langTag] = uri
-			} else {
-				return fmt.Errorf("invalid logo_uri format: %q", key)
 			}
 		case key == "scope":
 			if err := json.Unmarshal(value, &c.Scope); err != nil {
@@ -609,51 +551,13 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &c.Contacts); err != nil {
 				return err
 			}
-		case key == "tos_uri":
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
+		case strings.HasPrefix(key, c.TOSURI.FieldName):
+			if err := c.TOSURI.InsertEntry(key, value); err != nil {
 				return err
 			}
-			c.TOSURI.Items[language.Und] = uri
-		case strings.HasPrefix(key, "tos_uri#"):
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
+		case strings.HasPrefix(key, c.PolicyURI.FieldName):
+			if err := c.PolicyURI.InsertEntry(key, value); err != nil {
 				return err
-			}
-			// This is a tagged name, e.g., "tos_uri#ja-Jpan-JP"
-			// Split the key at the first '#' to get the language tag.
-			parts := strings.SplitN(key, "#", 2)
-			if len(parts) == 2 {
-				langTag, err := language.Parse(parts[1])
-				if err != nil {
-					return fmt.Errorf("failed to parse language tag for tos_uri: %w", err)
-				}
-				c.TOSURI.Items[langTag] = uri
-			} else {
-				return fmt.Errorf("invalid client_uri format: %q", key)
-			}
-		case key == "policy_uri":
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
-				return err
-			}
-			c.PolicyURI.Items[language.Und] = uri
-		case strings.HasPrefix(key, "policy_uri#"):
-			var uri string
-			if err := json.Unmarshal(value, &uri); err != nil {
-				return err
-			}
-			// This is a tagged name, e.g., "policy_uri#ja-Jpan-JP"
-			// Split the key at the first '#' to get the language tag.
-			parts := strings.SplitN(key, "#", 2)
-			if len(parts) == 2 {
-				langTag, err := language.Parse(parts[1])
-				if err != nil {
-					return fmt.Errorf("failed to parse language tag for policy_uri: %w", err)
-				}
-				c.PolicyURI.Items[langTag] = uri
-			} else {
-				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
 		case key == "jwks_uri":
 			if err := json.Unmarshal(value, &c.JWKSURI); err != nil {
@@ -810,35 +714,9 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["response_types"] = c.ResponseTypes
 	}
 
-	if len(c.ClientName.Items) > 0 {
-		for lang, name := range c.ClientName.Items {
-			if lang == language.Und {
-				res[c.ClientName.FieldName] = name
-			} else {
-				res[fmt.Sprintf("%s#%s", c.ClientName.FieldName, lang)] = name
-			}
-		}
-	}
-
-	if len(c.ClientURI.Items) > 0 {
-		for lang, uri := range c.ClientURI.Items {
-			if lang == language.Und {
-				res[c.ClientURI.FieldName] = uri
-			} else {
-				res[fmt.Sprintf("%s#%s", c.ClientURI.FieldName, lang)] = uri
-			}
-		}
-	}
-
-	if len(c.LogoURI.Items) > 0 {
-		for lang, logo := range c.LogoURI.Items {
-			if lang == language.Und {
-				res[c.LogoURI.FieldName] = logo
-			} else {
-				res[fmt.Sprintf("%s#%s", c.LogoURI.FieldName, lang)] = logo
-			}
-		}
-	}
+	c.ClientName.ExportEntries(res)
+	c.ClientURI.ExportEntries(res)
+	c.LogoURI.ExportEntries(res)
 
 	if c.Scope != "" {
 		res["scope"] = c.Scope
@@ -848,25 +726,8 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["contacts"] = c.Contacts
 	}
 
-	if len(c.TOSURI.Items) > 0 {
-		for lang, uri := range c.TOSURI.Items {
-			if lang == language.Und {
-				res[c.TOSURI.FieldName] = uri
-			} else {
-				res[fmt.Sprintf("%s#%s", c.TOSURI.FieldName, lang)] = uri
-			}
-		}
-	}
-
-	if len(c.PolicyURI.Items) > 0 {
-		for lang, uri := range c.PolicyURI.Items {
-			if lang == language.Und {
-				res[c.PolicyURI.FieldName] = uri
-			} else {
-				res[fmt.Sprintf("%s#%s", c.PolicyURI.FieldName, lang)] = uri
-			}
-		}
-	}
+	c.TOSURI.ExportEntries(res)
+	c.PolicyURI.ExportEntries(res)
 
 	if c.JWKSURI != "" {
 		res["jwks_uri"] = c.JWKSURI
