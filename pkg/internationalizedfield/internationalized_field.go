@@ -1,10 +1,7 @@
 package internationalizedfield
 
 import (
-	"encoding/json"
-	"fmt"
 	"golang.org/x/text/language"
-	"strings"
 )
 
 type languageMap = map[language.Tag]string
@@ -37,51 +34,4 @@ func New(fieldName string) InternationalizedField {
 		FieldName: fieldName,
 		Items:     make(languageMap),
 	}
-}
-
-func (i *InternationalizedField) UnmarshalJSON(data []byte) error {
-	i.Items = make(languageMap)
-
-	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("failed to unmarshal raw data: %w", err)
-	}
-
-	for key, value := range raw {
-		switch {
-		case key == i.FieldName:
-			if name, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				i.Items[language.Und] = name
-			}
-		case strings.HasPrefix(key, i.FieldName+"#"):
-			if name, ok := value.(string); ok {
-				// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					if t, err := language.Parse(langTag); err != nil {
-						return fmt.Errorf("failed to parse language tag %q: %w", langTag, err)
-					} else {
-						i.Items[t] = name
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-func (i InternationalizedField) MarshalJSON() ([]byte, error) {
-	res := make(map[string]interface{})
-	if len(i.Items) > 0 {
-		for lang, name := range i.Items {
-			if lang == language.Und {
-				res[i.FieldName] = name
-			} else {
-				res[fmt.Sprintf("%s#%s", i.FieldName, lang)] = name
-			}
-		}
-	}
-	return json.Marshal(res)
 }
