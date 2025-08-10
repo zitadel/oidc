@@ -28,13 +28,13 @@ type languageMap = map[language.Tag]string
 //
 // [Human-Readable Client Metadata]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
 type InternationalizedField struct {
-	fieldName string
+	FieldName string
 	Items     languageMap
 }
 
 func New(fieldName string) InternationalizedField {
 	return InternationalizedField{
-		fieldName: fieldName,
+		FieldName: fieldName,
 		Items:     make(languageMap),
 	}
 }
@@ -49,12 +49,12 @@ func (i *InternationalizedField) UnmarshalJSON(data []byte) error {
 
 	for key, value := range raw {
 		switch {
-		case key == i.fieldName:
+		case key == i.FieldName:
 			if name, ok := value.(string); ok {
 				// This is the default, non-tagged name.
 				i.Items[language.Und] = name
 			}
-		case strings.HasPrefix(key, i.fieldName+"#"):
+		case strings.HasPrefix(key, i.FieldName+"#"):
 			if name, ok := value.(string); ok {
 				// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
 				// Split the key at the first '#' to get the language tag.
@@ -77,9 +77,9 @@ func (i InternationalizedField) MarshalJSON() ([]byte, error) {
 	if len(i.Items) > 0 {
 		for lang, name := range i.Items {
 			if lang == language.Und {
-				res[i.fieldName] = name
+				res[i.FieldName] = name
 			} else {
-				res[fmt.Sprintf("%s#%s", i.fieldName, lang)] = name
+				res[fmt.Sprintf("%s#%s", i.FieldName, lang)] = name
 			}
 		}
 	}
