@@ -43,11 +43,15 @@ func clientRequestError(w http.ResponseWriter, r *http.Request, lvl slog.Level, 
 	httphelper.MarshalJSONWithStatus(w, errResp, status)
 }
 
-func clientReadHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
+func clientReadUpdateDeleteHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			clientRead(w, r, o)
+		case http.MethodPut:
+			clientUpdate(w, r, o)
+		case http.MethodDelete:
+			clientDelete(w, r, o)
 		default:
 			RequestError(w, r, fmt.Errorf("unsupported method: %s", r.Method), o.Logger())
 		}
@@ -124,15 +128,11 @@ func ParseClientReadRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientRead
 	return req, nil
 }
 
-func clientRegistrationUpdateDeleteHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
+func clientRegistrationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			clientRegistration(w, r, o)
-		case http.MethodPut:
-			clientUpdate(w, r, o)
-		case http.MethodDelete:
-			clientDelete(w, r, o)
 		default:
 			RequestError(w, r, fmt.Errorf("unsupported method: %s", r.Method), o.Logger())
 		}
@@ -162,7 +162,7 @@ func clientRegistration(w http.ResponseWriter, r *http.Request, o OpenIDProvider
 	}
 
 	var initialAccessToken string
-	if auth := r.Header.Get("authorization"); auth == "" {
+	if auth := r.Header.Get("authorization"); auth != "" {
 		iat, err := getBearerToken(r)
 		if err != nil && !errors.Is(err, errMissingAuthorizationHeader) {
 			// allow for missing authorization header, in case the software statement is used for authentication
@@ -355,15 +355,17 @@ func clientUpdate(w http.ResponseWriter, r *http.Request, o OpenIDProvider) {
 	return
 }
 
-func ParseClientUpdateRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientUpdateRequest, error) {
+func ParseClientUpdateRequest(r *http.Request, _ OpenIDProvider) (*oidc.ClientUpdateRequest, error) {
 	ctx, span := tracer.Start(r.Context(), "ParseClientUpdateRequest")
 	r = r.WithContext(ctx)
 	defer span.End()
 
 	req := new(oidc.ClientUpdateRequest)
-	if err := o.Decoder().Decode(req, r.Form); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client update request").WithParent(err)
 	}
+
+	req.ClientID = chi.URLParam(r, "client_id") // if there is a conflict, the client_id in the path takes precedence
 
 	return req, nil
 }
@@ -436,10 +438,7 @@ func ParseClientDeleteRequest(r *http.Request, o OpenIDProvider) (*oidc.ClientDe
 	r = r.WithContext(ctx)
 	defer span.End()
 
-	req := new(oidc.ClientDeleteRequest)
-	if err := o.Decoder().Decode(req, r.Form); err != nil {
-		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse client delete request").WithParent(err)
-	}
-
-	return req, nil
+	return &oidc.ClientDeleteRequest{
+		ClientID: chi.URLParam(r, "client_id"),
+	}, nil
 }

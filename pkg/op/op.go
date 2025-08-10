@@ -146,8 +146,8 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
-	router.HandleFunc(o.RegistrationEndpoint().Relative(), clientRegistrationUpdateDeleteHandler(o))
-	router.HandleFunc(path.Join(o.RegistrationEndpoint().Relative(), "{client_id}"), clientReadHandler(o))
+	router.HandleFunc(o.RegistrationEndpoint().Relative(), clientRegistrationHandler(o))
+	router.HandleFunc(path.Join(o.RegistrationEndpoint().Relative(), "{client_id}"), clientReadUpdateDeleteHandler(o))
 	return router
 }
 
