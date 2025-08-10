@@ -7,6 +7,8 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zitadel/oidc/v3/pkg/internationalizedfield"
+	"golang.org/x/text/language"
 	"math/big"
 	"testing"
 )
@@ -35,6 +37,8 @@ func compareRSAJSONWebKey(
 }
 
 func TestClientRegistrationRequest(t *testing.T) {
+	wantJPTag, err := language.Parse("ja-Jpan-JP")
+	require.NoError(t, err)
 	t.Run("test grant types", func(t *testing.T) {
 		marshalled := []byte(`
 {
@@ -99,12 +103,12 @@ func TestClientRegistrationRequest(t *testing.T) {
 		assert.Len(t, req.RedirectURIs, 2)
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback")
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback2")
-		assert.Len(t, req.ClientName, 2)
-		assert.Equal(t, "My Example Client", req.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName["ja-Jpan-JP"])
+		assert.Len(t, req.ClientName.Items, 2)
+		assert.Equal(t, "My Example Client", req.ClientName.Items[language.Und])
+		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName.Items[wantJPTag])
 		assert.Equal(t, AuthMethodBasic, req.TokenEndpointAuthMethod)
-		assert.Len(t, req.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req.LogoURI["default"])
+		assert.Len(t, req.LogoURI.Items, 1)
+		assert.Equal(t, "https://client.example.org/logo.png", req.LogoURI.Items[language.Und])
 		assert.Equal(t, "https://client.example.org/my_public_keys.jwks", req.JWKSURI)
 		assert.Contains(t, req.ExtraParameters, "example_extension_parameter")
 		assert.Len(t, req.ExtraParameters, 1)
@@ -139,12 +143,12 @@ func TestClientRegistrationRequest(t *testing.T) {
 		assert.Len(t, req.RedirectURIs, 2)
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback")
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback2")
-		assert.Len(t, req.ClientName, 2)
-		assert.Equal(t, "My Example Client", req.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName["ja-Jpan-JP"])
+		assert.Len(t, req.ClientName.Items, 2)
+		assert.Equal(t, "My Example Client", req.ClientName.Items[language.Und])
+		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName.Items[wantJPTag])
 		assert.Equal(t, AuthMethodBasic, req.TokenEndpointAuthMethod)
-		assert.Len(t, req.PolicyURI, 1)
-		assert.Equal(t, "https://client.example.org/policy.html", req.PolicyURI["default"])
+		assert.Len(t, req.PolicyURI.Items, 1)
+		assert.Equal(t, "https://client.example.org/policy.html", req.PolicyURI.Items[language.Und])
 		assert.Len(t, req.JWKS.Keys, 1)
 		compareRSAJSONWebKey(
 			t,
@@ -212,11 +216,11 @@ func TestClientRegistrationRequest(t *testing.T) {
 		assert.Len(t, req.RedirectURIs, 2)
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback")
 		assert.Contains(t, req.RedirectURIs, "https://client.example.org/callback2")
-		assert.Len(t, req.ClientName, 2)
-		assert.Equal(t, "My Example", req.ClientName["default"])
-		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName["ja-Jpan-JP"])
-		assert.Len(t, req.LogoURI, 1)
-		assert.Equal(t, "https://client.example.org/logo.png", req.LogoURI["default"])
+		assert.Len(t, req.ClientName.Items, 2)
+		assert.Equal(t, "My Example", req.ClientName.Items[language.Und])
+		assert.Equal(t, "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D", req.ClientName.Items[wantJPTag])
+		assert.Len(t, req.LogoURI.Items, 1)
+		assert.Equal(t, "https://client.example.org/logo.png", req.LogoURI.Items[language.Und])
 		assert.Equal(t, "pairwise", req.SubjectType)
 		assert.Equal(t, "https://other.example.net/file_of_redirect_uris.json", req.SectorIdentifierURI)
 		assert.Equal(t, AuthMethodBasic, req.TokenEndpointAuthMethod)
@@ -231,6 +235,8 @@ func TestClientRegistrationRequest(t *testing.T) {
 	})
 }
 func TestClientReadResponse(t *testing.T) {
+	wantJPTag, err := language.Parse("ja-Jpan-JP")
+	require.NoError(t, err)
 	// example from https://openid.net/specs/openid-connect-registration-1_0.html#ReadResponse
 	t.Run("marshal example", func(t *testing.T) {
 		want := `
@@ -265,13 +271,19 @@ func TestClientReadResponse(t *testing.T) {
 						TokenEndpointAuthMethod: AuthMethodBasic,
 						GrantTypes:              nil,
 						ResponseTypes:           nil,
-						ClientName: map[string]string{
-							"default":    "My Example",
-							"ja-Jpan-JP": "クライアント名",
+						ClientName: internationalizedfield.InternationalizedField{
+							FieldName: "client_name",
+							Items: map[language.Tag]string{
+								language.Und: "My Example",
+								wantJPTag:    "クライアント名",
+							},
 						},
-						ClientURI: nil,
-						LogoURI: map[string]string{
-							"default": "https://client.example.org/logo.png",
+						//ClientURI: internationalizedfield.InternationalizedField{},
+						LogoURI: internationalizedfield.InternationalizedField{
+							FieldName: "logo_uri",
+							Items: map[language.Tag]string{
+								language.Und: "https://client.example.org/logo.png",
+							},
 						},
 						//Scope:                        "",
 						Contacts: []string{"ve7jtb@example.org", "mary@example.org"},
@@ -374,6 +386,8 @@ func TestClientInformationErrorResponse(t *testing.T) {
 }
 
 func TestClientRegistrationResponse(t *testing.T) {
+	wantJPTag, err := language.Parse("ja-Jpan-JP")
+	require.NoError(t, err)
 	// from https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationResponse
 	t.Run("marshal example", func(t *testing.T) {
 		want := `
@@ -408,13 +422,19 @@ func TestClientRegistrationResponse(t *testing.T) {
 					TokenEndpointAuthMethod: AuthMethodBasic,
 					//GrantTypes:              nil,
 					//ResponseTypes:           nil,
-					ClientName: map[string]string{
-						"default":    "My Example",
-						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					ClientName: internationalizedfield.InternationalizedField{
+						FieldName: "client_name",
+						Items: map[language.Tag]string{
+							language.Und: "My Example",
+							wantJPTag:    "クライアント名",
+						},
 					},
 					//ClientURI: nil,
-					LogoURI: map[string]string{
-						"default": "https://client.example.org/logo.png",
+					LogoURI: internationalizedfield.InternationalizedField{
+						FieldName: "logo_uri",
+						Items: map[language.Tag]string{
+							language.Und: "https://client.example.org/logo.png",
+						},
 					},
 					//Scope: "",
 					Contacts: []string{
@@ -497,13 +517,19 @@ func TestClientRegistrationResponse(t *testing.T) {
 						GrantTypeRefreshToken,
 					},
 					//ResponseTypes: nil,
-					ClientName: map[string]string{
-						"default":    "My Example Client",
-						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					ClientName: internationalizedfield.InternationalizedField{
+						FieldName: "client_name",
+						Items: map[language.Tag]string{
+							language.Und: "My Example Client",
+							wantJPTag:    "クライアント名",
+						},
 					},
 					//ClientURI: nil,
-					LogoURI: map[string]string{
-						"default": "https://client.example.org/logo.png",
+					LogoURI: internationalizedfield.InternationalizedField{
+						FieldName: "logo_uri",
+						Items: map[language.Tag]string{
+							language.Und: "https://client.example.org/logo.png",
+						},
 					},
 					//Scope: "",
 					//Contacts: nil,
@@ -585,13 +611,19 @@ func TestClientRegistrationResponse(t *testing.T) {
 						GrantTypeRefreshToken,
 					},
 					ResponseTypes: nil,
-					ClientName: map[string]string{
-						"default":    "My Example Client",
-						"ja-Jpan-JP": "\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u540D",
+					ClientName: internationalizedfield.InternationalizedField{
+						FieldName: "client_name",
+						Items: map[language.Tag]string{
+							language.Und: "My Example Client",
+							wantJPTag:    "クライアント名",
+						},
 					},
 					//ClientURI: nil,
-					LogoURI: map[string]string{
-						"default": "https://client.example.org/logo.png",
+					LogoURI: internationalizedfield.InternationalizedField{
+						FieldName: "logo_uri",
+						Items: map[language.Tag]string{
+							language.Und: "https://client.example.org/logo.png",
+						},
 					},
 					//Scope: "",
 					//Contacts: nil,
@@ -669,11 +701,11 @@ func TestClientUpdateRequest(t *testing.T) {
 		assert.Contains(t, req.GrantTypes, GrantTypeCode)
 		assert.Contains(t, req.GrantTypes, GrantTypeRefreshToken)
 		assert.Equal(t, "https://client.example.org/my_public_keys.jwks", req.JWKSURI)
-		assert.Len(t, req.ClientName, 2)
-		assert.Equal(t, "My New Example", req.ClientName["default"])
-		assert.Equal(t, "Mon Nouvel Exemple", req.ClientName["fr"])
-		assert.Len(t, req.LogoURI, 2)
-		assert.Equal(t, "https://client.example.org/newlogo.png", req.LogoURI["default"])
-		assert.Equal(t, "https://client.example.org/fr/newlogo.png", req.LogoURI["fr"])
+		assert.Len(t, req.ClientName.Items, 2)
+		assert.Equal(t, "My New Example", req.ClientName.Items[language.Und])
+		assert.Equal(t, "Mon Nouvel Exemple", req.ClientName.Items[language.French])
+		assert.Len(t, req.LogoURI.Items, 2)
+		assert.Equal(t, "https://client.example.org/newlogo.png", req.LogoURI.Items[language.Und])
+		assert.Equal(t, "https://client.example.org/fr/newlogo.png", req.LogoURI.Items[language.French])
 	})
 }

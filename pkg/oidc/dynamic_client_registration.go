@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-jose/go-jose/v4"
+	"github.com/zitadel/oidc/v3/pkg/internationalizedfield"
+	"golang.org/x/text/language"
 	"strings"
 )
 
@@ -129,7 +131,7 @@ type ClientMetadata struct {
 	// [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	ClientName map[string]string `json:"client_name"`
+	ClientName internationalizedfield.InternationalizedField `json:"client_name"`
 
 	// ClientURI is a URL string of a web page providing information about the client.
 	// If present, the server SHOULD display this URL to the end-user in
@@ -139,7 +141,7 @@ type ClientMetadata struct {
 	// described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	ClientURI map[string]string `json:"client_uri"`
+	ClientURI internationalizedfield.InternationalizedField `json:"client_uri"`
 
 	// LogoURI is a URL string that references a logo for the client.  If present, the
 	// server SHOULD display this image to the end-user during approval.
@@ -148,7 +150,7 @@ type ClientMetadata struct {
 	// [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	LogoURI map[string]string `json:"logo_uri"`
+	LogoURI internationalizedfield.InternationalizedField `json:"logo_uri"`
 
 	// Scope is a string containing a space-separated list of scope values (as
 	// described in [Section 3.3] of OAuth 2.0 [RFC6749]) that the client
@@ -178,7 +180,7 @@ type ClientMetadata struct {
 	// be internationalized, as described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	TOSURI map[string]string `json:"tos_uri"`
+	TOSURI internationalizedfield.InternationalizedField `json:"tos_uri"`
 
 	// PolicyURI is a URL string that points to a human-readable privacy policy document
 	// that describes how the deployment organization collects, uses,
@@ -188,7 +190,7 @@ type ClientMetadata struct {
 	// this field MAY be internationalized, as described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	PolicyURI map[string]string `json:"policy_uri"`
+	PolicyURI internationalizedfield.InternationalizedField `json:"policy_uri"`
 
 	// JWKSURI is a URL string referencing the client's JSON Web Key (JWK) Set
 	// [RFC7517] document, which contains the client's public keys.  The
@@ -495,11 +497,11 @@ type ClientMetadata struct {
 
 func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 	// Initialize maps to avoid nil pointer issues later.
-	c.ClientName = make(map[string]string)
-	c.ClientURI = make(map[string]string)
-	c.LogoURI = make(map[string]string)
-	c.TOSURI = make(map[string]string)
-	c.PolicyURI = make(map[string]string)
+	c.ClientName = internationalizedfield.New("client_name")
+	c.ClientURI = internationalizedfield.New("client_uri")
+	c.LogoURI = internationalizedfield.New("logo_uri")
+	c.TOSURI = internationalizedfield.New("tos_uri")
+	c.PolicyURI = internationalizedfield.New("policy_uri")
 	c.ExtraParameters = make(map[string]interface{})
 
 	// Unmarshal into a temporary map to inspect all keys.
@@ -535,7 +537,7 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &name); err != nil {
 				return err
 			}
-			c.ClientName["default"] = name
+			c.ClientName.Items[language.Und] = name
 		case strings.HasPrefix(key, "client_name#"):
 			var name string
 			if err := json.Unmarshal(value, &name); err != nil {
@@ -545,8 +547,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			// Split the key at the first '#' to get the language tag.
 			parts := strings.SplitN(key, "#", 2)
 			if len(parts) == 2 {
-				langTag := parts[1]
-				c.ClientName[langTag] = name
+				langTag, err := language.Parse(parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to parse language tag for client_name: %w", err)
+				}
+				c.ClientName.Items[langTag] = name
 			} else {
 				return fmt.Errorf("invalid client_name format: %q", key)
 			}
@@ -555,7 +560,7 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &uri); err != nil {
 				return err
 			}
-			c.ClientURI["default"] = uri
+			c.ClientURI.Items[language.Und] = uri
 		case strings.HasPrefix(key, "client_uri#"):
 			var uri string
 			if err := json.Unmarshal(value, &uri); err != nil {
@@ -565,8 +570,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			// Split the key at the first '#' to get the language tag.
 			parts := strings.SplitN(key, "#", 2)
 			if len(parts) == 2 {
-				langTag := parts[1]
-				c.ClientURI[langTag] = uri
+				langTag, err := language.Parse(parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to parse language tag for client_uri: %w", err)
+				}
+				c.ClientURI.Items[langTag] = uri
 			} else {
 				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
@@ -575,7 +583,7 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &uri); err != nil {
 				return err
 			}
-			c.LogoURI["default"] = uri
+			c.LogoURI.Items[language.Und] = uri
 		case strings.HasPrefix(key, "logo_uri#"):
 			var uri string
 			if err := json.Unmarshal(value, &uri); err != nil {
@@ -585,8 +593,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			// Split the key at the first '#' to get the language tag.
 			parts := strings.SplitN(key, "#", 2)
 			if len(parts) == 2 {
-				langTag := parts[1]
-				c.LogoURI[langTag] = uri
+				langTag, err := language.Parse(parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to parse language tag for logo_uri: %w", err)
+				}
+				c.LogoURI.Items[langTag] = uri
 			} else {
 				return fmt.Errorf("invalid logo_uri format: %q", key)
 			}
@@ -603,7 +614,7 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &uri); err != nil {
 				return err
 			}
-			c.TOSURI["default"] = uri
+			c.TOSURI.Items[language.Und] = uri
 		case strings.HasPrefix(key, "tos_uri#"):
 			var uri string
 			if err := json.Unmarshal(value, &uri); err != nil {
@@ -613,8 +624,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			// Split the key at the first '#' to get the language tag.
 			parts := strings.SplitN(key, "#", 2)
 			if len(parts) == 2 {
-				langTag := parts[1]
-				c.TOSURI[langTag] = uri
+				langTag, err := language.Parse(parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to parse language tag for tos_uri: %w", err)
+				}
+				c.TOSURI.Items[langTag] = uri
 			} else {
 				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
@@ -623,19 +637,21 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(value, &uri); err != nil {
 				return err
 			}
-			c.PolicyURI["default"] = uri
+			c.PolicyURI.Items[language.Und] = uri
 		case strings.HasPrefix(key, "policy_uri#"):
 			var uri string
 			if err := json.Unmarshal(value, &uri); err != nil {
 				return err
 			}
-			c.LogoURI["default"] = uri
 			// This is a tagged name, e.g., "policy_uri#ja-Jpan-JP"
 			// Split the key at the first '#' to get the language tag.
 			parts := strings.SplitN(key, "#", 2)
 			if len(parts) == 2 {
-				langTag := parts[1]
-				c.PolicyURI[langTag] = uri
+				langTag, err := language.Parse(parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to parse language tag for policy_uri: %w", err)
+				}
+				c.PolicyURI.Items[langTag] = uri
 			} else {
 				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
@@ -794,32 +810,32 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["response_types"] = c.ResponseTypes
 	}
 
-	if len(c.ClientName) > 0 {
-		for lang, name := range c.ClientName {
-			if lang == "default" {
-				res["client_name"] = name
+	if len(c.ClientName.Items) > 0 {
+		for lang, name := range c.ClientName.Items {
+			if lang == language.Und {
+				res[c.ClientName.FieldName] = name
 			} else {
-				res[fmt.Sprintf("client_name#%s", lang)] = name
+				res[fmt.Sprintf("%s#%s", c.ClientName.FieldName, lang)] = name
 			}
 		}
 	}
 
-	if len(c.ClientURI) > 0 {
-		for lang, uri := range c.ClientURI {
-			if lang == "default" {
-				res["client_uri"] = uri
+	if len(c.ClientURI.Items) > 0 {
+		for lang, uri := range c.ClientURI.Items {
+			if lang == language.Und {
+				res[c.ClientURI.FieldName] = uri
 			} else {
-				res[fmt.Sprintf("client_uri#%s", lang)] = uri
+				res[fmt.Sprintf("%s#%s", c.ClientURI.FieldName, lang)] = uri
 			}
 		}
 	}
 
-	if len(c.LogoURI) > 0 {
-		for lang, logo := range c.LogoURI {
-			if lang == "default" {
-				res["logo_uri"] = logo
+	if len(c.LogoURI.Items) > 0 {
+		for lang, logo := range c.LogoURI.Items {
+			if lang == language.Und {
+				res[c.LogoURI.FieldName] = logo
 			} else {
-				res[fmt.Sprintf("logo_uri#%s", lang)] = logo
+				res[fmt.Sprintf("%s#%s", c.LogoURI.FieldName, lang)] = logo
 			}
 		}
 	}
@@ -832,22 +848,22 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["contacts"] = c.Contacts
 	}
 
-	if len(c.TOSURI) > 0 {
-		for lang, uri := range c.TOSURI {
-			if lang == "default" {
-				res["tos_uri"] = uri
+	if len(c.TOSURI.Items) > 0 {
+		for lang, uri := range c.TOSURI.Items {
+			if lang == language.Und {
+				res[c.TOSURI.FieldName] = uri
 			} else {
-				res[fmt.Sprintf("tos_uri#%s", lang)] = uri
+				res[fmt.Sprintf("%s#%s", c.TOSURI.FieldName, lang)] = uri
 			}
 		}
 	}
 
-	if len(c.PolicyURI) > 0 {
-		for lang, uri := range c.PolicyURI {
-			if lang == "default" {
-				res["policy_uri"] = uri
+	if len(c.PolicyURI.Items) > 0 {
+		for lang, uri := range c.PolicyURI.Items {
+			if lang == language.Und {
+				res[c.PolicyURI.FieldName] = uri
 			} else {
-				res[fmt.Sprintf("policy_uri#%s", lang)] = uri
+				res[fmt.Sprintf("%s#%s", c.PolicyURI.FieldName, lang)] = uri
 			}
 		}
 	}
