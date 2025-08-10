@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"golang.org/x/text/language"
 	"math/big"
 	"strings"
 	"sync"
@@ -31,9 +32,10 @@ var serviceKey1 = &rsa.PublicKey{
 var (
 	_ op.Storage                  = &Storage{}
 	_ op.ClientCredentialsStorage = &Storage{}
+	_ op.ClientsStorage           = &Storage{}
 )
 
-// storage implements the op.Storage interface
+// Storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
 type Storage struct {
@@ -930,4 +932,246 @@ func (s *Storage) ClientCredentialsTokenRequest(ctx context.Context, clientID st
 		Audience: []string{clientID},
 		Scopes:   scopes,
 	}, nil
+}
+
+func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRequest) (*oidc.ClientRegistrationResponse, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client := Client{
+		id:                             uuid.New().String(),
+		secret:                         uuid.New().String(),
+		redirectURIs:                   c.RedirectURIs,
+		applicationType:                0,
+		authMethod:                     c.TokenEndpointAuthMethod,
+		loginURL:                       nil,
+		responseTypes:                  c.ResponseTypes,
+		grantTypes:                     c.GrantTypes,
+		accessTokenType:                0,
+		devMode:                        false,
+		idTokenUserinfoClaimsAssertion: false,
+		clockSkew:                      0,
+		postLogoutRedirectURIGlobs:     nil,
+		redirectURIGlobs:               nil,
+		registrationAccessToken:        uuid.New().String(),
+	}
+	s.clients[client.id] = &client
+
+	return &oidc.ClientRegistrationResponse{
+		ClientInformationResponse: oidc.ClientInformationResponse{
+			ClientMetadata: oidc.ClientMetadata{
+				RedirectURIs:            client.redirectURIs,
+				TokenEndpointAuthMethod: client.authMethod,
+				GrantTypes:              client.grantTypes,
+				ResponseTypes:           client.responseTypes,
+				ClientName: oidc.InternationalizedField{
+					FieldName: "client_name",
+					Entries: map[language.Tag]string{
+						language.Und: client.id,
+					},
+				},
+				//ClientURI:                    nil,
+				//LogoURI:                      nil,
+				//Scope:                        "",
+				//Contacts:                     nil,
+				//TOSURI:                       nil,
+				//PolicyURI:                    nil,
+				//JWKSURI:                      "",
+				//JWKS:                         jose.JSONWebKeySet{},
+				//SoftwareID:                   "",
+				//SoftwareVersion:              "",
+				//ApplicationType:              "",
+				//SectorIdentifierURI:          "",
+				//SubjectType:                  "",
+				//IDTokenSignedResponseAlg:     "",
+				//IDTokenEncryptedResponseAlg:  "",
+				//IDTokenEncryptedResponseEnc:  "",
+				//UserinfoSignedResponseAlg:    "",
+				//UserinfoEncryptedResponseAlg: "",
+				//UserinfoEncryptedResponseEnc: "",
+				//RequestObjectSigningAlg:      "",
+				//RequestObjectEncryptionAlg:   "",
+				//RequestObjectEncryptionEnc:   "",
+				//TokenEndpointAuthSigningAlg:  "",
+				//DefaultMaxAge:                0,
+				//RequireAuthTime:              false,
+				//DefaultACRValues:             nil,
+				//InitiateLoginURI:             "",
+				//RequestURIs:                  nil,
+				//PostLogoutRedirectURIs:       nil,
+				//ExtraParameters:              nil,
+			},
+			ClientID:     client.id,
+			ClientSecret: client.secret,
+			//ClientIDIssuedAt:      0,
+			//ClientSecretExpiresAt: 0,
+		},
+		RegistrationAccessToken: client.registrationAccessToken,
+		RegistrationClientURI:   "",
+	}, nil
+}
+
+func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientReadResponse, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client, ok := s.clients[clientID]
+	if !ok {
+		return nil, errors.New("client not found")
+	}
+	return &oidc.ClientReadResponse{
+		ClientRegistrationResponse: oidc.ClientRegistrationResponse{
+			ClientInformationResponse: oidc.ClientInformationResponse{
+				ClientMetadata: oidc.ClientMetadata{
+					RedirectURIs:            client.redirectURIs,
+					TokenEndpointAuthMethod: client.authMethod,
+					GrantTypes:              client.grantTypes,
+					ResponseTypes:           client.responseTypes,
+					ClientName: oidc.InternationalizedField{
+						FieldName: "client_name",
+						Entries: map[language.Tag]string{
+							language.Und: client.id,
+						},
+					},
+					//ClientURI:                    nil,
+					//LogoURI:                      nil,
+					//Scope:                        "",
+					//Contacts:                     nil,
+					//TOSURI:                       nil,
+					//PolicyURI:                    nil,
+					//JWKSURI:                      "",
+					//JWKS:                         jose.JSONWebKeySet{},
+					//SoftwareID:                   "",
+					//SoftwareVersion:              "",
+					//ApplicationType:              "",
+					//SectorIdentifierURI:          "",
+					//SubjectType:                  "",
+					//IDTokenSignedResponseAlg:     "",
+					//IDTokenEncryptedResponseAlg:  "",
+					//IDTokenEncryptedResponseEnc:  "",
+					//UserinfoSignedResponseAlg:    "",
+					//UserinfoEncryptedResponseAlg: "",
+					//UserinfoEncryptedResponseEnc: "",
+					//RequestObjectSigningAlg:      "",
+					//RequestObjectEncryptionAlg:   "",
+					//RequestObjectEncryptionEnc:   "",
+					//TokenEndpointAuthSigningAlg:  "",
+					//DefaultMaxAge:                0,
+					//RequireAuthTime:              false,
+					//DefaultACRValues:             nil,
+					//InitiateLoginURI:             "",
+					//RequestURIs:                  nil,
+					//PostLogoutRedirectURIs:       nil,
+					//ExtraParameters:              nil,
+				},
+				ClientID:     client.id,
+				ClientSecret: client.secret,
+				//ClientIDIssuedAt:      0,
+				//ClientSecretExpiresAt: 0,
+			},
+			RegistrationAccessToken: client.registrationAccessToken,
+			RegistrationClientURI:   "",
+		},
+	}, nil
+}
+
+func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) (*oidc.ClientInformationResponse, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	client, ok := s.clients[c.ClientID]
+	if !ok {
+		return nil, errors.New("client not found")
+	}
+	client.secret = c.ClientSecret
+	client.redirectURIs = c.RedirectURIs
+	client.authMethod = c.TokenEndpointAuthMethod
+	client.grantTypes = c.GrantTypes
+	client.responseTypes = c.ResponseTypes
+
+	return &oidc.ClientInformationResponse{
+		ClientMetadata: oidc.ClientMetadata{
+			RedirectURIs:            client.redirectURIs,
+			TokenEndpointAuthMethod: client.authMethod,
+			GrantTypes:              client.grantTypes,
+			ResponseTypes:           client.responseTypes,
+			ClientName: oidc.InternationalizedField{
+				FieldName: "client_name",
+				Entries: map[language.Tag]string{
+					language.Und: client.id,
+				},
+			},
+			//ClientURI:                    nil,
+			//LogoURI:                      nil,
+			//Scope:                        "",
+			//Contacts:                     nil,
+			//TOSURI:                       nil,
+			//PolicyURI:                    nil,
+			//JWKSURI:                      "",
+			//JWKS:                         jose.JSONWebKeySet{},
+			//SoftwareID:                   "",
+			//SoftwareVersion:              "",
+			//ApplicationType:              "",
+			//SectorIdentifierURI:          "",
+			//SubjectType:                  "",
+			//IDTokenSignedResponseAlg:     "",
+			//IDTokenEncryptedResponseAlg:  "",
+			//IDTokenEncryptedResponseEnc:  "",
+			//UserinfoSignedResponseAlg:    "",
+			//UserinfoEncryptedResponseAlg: "",
+			//UserinfoEncryptedResponseEnc: "",
+			//RequestObjectSigningAlg:      "",
+			//RequestObjectEncryptionAlg:   "",
+			//RequestObjectEncryptionEnc:   "",
+			//TokenEndpointAuthSigningAlg:  "",
+			//DefaultMaxAge:                0,
+			//RequireAuthTime:              false,
+			//DefaultACRValues:             nil,
+			//InitiateLoginURI:             "",
+			//RequestURIs:                  nil,
+			//PostLogoutRedirectURIs:       nil,
+			//ExtraParameters:              nil,
+		},
+		ClientID:     client.id,
+		ClientSecret: client.secret,
+		//ClientIDIssuedAt:      0,
+		//ClientSecretExpiresAt: 0,
+	}, nil
+}
+
+func (s *Storage) DeleteClient(_ context.Context, clientID string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	// TODO(mqf20):    If possible, the authorization server SHOULD immediately invalidate all existing authorization grants and currently active access tokens, all refresh tokens, and all other tokens associated with this client.
+	delete(s.clients, clientID)
+	return nil
+}
+
+func (s *Storage) AuthorizeClientRegistration(ctx context.Context, initialAccessToken string, c *oidc.ClientRegistrationRequest) error {
+	if initialAccessToken != "verysecure" {
+		return op.ErrInvalidInitialAccessToken
+	}
+	return nil
+}
+
+func (s *Storage) authorizeClient(clientID, registrationAccessToken string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	c, ok := s.clients[clientID]
+	if !ok {
+		return op.ErrInvalidClient
+	}
+	if registrationAccessToken != c.registrationAccessToken {
+		return op.ErrInvalidRegistrationAccessToken
+	}
+	return nil
+}
+
+func (s *Storage) AuthorizeClientRead(ctx context.Context, clientID, registrationAccessToken string) error {
+	return s.authorizeClient(clientID, registrationAccessToken)
+}
+
+func (s *Storage) AuthorizeClientUpdate(ctx context.Context, clientID, registrationAccessToken string) error {
+	return s.authorizeClient(clientID, registrationAccessToken)
+}
+
+func (s *Storage) AuthorizeClientDelete(ctx context.Context, clientID, registrationAccessToken string) error {
+	return s.authorizeClient(clientID, registrationAccessToken)
 }

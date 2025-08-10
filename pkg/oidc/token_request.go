@@ -42,6 +42,17 @@ var AllGrantTypes = []GrantType{
 	GrantTypeDeviceCode, ClientAssertionTypeJWTAssertion,
 }
 
+var GrantTypeMap = map[string]GrantType{
+	string(GrantTypeCode):                   GrantTypeCode,
+	string(GrantTypeRefreshToken):           GrantTypeRefreshToken,
+	string(GrantTypeClientCredentials):      GrantTypeClientCredentials,
+	string(GrantTypeBearer):                 GrantTypeBearer,
+	string(GrantTypeTokenExchange):          GrantTypeTokenExchange,
+	string(GrantTypeImplicit):               GrantTypeImplicit,
+	string(GrantTypeDeviceCode):             GrantTypeDeviceCode,
+	string(ClientAssertionTypeJWTAssertion): ClientAssertionTypeJWTAssertion,
+}
+
 type GrantType string
 
 const (
