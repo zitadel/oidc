@@ -503,247 +503,241 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 	c.ExtraParameters = make(map[string]interface{})
 
 	// Unmarshal into a temporary map to inspect all keys.
-	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var rawMap map[string]json.RawMessage
+	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return fmt.Errorf("could not unmarshal raw data: %w", err)
 	}
 
 	// Iterate over all keys found in the JSON.
-	for key, value := range raw {
+	for key, value := range rawMap {
 		switch {
 		case key == "redirect_uris":
-			if uris, ok := value.([]interface{}); ok {
-				for _, u := range uris {
-					if uriStr, ok := u.(string); ok {
-						c.RedirectURIs = append(c.RedirectURIs, uriStr)
-					}
-				}
+			if err := json.Unmarshal(value, &c.RedirectURIs); err != nil {
+				return err
 			}
 		case key == "token_endpoint_auth_method":
-			if vStr, ok := value.(string); ok {
-				if v, exists := AuthMethodMap[vStr]; exists {
-					c.TokenEndpointAuthMethod = v
-				}
+			if err := json.Unmarshal(value, &c.TokenEndpointAuthMethod); err != nil {
+				// should we check against AuthMethodMap if token_endpoint_auth_method is valid?
+				return err
 			}
 		case key == "grant_types":
-			if gts, ok := value.([]interface{}); ok {
-				for _, gt := range gts {
-					if gtStr, ok := gt.(string); ok {
-						if gtParsed, exists := GrantTypeMap[gtStr]; exists {
-							c.GrantTypes = append(c.GrantTypes, gtParsed)
-						}
-					}
-				}
+			if err := json.Unmarshal(value, &c.GrantTypes); err != nil {
+				// should we check against GrantTypeMap if grant_types is valid?
+				return err
 			}
 		case key == "response_types":
-			if rts, ok := value.([]interface{}); ok {
-				for _, rt := range rts {
-					if rtStr, ok := rt.(string); ok {
-						if rtParsed, exists := ResponseTypeMap[rtStr]; exists {
-							c.ResponseTypes = append(c.ResponseTypes, rtParsed)
-						}
-					}
-				}
+			if err := json.Unmarshal(value, &c.ResponseTypes); err != nil {
+				// should we check against ResponseTypeMap if response_types is valid?
+				return err
 			}
 		case key == "client_name":
-			if name, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				c.ClientName["default"] = name
+			var name string
+			if err := json.Unmarshal(value, &name); err != nil {
+				return err
 			}
+			c.ClientName["default"] = name
 		case strings.HasPrefix(key, "client_name#"):
-			if name, ok := value.(string); ok {
-				// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					c.ClientName[langTag] = name
-				}
+			var name string
+			if err := json.Unmarshal(value, &name); err != nil {
+				return err
+			}
+			// This is a tagged name, e.g., "client_name#ja-Jpan-JP"
+			// Split the key at the first '#' to get the language tag.
+			parts := strings.SplitN(key, "#", 2)
+			if len(parts) == 2 {
+				langTag := parts[1]
+				c.ClientName[langTag] = name
+			} else {
+				return fmt.Errorf("invalid client_name format: %q", key)
 			}
 		case key == "client_uri":
-			if uri, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				c.ClientURI["default"] = uri
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
 			}
+			c.ClientURI["default"] = uri
 		case strings.HasPrefix(key, "client_uri#"):
-			if uri, ok := value.(string); ok {
-				// This is a tagged name, e.g., "client_uri#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					c.ClientURI[langTag] = uri
-				}
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
+			}
+			// This is a tagged name, e.g., "client_uri#ja-Jpan-JP"
+			// Split the key at the first '#' to get the language tag.
+			parts := strings.SplitN(key, "#", 2)
+			if len(parts) == 2 {
+				langTag := parts[1]
+				c.ClientURI[langTag] = uri
+			} else {
+				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
 		case key == "logo_uri":
-			if logo, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				c.LogoURI["default"] = logo
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
 			}
+			c.LogoURI["default"] = uri
 		case strings.HasPrefix(key, "logo_uri#"):
-			if logo, ok := value.(string); ok {
-				// This is a tagged name, e.g., "logo_uri#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					c.LogoURI[langTag] = logo
-				}
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
+			}
+			// This is a tagged name, e.g., "logo_uri#ja-Jpan-JP"
+			// Split the key at the first '#' to get the language tag.
+			parts := strings.SplitN(key, "#", 2)
+			if len(parts) == 2 {
+				langTag := parts[1]
+				c.LogoURI[langTag] = uri
+			} else {
+				return fmt.Errorf("invalid logo_uri format: %q", key)
 			}
 		case key == "scope":
-			if v, ok := value.(string); ok {
-				c.Scope = v
+			if err := json.Unmarshal(value, &c.Scope); err != nil {
+				return err
 			}
 		case key == "contacts":
-			if cts, ok := value.([]interface{}); ok {
-				for _, ct := range cts {
-					if ctStr, ok := ct.(string); ok {
-						c.Contacts = append(c.Contacts, ctStr)
-					}
-				}
+			if err := json.Unmarshal(value, &c.Contacts); err != nil {
+				return err
 			}
 		case key == "tos_uri":
-			if uri, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				c.TOSURI["default"] = uri
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
 			}
+			c.TOSURI["default"] = uri
 		case strings.HasPrefix(key, "tos_uri#"):
-			if uri, ok := value.(string); ok {
-				// This is a tagged name, e.g., "tos_uri#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					c.TOSURI[langTag] = uri
-				}
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
+			}
+			// This is a tagged name, e.g., "tos_uri#ja-Jpan-JP"
+			// Split the key at the first '#' to get the language tag.
+			parts := strings.SplitN(key, "#", 2)
+			if len(parts) == 2 {
+				langTag := parts[1]
+				c.TOSURI[langTag] = uri
+			} else {
+				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
 		case key == "policy_uri":
-			if uri, ok := value.(string); ok {
-				// This is the default, non-tagged name.
-				c.PolicyURI["default"] = uri
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
 			}
+			c.PolicyURI["default"] = uri
 		case strings.HasPrefix(key, "policy_uri#"):
-			if uri, ok := value.(string); ok {
-				// This is a tagged name, e.g., "policy_uri#ja-Jpan-JP"
-				// Split the key at the first '#' to get the language tag.
-				parts := strings.SplitN(key, "#", 2)
-				if len(parts) == 2 {
-					langTag := parts[1]
-					c.PolicyURI[langTag] = uri
-				}
+			var uri string
+			if err := json.Unmarshal(value, &uri); err != nil {
+				return err
+			}
+			c.LogoURI["default"] = uri
+			// This is a tagged name, e.g., "policy_uri#ja-Jpan-JP"
+			// Split the key at the first '#' to get the language tag.
+			parts := strings.SplitN(key, "#", 2)
+			if len(parts) == 2 {
+				langTag := parts[1]
+				c.PolicyURI[langTag] = uri
+			} else {
+				return fmt.Errorf("invalid client_uri format: %q", key)
 			}
 		case key == "jwks_uri":
-			if v, ok := value.(string); ok {
-				c.JWKSURI = v
+			if err := json.Unmarshal(value, &c.JWKSURI); err != nil {
+				return err
 			}
 		case key == "jwks":
-			// unmarshal into a jose.JSONWebKeySet
-			if vBytes, err := json.Marshal(value); err == nil {
-				_ = json.Unmarshal(vBytes, &c.JWKS)
+			if err := json.Unmarshal(value, &c.JWKS); err != nil {
+				return err
 			}
 		case key == "software_id":
-			if v, ok := value.(string); ok {
-				c.SoftwareID = v
+			if err := json.Unmarshal(value, &c.SoftwareID); err != nil {
+				return err
 			}
 		case key == "software_version":
-			if v, ok := value.(string); ok {
-				c.SoftwareVersion = v
+			if err := json.Unmarshal(value, &c.SoftwareVersion); err != nil {
+				return err
 			}
-		//case key == "software_statement":
-		//	if v, ok := value.(string); ok {
-		//		c.SoftwareStatement = v
-		//	}
 		case key == "application_type":
-			if v, ok := value.(string); ok {
-				c.ApplicationType = v
+			if err := json.Unmarshal(value, &c.ApplicationType); err != nil {
+				return err
 			}
 		case key == "sector_identifier_uri":
-			if v, ok := value.(string); ok {
-				c.SectorIdentifierURI = v
+			if err := json.Unmarshal(value, &c.SectorIdentifierURI); err != nil {
+				return err
 			}
 		case key == "subject_type":
-			if v, ok := value.(string); ok {
-				c.SubjectType = v
+			if err := json.Unmarshal(value, &c.SubjectType); err != nil {
+				return err
 			}
 		case key == "id_token_signed_response_alg":
-			if v, ok := value.(string); ok {
-				c.IDTokenSignedResponseAlg = v
+			if err := json.Unmarshal(value, &c.IDTokenSignedResponseAlg); err != nil {
+				return err
 			}
 		case key == "id_token_encrypted_response_alg":
-			if v, ok := value.(string); ok {
-				c.IDTokenEncryptedResponseAlg = v
+			if err := json.Unmarshal(value, &c.IDTokenEncryptedResponseAlg); err != nil {
+				return err
 			}
 		case key == "id_token_encrypted_response_enc":
-			if v, ok := value.(string); ok {
-				c.IDTokenEncryptedResponseEnc = v
+			if err := json.Unmarshal(value, &c.IDTokenEncryptedResponseEnc); err != nil {
+				return err
 			}
 		case key == "userinfo_signed_response_alg":
-			if v, ok := value.(string); ok {
-				c.UserinfoSignedResponseAlg = v
+			if err := json.Unmarshal(value, &c.UserinfoSignedResponseAlg); err != nil {
+				return err
 			}
 		case key == "userinfo_encrypted_response_alg":
-			if v, ok := value.(string); ok {
-				c.UserinfoEncryptedResponseAlg = v
+			if err := json.Unmarshal(value, &c.UserinfoEncryptedResponseAlg); err != nil {
+				return err
 			}
 		case key == "userinfo_encrypted_response_enc":
-			if v, ok := value.(string); ok {
-				c.UserinfoEncryptedResponseEnc = v
+			if err := json.Unmarshal(value, &c.UserinfoEncryptedResponseEnc); err != nil {
+				return err
 			}
 		case key == "request_object_signing_alg":
-			if v, ok := value.(string); ok {
-				c.RequestObjectSigningAlg = v
+			if err := json.Unmarshal(value, &c.RequestObjectEncryptionAlg); err != nil {
+				return err
 			}
 		case key == "request_object_encryption_alg":
-			if v, ok := value.(string); ok {
-				c.RequestObjectEncryptionAlg = v
+			if err := json.Unmarshal(value, &c.RequestObjectEncryptionAlg); err != nil {
+				return err
 			}
 		case key == "request_object_encryption_enc":
-			if v, ok := value.(string); ok {
-				c.RequestObjectEncryptionEnc = v
+			if err := json.Unmarshal(value, &c.RequestObjectEncryptionEnc); err != nil {
+				return err
 			}
 		case key == "token_endpoint_auth_signing_alg":
-			if v, ok := value.(string); ok {
-				c.TokenEndpointAuthSigningAlg = v
+			if err := json.Unmarshal(value, &c.TokenEndpointAuthSigningAlg); err != nil {
+				return err
 			}
 		case key == "default_max_age":
-			if v, ok := value.(float64); ok {
-				c.DefaultMaxAge = int(v)
+			if err := json.Unmarshal(value, &c.DefaultMaxAge); err != nil {
+				return err
 			}
 		case key == "require_auth_time":
-			if v, ok := value.(bool); ok {
-				c.RequireAuthTime = v
+			if err := json.Unmarshal(value, &c.RequireAuthTime); err != nil {
+				return err
 			}
 		case key == "default_acr_values":
-			if acrs, ok := value.([]interface{}); ok {
-				for _, acr := range acrs {
-					if acrStr, ok := acr.(string); ok {
-						c.DefaultACRValues = append(c.DefaultACRValues, acrStr)
-					}
-				}
+			if err := json.Unmarshal(value, &c.DefaultACRValues); err != nil {
+				return err
 			}
 		case key == "initiate_login_uri":
-			if v, ok := value.(string); ok {
-				c.InitiateLoginURI = v
+			if err := json.Unmarshal(value, &c.InitiateLoginURI); err != nil {
+				return err
 			}
 		case key == "request_uris":
-			if uris, ok := value.([]interface{}); ok {
-				for _, uri := range uris {
-					if uriStr, ok := uri.(string); ok {
-						c.RequestURIs = append(c.RequestURIs, uriStr)
-					}
-				}
+			if err := json.Unmarshal(value, &c.RequestURIs); err != nil {
+				return err
 			}
 		case key == "post_logout_redirect_uris":
-			if uris, ok := value.([]interface{}); ok {
-				for _, uri := range uris {
-					if uriStr, ok := uri.(string); ok {
-						c.PostLogoutRedirectURIs = append(c.PostLogoutRedirectURIs, uriStr)
-					}
-				}
+			if err := json.Unmarshal(value, &c.PostLogoutRedirectURIs); err != nil {
+				return err
 			}
 		default:
 			// If the key didn't match any of the above, it's an extra parameter.
-			c.ExtraParameters[key] = value
+			var val interface{}
+			if err := json.Unmarshal(value, &val); err != nil {
+				return err
+			}
+			c.ExtraParameters[key] = val
 		}
 	}
 
