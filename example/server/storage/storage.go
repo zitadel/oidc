@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"github.com/zitadel/oidc/v3/pkg/internationalizedfield"
 	"golang.org/x/text/language"
 	"math/big"
 	"strings"
@@ -964,7 +963,7 @@ func (s *Storage) RegisterClient(_ context.Context, c *oidc.ClientRegistrationRe
 				TokenEndpointAuthMethod: client.authMethod,
 				GrantTypes:              client.grantTypes,
 				ResponseTypes:           client.responseTypes,
-				ClientName: internationalizedfield.InternationalizedField{
+				ClientName: oidc.InternationalizedField{
 					FieldName: "client_name",
 					Entries: map[language.Tag]string{
 						language.Und: client.id,
@@ -1026,7 +1025,7 @@ func (s *Storage) ReadClient(_ context.Context, clientID string) (*oidc.ClientRe
 					TokenEndpointAuthMethod: client.authMethod,
 					GrantTypes:              client.grantTypes,
 					ResponseTypes:           client.responseTypes,
-					ClientName: internationalizedfield.InternationalizedField{
+					ClientName: oidc.InternationalizedField{
 						FieldName: "client_name",
 						Entries: map[language.Tag]string{
 							language.Und: client.id,
@@ -1093,7 +1092,7 @@ func (s *Storage) UpdateClient(_ context.Context, c *oidc.ClientUpdateRequest) (
 			TokenEndpointAuthMethod: client.authMethod,
 			GrantTypes:              client.grantTypes,
 			ResponseTypes:           client.responseTypes,
-			ClientName: internationalizedfield.InternationalizedField{
+			ClientName: oidc.InternationalizedField{
 				FieldName: "client_name",
 				Entries: map[language.Tag]string{
 					language.Und: client.id,
