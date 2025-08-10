@@ -32,8 +32,8 @@ type InternationalizedField struct {
 	Items     languageMap
 }
 
-func New(fieldName string) *InternationalizedField {
-	return &InternationalizedField{
+func New(fieldName string) InternationalizedField {
+	return InternationalizedField{
 		fieldName: fieldName,
 		Items:     make(languageMap),
 	}
@@ -44,7 +44,7 @@ func (i *InternationalizedField) UnmarshalJSON(data []byte) error {
 
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("could not unmarshal raw data: %w", err)
+		return fmt.Errorf("failed to unmarshal raw data: %w", err)
 	}
 
 	for key, value := range raw {
@@ -62,7 +62,7 @@ func (i *InternationalizedField) UnmarshalJSON(data []byte) error {
 				if len(parts) == 2 {
 					langTag := parts[1]
 					if t, err := language.Parse(langTag); err != nil {
-						return fmt.Errorf("could not parse language tag %q: %w", langTag, err)
+						return fmt.Errorf("failed to parse language tag %q: %w", langTag, err)
 					} else {
 						i.Items[t] = name
 					}
