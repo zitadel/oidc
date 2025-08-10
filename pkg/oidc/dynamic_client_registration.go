@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-jose/go-jose/v4"
-	"github.com/zitadel/oidc/v3/pkg/internationalizedfield"
 	"strings"
 )
 
@@ -130,7 +129,7 @@ type ClientMetadata struct {
 	// [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	ClientName internationalizedfield.InternationalizedField `json:"client_name"`
+	ClientName InternationalizedField `json:"client_name"`
 
 	// ClientURI is a URL string of a web page providing information about the client.
 	// If present, the server SHOULD display this URL to the end-user in
@@ -140,7 +139,7 @@ type ClientMetadata struct {
 	// described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	ClientURI internationalizedfield.InternationalizedField `json:"client_uri"`
+	ClientURI InternationalizedField `json:"client_uri"`
 
 	// LogoURI is a URL string that references a logo for the client.  If present, the
 	// server SHOULD display this image to the end-user during approval.
@@ -149,7 +148,7 @@ type ClientMetadata struct {
 	// [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	LogoURI internationalizedfield.InternationalizedField `json:"logo_uri"`
+	LogoURI InternationalizedField `json:"logo_uri"`
 
 	// Scope is a string containing a space-separated list of scope values (as
 	// described in [Section 3.3] of OAuth 2.0 [RFC6749]) that the client
@@ -179,7 +178,7 @@ type ClientMetadata struct {
 	// be internationalized, as described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	TOSURI internationalizedfield.InternationalizedField `json:"tos_uri"`
+	TOSURI InternationalizedField `json:"tos_uri"`
 
 	// PolicyURI is a URL string that points to a human-readable privacy policy document
 	// that describes how the deployment organization collects, uses,
@@ -189,7 +188,7 @@ type ClientMetadata struct {
 	// this field MAY be internationalized, as described in [Section 2.2].
 	//
 	// [Section 2.2]: https://www.rfc-editor.org/rfc/rfc7591#section-2.2
-	PolicyURI internationalizedfield.InternationalizedField `json:"policy_uri"`
+	PolicyURI InternationalizedField `json:"policy_uri"`
 
 	// JWKSURI is a URL string referencing the client's JSON Web Key (JWK) Set
 	// [RFC7517] document, which contains the client's public keys.  The
@@ -496,11 +495,11 @@ type ClientMetadata struct {
 
 func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 	// Initialize maps to avoid nil pointer issues later.
-	c.ClientName = internationalizedfield.New("client_name")
-	c.ClientURI = internationalizedfield.New("client_uri")
-	c.LogoURI = internationalizedfield.New("logo_uri")
-	c.TOSURI = internationalizedfield.New("tos_uri")
-	c.PolicyURI = internationalizedfield.New("policy_uri")
+	c.ClientName = NewInternationalizedField("client_name")
+	c.ClientURI = NewInternationalizedField("client_uri")
+	c.LogoURI = NewInternationalizedField("logo_uri")
+	c.TOSURI = NewInternationalizedField("tos_uri")
+	c.PolicyURI = NewInternationalizedField("policy_uri")
 	c.ExtraParameters = make(map[string]interface{})
 
 	// Unmarshal into a temporary map to inspect all keys.
@@ -532,15 +531,15 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 				return err
 			}
 		case strings.HasPrefix(key, c.ClientName.FieldName):
-			if err := c.ClientName.InsertEntry(key, value); err != nil {
+			if err := c.ClientName.insertEntry(key, value); err != nil {
 				return err
 			}
 		case strings.HasPrefix(key, c.ClientURI.FieldName):
-			if err := c.ClientURI.InsertEntry(key, value); err != nil {
+			if err := c.ClientURI.insertEntry(key, value); err != nil {
 				return err
 			}
 		case strings.HasPrefix(key, c.LogoURI.FieldName):
-			if err := c.LogoURI.InsertEntry(key, value); err != nil {
+			if err := c.LogoURI.insertEntry(key, value); err != nil {
 				return err
 			}
 		case key == "scope":
@@ -552,11 +551,11 @@ func (c *ClientMetadata) UnmarshalJSON(data []byte) error {
 				return err
 			}
 		case strings.HasPrefix(key, c.TOSURI.FieldName):
-			if err := c.TOSURI.InsertEntry(key, value); err != nil {
+			if err := c.TOSURI.insertEntry(key, value); err != nil {
 				return err
 			}
 		case strings.HasPrefix(key, c.PolicyURI.FieldName):
-			if err := c.PolicyURI.InsertEntry(key, value); err != nil {
+			if err := c.PolicyURI.insertEntry(key, value); err != nil {
 				return err
 			}
 		case key == "jwks_uri":
@@ -714,9 +713,9 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["response_types"] = c.ResponseTypes
 	}
 
-	c.ClientName.ExportEntries(res)
-	c.ClientURI.ExportEntries(res)
-	c.LogoURI.ExportEntries(res)
+	c.ClientName.exportEntries(res)
+	c.ClientURI.exportEntries(res)
+	c.LogoURI.exportEntries(res)
 
 	if c.Scope != "" {
 		res["scope"] = c.Scope
@@ -726,8 +725,8 @@ func (c ClientMetadata) MarshalJSON() ([]byte, error) {
 		res["contacts"] = c.Contacts
 	}
 
-	c.TOSURI.ExportEntries(res)
-	c.PolicyURI.ExportEntries(res)
+	c.TOSURI.exportEntries(res)
+	c.PolicyURI.exportEntries(res)
 
 	if c.JWKSURI != "" {
 		res["jwks_uri"] = c.JWKSURI

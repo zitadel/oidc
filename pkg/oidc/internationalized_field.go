@@ -1,4 +1,4 @@
-package internationalizedfield
+package oidc
 
 import (
 	"encoding/json"
@@ -32,14 +32,14 @@ type InternationalizedField struct {
 	Entries   languageMap
 }
 
-func New(fieldName string) InternationalizedField {
+func NewInternationalizedField(fieldName string) InternationalizedField {
 	return InternationalizedField{
 		FieldName: fieldName,
 		Entries:   make(languageMap),
 	}
 }
 
-func (i InternationalizedField) InsertEntry(key string, value []byte) error {
+func (i InternationalizedField) insertEntry(key string, value []byte) error {
 	var valStr string
 	if err := json.Unmarshal(value, &valStr); err != nil {
 		return fmt.Errorf("invalid value type for %s, expected string: %e", i.FieldName, err)
@@ -65,7 +65,7 @@ func (i InternationalizedField) InsertEntry(key string, value []byte) error {
 	return nil
 }
 
-func (i InternationalizedField) ExportEntries(res map[string]interface{}) {
+func (i InternationalizedField) exportEntries(res map[string]interface{}) {
 	for lang, name := range i.Entries {
 		if lang == language.Und {
 			res[i.FieldName] = name
@@ -73,4 +73,19 @@ func (i InternationalizedField) ExportEntries(res map[string]interface{}) {
 			res[fmt.Sprintf("%s#%s", i.FieldName, lang)] = name
 		}
 	}
+}
+
+func (i InternationalizedField) GetDefaultEntry() string {
+	val := i.GetEntry(language.Und)
+	if val == "" {
+		for _, v := range i.Entries {
+			// return any entry
+			return v
+		}
+	}
+	return val
+}
+
+func (i InternationalizedField) GetEntry(lang language.Tag) string {
+	return i.Entries[lang]
 }
