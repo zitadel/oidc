@@ -18,6 +18,10 @@ The RP is certified for the [basic](https://www.certification.openid.net/plan-de
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
 
+> [!NOTE]
+> We currently have limited availability for feature reviews: 
+https://github.com/zitadel/oidc/discussions/785
+
 ## Basic Overview
 
 The most important packages of the library:
