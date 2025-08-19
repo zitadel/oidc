@@ -128,6 +128,15 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 	ctx, span := tracer.Start(ctx, "LegacyServer.VerifyAuthRequest")
 	defer span.End()
 
+	if r.Data.RequestURI != "" {
+		stored, err := s.provider.Storage().GetPARState(ctx, r.Data.RequestURI)
+		if err != nil {
+			return nil, err
+		}
+
+		r.Data = stored
+	}
+
 	if r.Data.RequestParam != "" {
 		if !s.provider.RequestObjectSupported() {
 			return nil, oidc.ErrRequestNotSupported()
