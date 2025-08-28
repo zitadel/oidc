@@ -2,20 +2,50 @@ package op
 
 import (
 	"errors"
+	"slices"
 	"strings"
 )
 
 type Endpoint struct {
-	path string
-	url  string
+	method string
+	path   string
+	url    string
 }
 
-func NewEndpoint(path string) *Endpoint {
-	return &Endpoint{path: path}
+type EndpointOption func(endpoint *Endpoint)
+
+func EndpointWithURL(url string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.url = url
+	}
+}
+
+func EndpointWithMethod(method string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.method = method
+	}
+}
+
+func NewEndpoint(path string, opts ...EndpointOption) *Endpoint {
+	endpoint := &Endpoint{path: path}
+
+	for option := range slices.Values(opts) {
+		option(endpoint)
+	}
+
+	return endpoint
 }
 
 func NewEndpointWithURL(path, url string) *Endpoint {
 	return &Endpoint{path: path, url: url}
+}
+
+func (e *Endpoint) Method() string {
+	if e == nil {
+		return ""
+	}
+
+	return e.method
 }
 
 func (e *Endpoint) Relative() string {
