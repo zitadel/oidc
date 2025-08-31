@@ -62,58 +62,64 @@ func TestUserInfoMarshal(t *testing.T) {
 	assert.Equal(t, out, out2)
 }
 
-func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
+// TestUserInfoVerifiedFieldsUnmarshal ensures email_verified and phone_number_verified
+// handle both standard booleans and AWS Cognito's non-compliant strings.
+func TestUserInfoVerifiedFieldsUnmarshal(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unmarshal email_verified from json bool true", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": true}`)
+	tests := map[string]struct {
+		json                string
+		wantEmailVerified   Bool
+		wantPhoneVerified   Bool
+	}{
+		"booleans true":      {`{"email_verified": true, "phone_number_verified": true}`, true, true},
+		"booleans false":     {`{"email_verified": false, "phone_number_verified": false}`, false, false},
+		"strings true":       {`{"email_verified": "true", "phone_number_verified": "true"}`, true, true},
+		"strings false":      {`{"email_verified": "false", "phone_number_verified": "false"}`, false, false},
+		"mixed bool/string":  {`{"email_verified": true, "phone_number_verified": "false"}`, true, false},
+	}
 
-		var uie UserInfoEmail
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got UserInfo
+			err := json.Unmarshal([]byte(tt.json), &got)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantEmailVerified, got.EmailVerified)
+			assert.Equal(t, tt.wantPhoneVerified, got.PhoneNumberVerified)
+		})
+	}
+}
 
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: true,
-		}, uie)
-	})
+// TestBoolUnmarshal verifies the Bool type handles various inputs correctly.
+func TestBoolUnmarshal(t *testing.T) {
+	t.Parallel()
 
-	t.Run("unmarshal email_verified from json string true", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "true"}`)
+	tests := map[string]struct {
+		input   string
+		want    Bool
+		wantErr bool
+	}{
+		"bool true":      {`true`, true, false},
+		"bool false":     {`false`, false, false},
+		"string true":    {`"true"`, true, false},
+		"string false":   {`"false"`, false, false},
+		"string TRUE":    {`"TRUE"`, true, false},
+		"string False":   {`"False"`, false, false},
+		"invalid string": {`"yes"`, false, true},
+		"number":         {`1`, false, true},
+		"null":           {`null`, false, false},  // null defaults to false (safe default)
+	}
 
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: true,
-		}, uie)
-	})
-
-	t.Run("unmarshal email_verified from json bool false", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": false}`)
-
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: false,
-		}, uie)
-	})
-
-	t.Run("unmarshal email_verified from json string false", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "false"}`)
-
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: false,
-		}, uie)
-	})
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got Bool
+			err := json.Unmarshal([]byte(tt.input), &got)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
 }

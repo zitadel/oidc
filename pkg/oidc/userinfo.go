@@ -1,5 +1,50 @@
 package oidc
 
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+type Bool bool
+
+// UnmarshalJSON handles both standard JSON boolean values and string representations.
+// This is necessary because some OIDC providers (notably AWS Cognito) incorrectly return
+// boolean fields like email_verified and phone_number_verified as strings ("true"/"false")
+// instead of proper JSON booleans, violating the OIDC specification.
+//
+// The method first attempts standard boolean unmarshaling, and falls back to string
+// parsing if that fails, making it compatible with both compliant and non-compliant providers.
+//
+// Ref:
+// - https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
+// - https://docs.aws.amazon.com/cognito/latest/developerguide/userinfo-endpoint.html
+//
+// For broader historical context, see:
+// - https://github.com/zitadel/oidc/pull/139
+func (bs *Bool) UnmarshalJSON(data []byte) error {
+	var b bool
+	if err := json.Unmarshal(data, &b); err == nil {
+		*bs = Bool(b)
+		return nil
+	}
+
+	// Fall back to string handling for non-compliant providers
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		switch strings.ToLower(s) {
+		case "true":
+			*bs = true
+			return nil
+		case "false":
+			*bs = false
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cannot unmarshal %s into Bool", data)
+}
+
 // UserInfo implements OpenID Connect Core 1.0, section 5.1.
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type UserInfo struct {
@@ -64,25 +109,12 @@ type UserInfoProfile struct {
 type UserInfoEmail struct {
 	Email string `json:"email,omitempty"`
 
-	// Handle providers that return email_verified as a string
-	// https://forums.aws.amazon.com/thread.jspa?messageID=949441&#949441
-	// https://discuss.elastic.co/t/openid-error-after-authenticating-against-aws-cognito/206018/11
 	EmailVerified Bool `json:"email_verified,omitempty"`
-}
-
-type Bool bool
-
-func (bs *Bool) UnmarshalJSON(data []byte) error {
-	if string(data) == "true" || string(data) == `"true"` {
-		*bs = true
-	}
-
-	return nil
 }
 
 type UserInfoPhone struct {
 	PhoneNumber         string `json:"phone_number,omitempty"`
-	PhoneNumberVerified bool   `json:"phone_number_verified,omitempty"`
+	PhoneNumberVerified Bool   `json:"phone_number_verified,omitempty"`
 }
 
 type UserInfoAddress struct {
