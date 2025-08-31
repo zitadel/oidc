@@ -13,8 +13,8 @@ type Bool bool
 // boolean fields like email_verified and phone_number_verified as strings ("true"/"false")
 // instead of proper JSON booleans, violating the OIDC specification.
 //
-// The method first attempts standard boolean unmarshaling, and falls back to string
-// parsing if that fails, making it compatible with both compliant and non-compliant providers.
+// The method uses first-byte detection to efficiently determine the JSON type before
+// unmarshaling, avoiding unnecessary attempts and reducing allocations.
 //
 // Ref:
 // - https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
@@ -23,15 +23,25 @@ type Bool bool
 // For broader historical context, see:
 // - https://github.com/zitadel/oidc/pull/139
 func (bs *Bool) UnmarshalJSON(data []byte) error {
-	var b bool
-	if err := json.Unmarshal(data, &b); err == nil {
-		*bs = Bool(b)
-		return nil
+	if len(data) == 0 {
+		return fmt.Errorf("cannot unmarshal empty data into Bool")
 	}
 
-	// Fall back to string handling for non-compliant providers
-	var s string
-	if err := json.Unmarshal(data, &s); err == nil {
+	// Check first byte to avoid unnecessary unmarshal attempts
+	switch data[0] {
+	case 't', 'f': // boolean: true or false
+		var b bool
+		if err := json.Unmarshal(data, &b); err != nil {
+			return err
+		}
+		*bs = Bool(b)
+		return nil
+
+	case '"': // string: "true" or "false"  
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
 		switch strings.ToLower(s) {
 		case "true":
 			*bs = true
@@ -39,10 +49,17 @@ func (bs *Bool) UnmarshalJSON(data []byte) error {
 		case "false":
 			*bs = false
 			return nil
+		default:
+			return fmt.Errorf("cannot unmarshal %q into Bool", s)
 		}
-	}
 
-	return fmt.Errorf("cannot unmarshal %s into Bool", data)
+	case 'n': // null
+		*bs = false
+		return nil
+
+	default:
+		return fmt.Errorf("cannot unmarshal %s into Bool", data)
+	}
 }
 
 // UserInfo implements OpenID Connect Core 1.0, section 5.1.
