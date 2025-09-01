@@ -640,6 +640,15 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"code flow encoded redirect_uri should pass after unescaping",
+			args{
+				"https%3A%2F%2Fregistered.com%2Fcallback",
+				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
+				oidc.ResponseTypeCode,
+			},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1091,6 +1100,34 @@ func TestAuthResponseCode(t *testing.T) {
 			},
 		},
 		{
+			name: "success with state and session_state",
+			args: args{
+				authReq: &storage.AuthRequestWithSessionState{
+					AuthRequest: &storage.AuthRequest{
+						ID:            "id1",
+						TransferState: "state1",
+					},
+					SessionState: "session_state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:           http.StatusFound,
+				wantLocationHeader: "/auth/callback/?code=id1&session_state=session_state1&state=state1",
+				wantBody:           "",
+			},
+		},
+		{
 			name: "success without state", // reproduce issue #415
 			args: args{
 				authReq: &storage.AuthRequest{
@@ -1197,6 +1234,133 @@ func Test_parseAuthorizeCallbackRequest(t *testing.T) {
 	}
 }
 
+func TestBuildAuthResponseCodeResponsePayload(t *testing.T) {
+	type args struct {
+		authReq    op.AuthRequest
+		authorizer func(*testing.T) op.Authorizer
+	}
+	type res struct {
+		wantCode         string
+		wantState        string
+		wantSessionState string
+		wantErr          bool
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			name: "create code error",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID: "id1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{
+						returnErr: io.ErrClosedPipe,
+					})
+					return authorizer
+				},
+			},
+			res: res{
+				wantErr: true,
+			},
+		},
+		{
+			name: "success with state",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					TransferState: "state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:  "id1",
+				wantState: "state1",
+			},
+		},
+		{
+			name: "success without state",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					TransferState: "",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:  "id1",
+				wantState: "",
+			},
+		},
+		{
+			name: "success with session_state",
+			args: args{
+				authReq: &storage.AuthRequestWithSessionState{
+					AuthRequest: &storage.AuthRequest{
+						ID:            "id1",
+						TransferState: "state1",
+					},
+					SessionState: "session_state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					return authorizer
+				},
+			},
+			res: res{
+				wantCode:         "id1",
+				wantState:        "state1",
+				wantSessionState: "session_state1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := op.BuildAuthResponseCodeResponsePayload(context.Background(), tt.args.authReq, tt.args.authorizer(t))
+			if tt.res.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.res.wantCode, got.Code)
+			assert.Equal(t, tt.res.wantState, got.State)
+			assert.Equal(t, tt.res.wantSessionState, got.SessionState)
+		})
+	}
+}
+
 func TestValidateAuthReqIDTokenHint(t *testing.T) {
 	token, _ := tu.ValidIDToken()
 	tests := []struct {
@@ -1224,6 +1388,234 @@ func TestValidateAuthReqIDTokenHint(t *testing.T) {
 			got, err := op.ValidateAuthReqIDTokenHint(context.Background(), tt.idTokenHint, op.NewIDTokenHintVerifier(tu.ValidIssuer, tu.KeySet{}))
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestBuildAuthResponseCallbackURL(t *testing.T) {
+	type args struct {
+		authReq    op.AuthRequest
+		authorizer func(*testing.T) op.Authorizer
+	}
+	type res struct {
+		wantURL string
+		wantErr bool
+	}
+	tests := []struct {
+		name string
+		args args
+		res  res
+	}{
+		{
+			name: "error when generating code response",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID: "id1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{
+						returnErr: io.ErrClosedPipe,
+					})
+					return authorizer
+				},
+			},
+			res: res{
+				wantErr: true,
+			},
+		},
+		{
+			name: "error when generating callback URL",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:          "id1",
+					CallbackURI: "://invalid-url",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantErr: true,
+			},
+		},
+		{
+			name: "success with state",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					CallbackURI:   "https://example.com/callback",
+					TransferState: "state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantURL: "https://example.com/callback?code=id1&state=state1",
+				wantErr: false,
+			},
+		},
+		{
+			name: "success without state",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:          "id1",
+					CallbackURI: "https://example.com/callback",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantURL: "https://example.com/callback?code=id1",
+				wantErr: false,
+			},
+		},
+		{
+			name: "success with session_state",
+			args: args{
+				authReq: &storage.AuthRequestWithSessionState{
+					AuthRequest: &storage.AuthRequest{
+						ID:            "id1",
+						CallbackURI:   "https://example.com/callback",
+						TransferState: "state1",
+					},
+					SessionState: "session_state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantURL: "https://example.com/callback?code=id1&session_state=session_state1&state=state1",
+				wantErr: false,
+			},
+		},
+		{
+			name: "success with existing query parameters",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					CallbackURI:   "https://example.com/callback?param=value",
+					TransferState: "state1",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantURL: "https://example.com/callback?param=value&code=id1&state=state1",
+				wantErr: false,
+			},
+		},
+		{
+			name: "success with fragment response mode",
+			args: args{
+				authReq: &storage.AuthRequest{
+					ID:            "id1",
+					CallbackURI:   "https://example.com/callback",
+					TransferState: "state1",
+					ResponseMode:  "fragment",
+				},
+				authorizer: func(t *testing.T) op.Authorizer {
+					ctrl := gomock.NewController(t)
+					storage := mock.NewMockStorage(ctrl)
+					storage.EXPECT().SaveAuthCode(gomock.Any(), "id1", "id1")
+
+					authorizer := mock.NewMockAuthorizer(ctrl)
+					authorizer.EXPECT().Storage().Return(storage)
+					authorizer.EXPECT().Crypto().Return(&mockCrypto{})
+					authorizer.EXPECT().Encoder().Return(schema.NewEncoder())
+					return authorizer
+				},
+			},
+			res: res{
+				wantURL: "https://example.com/callback#code=id1&state=state1",
+				wantErr: false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := op.BuildAuthResponseCallbackURL(context.Background(), tt.args.authReq, tt.args.authorizer(t))
+			if tt.res.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			if tt.res.wantURL != "" {
+				// Parse the URLs to compare components instead of direct string comparison
+				expectedURL, err := url.Parse(tt.res.wantURL)
+				require.NoError(t, err)
+				actualURL, err := url.Parse(got)
+				require.NoError(t, err)
+
+				// Compare the base parts (scheme, host, path)
+				assert.Equal(t, expectedURL.Scheme, actualURL.Scheme)
+				assert.Equal(t, expectedURL.Host, actualURL.Host)
+				assert.Equal(t, expectedURL.Path, actualURL.Path)
+
+				// Compare the fragment if any
+				assert.Equal(t, expectedURL.Fragment, actualURL.Fragment)
+
+				// For query parameters, compare them independently of order
+				expectedQuery := expectedURL.Query()
+				actualQuery := actualURL.Query()
+
+				assert.Equal(t, len(expectedQuery), len(actualQuery), "Query parameter count does not match")
+
+				for key, expectedValues := range expectedQuery {
+					actualValues, exists := actualQuery[key]
+					assert.True(t, exists, "Expected query parameter %s not found", key)
+					assert.ElementsMatch(t, expectedValues, actualValues, "Values for parameter %s don't match", key)
+				}
+			}
 		})
 	}
 }

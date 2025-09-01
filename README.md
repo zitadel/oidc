@@ -18,6 +18,10 @@ The RP is certified for the [basic](https://www.certification.openid.net/plan-de
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
 
+> [!NOTE]
+> We currently have limited availability for feature reviews: 
+https://github.com/zitadel/oidc/discussions/785
+
 ## Basic Overview
 
 The most important packages of the library:
@@ -72,6 +76,15 @@ CLIENT_ID=web CLIENT_SECRET=secret ISSUER=http://oidc.local:9998/ SCOPES="openid
 ```
 
 > Note: Usernames are suffixed with the hostname (`test-user@localhost` or `test-user@oidc.local`)
+
+
+### Build Tags
+
+The library uses build tags to enable or disable features. The following build tags are available:
+
+| Build Tag | Description                                                                                                                                                              |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `no_otel`  | Disables the OTel instrumentation, which is enabled by default. This is useful if you do not want to use OTel or if you want to use a different instrumentation library. |
 
 ### Server configuration
 
@@ -156,10 +169,9 @@ Versions that also build are marked with :warning:.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| <1.21   | :x:                |
-| 1.21    | :warning:          |
-| 1.22    | :white_check_mark: |
+| <1.23   | :x:                |
 | 1.23    | :white_check_mark: |
+| 1.24    | :white_check_mark: |
 
 ## Why another library
 

@@ -130,7 +130,7 @@ func TestServerRoutes(t *testing.T) {
 				"client_id":     client.GetID(),
 				"client_secret": "secret",
 				"redirect_uri":  "https://example.com",
-				"code":          "123",
+				"code":          "abc",
 			},
 			wantCode: http.StatusBadRequest,
 			json:     `{"error":"invalid_grant", "error_description":"invalid code"}`,

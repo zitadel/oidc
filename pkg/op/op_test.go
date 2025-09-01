@@ -102,6 +102,7 @@ func TestRoutes(t *testing.T) {
 	authReq, err := storage.CreateAuthRequest(ctx, oidcAuthReq, "id1")
 	require.NoError(t, err)
 	storage.AuthRequestDone(authReq.GetID())
+	storage.SaveAuthCode(ctx, authReq.GetID(), "123")
 
 	accessToken, refreshToken, _, err := op.CreateAccessToken(ctx, authReq, op.AccessTokenTypeBearer, testProvider, client, "")
 	require.NoError(t, err)

@@ -91,10 +91,7 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	}
 	config := o.DeviceAuthorization()
 
-	deviceCode, err := NewDeviceCode(RecommendedDeviceCodeBytes)
-	if err != nil {
-		return nil, NewStatusError(err, http.StatusInternalServerError)
-	}
+	deviceCode, _ := NewDeviceCode(RecommendedDeviceCodeBytes)
 	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.DashInterval)
 	if err != nil {
 		return nil, NewStatusError(err, http.StatusInternalServerError)
@@ -163,11 +160,14 @@ func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuth
 // results in a 22 character base64 encoded string.
 const RecommendedDeviceCodeBytes = 16
 
+// NewDeviceCode generates a new cryptographically secure device code as a base64 encoded string.
+// The length of the string is nBytes * 4 / 3.
+// An error is never returned.
+//
+// TODO(v4): change return type to string alone.
 func NewDeviceCode(nBytes int) (string, error) {
 	bytes := make([]byte, nBytes)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", fmt.Errorf("%w getting entropy for device code", err)
-	}
+	rand.Read(bytes)
 	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 

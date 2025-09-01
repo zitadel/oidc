@@ -74,6 +74,17 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	ctx, span := tracer.Start(ctx, "AuthorizeCodeClient")
 	defer span.End()
 
+	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	codeChallenge := request.GetCodeChallenge()
+	err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, codeChallenge)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	if tokenReq.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
 		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
 		if !ok || !exchanger.AuthMethodPrivateKeyJWTSupported() {
@@ -83,9 +94,9 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 		if err != nil {
 			return nil, nil, err
 		}
-		request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
 		return request, client, err
 	}
+
 	client, err = exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
 	if err != nil {
 		return nil, nil, oidc.ErrInvalidClient().WithParent(err)
@@ -94,12 +105,10 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 		return nil, nil, oidc.ErrInvalidClient().WithDescription("private_key_jwt not allowed for this client")
 	}
 	if client.AuthMethod() == oidc.AuthMethodNone {
-		request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
-		if err != nil {
-			return nil, nil, err
+		if codeChallenge == nil {
+			return nil, nil, oidc.ErrInvalidRequest().WithDescription("PKCE required")
 		}
-		err = AuthorizeCodeChallenge(tokenReq.CodeVerifier, request.GetCodeChallenge())
-		return request, client, err
+		return request, client, nil
 	}
 	if client.AuthMethod() == oidc.AuthMethodPost && !exchanger.AuthMethodPostSupported() {
 		return nil, nil, oidc.ErrInvalidClient().WithDescription("auth_method post not supported")
@@ -108,7 +117,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 	if err != nil {
 		return nil, nil, err
 	}
-	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
+
 	return request, client, err
 }
 

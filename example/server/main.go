@@ -44,8 +44,15 @@ func main() {
 		logger.Error("cannot create UserStore", "error", err)
 		os.Exit(1)
 	}
-	storage := storage.NewStorage(store)
-	router := exampleop.SetupServer(issuer, storage, logger, false)
+
+	stor := storage.NewStorage(store)
+	router := exampleop.SetupServer(
+		issuer,
+		stor,
+		logger,
+		false,
+		//op.WithCrypto(newMyCrypto(sha256.Sum256([]byte("test")), logger)),
+	)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

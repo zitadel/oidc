@@ -6,6 +6,7 @@ import (
 	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
+	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -40,8 +41,14 @@ type AuthStorage interface {
 	//   registered the refresh_token grant type in advance
 	//
 	// * TokenExchangeRequest as returned by ValidateTokenExchangeRequest
-	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshTokenID string, expiration time.Time, err error)
-	TokenRequestByRefreshToken(ctx context.Context, refreshTokenID string) (RefreshTokenRequest, error)
+	//
+	// CreateAccessAndRefreshToken creates both access and refresh tokens.
+	// The returned refresh token is the actual token value that will be passed
+	// directly to the client. The storage implementation is responsible for
+	// creating the complete refresh token (JWT or opaque format). For refresh tokens,
+	// in either format, the token itself serves as both the identifier and the credential.
+	CreateAccessAndRefreshTokens(ctx context.Context, request TokenRequest, currentRefreshToken string) (accessTokenID string, newRefreshToken string, expiration time.Time, err error)
+	TokenRequestByRefreshToken(ctx context.Context, refreshToken string) (RefreshTokenRequest, error)
 
 	TerminateSession(ctx context.Context, userID string, clientID string) error
 
@@ -144,6 +151,12 @@ type CanSetUserinfoFromRequest interface {
 	SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, request IDTokenRequest, scopes []string) error
 }
 
+// CanGetPrivateClaimsFromRequest is an optional additional interface that may be implemented by
+// implementors of Storage. It allows setting the jwt token claims based on the request.
+type CanGetPrivateClaimsFromRequest interface {
+	GetPrivateClaimsFromRequest(ctx context.Context, request TokenRequest, restrictedScopes []string) (map[string]any, error)
+}
+
 // Storage is a required parameter for NewOpenIDProvider(). In addition to the
 // embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
 // then the grant type "client_credentials" will be supported. In that case, the access
@@ -164,6 +177,8 @@ type EndSessionRequest struct {
 	ClientID          string
 	IDTokenHintClaims *oidc.IDTokenClaims
 	RedirectURI       string
+	LogoutHint        string
+	UILocales         []language.Tag
 }
 
 var ErrDuplicateUserCode = errors.New("user code already exists")

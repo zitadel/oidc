@@ -14,32 +14,32 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.21', '1.22', '1.23']
+        go: ['1.23', '1.24']
     name: Go ${{ matrix.go }} test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v5.3.1
+      - uses: codecov/codecov-action@v5.5.0
         with:
           file: ./profile.cov
           name: codecov-go
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     needs: [test]
     if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - name: Source checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Semantic Release
       uses: cycjimmy/semantic-release-action@v4
       with:
