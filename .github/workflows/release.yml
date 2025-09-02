@@ -41,7 +41,7 @@ jobs:
     - name: Source checkout
       uses: actions/checkout@v5
     - name: Semantic Release
-      uses: cycjimmy/semantic-release-action@v4
+      uses: cycjimmy/semantic-release-action@v5
       with:
         dry_run: false
         semantic_version: 18.0.1
