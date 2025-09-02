@@ -37,18 +37,19 @@ var (
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
 type Storage struct {
-	lock          sync.Mutex
-	authRequests  map[string]*AuthRequest
-	codes         map[string]string
-	tokens        map[string]*Token
-	clients       map[string]*Client
-	userStore     UserStore
-	services      map[string]Service
-	refreshTokens map[string]*RefreshToken
-	signingKey    signingKey
-	deviceCodes   map[string]deviceAuthorizationEntry
-	userCodes     map[string]string
-	serviceUsers  map[string]*Client
+	lock               sync.Mutex
+	authRequests       map[string]*AuthRequest
+	codes              map[string]string
+	tokens             map[string]*Token
+	clients            map[string]*Client
+	userStore          UserStore
+	services           map[string]Service
+	refreshTokens      map[string]*RefreshToken
+	signingKey         signingKey
+	deviceCodes        map[string]deviceAuthorizationEntry
+	userCodes          map[string]string
+	serviceUsers       map[string]*Client
+	pushedAuthRequests map[string]*oidc.AuthRequest
 }
 
 type signingKey struct {
@@ -578,6 +579,30 @@ func (s *Storage) ValidateJWTProfileScopes(ctx context.Context, userID string, s
 		}
 	}
 	return allowedScopes, nil
+}
+
+// StorePAR implements the op.PARStorage interface.
+func (s *Storage) StorePAR(ctx context.Context, requestURI string, request *oidc.AuthRequest, _ time.Time) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.pushedAuthRequests[requestURI] = request
+
+	return nil
+}
+
+// GetPARState returns the current state of the pushed authorization request flow in the database.
+// Returned structure contains original auth request that should be used in auth API.
+func (s *Storage) GetPARState(ctx context.Context, requestURI string) (*oidc.AuthRequest, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	request, found := s.pushedAuthRequests[requestURI]
+	if !found {
+		return nil, errors.New("auth request wasn't found ")
+	}
+
+	return request, nil
 }
 
 // Health implements the op.Storage interface
