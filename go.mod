@@ -1,8 +1,6 @@
 module github.com/zitadel/oidc/v3
 
-go 1.23.7
-
-toolchain go1.24.1
+go 1.24
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
