@@ -21,6 +21,7 @@ type KeyFile struct {
 
 	// application
 	ClientID string `json:"clientId"`
+	AppID 	 string `json:"appId"`
 }
 
 func ConfigFromKeyFile(path string) (*KeyFile, error) {
