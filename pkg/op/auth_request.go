@@ -173,7 +173,7 @@ func ParseRequestObject(ctx context.Context, authReq *oidc.AuthRequest, storage 
 	}
 	keySet := &jwtProfileKeySet{storage: storage, clientID: requestObject.Issuer}
 	if err = oidc.CheckSignature(ctx, authReq.RequestParam, payload, requestObject, nil, keySet); err != nil {
-		return oidc.ErrInvalidRequest().WithParent(err).WithDescription(err.Error())
+		return oidc.ErrInvalidRequest().WithParent(err).WithDescription("invalid request signature")
 	}
 	CopyRequestObjectToAuthRequest(authReq, requestObject)
 	return nil
@@ -321,7 +321,8 @@ func checkURIAgainstRedirects(client Client, uri string) error {
 
 // ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
 func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
-	if uri == "" {
+	uri, err := url.QueryUnescape(uri)
+	if uri == "" || err != nil {
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}

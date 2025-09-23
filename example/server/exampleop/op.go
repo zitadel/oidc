@@ -51,7 +51,13 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newOP(storage, issuer, key, logger, extraOptions...)
+	provider, err := newOP(
+		storage,
+		issuer,
+		key,
+		logger,
+		extraOptions...,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,10 +90,16 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	return router
 }
 
-// newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
+// newOP will create an OpenID Provider for localhost on a specified port
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newOP(storage op.Storage, issuer string, key [32]byte, logger *slog.Logger, extraOptions ...op.Option) (op.OpenIDProvider, error) {
+func newOP(
+	storage op.Storage,
+	issuer string,
+	key [32]byte, // encryption key
+	logger *slog.Logger,
+	extraOptions ...op.Option,
+) (op.OpenIDProvider, error) {
 	config := &op.Config{
 		CryptoKey: key,
 

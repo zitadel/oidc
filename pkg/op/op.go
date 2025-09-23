@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/cors"
+	"github.com/zitadel/oidc/v3/internal/otel"
 	"github.com/zitadel/schema"
-	"go.opentelemetry.io/otel"
 	"golang.org/x/text/language"
 
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
@@ -158,7 +158,7 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	CryptoKey                         [32]byte
+	CryptoKey                         [32]byte // for encrypting access token via NewAESCrypto; will be overwritten by WithCrypto
 	DefaultLogoutRedirectURI          string
 	CodeMethodS256                    bool
 	AuthMethodPost                    bool
@@ -259,6 +259,7 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
+		crypto:            NewAESCrypto(config.CryptoKey),
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,
@@ -279,7 +280,6 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
 	o.encoder = oidc.NewEncoder()
-	o.crypto = NewAESCrypto(config.CryptoKey)
 	return o, nil
 }
 
@@ -657,6 +657,16 @@ func WithCORSOptions(opts *cors.Options) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *Provider) error {
 		o.logger = logger
+		return nil
+	}
+}
+
+// WithCrypto allows the user to pass their own Crypto implementation.
+//
+// If provided, this will overwrite Config.CryptoKey.
+func WithCrypto(crypto Crypto) Option {
+	return func(o *Provider) error {
+		o.crypto = crypto
 		return nil
 	}
 }
