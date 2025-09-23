@@ -15,6 +15,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/zitadel/logging"
+
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -324,7 +325,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
-// deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
+// Deprecated: use WithJWTProfile(SignerFromKeyPath(path)), resp. WithJWTProfile(SignerFromKeyAndKeyID(key, keyID) instead.
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
@@ -363,6 +364,8 @@ func WithSigningAlgsFromDiscovery() Option {
 
 type SignerFromKey func() (jose.Signer, error)
 
+// Deprecated: use [SignerFromKeyAndKeyID] instead.
+// The function will be removed in the next major release.
 func SignerFromKeyPath(path string) SignerFromKey {
 	return func() (jose.Signer, error) {
 		config, err := client.ConfigFromKeyFile(path)
@@ -373,6 +376,8 @@ func SignerFromKeyPath(path string) SignerFromKey {
 	}
 }
 
+// Deprecated: use [SignerFromKeyAndKeyID] instead.
+// The function will be removed in the next major release.
 func SignerFromKeyFile(fileData []byte) SignerFromKey {
 	return func() (jose.Signer, error) {
 		config, err := client.ConfigFromKeyFileData(fileData)

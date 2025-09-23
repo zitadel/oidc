@@ -9,6 +9,13 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	// ServiceUserID is the ID of the service user.
+	ServiceUserID = "service"
+	// ServiceUserKeyID is the key ID of the service user.
+	ServiceUserKeyID = "key1"
+)
+
 type User struct {
 	ID                string
 	Username          string
@@ -85,7 +92,7 @@ func NewUserStore(issuer string) UserStore {
 
 // ExampleClientID is only used in the example server
 func (u userStore) ExampleClientID() string {
-	return "service"
+	return ServiceUserID
 }
 
 func (u userStore) GetUserByID(id string) *User {
