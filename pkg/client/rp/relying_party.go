@@ -3,7 +3,10 @@ package rp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -64,6 +67,10 @@ type RelyingParty interface {
 	// GetDeviceAuthorizationEndpoint returns the endpoint which can
 	// be used to start a DeviceAuthorization flow.
 	GetDeviceAuthorizationEndpoint() string
+
+	// GetPushedAuthorizationRequestEndpoint returns the endpoint which can
+	// be used to start a PAR flow (RFC-9126).
+	GetPushedAuthorizationRequestEndpoint() string
 
 	// IDTokenVerifier returns the verifier used for oidc id_token verification
 	IDTokenVerifier() *IDTokenVerifier
@@ -146,6 +153,10 @@ func (rp *relyingParty) UserinfoEndpoint() string {
 
 func (rp *relyingParty) GetDeviceAuthorizationEndpoint() string {
 	return rp.endpoints.DeviceAuthorizationURL
+}
+
+func (rp *relyingParty) GetPushedAuthorizationRequestEndpoint() string {
+	return rp.endpoints.PushedAuthorizationRequestEndpoint
 }
 
 func (rp *relyingParty) GetEndSessionEndpoint() string {
@@ -396,12 +407,18 @@ func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 
 // AuthURL returns the auth request url
 // (wrapping the oauth2 `AuthCodeURL`)
-func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
+func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) *url.URL {
 	authOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
 		authOpts = append(authOpts, opt()...)
 	}
-	return rp.OAuthConfig().AuthCodeURL(state, authOpts...)
+
+	authURL, err := url.Parse(rp.OAuthConfig().AuthCodeURL(state, authOpts...))
+	if err != nil {
+		panic(err)
+	}
+
+	return authURL
 }
 
 // AuthURLHandler extends the `AuthURL` method with a http redirect handler
@@ -435,8 +452,51 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 			opts = append(opts, WithCodeChallenge(codeChallenge))
 		}
 
-		http.Redirect(w, r, AuthURL(state, rp, opts...), http.StatusFound)
+		authURL := AuthURL(state, rp, opts...)
+		if parURL := rp.GetPushedAuthorizationRequestEndpoint(); parURL != "" {
+			requestURI, err := pushedAuthorizationRequestAuthExtension(parURL, authURL.Query())
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(err.Error()))
+				return
+			}
+
+			authURL.RawQuery = url.Values{"request_uri": []string{requestURI}}.Encode()
+		}
+
+		http.Redirect(w, r, authURL.String(), http.StatusFound)
 	}
+}
+
+// pushedAuthorizationRequestAuthExtention implements first step of PAR (RFC-9126) extention,
+// providing request_uri for auth redirect.
+func pushedAuthorizationRequestAuthExtension(url string, query url.Values) (string, error) {
+	resp, err := http.PostForm(url, query)
+	if err != nil {
+		return "", fmt.Errorf("post form: %v", err)
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		// TODO: provide functionality for custom error handling per-code.
+		// See https://openid.net/specs/openid-connect-core-1_0.html#AuthError.
+		return "", errors.New(string(bodyBytes))
+	}
+
+	var parResp struct {
+		RequestURI string `json:"request_uri"`
+	}
+
+	err = json.Unmarshal(bodyBytes, &parResp)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal body: %v", err)
+	}
+
+	return parResp.RequestURI, nil
 }
 
 // GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
@@ -660,12 +720,13 @@ type OptionFunc func(RelyingParty)
 
 type Endpoints struct {
 	oauth2.Endpoint
-	IntrospectURL          string
-	UserinfoURL            string
-	JKWsURL                string
-	EndSessionURL          string
-	RevokeURL              string
-	DeviceAuthorizationURL string
+	IntrospectURL                      string
+	UserinfoURL                        string
+	JKWsURL                            string
+	EndSessionURL                      string
+	RevokeURL                          string
+	DeviceAuthorizationURL             string
+	PushedAuthorizationRequestEndpoint string
 }
 
 func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
@@ -674,12 +735,13 @@ func GetEndpoints(discoveryConfig *oidc.DiscoveryConfiguration) Endpoints {
 			AuthURL:  discoveryConfig.AuthorizationEndpoint,
 			TokenURL: discoveryConfig.TokenEndpoint,
 		},
-		IntrospectURL:          discoveryConfig.IntrospectionEndpoint,
-		UserinfoURL:            discoveryConfig.UserinfoEndpoint,
-		JKWsURL:                discoveryConfig.JwksURI,
-		EndSessionURL:          discoveryConfig.EndSessionEndpoint,
-		RevokeURL:              discoveryConfig.RevocationEndpoint,
-		DeviceAuthorizationURL: discoveryConfig.DeviceAuthorizationEndpoint,
+		IntrospectURL:                      discoveryConfig.IntrospectionEndpoint,
+		UserinfoURL:                        discoveryConfig.UserinfoEndpoint,
+		JKWsURL:                            discoveryConfig.JwksURI,
+		EndSessionURL:                      discoveryConfig.EndSessionEndpoint,
+		RevokeURL:                          discoveryConfig.RevocationEndpoint,
+		DeviceAuthorizationURL:             discoveryConfig.DeviceAuthorizationEndpoint,
+		PushedAuthorizationRequestEndpoint: discoveryConfig.PushedAuthorizationRequestEndpoint,
 	}
 }
 

@@ -30,6 +30,8 @@ type Configuration interface {
 	EndSessionEndpoint() *Endpoint
 	KeysEndpoint() *Endpoint
 	DeviceAuthorizationEndpoint() *Endpoint
+	PushedAuthorizationRequestEndpoint() *Endpoint
+
 	CheckSessionIframe() *Endpoint
 
 	AuthMethodPostSupported() bool
@@ -50,6 +52,7 @@ type Configuration interface {
 
 	SupportedUILocales() []language.Tag
 	DeviceAuthorization() DeviceAuthorizationConfig
+	PushedAuthorizationRequest() PushedAuthorizationRequestConfig
 
 	BackChannelLogoutSupported() bool
 	BackChannelLogoutSessionSupported() bool

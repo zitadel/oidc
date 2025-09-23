@@ -174,6 +174,21 @@ func (mr *MockStorageMockRecorder) GetKeyByIDAndClientID(arg0, arg1, arg2 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyByIDAndClientID", reflect.TypeOf((*MockStorage)(nil).GetKeyByIDAndClientID), arg0, arg1, arg2)
 }
 
+// GetPARState mocks base method.
+func (m *MockStorage) GetPARState(arg0 context.Context, arg1 string) (*oidc.AuthRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPARState", arg0, arg1)
+	ret0, _ := ret[0].(*oidc.AuthRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPARState indicates an expected call of GetPARState.
+func (mr *MockStorageMockRecorder) GetPARState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPARState", reflect.TypeOf((*MockStorage)(nil).GetPARState), arg0, arg1)
+}
+
 // GetPrivateClaimsFromScopes mocks base method.
 func (m *MockStorage) GetPrivateClaimsFromScopes(arg0 context.Context, arg1, arg2 string, arg3 []string) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
@@ -332,6 +347,20 @@ func (m *MockStorage) SigningKey(arg0 context.Context) (op.SigningKey, error) {
 func (mr *MockStorageMockRecorder) SigningKey(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SigningKey", reflect.TypeOf((*MockStorage)(nil).SigningKey), arg0)
+}
+
+// StorePAR mocks base method.
+func (m *MockStorage) StorePAR(arg0 context.Context, arg1 string, arg2 *oidc.AuthRequest, arg3 time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StorePAR", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StorePAR indicates an expected call of StorePAR.
+func (mr *MockStorageMockRecorder) StorePAR(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StorePAR", reflect.TypeOf((*MockStorage)(nil).StorePAR), arg0, arg1, arg2, arg3)
 }
 
 // TerminateSession mocks base method.

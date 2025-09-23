@@ -92,42 +92,25 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
-	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
-		err = ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
-		if err != nil {
-			AuthRequestError(w, r, nil, err, authorizer)
-			return
-		}
-	}
-	if authReq.ClientID == "" {
-		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing client_id"), authorizer)
-		return
-	}
-	if authReq.RedirectURI == "" {
-		AuthRequestError(w, r, nil, fmt.Errorf("auth request is missing redirect_uri"), authorizer)
+
+	storedReq, err := handlePushedAuthorizationRequest(
+		ctx, authReq.RequestURI, authorizer.Storage(),
+	)
+	if err != nil {
+		AuthRequestError(w, r, nil, err, authorizer)
 		return
 	}
 
-	var client Client
-	validation := func(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
-		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
-		if err != nil {
-			return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
-		}
-		return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+	if storedReq != nil {
+		authReq = storedReq
 	}
-	if validator, ok := authorizer.(AuthorizeValidator); ok {
-		validation = validator.ValidateAuthRequest
-	}
-	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
+
+	client, userID, err := validateAuthRequest(ctx, authReq, authorizer)
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer)
 		return
 	}
-	if authReq.RequestParam != "" {
-		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer)
-		return
-	}
+
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
@@ -148,6 +131,67 @@ func ParseAuthorizeRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.A
 		return nil, oidc.ErrInvalidRequest().WithDescription("cannot parse auth request").WithParent(err)
 	}
 	return authReq, nil
+}
+
+func handlePushedAuthorizationRequest(
+	ctx context.Context, requestURI string, storage Storage,
+) (*oidc.AuthRequest, error) {
+	if len(requestURI) == 0 {
+		return nil, nil
+	}
+
+	parStorage, err := assertPARStorage(storage)
+	if err != nil {
+		return nil, oidc.ErrInvalidRequest().WithDescription("PAR not supported")
+	}
+
+	req, err := parStorage.GetPARState(ctx, requestURI)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+func validateAuthRequest(
+	ctx context.Context, authReq *oidc.AuthRequest, authorizer Authorizer,
+) (Client, string, error) {
+	if authReq.RequestParam != "" && authorizer.RequestObjectSupported() {
+		err := ParseRequestObject(ctx, authReq, authorizer.Storage(), IssuerFromContext(ctx))
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	if authReq.ClientID == "" {
+		return nil, "", errors.New("auth request is missing client_id")
+	}
+	if authReq.RedirectURI == "" {
+		return nil, "", errors.New("auth request is missing redirect_uri")
+	}
+
+	var client Client
+	validation := func(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
+		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
+		if err != nil {
+			return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+		}
+		return ValidateAuthRequestClient(ctx, authReq, client, verifier)
+	}
+	if validator, ok := authorizer.(AuthorizeValidator); ok {
+		validation = validator.ValidateAuthRequest
+	}
+
+	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
+	if err != nil {
+		return nil, "", err
+	}
+
+	if authReq.RequestParam != "" {
+		return nil, "", oidc.ErrRequestNotSupported()
+	}
+
+	return client, userID, nil
 }
 
 // ParseRequestObject parse the `request` parameter, validates the token including the signature

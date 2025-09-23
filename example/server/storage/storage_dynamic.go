@@ -267,6 +267,27 @@ func (s *multiStorage) ValidateJWTProfileScopes(ctx context.Context, userID stri
 	return storage.ValidateJWTProfileScopes(ctx, userID, scopes)
 }
 
+// StorePAR implements the op.PARStorage interface.
+func (s *multiStorage) StorePAR(ctx context.Context, requestURI string, request *oidc.AuthRequest, expiresAt time.Time) error {
+	storage, err := s.storageFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	return storage.StorePAR(ctx, requestURI, request, expiresAt)
+}
+
+// GetPARState returns the current state of the pushed authorization request flow in the database.
+// Returned structure contains original auth request that should be used in auth API.
+func (s *multiStorage) GetPARState(ctx context.Context, requestURI string) (*oidc.AuthRequest, error) {
+	storage, err := s.storageFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return storage.GetPARState(ctx, requestURI)
+}
+
 // Health implements the op.Storage interface
 func (s *multiStorage) Health(ctx context.Context) error {
 	return nil

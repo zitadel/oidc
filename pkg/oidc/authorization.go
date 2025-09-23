@@ -67,28 +67,31 @@ const (
 // AuthRequest according to:
 // https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {
-	Scopes       SpaceDelimitedArray `json:"scope" schema:"scope"`
-	ResponseType ResponseType        `json:"response_type" schema:"response_type"`
-	ClientID     string              `json:"client_id" schema:"client_id"`
-	RedirectURI  string              `json:"redirect_uri" schema:"redirect_uri"`
+	Scopes       SpaceDelimitedArray `json:"scope,omitempty" schema:"scope"`
+	ResponseType ResponseType        `json:"response_type,omitempty" schema:"response_type"`
+	ClientID     string              `json:"client_id,omitempty" schema:"client_id"`
+	RedirectURI  string              `json:"redirect_uri,omitempty" schema:"redirect_uri"`
 
-	State string `json:"state" schema:"state"`
-	Nonce string `json:"nonce" schema:"nonce"`
+	State string `json:"state,omitempty" schema:"state"`
+	Nonce string `json:"nonce,omitempty" schema:"nonce"`
 
-	ResponseMode ResponseMode        `json:"response_mode" schema:"response_mode"`
-	Display      Display             `json:"display" schema:"display"`
-	Prompt       SpaceDelimitedArray `json:"prompt" schema:"prompt"`
-	MaxAge       *uint               `json:"max_age" schema:"max_age"`
-	UILocales    Locales             `json:"ui_locales" schema:"ui_locales"`
-	IDTokenHint  string              `json:"id_token_hint" schema:"id_token_hint"`
-	LoginHint    string              `json:"login_hint" schema:"login_hint"`
-	ACRValues    SpaceDelimitedArray `json:"acr_values" schema:"acr_values"`
+	ResponseMode ResponseMode        `json:"response_mode,omitempty" schema:"response_mode"`
+	Display      Display             `json:"display,omitempty" schema:"display"`
+	Prompt       SpaceDelimitedArray `json:"prompt,omitempty" schema:"prompt"`
+	MaxAge       *uint               `json:"max_age,omitempty" schema:"max_age"`
+	UILocales    Locales             `json:"ui_locales,omitempty" schema:"ui_locales"`
+	IDTokenHint  string              `json:"id_token_hint,omitempty" schema:"id_token_hint"`
+	LoginHint    string              `json:"login_hint,omitempty" schema:"login_hint"`
+	ACRValues    SpaceDelimitedArray `json:"acr_values,omitempty" schema:"acr_values"`
 
-	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
-	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
+	CodeChallenge       string              `json:"code_challenge,omitempty" schema:"code_challenge"`
+	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method,omitempty" schema:"code_challenge_method"`
 
 	// RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)
-	RequestParam string `schema:"request"`
+	RequestParam string `schema:"request,omitempty"`
+
+	// RequestParam enables OIDC requests to be passed via intermediate cache (RFC-9126)
+	RequestURI string `schema:"request_uri,omitempty"`
 }
 
 func (a *AuthRequest) LogValue() slog.Value {
