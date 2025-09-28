@@ -35,7 +35,7 @@ type DiscoveryConfiguration struct {
 	// It may also contain the OP's encryption keys that RPs can use to encrypt request to the OP.
 	JwksURI string `json:"jwks_uri,omitempty"`
 
-	// RegistrationEndpoint is the URL for the Dynamic Client Registration (RFC7591, RFC7592)..
+	// RegistrationEndpoint is the URL for the Dynamic Client Registration (RFC7591, RFC7592).
 	RegistrationEndpoint string `json:"registration_endpoint,omitempty"`
 
 	// ScopesSupported lists an array of supported scopes. This list must not include every supported scope by the OP.
