@@ -18,6 +18,10 @@ The RP is certified for the [basic](https://www.certification.openid.net/plan-de
 
 Whenever possible we tried to reuse / extend existing packages like `OAuth2 for Go`.
 
+> [!NOTE]
+> We currently have limited availability for feature reviews: 
+https://github.com/zitadel/oidc/discussions/785
+
 ## Basic Overview
 
 The most important packages of the library:
@@ -165,9 +169,9 @@ Versions that also build are marked with :warning:.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| <1.23   | :x:                |
-| 1.23    | :white_check_mark: |
+| <1.24   | :x:                |
 | 1.24    | :white_check_mark: |
+| 1.25    | :white_check_mark: |
 
 ## Why another library
 
