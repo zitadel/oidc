@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/zitadel/logging"
+
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -30,6 +31,7 @@ func main() {
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	keyPath := os.Getenv("KEY_PATH")
+	keyID := os.Getenv("KEY_ID")
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
@@ -71,7 +73,11 @@ func main() {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 	if keyPath != "" {
-		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
+		signingKey, err := os.ReadFile(keyPath)
+		if err != nil {
+			logrus.Fatalf("error reading key file %s", err.Error())
+		}
+		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(signingKey, keyID)))
 	}
 	if pkce {
 		options = append(options, rp.WithPKCE(cookieHandler))

@@ -60,6 +60,7 @@ func main() {
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	keyPath := os.Getenv("KEY_PATH")
+	keyID := os.Getenv("KEY_ID")
 	issuer := os.Getenv("ISSUER")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
@@ -70,7 +71,11 @@ func main() {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 	if keyPath != "" {
-		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
+		signingKey, err := os.ReadFile(keyPath)
+		if err != nil {
+			logrus.Fatalf("error reading key file %s", err.Error())
+		}
+		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(signingKey, keyID)))
 	}
 
 	provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, "", scopes, options...)

@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.23', '1.24']
+        go: ['1.24', '1.25']
     name: Go ${{ matrix.go }} test
     steps:
       - uses: actions/checkout@v5
@@ -27,7 +27,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v5.5.0
+      - uses: codecov/codecov-action@v5.5.1
         with:
           file: ./profile.cov
           name: codecov-go
@@ -41,7 +41,7 @@ jobs:
     - name: Source checkout
       uses: actions/checkout@v5
     - name: Semantic Release
-      uses: cycjimmy/semantic-release-action@v4
+      uses: cycjimmy/semantic-release-action@v5
       with:
         dry_run: false
         semantic_version: 18.0.1

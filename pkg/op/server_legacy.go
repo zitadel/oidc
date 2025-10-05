@@ -119,8 +119,10 @@ func (s *LegacyServer) Keys(ctx context.Context, r *Request[struct{}]) (*Respons
 	return NewResponse(jsonWebKeySet(keys)), nil
 }
 
+const authReqMissingClientID = "auth request is missing client_id"
+
 var (
-	ErrAuthReqMissingClientID    = errors.New("auth request is missing client_id")
+	ErrAuthReqMissingClientID    = errors.New(authReqMissingClientID)
 	ErrAuthReqMissingRedirectURI = errors.New("auth request is missing redirect_uri")
 )
 
@@ -138,7 +140,7 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 		}
 	}
 	if r.Data.ClientID == "" {
-		return nil, oidc.ErrInvalidRequest().WithParent(ErrAuthReqMissingClientID).WithDescription(ErrAuthReqMissingClientID.Error())
+		return nil, oidc.ErrInvalidRequest().WithParent(ErrAuthReqMissingClientID).WithDescription(authReqMissingClientID)
 	}
 	client, err := s.provider.Storage().GetClientByClientID(ctx, r.Data.ClientID)
 	if err != nil {

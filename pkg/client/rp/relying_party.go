@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -15,18 +17,28 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/zitadel/logging"
+
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 const (
+	pkceDisabled pkceState = iota
+	pkceEnabled
+	pkceFromDiscovery
+
 	idTokenKey = "id_token"
 	stateParam = "state"
 	pkceCode   = "pkce"
 )
 
-var ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
+var (
+	ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
+	ErrInvalidOption          = errors.New("invalid relying party option")
+)
+
+type pkceState uint8
 
 // RelyingParty declares the minimal interface for oidc clients
 type RelyingParty interface {
@@ -95,7 +107,7 @@ type relyingParty struct {
 	endpoints                   Endpoints
 	oauthConfig                 *oauth2.Config
 	oauth2Only                  bool
-	pkce                        bool
+	pkce                        pkceState
 	useSigningAlgsFromDiscovery bool
 
 	httpClient    *http.Client
@@ -120,7 +132,7 @@ func (rp *relyingParty) Issuer() string {
 }
 
 func (rp *relyingParty) IsPKCE() bool {
-	return rp.pkce
+	return rp.pkce == pkceEnabled
 }
 
 func (rp *relyingParty) CookieHandler() *httphelper.CookieHandler {
@@ -194,12 +206,20 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 		oauth2Only:          true,
 		unauthorizedHandler: DefaultUnauthorizedHandler,
 		oauthAuthStyle:      oauth2.AuthStyleAutoDetect,
+		pkce:                pkceDisabled,
 	}
 
 	for _, optFunc := range options {
 		if err := optFunc(rp); err != nil {
 			return nil, err
 		}
+	}
+
+	if rp.pkce == pkceFromDiscovery {
+		return nil, fmt.Errorf(
+			"%w: PKCE from discovery is not supported for OAuth2 only relying parties",
+			ErrInvalidOption,
+		)
 	}
 
 	rp.oauthConfig.Endpoint.AuthStyle = rp.oauthAuthStyle
@@ -227,6 +247,7 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 		httpClient:     httphelper.DefaultHTTPClient,
 		oauth2Only:     false,
 		oauthAuthStyle: oauth2.AuthStyleAutoDetect,
+		pkce:           pkceDisabled,
 	}
 
 	for _, optFunc := range options {
@@ -248,6 +269,20 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 
 	rp.oauthConfig.Endpoint.AuthStyle = rp.oauthAuthStyle
 	rp.endpoints.Endpoint.AuthStyle = rp.oauthAuthStyle
+
+	if rp.pkce == pkceFromDiscovery {
+		if slices.ContainsFunc(
+			discoveryConfiguration.CodeChallengeMethodsSupported,
+			func(method oidc.CodeChallengeMethod) bool {
+				return method == oidc.CodeChallengeMethodPlain ||
+					method == oidc.CodeChallengeMethodS256
+			},
+		) {
+			rp.pkce = pkceEnabled
+		} else {
+			rp.pkce = pkceDisabled
+		}
+	}
 
 	// avoid races by calling these early
 	_ = rp.IDTokenVerifier()     // sets idTokenVerifier
@@ -280,7 +315,19 @@ func WithCookieHandler(cookieHandler *httphelper.CookieHandler) Option {
 // and exchanging the code challenge
 func WithPKCE(cookieHandler *httphelper.CookieHandler) Option {
 	return func(rp *relyingParty) error {
-		rp.pkce = true
+		rp.pkce = pkceEnabled
+		rp.cookieHandler = cookieHandler
+		return nil
+	}
+}
+
+// WithPKCEFromDiscovery enables Oauth2 Code Challenge if support is found in the discovery response from the OP.
+// Passing this option to a Oauth2-only RP will result in an error, as there is no discovery call.
+// It also sets a `CookieHandler` for securing the various redirects
+// and exchanging the code challenge
+func WithPKCEFromDiscovery(cookieHandler *httphelper.CookieHandler) Option {
+	return func(rp *relyingParty) error {
+		rp.pkce = pkceFromDiscovery
 		rp.cookieHandler = cookieHandler
 		return nil
 	}
@@ -324,7 +371,7 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 
 // WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
 //
-// deprecated: use WithJWTProfile(SignerFromKeyPath(path)) instead
+// Deprecated: use WithJWTProfile(SignerFromKeyPath(path)), resp. WithJWTProfile(SignerFromKeyAndKeyID(key, keyID) instead.
 func WithClientKey(path string) Option {
 	return WithJWTProfile(SignerFromKeyPath(path))
 }
@@ -363,6 +410,8 @@ func WithSigningAlgsFromDiscovery() Option {
 
 type SignerFromKey func() (jose.Signer, error)
 
+// Deprecated: use [SignerFromKeyAndKeyID] instead.
+// The function will be removed in the next major release.
 func SignerFromKeyPath(path string) SignerFromKey {
 	return func() (jose.Signer, error) {
 		config, err := client.ConfigFromKeyFile(path)
@@ -373,6 +422,8 @@ func SignerFromKeyPath(path string) SignerFromKey {
 	}
 }
 
+// Deprecated: use [SignerFromKeyAndKeyID] instead.
+// The function will be removed in the next major release.
 func SignerFromKeyFile(fileData []byte) SignerFromKey {
 	return func() (jose.Signer, error) {
 		config, err := client.ConfigFromKeyFileData(fileData)
