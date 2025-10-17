@@ -23,6 +23,7 @@ type KeyFile struct {
 
 	// application
 	ClientID string `json:"clientId"`
+	AppID 	 string `json:"appId"`
 }
 
 // Deprecated: use [github.com/zitadel/zitadel-go/v3/pkg/client.ConfigFromKeyFile] instead.
