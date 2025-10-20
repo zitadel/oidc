@@ -64,7 +64,7 @@ func SubjectCheck(check func(request *oidc.JWTTokenRequest) error) JWTProfileVer
 //
 // checks audience, exp, iat, signature and that issuer and sub are the same
 func VerifyJWTAssertion(ctx context.Context, assertion string, v *JWTProfileVerifier) (*oidc.JWTTokenRequest, error) {
-	ctx, span := tracer.Start(ctx, "VerifyJWTAssertion")
+	ctx, span := Tracer.Start(ctx, "VerifyJWTAssertion")
 	defer span.End()
 
 	request := new(oidc.JWTTokenRequest)
@@ -118,7 +118,7 @@ type jwtProfileKeySet struct {
 
 // VerifySignature implements oidc.KeySet by getting the public key from Storage implementation
 func (k *jwtProfileKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
-	ctx, span := tracer.Start(ctx, "VerifySignature")
+	ctx, span := Tracer.Start(ctx, "VerifySignature")
 	defer span.End()
 
 	keyID, _ := oidc.GetKeyIDAndAlg(jws)
