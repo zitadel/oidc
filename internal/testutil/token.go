@@ -10,7 +10,7 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/muhlemmer/gu"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 // KeySet implements oidc.Keys

@@ -17,7 +17,7 @@ As first steps we will:
 3. Tidy the module file;
 
 ```bash
-go get -u github.com/zitadel/oidc/v3
+go get -u github.com/datasapiens/oidc/v3
 find . -type f -name '*.go' | xargs sed -i \
     -e 's/github\.com\/zitadel\/oidc\/v2/github.com\/zitadel\/oidc\/v3/g'
 go mod tidy
@@ -39,7 +39,7 @@ go mod tidy
 ### op
 
 ```go
-import "github.com/zitadel/oidc/v3/pkg/op"
+import "github.com/datasapiens/oidc/v3/pkg/op"
 ```
 
 #### Logger
@@ -51,11 +51,11 @@ Most users of the OP package with the storage interface will not experience brea
 
 The `OpenIDProvider` and sub-interfaces like `Authorizer` and `Exchanger` got a `Logger()` method to return the configured logger. This logger is in turn used by `AuthRequestError()`. You configure the logger with the `WithLogger()` for the `Provider`. By default the `slog.Default()` is used.
 
-We also provide a new optional interface: [`LogAuthRequest`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#LogAuthRequest). If an `AuthRequest` implements this interface, it is completely passed into the logger after an error. Its `LogValue()` will be used by `slog` to print desired fields. This allows omitting sensitive fields you wish not no print. If the interface is not implemented, no `AuthRequest` details will ever be printed.
+We also provide a new optional interface: [`LogAuthRequest`](https://pkg.go.dev/github.com/datasapiens/oidc/v3/pkg/op#LogAuthRequest). If an `AuthRequest` implements this interface, it is completely passed into the logger after an error. Its `LogValue()` will be used by `slog` to print desired fields. This allows omitting sensitive fields you wish not no print. If the interface is not implemented, no `AuthRequest` details will ever be printed.
 
 #### Server interface
 
-We've added a new [`Server`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#Server) interface. This interface is experimental and subject to change. See [issue 440](https://github.com/zitadel/oidc/issues/440) for the motivation and discussion around this new interface.
+We've added a new [`Server`](https://pkg.go.dev/github.com/datasapiens/oidc/v3/pkg/op#Server) interface. This interface is experimental and subject to change. See [issue 440](https://github.com/datasapiens/oidc/issues/440) for the motivation and discussion around this new interface.
 Usage of the new interface is not required, but may be used for advanced scenarios when working with the `Storage` interface isn't the optimal solution for your app (like we experienced in [Zitadel](https://github.com/zitadel/zitadel)).
 
 #### AuthRequestError
@@ -129,7 +129,7 @@ find . -type f -name '*.go' | xargs sed -i \
     -e 's/op\.CreateDiscoveryConfig(/op.CreateDiscoveryConfig(context.TODO(), /g'
 ```
 
-It now takes the issuer out of the context using the [`IssuerFromContext`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#IssuerFromContext) functionality,
+It now takes the issuer out of the context using the [`IssuerFromContext`](https://pkg.go.dev/github.com/datasapiens/oidc/v3/pkg/op#IssuerFromContext) functionality,
 instead of the `config.IssuerFromRequest()` method.
 
 #### CreateRouter
@@ -161,7 +161,7 @@ find . -type f -name '*.go' | xargs sed -i \
 ### client
 
 ```go
-import "github.com/zitadel/oidc/v3/pkg/client"
+import "github.com/datasapiens/oidc/v3/pkg/client"
 ```
 
 #### Context
@@ -200,7 +200,7 @@ find . -type f -name '*.go' | xargs sed -i \
 ### client/rp
 
 ```go
-import "github.com/zitadel/oidc/v3/pkg/client/rs"
+import "github.com/datasapiens/oidc/v3/pkg/client/rs"
 ```
 
 #### Discover
@@ -243,7 +243,7 @@ Users that called `tokens.Extra("id_token").(string)` and a subsequent `VerifyTo
 1. A context must be passed as first argument;
 2. The function is now generic and requires a type argument for the returned user info object;
 
-For most use cases `*oidc.UserInfo` can be used a type argument. A [custom implementation](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/client/rp#example-Userinfo-Custom) of `rp.SubjectGetter` can be used if type-safe access to custom claims is required.
+For most use cases `*oidc.UserInfo` can be used a type argument. A [custom implementation](https://pkg.go.dev/github.com/datasapiens/oidc/v3/pkg/client/rp#example-Userinfo-Custom) of `rp.SubjectGetter` can be used if type-safe access to custom claims is required.
 
 ```bash
 find . -type f -name '*.go' | xargs sed -i \
@@ -268,7 +268,7 @@ find . -type f -name '*.go' | xargs sed -i \
 ### client/rs
 
 ```go
-import "github.com/zitadel/oidc/v3/pkg/client/rs"
+import "github.com/datasapiens/oidc/v3/pkg/client/rs"
 ```
 
 #### NewResourceServer
@@ -283,7 +283,7 @@ find . -type f -name '*.go' | xargs sed -i \
 
 #### Introspect
 
-`Introspect` is now generic and requires a type argument for the returned introspection response. For most use cases `*oidc.IntrospectionResponse` can be used as type argument. Any other response type if type-safe access to [custom claims](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/client/rs#example-Introspect-Custom) is required.
+`Introspect` is now generic and requires a type argument for the returned introspection response. For most use cases `*oidc.IntrospectionResponse` can be used as type argument. Any other response type if type-safe access to [custom claims](https://pkg.go.dev/github.com/datasapiens/oidc/v3/pkg/client/rs#example-Introspect-Custom) is required.
 
 ```bash
 find . -type f -name '*.go' | xargs sed -i \
@@ -325,7 +325,7 @@ Warnings:
 - The script has been tested on the [ZITADEL](https://github.com/zitadel/zitadel) project, but we do not use all affected symbols. Parts of the script are mere guesswork.
 
 ```bash
-go get -u github.com/zitadel/oidc/v3
+go get -u github.com/datasapiens/oidc/v3
 find . -type f -name '*.go' | xargs sed -i \
     -e 's/github\.com\/zitadel\/oidc\/v2/github.com\/zitadel\/oidc\/v3/g' \
     -e 's/gopkg.in\/square\/go-jose\.v2/github.com\/go-jose\/go-jose\/v3/g' \

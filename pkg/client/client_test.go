@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 func TestDiscover(t *testing.T) {
@@ -26,7 +26,7 @@ func TestDiscover(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name: "spotify", // https://github.com/zitadel/oidc/issues/406
+			name: "spotify", // https://github.com/datasapiens/oidc/issues/406
 			args: args{
 				issuer: "https://accounts.spotify.com",
 			},

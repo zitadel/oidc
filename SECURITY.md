@@ -14,7 +14,7 @@ We currently support the following version of the OIDC framework:
 | 3.x.x    | :heavy_check_mark: | [main][3]   | supported                            |
 | 4.0.0-xx | :white_check_mark: | [next][4]   | [development branch]                 |
 
-[1]: https://github.com/zitadel/oidc/tree/2.11.x
-[2]: https://github.com/zitadel/oidc/discussions/458
-[3]: https://github.com/zitadel/oidc/tree/main
-[4]: https://github.com/zitadel/oidc/tree/next
+[1]: https://github.com/datasapiens/oidc/tree/2.11.x
+[2]: https://github.com/datasapiens/oidc/discussions/458
+[3]: https://github.com/datasapiens/oidc/tree/main
+[4]: https://github.com/datasapiens/oidc/tree/next

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/zitadel/oidc/v3/pkg/crypto"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/datasapiens/oidc/v3/pkg/crypto"
+	"github.com/datasapiens/oidc/v3/pkg/op"
 	"log/slog"
 )
 

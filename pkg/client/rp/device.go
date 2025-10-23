@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zitadel/oidc/v3/pkg/client"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/client"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {

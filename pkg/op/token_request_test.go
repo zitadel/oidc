@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/op"
 )
 
 func TestAuthorizeCodeChallenge(t *testing.T) {

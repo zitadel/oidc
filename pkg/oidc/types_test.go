@@ -661,7 +661,7 @@ func TestTime_UnmarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "RFC3339", // https://github.com/zitadel/oidc/issues/292
+			name: "RFC3339", // https://github.com/datasapiens/oidc/issues/292
 			json: `{"updated_at": "2021-05-11T21:13:25.566Z"}`,
 			want: dst{UpdatedAt: 1620767605},
 		},

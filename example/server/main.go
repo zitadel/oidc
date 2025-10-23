@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/zitadel/oidc/v3/example/server/config"
-	"github.com/zitadel/oidc/v3/example/server/exampleop"
-	"github.com/zitadel/oidc/v3/example/server/storage"
+	"github.com/datasapiens/oidc/v3/example/server/config"
+	"github.com/datasapiens/oidc/v3/example/server/exampleop"
+	"github.com/datasapiens/oidc/v3/example/server/storage"
 )
 
 func getUserStore(cfg *config.Config) (storage.UserStore, error) {

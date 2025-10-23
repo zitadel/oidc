@@ -8,7 +8,7 @@ import (
 	jose "github.com/go-jose/go-jose/v4"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 type AuthStorage interface {

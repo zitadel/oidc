@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tu "github.com/zitadel/oidc/v3/internal/testutil"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	tu "github.com/datasapiens/oidc/v3/internal/testutil"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 func TestParseToken(t *testing.T) {

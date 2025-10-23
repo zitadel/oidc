@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v3/example/server/storage"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/datasapiens/oidc/v3/example/server/storage"
+	"github.com/datasapiens/oidc/v3/pkg/op"
 )
 
 const (

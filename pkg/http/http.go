@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 var DefaultHTTPClient = &http.Client{

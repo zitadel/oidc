@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zitadel/oidc/v3/pkg/client/rp"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/client/rp"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 type UserInfo struct {

@@ -12,17 +12,17 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
-	"github.com/zitadel/oidc/v3/internal/otel"
+	"github.com/datasapiens/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v3/pkg/crypto"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/datasapiens/oidc/v3/pkg/crypto"
+	httphelper "github.com/datasapiens/oidc/v3/pkg/http"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 var (
 	Encoder = httphelper.Encoder(oidc.NewEncoder())
-	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
+	Tracer  = otel.Tracer("github.com/datasapiens/oidc/pkg/client")
 )
 
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration

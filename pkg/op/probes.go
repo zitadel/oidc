@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	httphelper "github.com/datasapiens/oidc/v3/pkg/http"
 )
 
 type ProbesFn func(context.Context) error

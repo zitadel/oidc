@@ -275,7 +275,7 @@ func (ts *Time) UnmarshalJSON(data []byte) error {
 		*ts = Time(x)
 	case string:
 		// Compatibility with Auth0:
-		// https://github.com/zitadel/oidc/issues/292
+		// https://github.com/datasapiens/oidc/issues/292
 		tt, err := time.Parse(time.RFC3339, x)
 		if err != nil {
 			return fmt.Errorf("oidc.Time: %w", err)
