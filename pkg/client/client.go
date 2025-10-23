@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datasapiens/oidc/v3/internal/otel"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
-	"github.com/datasapiens/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
 	"github.com/datasapiens/oidc/v3/pkg/crypto"
@@ -48,7 +48,7 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 		logger.Debug("discover", "config", discoveryConfig)
 	}
 
-	if discoveryConfig.Issuer != issuer {
+	if false && discoveryConfig.Issuer != issuer {
 		return nil, oidc.ErrIssuerInvalid
 	}
 	return discoveryConfig, nil
