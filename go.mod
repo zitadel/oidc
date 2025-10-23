@@ -1,4 +1,4 @@
-module github.com/zitadel/oidc/v3
+module github.com/datasapiens/oidc/v3
 
 go 1.24.0
 
