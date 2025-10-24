@@ -5,16 +5,16 @@ import (
 	"testing"
 	"time"
 
+	tu "github.com/datasapiens/oidc/v3/internal/testutil"
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tu "github.com/datasapiens/oidc/v3/internal/testutil"
-	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 func TestVerifyTokens(t *testing.T) {
 	verifier := &IDTokenVerifier{
-		Issuer:            tu.ValidIssuer,
+		Issuers:           []string{tu.ValidIssuer},
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
 		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
@@ -93,7 +93,7 @@ func TestVerifyTokens(t *testing.T) {
 
 func TestVerifyIDToken(t *testing.T) {
 	verifier := &IDTokenVerifier{
-		Issuer:            tu.ValidIssuer,
+		Issuers:           []string{tu.ValidIssuer},
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
 		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
@@ -341,7 +341,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 				},
 			},
 			want: &IDTokenVerifier{
-				Issuer:            tu.ValidIssuer,
+				Issuers:           []string{tu.ValidIssuer},
 				Offset:            time.Minute,
 				MaxAgeIAT:         time.Hour,
 				ClientID:          tu.ValidClientID,
@@ -355,7 +355,7 @@ func TestNewIDTokenVerifier(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewIDTokenVerifier(tt.args.issuer, tt.args.clientID, tt.args.keySet, tt.args.options...)
+			got := NewIDTokenVerifier([]string{tt.args.issuer}, tt.args.clientID, tt.args.keySet, tt.args.options...)
 			assert.Equal(t, tt.want, got)
 		})
 	}

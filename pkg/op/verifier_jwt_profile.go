@@ -34,7 +34,7 @@ func NewJWTProfileVerifierKeySet(keySet oidc.KeySet, issuer string, maxAgeIAT, o
 func newJWTProfileVerifier(storage JWTProfileKeyStorage, keySet oidc.KeySet, issuer string, maxAgeIAT, offset time.Duration, opts ...JWTProfileVerifierOption) *JWTProfileVerifier {
 	j := &JWTProfileVerifier{
 		Verifier: oidc.Verifier{
-			Issuer:    issuer,
+			Issuers:   []string{issuer},
 			MaxAgeIAT: maxAgeIAT,
 			Offset:    offset,
 		},
@@ -73,7 +73,11 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v *JWTProfileVeri
 		return nil, err
 	}
 
-	if err = oidc.CheckAudience(request, v.Issuer); err != nil {
+	if len(v.Issuers) == 0 {
+		return nil, errors.New("no issuers provided")
+	}
+
+	if err = oidc.CheckAudience(request, v.Issuers[0]); err != nil {
 		return nil, err
 	}
 

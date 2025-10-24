@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,11 +28,15 @@ var (
 
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
-func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
+func Discover(ctx context.Context, issuers []string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
 	ctx, span := Tracer.Start(ctx, "Discover")
 	defer span.End()
 
-	wellKnown := strings.TrimSuffix(issuer, "/") + oidc.DiscoveryEndpoint
+	wellKnown := ""
+	if len(issuers) > 0 {
+		wellKnown = strings.TrimSuffix(issuers[0], "/") + oidc.DiscoveryEndpoint
+	}
+
 	if len(wellKnownUrl) == 1 && wellKnownUrl[0] != "" {
 		wellKnown = wellKnownUrl[0]
 	}
@@ -48,7 +53,7 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 		logger.Debug("discover", "config", discoveryConfig)
 	}
 
-	if false && discoveryConfig.Issuer != issuer {
+	if !slices.Contains(issuers, discoveryConfig.Issuer) {
 		return nil, oidc.ErrIssuerInvalid
 	}
 	return discoveryConfig, nil

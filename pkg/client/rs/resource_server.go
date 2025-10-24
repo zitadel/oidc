@@ -73,7 +73,7 @@ func newResourceServer(ctx context.Context, issuer string, authorizer func() (an
 		optFunc(rs)
 	}
 	if rs.introspectURL == "" || rs.tokenURL == "" {
-		config, err := client.Discover(ctx, rs.issuer, rs.httpClient)
+		config, err := client.Discover(ctx, []string{issuer}, rs.httpClient)
 		if err != nil {
 			return nil, err
 		}

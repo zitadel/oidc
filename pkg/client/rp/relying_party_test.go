@@ -20,7 +20,7 @@ import (
 
 func Test_verifyTokenResponse(t *testing.T) {
 	verifier := &IDTokenVerifier{
-		Issuer:            tu.ValidIssuer,
+		Issuers:           []string{tu.ValidIssuer},
 		MaxAgeIAT:         2 * time.Minute,
 		ClientID:          tu.ValidClientID,
 		Offset:            time.Second,

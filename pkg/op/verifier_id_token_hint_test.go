@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	tu "github.com/datasapiens/oidc/v3/internal/testutil"
 	"github.com/datasapiens/oidc/v3/pkg/oidc"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewIDTokenHintVerifier(t *testing.T) {
@@ -30,8 +30,8 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 				keySet: tu.KeySet{},
 			},
 			want: &IDTokenHintVerifier{
-				Issuer: tu.ValidIssuer,
-				KeySet: tu.KeySet{},
+				Issuers: []string{tu.ValidIssuer},
+				KeySet:  tu.KeySet{},
 			},
 		},
 		{
@@ -44,7 +44,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 				},
 			},
 			want: &IDTokenHintVerifier{
-				Issuer:            tu.ValidIssuer,
+				Issuers:           []string{tu.ValidIssuer},
 				KeySet:            tu.KeySet{},
 				SupportedSignAlgs: []string{"ABC", "DEF"},
 			},
@@ -67,7 +67,7 @@ func Test_IDTokenHintExpiredError(t *testing.T) {
 
 func TestVerifyIDTokenHint(t *testing.T) {
 	verifier := &IDTokenHintVerifier{
-		Issuer:            tu.ValidIssuer,
+		Issuers:           []string{tu.ValidIssuer},
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
 		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},

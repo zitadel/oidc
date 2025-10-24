@@ -49,7 +49,7 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckIssuer(claims, v.Issuer); err != nil {
+	if err = oidc.CheckIssuer(claims, v.Issuers); err != nil {
 		return nilClaims, err
 	}
 
@@ -110,9 +110,9 @@ func VerifyAccessToken(accessToken, atHash string, sigAlgorithm jose.SignatureAl
 }
 
 // NewIDTokenVerifier returns a oidc.Verifier suitable for ID token verification.
-func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...VerifierOption) *IDTokenVerifier {
+func NewIDTokenVerifier(issuers []string, clientID string, keySet oidc.KeySet, options ...VerifierOption) *IDTokenVerifier {
 	v := &IDTokenVerifier{
-		Issuer:   issuer,
+		Issuers:  issuers,
 		ClientID: clientID,
 		KeySet:   keySet,
 		Offset:   time.Second,

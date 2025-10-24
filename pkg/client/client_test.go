@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/datasapiens/oidc/v3/pkg/oidc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/datasapiens/oidc/v3/pkg/oidc"
 )
 
 func TestDiscover(t *testing.T) {
@@ -45,7 +45,7 @@ func TestDiscover(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Discover(context.Background(), tt.args.issuer, http.DefaultClient, tt.args.wellKnownUrl...)
+			got, err := Discover(context.Background(), []string{tt.args.issuer}, http.DefaultClient, tt.args.wellKnownUrl...)
 			require.ErrorIs(t, err, tt.wantErr)
 			if tt.wantFields == nil {
 				return

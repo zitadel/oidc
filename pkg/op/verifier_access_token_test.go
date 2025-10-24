@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	tu "github.com/datasapiens/oidc/v3/internal/testutil"
 	"github.com/datasapiens/oidc/v3/pkg/oidc"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewAccessTokenVerifier(t *testing.T) {
@@ -29,8 +29,8 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 				keySet: tu.KeySet{},
 			},
 			want: &AccessTokenVerifier{
-				Issuer: tu.ValidIssuer,
-				KeySet: tu.KeySet{},
+				Issuers: []string{tu.ValidIssuer},
+				KeySet:  tu.KeySet{},
 			},
 		},
 		{
@@ -43,7 +43,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 				},
 			},
 			want: &AccessTokenVerifier{
-				Issuer:            tu.ValidIssuer,
+				Issuers:           []string{tu.ValidIssuer},
 				KeySet:            tu.KeySet{},
 				SupportedSignAlgs: []string{"ABC", "DEF"},
 			},
@@ -59,7 +59,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 
 func TestVerifyAccessToken(t *testing.T) {
 	verifier := &AccessTokenVerifier{
-		Issuer:            tu.ValidIssuer,
+		Issuers:           []string{tu.ValidIssuer},
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
 		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},

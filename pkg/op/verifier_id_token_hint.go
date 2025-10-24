@@ -19,8 +19,8 @@ func WithSupportedIDTokenHintSigningAlgorithms(algs ...string) IDTokenHintVerifi
 
 func NewIDTokenHintVerifier(issuer string, keySet oidc.KeySet, opts ...IDTokenHintVerifierOpt) *IDTokenHintVerifier {
 	verifier := &IDTokenHintVerifier{
-		Issuer: issuer,
-		KeySet: keySet,
+		Issuers: []string{issuer},
+		KeySet:  keySet,
 	}
 	for _, opt := range opts {
 		opt(verifier)
@@ -60,7 +60,7 @@ func VerifyIDTokenHint[C oidc.Claims](ctx context.Context, token string, v *IDTo
 		return nilClaims, err
 	}
 
-	if err := oidc.CheckIssuer(claims, v.Issuer); err != nil {
+	if err := oidc.CheckIssuer(claims, v.Issuers); err != nil {
 		return nilClaims, err
 	}
 

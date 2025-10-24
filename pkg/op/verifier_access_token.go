@@ -19,8 +19,8 @@ func WithSupportedAccessTokenSigningAlgorithms(algs ...string) AccessTokenVerifi
 // NewAccessTokenVerifier returns a AccessTokenVerifier suitable for access token verification.
 func NewAccessTokenVerifier(issuer string, keySet oidc.KeySet, opts ...AccessTokenVerifierOpt) *AccessTokenVerifier {
 	verifier := &AccessTokenVerifier{
-		Issuer: issuer,
-		KeySet: keySet,
+		Issuers: []string{issuer},
+		KeySet:  keySet,
 	}
 	for _, opt := range opts {
 		opt(verifier)
@@ -44,7 +44,7 @@ func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v *Acce
 		return nilClaims, err
 	}
 
-	if err := oidc.CheckIssuer(claims, v.Issuer); err != nil {
+	if err := oidc.CheckIssuer(claims, v.Issuers); err != nil {
 		return nilClaims, err
 	}
 

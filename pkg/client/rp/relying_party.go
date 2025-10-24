@@ -102,7 +102,7 @@ var DefaultUnauthorizedHandler UnauthorizedHandler = func(w http.ResponseWriter,
 }
 
 type relyingParty struct {
-	issuer                      string
+	issuers                     []string
 	DiscoveryEndpoint           string
 	endpoints                   Endpoints
 	oauthConfig                 *oauth2.Config
@@ -128,7 +128,15 @@ func (rp *relyingParty) OAuthConfig() *oauth2.Config {
 }
 
 func (rp *relyingParty) Issuer() string {
-	return rp.issuer
+	if len(rp.issuers) == 0 {
+		return ""
+	}
+
+	return rp.issuers[0]
+}
+
+func (rp *relyingParty) Issuers() []string {
+	return rp.issuers
 }
 
 func (rp *relyingParty) IsPKCE() bool {
@@ -169,7 +177,7 @@ func (rp *relyingParty) GetRevokeEndpoint() string {
 
 func (rp *relyingParty) IDTokenVerifier() *IDTokenVerifier {
 	if rp.idTokenVerifier == nil {
-		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuer, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
+		rp.idTokenVerifier = NewIDTokenVerifier(rp.issuers, rp.oauthConfig.ClientID, NewRemoteKeySet(rp.httpClient, rp.endpoints.JKWsURL), rp.verifierOpts...)
 	}
 	return rp.idTokenVerifier
 }
@@ -236,8 +244,16 @@ func NewRelyingPartyOAuth(config *oauth2.Config, options ...Option) (RelyingPart
 // issuer, clientID, clientSecret, redirectURI, scopes and possible configOptions
 // it will run discovery on the provided issuer and use the found endpoints
 func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, redirectURI string, scopes []string, options ...Option) (RelyingParty, error) {
+
+	return NewRelyingPartyOIDCWithIssuers(ctx, []string{issuer}, clientID, clientSecret, redirectURI, scopes, options...)
+}
+
+// NewRelyingPartyOIDCWithIssuers creates an (OIDC) RelyingParty with the given
+// issuers, clientID, clientSecret, redirectURI, scopes and possible configOptions
+// it will run discovery on the provided issuers and use the found endpoints
+func NewRelyingPartyOIDCWithIssuers(ctx context.Context, issuers []string, clientID, clientSecret, redirectURI string, scopes []string, options ...Option) (RelyingParty, error) {
 	rp := &relyingParty{
-		issuer: issuer,
+		issuers: issuers,
 		oauthConfig: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -256,7 +272,7 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 		}
 	}
 	ctx = logCtxWithRPData(ctx, rp, "function", "NewRelyingPartyOIDC")
-	discoveryConfiguration, err := client.Discover(ctx, rp.issuer, rp.httpClient, rp.DiscoveryEndpoint)
+	discoveryConfiguration, err := client.Discover(ctx, rp.issuers, rp.httpClient, rp.DiscoveryEndpoint)
 	if err != nil {
 		return nil, err
 	}

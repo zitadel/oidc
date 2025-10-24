@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-jose/go-jose/v4"
 	"github.com/datasapiens/oidc/v3/pkg/client"
 	httphelper "github.com/datasapiens/oidc/v3/pkg/http"
 	"github.com/datasapiens/oidc/v3/pkg/oidc"
+	"github.com/go-jose/go-jose/v4"
 )
 
 type TokenExchanger interface {
@@ -55,7 +55,7 @@ func newOAuthTokenExchange(ctx context.Context, issuer string, authorizer func()
 	}
 
 	if te.tokenEndpoint == "" {
-		config, err := client.Discover(ctx, issuer, te.httpClient)
+		config, err := client.Discover(ctx, []string{issuer}, te.httpClient)
 		if err != nil {
 			return nil, err
 		}

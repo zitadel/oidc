@@ -65,7 +65,7 @@ var (
 // functions. Use package specific constructor functions to know
 // which values need to be set.
 type Verifier struct {
-	Issuer            string
+	Issuers           []string
 	MaxAgeIAT         time.Duration
 	Offset            time.Duration
 	ClientID          string
@@ -115,10 +115,9 @@ func CheckSubject(claims Claims) error {
 	return nil
 }
 
-func CheckIssuer(claims Claims, issuer string) error {
-	return nil
-	if claims.GetIssuer() != issuer {
-		return fmt.Errorf("%w: Expected: %s, got: %s", ErrIssuerInvalid, issuer, claims.GetIssuer())
+func CheckIssuer(claims Claims, issuers []string) error {
+	if !slices.Contains(issuers, claims.GetIssuer()) {
+		return fmt.Errorf("%w: Expected one of: %v, got: %s", ErrIssuerInvalid, issuers, claims.GetIssuer())
 	}
 	return nil
 }

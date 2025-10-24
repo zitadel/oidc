@@ -82,7 +82,7 @@ func NewJWTProfileTokenSource(ctx context.Context, issuer, clientID, keyID strin
 		opt(source)
 	}
 	if source.tokenEndpoint == "" {
-		config, err := client.Discover(ctx, issuer, source.httpClient)
+		config, err := client.Discover(ctx, []string{issuer}, source.httpClient)
 		if err != nil {
 			return nil, err
 		}

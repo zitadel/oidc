@@ -5,17 +5,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	tu "github.com/datasapiens/oidc/v3/internal/testutil"
 	"github.com/datasapiens/oidc/v3/pkg/oidc"
 	"github.com/datasapiens/oidc/v3/pkg/op"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewJWTProfileVerifier(t *testing.T) {
 	want := &op.JWTProfileVerifier{
 		Verifier: oidc.Verifier{
-			Issuer:    tu.ValidIssuer,
+			Issuers:   []string{tu.ValidIssuer},
 			MaxAgeIAT: time.Minute,
 			Offset:    time.Second,
 		},
