@@ -21,7 +21,7 @@ jobs:
         go: ['1.24', '1.25']
     name: Go ${{ matrix.go }} test
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup go
         uses: actions/setup-go@v5
         with:
@@ -39,7 +39,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - name: Source checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Semantic Release
       uses: cycjimmy/semantic-release-action@v5
       with:
