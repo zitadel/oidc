@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -14,21 +15,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zitadel/oidc/v3/example/server/storage"
 	"github.com/zitadel/oidc/v3/pkg/client"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 )
 
 func jwtProfile() (string, error) {
-	keyData, err := client.ConfigFromKeyFile("../../example/server/service-key1.json")
+	data, err := os.ReadFile("../../example/server/service-key1.pem")
 	if err != nil {
 		return "", err
 	}
-	signer, err := client.NewSignerFromPrivateKeyByte([]byte(keyData.Key), keyData.KeyID)
+	signer, err := client.NewSignerFromPrivateKeyByte(data, storage.ServiceUserKeyID)
 	if err != nil {
 		return "", err
 	}
-	return client.SignedJWTProfileAssertion(keyData.UserID, []string{testIssuer}, time.Hour, signer)
+	return client.SignedJWTProfileAssertion(storage.ServiceUserID, []string{testIssuer}, time.Hour, signer)
 }
 
 func TestServerRoutes(t *testing.T) {
