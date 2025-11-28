@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -300,3 +302,33 @@ func (r *RequestObject) GetIssuer() string {
 }
 
 func (*RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {}
+
+type Duration int64
+
+func (d *Duration) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("oidc.Duration: %w", err)
+	}
+	switch x := v.(type) {
+	case int64:
+		*d = Duration(x)
+	case float64:
+		mod := math.Mod(x, 1)
+		if mod > 0 {
+			return fmt.Errorf("oidc.Duration: unable to parse type %T with value %v", x, x)
+		}
+		*d = Duration(x)
+	case string:
+		i, err := strconv.Atoi(x)
+		if err != nil {
+			return fmt.Errorf("oidc.Duration: %w", err)
+		}
+		*d = Duration(i)
+	case nil:
+		*d = 0
+	default:
+		return fmt.Errorf("oidc.Duration: unable to parse type %T with value %v", x, x)
+	}
+	return nil
+}
