@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/zitadel/logging"
+
 	"github.com/zitadel/oidc/v4/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
@@ -29,11 +31,20 @@ func main() {
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	keyPath := os.Getenv("KEY_PATH")
+	keyID := os.Getenv("KEY_ID")
 	issuer := os.Getenv("ISSUER")
 	port := os.Getenv("PORT")
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 	responseMode := os.Getenv("RESPONSE_MODE")
 
+	var pkce bool
+	if pkceEnv, ok := os.LookupEnv("PKCE"); ok {
+		var err error
+		pkce, err = strconv.ParseBool(pkceEnv)
+		if err != nil {
+			logrus.Fatalf("error parsing PKCE %s", err.Error())
+		}
+	}
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
@@ -56,12 +67,20 @@ func main() {
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
 		rp.WithHTTPClient(client),
 		rp.WithLogger(logger),
+		rp.WithSigningAlgsFromDiscovery(),
 	}
 	if clientSecret == "" {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 	if keyPath != "" {
-		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyPath(keyPath)))
+		signingKey, err := os.ReadFile(keyPath)
+		if err != nil {
+			logrus.Fatalf("error reading key file %s", err.Error())
+		}
+		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(signingKey, keyID)))
+	}
+	if pkce {
+		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 
 	// One can add a logger to the context,
@@ -108,6 +127,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("content-type", "application/json")
 		w.Write(data)
 	}
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v4/pkg/crypto"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
@@ -41,7 +41,7 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
 	err = httphelper.HttpRequest(httpClient, req, &discoveryConfig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(oidc.ErrDiscoveryFailed, err)
 	}
 	if logger, ok := logging.FromContext(ctx); ok {
 		logger.Debug("discover", "config", discoveryConfig)
@@ -97,7 +97,12 @@ func CallEndSessionEndpoint(ctx context.Context, request any, authFn any, caller
 	ctx, span := Tracer.Start(ctx, "CallEndSessionEndpoint")
 	defer span.End()
 
-	req, err := httphelper.FormRequest(ctx, caller.GetEndSessionEndpoint(), request, Encoder, authFn)
+	endpoint := caller.GetEndSessionEndpoint()
+	if endpoint == "" {
+		return nil, fmt.Errorf("end session %w", ErrEndpointNotSet)
+	}
+
+	req, err := httphelper.FormRequest(ctx, endpoint, request, Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +148,12 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	ctx, span := Tracer.Start(ctx, "CallRevokeEndpoint")
 	defer span.End()
 
-	req, err := httphelper.FormRequest(ctx, caller.GetRevokeEndpoint(), request, Encoder, authFn)
+	endpoint := caller.GetRevokeEndpoint()
+	if endpoint == "" {
+		return fmt.Errorf("revoke %w", ErrEndpointNotSet)
+	}
+
+	req, err := httphelper.FormRequest(ctx, endpoint, request, Encoder, authFn)
 	if err != nil {
 		return err
 	}
@@ -186,12 +196,12 @@ func CallTokenExchangeEndpoint(ctx context.Context, request any, authFn any, cal
 }
 
 func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) {
-	privateKey, err := crypto.BytesToPrivateKey(key)
+	privateKey, algorithm, err := crypto.BytesToPrivateKey(key)
 	if err != nil {
 		return nil, err
 	}
 	signingKey := jose.SigningKey{
-		Algorithm: jose.RS256,
+		Algorithm: algorithm,
 		Key:       &jose.JSONWebKey{Key: privateKey, KeyID: keyID},
 	}
 	return jose.NewSigner(signingKey, &jose.SignerOptions{})
@@ -218,7 +228,12 @@ func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCr
 	ctx, span := Tracer.Start(ctx, "CallDeviceAuthorizationEndpoint")
 	defer span.End()
 
-	req, err := httphelper.FormRequest(ctx, caller.GetDeviceAuthorizationEndpoint(), request, Encoder, authFn)
+	endpoint := caller.GetDeviceAuthorizationEndpoint()
+	if endpoint == "" {
+		return nil, fmt.Errorf("device authorization %w", ErrEndpointNotSet)
+	}
+
+	req, err := httphelper.FormRequest(ctx, endpoint, request, Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}

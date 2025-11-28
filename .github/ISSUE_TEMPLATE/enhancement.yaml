@@ -1,11 +1,12 @@
 name: 🛠️ Improvement
 description: "Create an new issue for an improvment in ZITADEL"
-labels: ["improvement"]
+labels: ["enhancement"]
+type: enhancement
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this improvement request
+        Thanks for taking the time to fill out this proposal / feature reqeust
   - type: checkboxes
     id: preflight
     attributes:

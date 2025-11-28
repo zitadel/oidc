@@ -145,6 +145,14 @@ type DiscoveryConfiguration struct {
 
 	// OPTermsOfServiceURI is a URL the OpenID Provider provides to the person registering the Client to read about OpenID Provider's terms of service.
 	OPTermsOfServiceURI string `json:"op_tos_uri,omitempty"`
+
+	// BackChannelLogoutSupported specifies whether the OP supports back-channel logout (https://openid.net/specs/openid-connect-backchannel-1_0.html),
+	// with true indicating support. If omitted, the default value is false.
+	BackChannelLogoutSupported bool `json:"backchannel_logout_supported,omitempty"`
+
+	// BackChannelLogoutSessionSupported specifies whether the OP can pass a sid (session ID) Claim in the Logout Token to identify the RP session with the OP.
+	// If supported, the sid Claim is also included in ID Tokens issued by the OP. If omitted, the default value is false.
+	BackChannelLogoutSessionSupported bool `json:"backchannel_logout_session_supported,omitempty"`
 }
 
 type AuthMethod string

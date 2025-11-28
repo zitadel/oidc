@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/cors"
+	"github.com/zitadel/oidc/v4/internal/otel"
 	"github.com/zitadel/schema"
-	"go.opentelemetry.io/otel"
 	"golang.org/x/text/language"
 
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
@@ -135,7 +135,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(readinessEndpoint, readyHandler(o.Probes()))
 	router.HandleFunc(oidc.DiscoveryEndpoint, discoveryHandler(o, o.Storage()))
 	router.HandleFunc(o.AuthorizationEndpoint().Relative(), authorizeHandler(o))
-	router.HandleFunc(authCallbackPath(o), authorizeCallbackHandler(o))
+	router.HandleFunc(authCallbackPath(o), AuthorizeCallbackHandler(o))
 	router.HandleFunc(o.TokenEndpoint().Relative(), tokenHandler(o))
 	router.HandleFunc(o.IntrospectionEndpoint().Relative(), introspectionHandler(o))
 	router.HandleFunc(o.UserinfoEndpoint().Relative(), userinfoHandler(o))
@@ -158,16 +158,19 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	CryptoKey                [32]byte
-	DefaultLogoutRedirectURI string
-	CodeMethodS256           bool
-	AuthMethodPost           bool
-	AuthMethodPrivateKeyJWT  bool
-	GrantTypeRefreshToken    bool
-	RequestObjectSupported   bool
-	SupportedUILocales       []language.Tag
-	SupportedClaims          []string
-	DeviceAuthorization      DeviceAuthorizationConfig
+	CryptoKey                         [32]byte // for encrypting access token via NewAESCrypto; will be overwritten by WithCrypto
+	DefaultLogoutRedirectURI          string
+	CodeMethodS256                    bool
+	AuthMethodPost                    bool
+	AuthMethodPrivateKeyJWT           bool
+	GrantTypeRefreshToken             bool
+	RequestObjectSupported            bool
+	SupportedUILocales                []language.Tag
+	SupportedClaims                   []string
+	SupportedScopes                   []string
+	DeviceAuthorization               DeviceAuthorizationConfig
+	BackChannelLogoutSupported        bool
+	BackChannelLogoutSessionSupported bool
 }
 
 // Endpoints defines endpoint routes.
@@ -256,6 +259,7 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
+		crypto:            NewAESCrypto(config.CryptoKey),
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,
@@ -276,7 +280,6 @@ func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (Is
 	o.decoder = schema.NewDecoder()
 	o.decoder.IgnoreUnknownKeys(true)
 	o.encoder = oidc.NewEncoder()
-	o.crypto = NewAESCrypto(config.CryptoKey)
 	return o, nil
 }
 
@@ -334,6 +337,10 @@ func (o *Provider) EndSessionEndpoint() *Endpoint {
 
 func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 	return o.endpoints.DeviceAuthorization
+}
+
+func (o *Provider) CheckSessionIframe() *Endpoint {
+	return o.endpoints.CheckSessionIframe
 }
 
 func (o *Provider) KeysEndpoint() *Endpoint {
@@ -409,6 +416,14 @@ func (o *Provider) SupportedUILocales() []language.Tag {
 
 func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
 	return o.config.DeviceAuthorization
+}
+
+func (o *Provider) BackChannelLogoutSupported() bool {
+	return o.config.BackChannelLogoutSupported
+}
+
+func (o *Provider) BackChannelLogoutSessionSupported() bool {
+	return o.config.BackChannelLogoutSessionSupported
 }
 
 func (o *Provider) Storage() Storage {
@@ -642,6 +657,16 @@ func WithCORSOptions(opts *cors.Options) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *Provider) error {
 		o.logger = logger
+		return nil
+	}
+}
+
+// WithCrypto allows the user to pass their own Crypto implementation.
+//
+// If provided, this will overwrite Config.CryptoKey.
+func WithCrypto(crypto Crypto) Option {
+	return func(o *Provider) error {
+		o.crypto = crypto
 		return nil
 	}
 }

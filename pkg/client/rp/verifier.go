@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/zitadel/oidc/v4/pkg/client"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
@@ -57,7 +57,7 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckAuthorizedParty(claims, v.ClientID); err != nil {
+	if err = oidc.CheckAZPVerifier(claims, v.AZP); err != nil {
 		return nilClaims, err
 	}
 
@@ -73,8 +73,10 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
-		return nilClaims, err
+	if v.Nonce != nil {
+		if err = oidc.CheckNonce(claims, v.Nonce(ctx)); err != nil {
+			return nilClaims, err
+		}
 	}
 
 	if err = oidc.CheckAuthorizationContextClassReference(claims, v.ACR); err != nil {
@@ -84,6 +86,7 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 	if err = oidc.CheckAuthTime(claims, v.MaxAge); err != nil {
 		return nilClaims, err
 	}
+
 	return claims, nil
 }
 
@@ -116,6 +119,7 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 		Nonce: func(_ context.Context) string {
 			return ""
 		},
+		AZP: oidc.DefaultAZPVerifier(clientID),
 	}
 
 	for _, opts := range options {
@@ -154,6 +158,13 @@ func WithNonce(nonce func(context.Context) string) VerifierOption {
 func WithACRVerifier(verifier oidc.ACRVerifier) VerifierOption {
 	return func(v *IDTokenVerifier) {
 		v.ACR = verifier
+	}
+}
+
+// WithAZPVerifier sets the verifier for the azp claim
+func WithAZPVerifier(verifier oidc.AZPVerifier) VerifierOption {
+	return func(v *IDTokenVerifier) {
+		v.AZP = verifier
 	}
 }
 

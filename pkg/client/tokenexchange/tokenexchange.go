@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v4/pkg/client"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
