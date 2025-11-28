@@ -402,7 +402,7 @@ func CreateTokenExchangeResponse(
 		oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
 	}
 
-	exp := uint64(validity.Seconds())
+	exp := oidc.Duration(validity.Seconds())
 	return &oidc.TokenExchangeResponse{
 		AccessToken:     token,
 		IssuedTokenType: tokenExchangeRequest.GetRequestedTokenType(),
