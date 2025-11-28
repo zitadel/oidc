@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -80,6 +80,11 @@ func Test_scopes(t *testing.T) {
 			"default Scopes",
 			args{},
 			op.DefaultSupportedScopes,
+		},
+		{
+			"custom scopes",
+			args{newTestProvider(&op.Config{SupportedScopes: []string{"test1", "test2"}})},
+			[]string{"test1", "test2"},
 		},
 	}
 	for _, tt := range tests {

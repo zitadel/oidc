@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 )
 
 const (
@@ -72,10 +72,10 @@ type AccessTokenRequest struct {
 	Code                string `schema:"code"`
 	RedirectURI         string `schema:"redirect_uri"`
 	ClientID            string `schema:"client_id"`
-	ClientSecret        string `schema:"client_secret"`
-	CodeVerifier        string `schema:"code_verifier"`
-	ClientAssertion     string `schema:"client_assertion"`
-	ClientAssertionType string `schema:"client_assertion_type"`
+	ClientSecret        string `schema:"client_secret,omitempty"`
+	CodeVerifier        string `schema:"code_verifier,omitempty"`
+	ClientAssertion     string `schema:"client_assertion,omitempty"`
+	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
 }
 
 func (a *AccessTokenRequest) GrantType() GrantType {
@@ -240,6 +240,6 @@ type ClientCredentialsRequest struct {
 	Scope               SpaceDelimitedArray `schema:"scope"`
 	ClientID            string              `schema:"client_id"`
 	ClientSecret        string              `schema:"client_secret"`
-	ClientAssertion     string              `schema:"client_assertion"`
-	ClientAssertionType string              `schema:"client_assertion_type"`
+	ClientAssertion     string              `schema:"client_assertion,omitempty"`
+	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
 }

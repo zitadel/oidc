@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 
 	"github.com/zitadel/oidc/v4/pkg/oidc"
@@ -19,7 +19,7 @@ import (
 )
 
 // serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant
-// the corresponding private key is in the service-key1.json (for demonstration purposes)
+// the corresponding private key is in the service-key1.pem (for demonstration purposes)
 var serviceKey1 = &rsa.PublicKey{
 	N: func() *big.Int {
 		n, _ := new(big.Int).SetString("00f6d44fb5f34ac2033a75e73cb65ff24e6181edc58845e75a560ac21378284977bb055b1a75b714874e2a2641806205681c09abec76efd52cf40984edcf4c8ca09717355d11ac338f280d3e4c905b00543bdb8ee5a417496cb50cb0e29afc5a0d0471fd5a2fa625bd5281f61e6b02067d4fe7a5349eeae6d6a4300bcd86eef331", 16)
@@ -33,7 +33,7 @@ var (
 	_ op.ClientCredentialsStorage = &Storage{}
 )
 
-// storage implements the op.Storage interface
+// Storage implements the op.Storage interface
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
 type Storage struct {
@@ -105,7 +105,7 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 		services: map[string]Service{
 			userStore.ExampleClientID(): {
 				keys: map[string]*rsa.PublicKey{
-					"key1": serviceKey1,
+					ServiceUserKeyID: serviceKey1,
 				},
 			},
 		},
@@ -151,6 +151,9 @@ func (s *Storage) CheckUsernamePassword(username, password, id string) error {
 		// in this example we'll simply check the username / password and set a boolean to true
 		// therefore we will also just check this boolean if the request / login has been finished
 		request.done = true
+
+		request.authTime = time.Now()
+
 		return nil
 	}
 	return fmt.Errorf("username or password wrong")
@@ -295,15 +298,19 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 
 	// if we get here, the currentRefreshToken was not empty, so the call is a refresh token request
 	// we therefore will have to check the currentRefreshToken and renew the refresh token
-	refreshToken, refreshTokenID, err := s.renewRefreshToken(currentRefreshToken)
+
+	newRefreshToken = uuid.NewString()
+
+	accessToken, err := s.accessToken(applicationID, newRefreshToken, request.GetSubject(), request.GetAudience(), request.GetScopes())
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
-	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
-	if err != nil {
+
+	if err := s.renewRefreshToken(currentRefreshToken, newRefreshToken, accessToken.ID); err != nil {
 		return "", "", time.Time{}, err
 	}
-	return accessToken.ID, refreshToken, accessToken.Expiration, nil
+
+	return accessToken.ID, newRefreshToken, accessToken.Expiration, nil
 }
 
 func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExchangeRequest) (accessTokenID string, newRefreshToken string, expiration time.Time, err error) {
@@ -385,14 +392,9 @@ func (s *Storage) RevokeToken(ctx context.Context, tokenIDOrToken string, userID
 	if refreshToken.ApplicationID != clientID {
 		return oidc.ErrInvalidClient().WithDescription("token was not issued for this client")
 	}
-	// if it is a refresh token, you will have to remove the access token as well
 	delete(s.refreshTokens, refreshToken.ID)
-	for _, accessToken := range s.tokens {
-		if accessToken.RefreshTokenID == refreshToken.ID {
-			delete(s.tokens, accessToken.ID)
-			return nil
-		}
-	}
+	// if it is a refresh token, you will have to remove the access token as well
+	delete(s.tokens, refreshToken.AccessToken)
 	return nil
 }
 
@@ -488,6 +490,9 @@ func (s *Storage) SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserI
 	//		return err
 	//	}
 	//}
+	if token.Expiration.Before(time.Now()) {
+		return fmt.Errorf("token is expired")
+	}
 	return s.setUserinfo(ctx, userinfo, token.Subject, token.ApplicationID, token.Scopes)
 }
 
@@ -594,33 +599,41 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 		Audience:      accessToken.Audience,
 		Expiration:    time.Now().Add(5 * time.Hour),
 		Scopes:        accessToken.Scopes,
+		AccessToken:   accessToken.ID,
 	}
 	s.refreshTokens[token.ID] = token
 	return token.Token, nil
 }
 
 // renewRefreshToken checks the provided refresh_token and creates a new one based on the current
-func (s *Storage) renewRefreshToken(currentRefreshToken string) (string, string, error) {
+//
+// [Refresh Token Rotation] is implemented.
+//
+// [Refresh Token Rotation]: https://www.rfc-editor.org/rfc/rfc6819#section-5.2.2.3
+func (s *Storage) renewRefreshToken(currentRefreshToken, newRefreshToken, newAccessToken string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	refreshToken, ok := s.refreshTokens[currentRefreshToken]
 	if !ok {
-		return "", "", fmt.Errorf("invalid refresh token")
+		return fmt.Errorf("invalid refresh token")
 	}
-	// deletes the refresh token and all access tokens which were issued based on this refresh token
+	// deletes the refresh token
 	delete(s.refreshTokens, currentRefreshToken)
-	for _, token := range s.tokens {
-		if token.RefreshTokenID == currentRefreshToken {
-			delete(s.tokens, token.ID)
-			break
-		}
+
+	// delete the access token which was issued based on this refresh token
+	delete(s.tokens, refreshToken.AccessToken)
+
+	if refreshToken.Expiration.Before(time.Now()) {
+		return fmt.Errorf("expired refresh token")
 	}
+
 	// creates a new refresh token based on the current one
-	token := uuid.NewString()
-	refreshToken.Token = token
-	refreshToken.ID = token
-	s.refreshTokens[token] = refreshToken
-	return token, refreshToken.ID, nil
+	refreshToken.Token = newRefreshToken
+	refreshToken.ID = newRefreshToken
+	refreshToken.Expiration = time.Now().Add(5 * time.Hour)
+	refreshToken.AccessToken = newAccessToken
+	s.refreshTokens[newRefreshToken] = refreshToken
+	return nil
 }
 
 // accessToken will store an access_token in-memory based on the provided information

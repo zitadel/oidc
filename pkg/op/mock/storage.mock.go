@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 	gomock "github.com/golang/mock/gomock"
 	oidc "github.com/zitadel/oidc/v4/pkg/oidc"
 	op "github.com/zitadel/oidc/v4/pkg/op"

@@ -7,12 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
-
-	str "github.com/zitadel/oidc/v4/pkg/strings"
+	"github.com/go-jose/go-jose/v4"
 )
 
 type Claims interface {
@@ -41,6 +40,7 @@ type IDClaims interface {
 var (
 	ErrParse                   = errors.New("parsing of request failed")
 	ErrIssuerInvalid           = errors.New("issuer does not match")
+	ErrDiscoveryFailed         = errors.New("OpenID Provider Configuration Discovery has failed")
 	ErrSubjectMissing          = errors.New("subject missing")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
@@ -72,6 +72,7 @@ type Verifier struct {
 	SupportedSignAlgs []string
 	MaxAge            time.Duration
 	ACR               ACRVerifier
+	AZP               AZPVerifier
 	KeySet            KeySet
 	Nonce             func(ctx context.Context) string
 }
@@ -83,7 +84,7 @@ type ACRVerifier func(string) error
 // if none of the provided values matches the acr claim
 func DefaultACRVerifier(possibleValues []string) ACRVerifier {
 	return func(acr string) error {
-		if !str.Contains(possibleValues, acr) {
+		if !slices.Contains(possibleValues, acr) {
 			return fmt.Errorf("expected one of: %v, got: %q", possibleValues, acr)
 		}
 		return nil
@@ -122,7 +123,7 @@ func CheckIssuer(claims Claims, issuer string) error {
 }
 
 func CheckAudience(claims Claims, clientID string) error {
-	if !str.Contains(claims.GetAudience(), clientID) {
+	if !slices.Contains(claims.GetAudience(), clientID) {
 		return fmt.Errorf("%w: Audience must contain client_id %q", ErrAudience, clientID)
 	}
 
@@ -130,26 +131,55 @@ func CheckAudience(claims Claims, clientID string) error {
 	return nil
 }
 
+// AZPVerifier specifies the function to be used by the `DefaultVerifier` for validating the azp claim
+type AZPVerifier func(string) error
+
+// DefaultAZPVerifier implements `AZPVerifier` returning an error
+// if the azp claim is set and doesn't match the clientID.
+func DefaultAZPVerifier(clientID string) AZPVerifier {
+	return func(azp string) error {
+		if azp != "" && azp != clientID {
+			return fmt.Errorf("%w: azp %q must be equal to client_id %q", ErrAzpInvalid, azp, clientID)
+		}
+		return nil
+	}
+}
+
 // CheckAuthorizedParty checks azp (authorized party) claim requirements.
 //
 // If the ID Token contains multiple audiences, the Client SHOULD verify that an azp Claim is present.
-// If an azp Claim is present, the Client SHOULD verify that its client_id is the Claim Value.
+// If an azp Claim is present, the Client MAY verify that its client_id is the Claim Value.
 // https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
 func CheckAuthorizedParty(claims Claims, clientID string) error {
+	return CheckAZPVerifier(claims, DefaultAZPVerifier(clientID))
+}
+
+// CheckAZPVerifier checks azp (authorized party) claim requirements.
+//
+// If the ID Token contains multiple audiences, the Client SHOULD verify that an azp Claim is present.
+// If an azp Claim is present, the Client MAY verify that its client_id is the Claim Value.
+// https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+func CheckAZPVerifier(claims Claims, azp AZPVerifier) error {
 	if len(claims.GetAudience()) > 1 {
 		if claims.GetAuthorizedParty() == "" {
 			return ErrAzpMissing
 		}
 	}
-	if claims.GetAuthorizedParty() != "" && claims.GetAuthorizedParty() != clientID {
-		return fmt.Errorf("%w: azp %q must be equal to client_id %q", ErrAzpInvalid, claims.GetAuthorizedParty(), clientID)
+
+	if err := azp(claims.GetAuthorizedParty()); err != nil {
+		return fmt.Errorf("%w: %v", ErrAzpInvalid, err)
 	}
 	return nil
 }
 
 func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
-	jws, err := jose.ParseSigned(token)
+	jws, err := jose.ParseSigned(token, toJoseSignatureAlgorithms(supportedSigAlgs))
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "go-jose/go-jose: unexpected signature algorithm") {
+			// TODO(v4): we should wrap errors instead of returning static ones.
+			// This is a workaround so we keep returning the same error for now.
+			return ErrSignatureUnsupportedAlg
+		}
 		return ErrParse
 	}
 	if len(jws.Signatures) == 0 {
@@ -159,12 +189,6 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 		return ErrSignatureMultiple
 	}
 	sig := jws.Signatures[0]
-	if len(supportedSigAlgs) == 0 {
-		supportedSigAlgs = []string{"RS256"}
-	}
-	if !str.Contains(supportedSigAlgs, sig.Header.Algorithm) {
-		return fmt.Errorf("%w: id token signed with unsupported algorithm, expected %q got %q", ErrSignatureUnsupportedAlg, supportedSigAlgs, sig.Header.Algorithm)
-	}
 
 	signedPayload, err := set.VerifySignature(ctx, jws)
 	if err != nil {
@@ -178,6 +202,18 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 	claims.SetSignatureAlgorithm(jose.SignatureAlgorithm(sig.Header.Algorithm))
 
 	return nil
+}
+
+// TODO(v4): Use the new jose.SignatureAlgorithm type directly, instead of string.
+func toJoseSignatureAlgorithms(algorithms []string) []jose.SignatureAlgorithm {
+	out := make([]jose.SignatureAlgorithm, len(algorithms))
+	for i := range algorithms {
+		out[i] = jose.SignatureAlgorithm(algorithms[i])
+	}
+	if len(out) == 0 {
+		out = append(out, jose.RS256, jose.ES256, jose.PS256)
+	}
+	return out
 }
 
 func CheckExpiration(claims Claims, offset time.Duration) error {

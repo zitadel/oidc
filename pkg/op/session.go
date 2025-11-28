@@ -73,6 +73,8 @@ func ValidateEndSessionRequest(ctx context.Context, req *oidc.EndSessionRequest,
 
 	session := &EndSessionRequest{
 		RedirectURI: ender.DefaultLogoutRedirectURI(),
+		LogoutHint:  req.LogoutHint,
+		UILocales:   req.UILocales,
 	}
 	if req.IdTokenHint != "" {
 		claims, err := VerifyIDTokenHint[*oidc.IDTokenClaims](ctx, req.IdTokenHint, ender.IDTokenHintVerifier(ctx))

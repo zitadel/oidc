@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 func TestDiscover(t *testing.T) {
@@ -22,7 +23,7 @@ func TestDiscover(t *testing.T) {
 		name       string
 		args       args
 		wantFields *wantFields
-		wantErr    bool
+		wantErr    error
 	}{
 		{
 			name: "spotify", // https://github.com/zitadel/oidc/issues/406
@@ -32,17 +33,20 @@ func TestDiscover(t *testing.T) {
 			wantFields: &wantFields{
 				UILocalesSupported: true,
 			},
-			wantErr: false,
+			wantErr: nil,
+		},
+		{
+			name: "discovery failed",
+			args: args{
+				issuer: "https://example.com",
+			},
+			wantErr: oidc.ErrDiscoveryFailed,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := Discover(context.Background(), tt.args.issuer, http.DefaultClient, tt.args.wellKnownUrl...)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+			require.ErrorIs(t, err, tt.wantErr)
 			if tt.wantFields == nil {
 				return
 			}

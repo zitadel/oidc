@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
-// JWTProfileVerfiier extends oidc.Verifier with
+// JWTProfileVerifier extends oidc.Verifier with
 // a jwtProfileKeyStorage and a function to check
 // the subject in a token.
 type JWTProfileVerifier struct {
@@ -100,7 +100,7 @@ func VerifyJWTAssertion(ctx context.Context, assertion string, v *JWTProfileVeri
 }
 
 type JWTProfileKeyStorage interface {
-	GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error)
+	GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error)
 }
 
 // SubjectIsIssuer

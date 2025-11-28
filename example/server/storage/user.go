@@ -2,9 +2,18 @@ package storage
 
 import (
 	"crypto/rsa"
+	"encoding/json"
+	"os"
 	"strings"
 
 	"golang.org/x/text/language"
+)
+
+const (
+	// ServiceUserID is the ID of the service user.
+	ServiceUserID = "service"
+	// ServiceUserKeyID is the key ID of the service user.
+	ServiceUserKeyID = "key1"
 )
 
 type User struct {
@@ -33,6 +42,18 @@ type UserStore interface {
 
 type userStore struct {
 	users map[string]*User
+}
+
+func StoreFromFile(path string) (UserStore, error) {
+	users := map[string]*User{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, &users); err != nil {
+		return nil, err
+	}
+	return userStore{users}, nil
 }
 
 func NewUserStore(issuer string) UserStore {
@@ -71,7 +92,7 @@ func NewUserStore(issuer string) UserStore {
 
 // ExampleClientID is only used in the example server
 func (u userStore) ExampleClientID() string {
-	return "service"
+	return ServiceUserID
 }
 
 func (u userStore) GetUserByID(id string) *User {

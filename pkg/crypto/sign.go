@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 )
 
 func Sign(object any, signer jose.Signer) (string, error) {

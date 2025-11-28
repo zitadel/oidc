@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/muhlemmer/gu"
 	"github.com/zitadel/schema"
 	"golang.org/x/text/language"
@@ -82,6 +82,9 @@ func (l *Locale) MarshalJSON() ([]byte, error) {
 // to an empty value (language "und") and no error will be returned.
 // This state can be checked with the `l.Tag().IsRoot()` method.
 func (l *Locale) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "\"\"" {
+		return nil
+	}
 	err := json.Unmarshal(data, &l.tag)
 	if err == nil {
 		return nil
@@ -110,6 +113,14 @@ func ParseLocales(locales []string) Locales {
 		}
 	}
 	return out
+}
+
+func (l Locales) String() string {
+	tags := make([]string, len(l))
+	for i, tag := range l {
+		tags[i] = tag.String()
+	}
+	return strings.Join(tags, " ")
 }
 
 // UnmarshalText implements the [encoding.TextUnmarshaler] interface.
@@ -227,6 +238,9 @@ func NewEncoder() *schema.Encoder {
 	e := schema.NewEncoder()
 	e.RegisterEncoder(SpaceDelimitedArray{}, func(value reflect.Value) string {
 		return value.Interface().(SpaceDelimitedArray).String()
+	})
+	e.RegisterEncoder(Locales{}, func(value reflect.Value) string {
+		return value.Interface().(Locales).String()
 	})
 	return e
 }

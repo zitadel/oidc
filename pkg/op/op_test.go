@@ -102,6 +102,7 @@ func TestRoutes(t *testing.T) {
 	authReq, err := storage.CreateAuthRequest(ctx, oidcAuthReq, "id1")
 	require.NoError(t, err)
 	storage.AuthRequestDone(authReq.GetID())
+	storage.SaveAuthCode(ctx, authReq.GetID(), "123")
 
 	accessToken, refreshToken, _, err := op.CreateAccessToken(ctx, authReq, op.AccessTokenTypeBearer, testProvider, client, "")
 	require.NoError(t, err)
@@ -232,7 +233,7 @@ func TestRoutes(t *testing.T) {
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
 			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299}`},
+			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
 		},
 		{
 			// This call will fail. A successful test is already

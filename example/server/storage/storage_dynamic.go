@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 	"github.com/zitadel/oidc/v4/pkg/op"
@@ -249,12 +249,12 @@ func (s *multiStorage) GetPrivateClaimsFromScopes(ctx context.Context, userID, c
 
 // GetKeyByIDAndClientID implements the op.Storage interface
 // it will be called to validate the signatures of a JWT (JWT Profile Grant and Authentication)
-func (s *multiStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, userID string) (*jose.JSONWebKey, error) {
+func (s *multiStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
 	storage, err := s.storageFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return storage.GetKeyByIDAndClientID(ctx, keyID, userID)
+	return storage.GetKeyByIDAndClientID(ctx, keyID, clientID)
 }
 
 // ValidateJWTProfileScopes implements the op.Storage interface

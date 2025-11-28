@@ -12,21 +12,12 @@ import (
 	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v4/example/server/storage"
 	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 const (
 	pathLoggedOut = "/logged-out"
 )
-
-func init() {
-	storage.RegisterClients(
-		storage.NativeClient("native"),
-		storage.WebClient("web", "secret"),
-		storage.WebClient("api", "secret"),
-	)
-}
 
 type Storage interface {
 	op.Storage
@@ -56,11 +47,17 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("signed out successfully"))
-		// no need to check/log error, this will be handeled by the middleware.
+		// no need to check/log error, this will be handled by the middleware.
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newOP(storage, issuer, key, logger, extraOptions...)
+	provider, err := newOP(
+		storage,
+		issuer,
+		key,
+		logger,
+		extraOptions...,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +77,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 
 	handler := http.Handler(provider)
 	if wrapServer {
-		handler = op.RegisterLegacyServer(op.NewLegacyServer(provider, *op.DefaultEndpoints))
+		handler = op.RegisterLegacyServer(op.NewLegacyServer(provider, *op.DefaultEndpoints), op.AuthorizeCallbackHandler(provider))
 	}
 
 	// we register the http handler of the OP on the root, so that the discovery endpoint (/.well-known/openid-configuration)
@@ -93,10 +90,16 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	return router
 }
 
-// newOP will create an OpenID Provider for localhost on a specified port with a given encryption key
+// newOP will create an OpenID Provider for localhost on a specified port
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newOP(storage op.Storage, issuer string, key [32]byte, logger *slog.Logger, extraOptions ...op.Option) (op.OpenIDProvider, error) {
+func newOP(
+	storage op.Storage,
+	issuer string,
+	key [32]byte, // encryption key
+	logger *slog.Logger,
+	extraOptions ...op.Option,
+) (op.OpenIDProvider, error) {
 	config := &op.Config{
 		CryptoKey: key,
 

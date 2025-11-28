@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	jose "github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 )
