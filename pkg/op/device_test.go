@@ -523,7 +523,7 @@ func TestCreateDeviceTokenResponse(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.InDelta(t, 300, int64(got.ExpiresIn), 2)
+			assert.InDelta(t, 300, int64(time.Duration(got.ExpiresIn)/time.Second), 2)
 			if tt.wantAccessToken {
 				assert.NotEmpty(t, got.AccessToken, "access token")
 			}
