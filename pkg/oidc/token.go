@@ -233,7 +233,7 @@ type AccessTokenResponse struct {
 	AccessToken  string              `json:"access_token,omitempty" schema:"access_token,omitempty"`
 	TokenType    string              `json:"token_type,omitempty" schema:"token_type,omitempty"`
 	RefreshToken string              `json:"refresh_token,omitempty" schema:"refresh_token,omitempty"`
-	ExpiresIn    uint64              `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
+	ExpiresIn    Duration            `json:"expires_in,omitempty" schema:"expires_in,omitempty"`
 	IDToken      string              `json:"id_token,omitempty" schema:"id_token,omitempty"`
 	State        string              `json:"state,omitempty" schema:"state,omitempty"`
 	Scope        SpaceDelimitedArray `json:"scope,omitempty" schema:"scope,omitempty"`
@@ -375,7 +375,7 @@ type TokenExchangeResponse struct {
 	AccessToken     string              `json:"access_token"` // Can be access token or ID token
 	IssuedTokenType TokenType           `json:"issued_token_type"`
 	TokenType       string              `json:"token_type"`
-	ExpiresIn       uint64              `json:"expires_in,omitempty"`
+	ExpiresIn       Duration            `json:"expires_in,omitempty"`
 	Scopes          SpaceDelimitedArray `json:"scope,omitempty"`
 	RefreshToken    string              `json:"refresh_token,omitempty"`
 

@@ -5,6 +5,36 @@ All commands are executed from the root of the project that imports oidc package
 on non-GNU systems, such as MacOS.
 Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 
+## V3 to V4
+
+### oidc
+
+#### `exp` claim in `AccessTokenResponse` and `TokenExchangeResponse`
+
+The type of the `ExpiresIn` field has been changed from an `int64` to an `oidc.Duration` type. 
+Unfortunately this upgrade cannot be described in a sed command and has to be done manually.
+
+Example:
+```go
+validity := 30 * time.Seconds
+oidc.AccessTokenResponse{
+    AccessToken: accessToken,
+    TokenType:   oidc.BearerToken,
+    ExpiresIn:   uint64(validity.Seconds()),
+    Scope:       tokenRequest.GetScopes(),
+}
+```
+becomes
+```go
+validity := 30 * time.Seconds
+oidc.AccessTokenResponse{
+    AccessToken: accessToken,
+    TokenType:   oidc.BearerToken,
+    ExpiresIn:   oidc.Duration(validity),
+    Scope:       tokenRequest.GetScopes(),
+}
+```
+
 ## V2 to V3
 
 **TL;DR** at the [bottom](#full-script) of this chapter is a full `sed` script

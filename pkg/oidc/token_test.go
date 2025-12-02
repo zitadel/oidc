@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -277,4 +278,175 @@ func TestNewLogoutTokenClaims(t *testing.T) {
 	got.IssuedAt = 0
 
 	assert.Equal(t, want, got)
+}
+
+func TestTokenExchangeResponse_UnmarshalJSON(t *testing.T) {
+	testCases := []struct {
+		marshaled string
+		want      TokenExchangeResponse
+	}{
+		{
+			marshaled: `
+            {
+                "access_token":"access_token",
+                "issued_token_type":"test_token",
+                "token_type":"test_token",
+                "expires_in":12345,
+	        	"scope": "lorem ipsum",
+	        	"refresh_token": "refresh_token",
+	        	"id_token": "id_token"
+            }`,
+			want: TokenExchangeResponse{
+				AccessToken:     "access_token",
+				IssuedTokenType: "test_token",
+				TokenType:       "test_token",
+				ExpiresIn:       Duration(12345 * time.Second),
+				Scopes:          []string{"lorem", "ipsum"},
+				RefreshToken:    "refresh_token",
+				IDToken:         "id_token",
+			},
+		},
+		{
+			marshaled: `
+            {
+                "access_token":"access_token",
+                "issued_token_type":"test_token",
+                "token_type":"test_token",
+                "expires_in":"12345",
+	        	"scope": "lorem ipsum",
+	        	"refresh_token": "refresh_token",
+	        	"id_token": "id_token"
+            }`,
+			want: TokenExchangeResponse{
+				AccessToken:     "access_token",
+				IssuedTokenType: "test_token",
+				TokenType:       "test_token",
+				ExpiresIn:       Duration(12345 * time.Second),
+				Scopes:          []string{"lorem", "ipsum"},
+				RefreshToken:    "refresh_token",
+				IDToken:         "id_token",
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		got := &TokenExchangeResponse{}
+		err := json.Unmarshal([]byte(testCase.marshaled), got)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, testCase.want.AccessToken, got.AccessToken)
+		assert.Equal(t, testCase.want.IssuedTokenType, got.IssuedTokenType)
+		assert.Equal(t, testCase.want.TokenType, got.TokenType)
+		assert.Equal(t, testCase.want.ExpiresIn, got.ExpiresIn)
+		assert.Equal(t, testCase.want.Scopes, got.Scopes)
+		assert.Equal(t, testCase.want.RefreshToken, got.RefreshToken)
+		assert.Equal(t, testCase.want.IDToken, got.IDToken)
+	}
+}
+func TestTokenExchangeResponse_MarshalJSON(t *testing.T) {
+	testCases := []struct {
+		want        string
+		unmarshaled TokenExchangeResponse
+	}{
+		{
+			want: `{"access_token":"access_token","issued_token_type":"test_token","token_type":"test_token","expires_in":12345,"scope":"lorem ipsum","refresh_token":"refresh_token","id_token":"id_token"}`,
+			unmarshaled: TokenExchangeResponse{
+				AccessToken:     "access_token",
+				IssuedTokenType: "test_token",
+				TokenType:       "test_token",
+				ExpiresIn:       Duration(12345 * time.Second),
+				Scopes:          []string{"lorem", "ipsum"},
+				RefreshToken:    "refresh_token",
+				IDToken:         "id_token",
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		got, err := json.Marshal(testCase.unmarshaled)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, testCase.want, string(got))
+	}
+}
+func TestAccessTokenResponse_UnmarshalJSON(t *testing.T) {
+	testCases := []struct {
+		marshaled string
+		want      AccessTokenResponse
+	}{
+		{
+			marshaled: `
+            {
+                "access_token":"access_token",
+                "token_type":"test_token",
+	        	"refresh_token": "refresh_token",
+                "expires_in":12345,
+	        	"id_token": "id_token",
+                "state": "state",
+	        	"scope": "lorem ipsum"
+            }`,
+			want: AccessTokenResponse{
+				AccessToken:  "access_token",
+				TokenType:    "test_token",
+				RefreshToken: "refresh_token",
+				ExpiresIn:    Duration(12345 * time.Second),
+				IDToken:      "id_token",
+				State:        "state",
+				Scope:        []string{"lorem", "ipsum"},
+			},
+		},
+		{
+			marshaled: `
+            {
+                "access_token":"access_token",
+                "token_type":"test_token",
+	        	"refresh_token": "refresh_token",
+                "expires_in":"12345",
+	        	"id_token": "id_token",
+				"state": "state",
+	        	"scope": "lorem ipsum"
+            }`,
+			want: AccessTokenResponse{
+				AccessToken:  "access_token",
+				TokenType:    "test_token",
+				RefreshToken: "refresh_token",
+				ExpiresIn:    Duration(12345 * time.Second),
+				IDToken:      "id_token",
+				State:        "state",
+				Scope:        []string{"lorem", "ipsum"},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		got := &AccessTokenResponse{}
+		err := json.Unmarshal([]byte(testCase.marshaled), got)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, testCase.want.AccessToken, got.AccessToken)
+		assert.Equal(t, testCase.want.TokenType, got.TokenType)
+		assert.Equal(t, testCase.want.RefreshToken, got.RefreshToken)
+		assert.Equal(t, testCase.want.ExpiresIn, got.ExpiresIn)
+		assert.Equal(t, testCase.want.IDToken, got.IDToken)
+		assert.Equal(t, testCase.want.State, got.State)
+		assert.Equal(t, testCase.want.Scope, got.Scope)
+	}
+}
+func TestAccessTokenResponse_MarshalJSON(t *testing.T) {
+	testCases := []struct {
+		want        string
+		unmarshaled AccessTokenResponse
+	}{
+		{
+			want: `{"access_token":"access_token","token_type":"test_token","refresh_token":"refresh_token","expires_in":12345,"id_token":"id_token","state":"state","scope":"lorem ipsum"}`,
+			unmarshaled: AccessTokenResponse{
+				AccessToken:  "access_token",
+				TokenType:    "test_token",
+				RefreshToken: "refresh_token",
+				ExpiresIn:    Duration(12345 * time.Second),
+				IDToken:      "id_token",
+				State:        "state",
+				Scope:        []string{"lorem", "ipsum"},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		got, err := json.Marshal(testCase.unmarshaled)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, testCase.want, string(got))
+	}
 }
