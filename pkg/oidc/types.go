@@ -305,6 +305,10 @@ func (*RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {
 
 type Duration time.Duration
 
+func (d Duration) AsDuration() time.Duration {
+	return time.Duration(d)
+}
+
 func (d *Duration) UnmarshalJSON(data []byte) error {
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
@@ -337,6 +341,6 @@ func (d *Duration) UnmarshalJSON(data []byte) error {
 }
 
 func (d Duration) MarshalJSON() ([]byte, error) {
-	ms := int64(time.Duration(d) / time.Second)
-	return []byte(strconv.FormatInt(ms, 10)), nil
+	s := int64(d.AsDuration().Seconds())
+	return []byte(strconv.FormatInt(s, 10)), nil
 }
