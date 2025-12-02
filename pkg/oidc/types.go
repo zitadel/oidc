@@ -324,6 +324,8 @@ func (d *Duration) UnmarshalJSON(data []byte) error {
 		}
 		*d = Duration(time.Second * time.Duration(x))
 	case string:
+		// Compatibility with EntraID:
+		// https://github.com/zitadel/oidc/issues/815
 		i, err := strconv.Atoi(x)
 		if err != nil {
 			return fmt.Errorf("oidc.Duration: %w", err)
