@@ -57,7 +57,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 		}
 	}
 
-	exp := oidc.Duration(validity.Seconds())
+	exp := oidc.Duration(validity)
 	return &oidc.AccessTokenResponse{
 		AccessToken:  accessToken,
 		IDToken:      idToken,

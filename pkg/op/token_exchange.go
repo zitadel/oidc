@@ -402,12 +402,11 @@ func CreateTokenExchangeResponse(
 		oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
 	}
 
-	exp := oidc.Duration(validity.Seconds())
 	return &oidc.TokenExchangeResponse{
 		AccessToken:     token,
 		IssuedTokenType: tokenExchangeRequest.GetRequestedTokenType(),
 		TokenType:       tokenType,
-		ExpiresIn:       exp,
+		ExpiresIn:       oidc.Duration(validity),
 		RefreshToken:    refreshToken,
 		Scopes:          tokenExchangeRequest.GetScopes(),
 	}, nil

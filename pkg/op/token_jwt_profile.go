@@ -88,7 +88,7 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 	return &oidc.AccessTokenResponse{
 		AccessToken: accessToken,
 		TokenType:   oidc.BearerToken,
-		ExpiresIn:   oidc.Duration(validity.Seconds()),
+		ExpiresIn:   oidc.Duration(validity),
 		Scope:       tokenRequest.GetScopes(),
 	}, nil
 }
