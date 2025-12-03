@@ -96,7 +96,7 @@ var (
 	}
 )
 
-var tracer = otel.Tracer("github.com/zitadel/oidc/pkg/op")
+var Tracer = otel.Tracer("github.com/zitadel/oidc/pkg/op")
 
 type OpenIDProvider interface {
 	http.Handler
@@ -252,7 +252,12 @@ func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, op
 // Successful logins should mark the request as authorized and redirect back to to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-func NewProvider(config *Config, storage Storage, issuer func(insecure bool) (IssuerFromRequest, error), opOpts ...Option) (_ *Provider, err error) {
+func NewProvider(
+	config *Config,
+	storage Storage,
+	issuer func(insecure bool) (IssuerFromRequest, error),
+	opOpts ...Option,
+) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
 	o := &Provider{
 		config:            config,
