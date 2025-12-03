@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	jose "github.com/go-jose/go-jose/v4"
@@ -13,6 +14,8 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
+
+const joseUnknownKeyTypeErrMsg = "go-jose/go-jose: unknown json web key type '"
 
 func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKeySet)) oidc.KeySet {
 	keyset := &remoteKeySet{httpClient: client, jwksURL: jwksURL}
@@ -238,14 +241,19 @@ func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	var raw rawJSONWebKeySet
 	err = json.Unmarshal(data, &raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("oidc: failed to unmarshall key set: %w", err)
 	}
-	for _, key := range raw.Keys {
+	for i, key := range raw.Keys {
 		webKey := new(jose.JSONWebKey)
-		err = webKey.UnmarshalJSON(key)
-		if err == nil {
-			k.Keys = append(k.Keys, *webKey)
+		if err = webKey.UnmarshalJSON(key); err != nil {
+			if strings.HasPrefix(err.Error(), joseUnknownKeyTypeErrMsg) {
+				continue
+			}
+
+			return fmt.Errorf("oidc: failed to unmarshal key %d from set: %w", i, err)
 		}
+
+		k.Keys = append(k.Keys, *webKey)
 	}
 	return nil
 }
