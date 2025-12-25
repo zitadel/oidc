@@ -211,6 +211,28 @@ func DeviceClient(id, secret string) *Client {
 	}
 }
 
+// CIBAClient creates a CIBA (Client Initiated Backchannel Authentication) client with Basic authentication.
+// CIBA allows clients to initiate authentication flows where the user authenticates on a separate device.
+func CIBAClient(id, secret string) *Client {
+	return &Client{
+		id:              id,
+		secret:          secret,
+		redirectURIs:    nil, // CIBA doesn't use redirects
+		applicationType: op.ApplicationTypeWeb,
+		authMethod:      oidc.AuthMethodBasic,
+		loginURL:        defaultLoginURL,
+		responseTypes:   []oidc.ResponseType{oidc.ResponseTypeCode},
+		grantTypes: []oidc.GrantType{
+			oidc.GrantTypeCIBA,
+			oidc.GrantTypeRefreshToken, // CIBA can support refresh tokens
+		},
+		accessTokenType:                op.AccessTokenTypeBearer,
+		devMode:                        false,
+		idTokenUserinfoClaimsAssertion: false,
+		clockSkew:                      0,
+	}
+}
+
 type hasRedirectGlobs struct {
 	*Client
 }

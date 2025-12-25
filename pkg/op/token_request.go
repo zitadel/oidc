@@ -71,6 +71,11 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 			DeviceAccessToken(w, r, exchanger)
 			return
 		}
+	case string(oidc.GrantTypeCIBA):
+		if exchanger.GrantTypeBackchannelAuthenticationSupported() {
+			BackchannelAccessToken(w, r, exchanger)
+			return
+		}
 	case "":
 		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), exchanger.Logger())
 		return

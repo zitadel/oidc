@@ -44,9 +44,12 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		RevocationEndpoint:                         config.RevocationEndpoint().Absolute(issuer),
 		EndSessionEndpoint:                         config.EndSessionEndpoint().Absolute(issuer),
 		JwksURI:                                    config.KeysEndpoint().Absolute(issuer),
-		DeviceAuthorizationEndpoint:                config.DeviceAuthorizationEndpoint().Absolute(issuer),
-		CheckSessionIframe:                         config.CheckSessionIframe().Absolute(issuer),
-		ScopesSupported:                            Scopes(config),
+		DeviceAuthorizationEndpoint:                           config.DeviceAuthorizationEndpoint().Absolute(issuer),
+		BackchannelAuthenticationEndpoint:                     config.BackchannelAuthenticationEndpoint().Absolute(issuer),
+		BackchannelTokenDeliveryModesSupported:                BackchannelDeliveryModes(config),
+		BackchannelUserCodeParameterSupported:                 false, // Not supported in v1
+		CheckSessionIframe:                                    config.CheckSessionIframe().Absolute(issuer),
+		ScopesSupported:                                       Scopes(config),
 		ResponseTypesSupported:                     ResponseTypes(config),
 		GrantTypesSupported:                        GrantTypes(config),
 		SubjectTypesSupported:                      SubjectTypes(config),
@@ -78,8 +81,11 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		RevocationEndpoint:                         endpoints.Revocation.Absolute(issuer),
 		EndSessionEndpoint:                         endpoints.EndSession.Absolute(issuer),
 		JwksURI:                                    endpoints.JwksURI.Absolute(issuer),
-		DeviceAuthorizationEndpoint:                endpoints.DeviceAuthorization.Absolute(issuer),
-		ScopesSupported:                            Scopes(config),
+		DeviceAuthorizationEndpoint:                           endpoints.DeviceAuthorization.Absolute(issuer),
+		BackchannelAuthenticationEndpoint:                     endpoints.BackchannelAuthentication.Absolute(issuer),
+		BackchannelTokenDeliveryModesSupported:                BackchannelDeliveryModes(config),
+		BackchannelUserCodeParameterSupported:                 false, // Not supported in v1
+		ScopesSupported:                                       Scopes(config),
 		ResponseTypesSupported:                     ResponseTypes(config),
 		GrantTypesSupported:                        GrantTypes(config),
 		SubjectTypesSupported:                      SubjectTypes(config),
@@ -135,6 +141,9 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 	}
 	if c.GrantTypeDeviceCodeSupported() {
 		grantTypes = append(grantTypes, oidc.GrantTypeDeviceCode)
+	}
+	if c.GrantTypeBackchannelAuthenticationSupported() {
+		grantTypes = append(grantTypes, oidc.GrantTypeCIBA)
 	}
 	return grantTypes
 }
@@ -239,4 +248,13 @@ func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {
 		codeMethods = append(codeMethods, oidc.CodeChallengeMethodS256)
 	}
 	return codeMethods
+}
+
+func BackchannelDeliveryModes(c Configuration) []string {
+	if !c.GrantTypeBackchannelAuthenticationSupported() {
+		return nil
+	}
+	// Poll mode only for v1 implementation
+	// Future versions may add "ping" and "push" modes
+	return []string{"poll"}
 }

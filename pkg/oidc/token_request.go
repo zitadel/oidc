@@ -31,6 +31,9 @@ const (
 	// GrantTypeDeviceCode
 	GrantTypeDeviceCode GrantType = "urn:ietf:params:oauth:grant-type:device_code"
 
+	// GrantTypeCIBA defines the grant_type `urn:openid:params:grant-type:ciba` used for Client Initiated Backchannel Authentication
+	GrantTypeCIBA GrantType = "urn:openid:params:grant-type:ciba"
+
 	// ClientAssertionTypeJWTAssertion defines the client_assertion_type `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
 	// used for the OAuth JWT Profile Client Authentication
 	ClientAssertionTypeJWTAssertion = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -39,7 +42,7 @@ const (
 var AllGrantTypes = []GrantType{
 	GrantTypeCode, GrantTypeRefreshToken, GrantTypeClientCredentials,
 	GrantTypeBearer, GrantTypeTokenExchange, GrantTypeImplicit,
-	GrantTypeDeviceCode, ClientAssertionTypeJWTAssertion,
+	GrantTypeDeviceCode, GrantTypeCIBA, ClientAssertionTypeJWTAssertion,
 }
 
 type GrantType string

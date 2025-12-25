@@ -28,6 +28,18 @@ type DiscoveryConfiguration struct {
 
 	DeviceAuthorizationEndpoint string `json:"device_authorization_endpoint,omitempty"`
 
+	// BackchannelAuthenticationEndpoint is the URL of the CIBA (Client Initiated Backchannel Authentication) Endpoint
+	BackchannelAuthenticationEndpoint string `json:"backchannel_authentication_endpoint,omitempty"`
+
+	// BackchannelTokenDeliveryModesSupported contains a list of token delivery modes supported for CIBA (poll, ping, push)
+	BackchannelTokenDeliveryModesSupported []string `json:"backchannel_token_delivery_modes_supported,omitempty"`
+
+	// BackchannelAuthenticationRequestSigningAlgValuesSupported contains a list of JWS signing algorithms supported for signed authentication requests
+	BackchannelAuthenticationRequestSigningAlgValuesSupported []string `json:"backchannel_authentication_request_signing_alg_values_supported,omitempty"`
+
+	// BackchannelUserCodeParameterSupported specifies whether the OP supports the user_code parameter in backchannel authentication requests
+	BackchannelUserCodeParameterSupported bool `json:"backchannel_user_code_parameter_supported,omitempty"`
+
 	// CheckSessionIframe is a URL where the OP provides an iframe that support cross-origin communications for session state information with the RP Client.
 	CheckSessionIframe string `json:"check_session_iframe,omitempty"`
 

@@ -37,18 +37,19 @@ var (
 // typically you would implement this as a layer on top of your database
 // for simplicity this example keeps everything in-memory
 type Storage struct {
-	lock          sync.Mutex
-	authRequests  map[string]*AuthRequest
-	codes         map[string]string
-	tokens        map[string]*Token
-	clients       map[string]*Client
-	userStore     UserStore
-	services      map[string]Service
-	refreshTokens map[string]*RefreshToken
-	signingKey    signingKey
-	deviceCodes   map[string]deviceAuthorizationEntry
-	userCodes     map[string]string
-	serviceUsers  map[string]*Client
+	lock             sync.Mutex
+	authRequests     map[string]*AuthRequest
+	codes            map[string]string
+	tokens           map[string]*Token
+	clients          map[string]*Client
+	userStore        UserStore
+	services         map[string]Service
+	refreshTokens    map[string]*RefreshToken
+	signingKey       signingKey
+	deviceCodes      map[string]deviceAuthorizationEntry
+	userCodes        map[string]string
+	backchannelAuths map[string]*op.BackchannelAuthenticationState
+	serviceUsers     map[string]*Client
 }
 
 type signingKey struct {
@@ -114,8 +115,9 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 			algorithm: jose.RS256,
 			key:       key,
 		},
-		deviceCodes: make(map[string]deviceAuthorizationEntry),
-		userCodes:   make(map[string]string),
+		deviceCodes:      make(map[string]deviceAuthorizationEntry),
+		userCodes:        make(map[string]string),
+		backchannelAuths: make(map[string]*op.BackchannelAuthenticationState),
 		serviceUsers: map[string]*Client{
 			"sid1": {
 				id:     "sid1",
@@ -888,6 +890,93 @@ func (s *Storage) DenyDeviceAuthorization(ctx context.Context, userCode string) 
 	defer s.lock.Unlock()
 
 	s.deviceCodes[s.userCodes[userCode]].state.Denied = true
+	return nil
+}
+
+// StoreBackchannelAuthentication implements the op.BackchannelAuthenticationStorage interface
+func (s *Storage) StoreBackchannelAuthentication(ctx context.Context, clientID, authReqID string, expires time.Time, scopes []string, loginHint string, bindingMessage string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if _, ok := s.clients[clientID]; !ok {
+		return errors.New("client not found")
+	}
+
+	s.backchannelAuths[authReqID] = &op.BackchannelAuthenticationState{
+		ClientID:       clientID,
+		Scopes:         scopes,
+		Expires:        expires,
+		LoginHint:      loginHint,
+		BindingMessage: bindingMessage,
+	}
+
+	// TODO: In a real implementation, this is where you would trigger notification to the user's device
+	// Examples: push notification, SMS, email, webhook to authentication service, etc.
+	// For this example, we just log it
+	fmt.Printf("CIBA: New authentication request\n")
+	fmt.Printf("  auth_req_id: %s\n", authReqID)
+	fmt.Printf("  client_id: %s\n", clientID)
+	fmt.Printf("  login_hint: %s\n", loginHint)
+	if bindingMessage != "" {
+		fmt.Printf("  binding_message: %s\n", bindingMessage)
+	}
+	fmt.Printf("  expires: %s\n", expires.Format(time.RFC3339))
+	fmt.Printf("  scopes: %v\n", scopes)
+	fmt.Println()
+
+	return nil
+}
+
+// GetBackchannelAuthenticationState implements the op.BackchannelAuthenticationStorage interface
+func (s *Storage) GetBackchannelAuthenticationState(ctx context.Context, clientID, authReqID string) (*op.BackchannelAuthenticationState, error) {
+	// Check for context deadline to trigger slow_down error
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	state, ok := s.backchannelAuths[authReqID]
+	if !ok || state.ClientID != clientID {
+		return nil, errors.New("auth_req_id not found for client")
+	}
+
+	return state, nil
+}
+
+// CompleteBackchannelAuthentication implements the op.BackchannelAuthenticationStorage interface
+func (s *Storage) CompleteBackchannelAuthentication(ctx context.Context, authReqID, subject string, amr []string, authTime time.Time) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	state, ok := s.backchannelAuths[authReqID]
+	if !ok {
+		return errors.New("auth_req_id not found")
+	}
+
+	state.Subject = subject
+	state.AMR = amr
+	state.AuthTime = authTime
+	state.Done = true
+
+	fmt.Printf("CIBA: Authentication completed for auth_req_id: %s, subject: %s\n", authReqID, subject)
+	return nil
+}
+
+// DenyBackchannelAuthentication implements the op.BackchannelAuthenticationStorage interface
+func (s *Storage) DenyBackchannelAuthentication(ctx context.Context, authReqID string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	state, ok := s.backchannelAuths[authReqID]
+	if !ok {
+		return errors.New("auth_req_id not found")
+	}
+
+	state.Denied = true
+
+	fmt.Printf("CIBA: Authentication denied for auth_req_id: %s\n", authReqID)
 	return nil
 }
 

@@ -50,6 +50,9 @@ type Configuration interface {
 
 	SupportedUILocales() []language.Tag
 	DeviceAuthorization() DeviceAuthorizationConfig
+	BackchannelAuthentication() BackchannelAuthenticationConfig
+	GrantTypeBackchannelAuthenticationSupported() bool
+	BackchannelAuthenticationEndpoint() *Endpoint
 
 	BackChannelLogoutSupported() bool
 	BackChannelLogoutSessionSupported() bool

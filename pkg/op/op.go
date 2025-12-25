@@ -19,29 +19,31 @@ import (
 )
 
 const (
-	healthEndpoint               = "/healthz"
-	readinessEndpoint            = "/ready"
-	authCallbackPathSuffix       = "/callback"
-	defaultAuthorizationEndpoint = "authorize"
-	defaultTokenEndpoint         = "oauth/token"
-	defaultIntrospectEndpoint    = "oauth/introspect"
-	defaultUserinfoEndpoint      = "userinfo"
-	defaultRevocationEndpoint    = "revoke"
-	defaultEndSessionEndpoint    = "end_session"
-	defaultKeysEndpoint          = "keys"
-	defaultDeviceAuthzEndpoint   = "/device_authorization"
+	healthEndpoint                          = "/healthz"
+	readinessEndpoint                       = "/ready"
+	authCallbackPathSuffix                  = "/callback"
+	defaultAuthorizationEndpoint            = "authorize"
+	defaultTokenEndpoint                    = "oauth/token"
+	defaultIntrospectEndpoint               = "oauth/introspect"
+	defaultUserinfoEndpoint                 = "userinfo"
+	defaultRevocationEndpoint               = "revoke"
+	defaultEndSessionEndpoint               = "end_session"
+	defaultKeysEndpoint                     = "keys"
+	defaultDeviceAuthzEndpoint              = "/device_authorization"
+	defaultBackchannelAuthenticationEndpoint = "/backchannel_authentication"
 )
 
 var (
 	DefaultEndpoints = &Endpoints{
-		Authorization:       NewEndpoint(defaultAuthorizationEndpoint),
-		Token:               NewEndpoint(defaultTokenEndpoint),
-		Introspection:       NewEndpoint(defaultIntrospectEndpoint),
-		Userinfo:            NewEndpoint(defaultUserinfoEndpoint),
-		Revocation:          NewEndpoint(defaultRevocationEndpoint),
-		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
-		JwksURI:             NewEndpoint(defaultKeysEndpoint),
-		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
+		Authorization:             NewEndpoint(defaultAuthorizationEndpoint),
+		Token:                     NewEndpoint(defaultTokenEndpoint),
+		Introspection:             NewEndpoint(defaultIntrospectEndpoint),
+		Userinfo:                  NewEndpoint(defaultUserinfoEndpoint),
+		Revocation:                NewEndpoint(defaultRevocationEndpoint),
+		EndSession:                NewEndpoint(defaultEndSessionEndpoint),
+		JwksURI:                   NewEndpoint(defaultKeysEndpoint),
+		DeviceAuthorization:       NewEndpoint(defaultDeviceAuthzEndpoint),
+		BackchannelAuthentication: NewEndpoint(defaultBackchannelAuthenticationEndpoint),
 	}
 
 	DefaultSupportedClaims = []string{
@@ -143,6 +145,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
+	router.HandleFunc(o.BackchannelAuthenticationEndpoint().Relative(), BackchannelAuthenticationHandler(o))
 	return router
 }
 
@@ -169,21 +172,23 @@ type Config struct {
 	SupportedClaims                   []string
 	SupportedScopes                   []string
 	DeviceAuthorization               DeviceAuthorizationConfig
+	BackchannelAuthentication         BackchannelAuthenticationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
 }
 
 // Endpoints defines endpoint routes.
 type Endpoints struct {
-	Authorization       *Endpoint
-	Token               *Endpoint
-	Introspection       *Endpoint
-	Userinfo            *Endpoint
-	Revocation          *Endpoint
-	EndSession          *Endpoint
-	CheckSessionIframe  *Endpoint
-	JwksURI             *Endpoint
-	DeviceAuthorization *Endpoint
+	Authorization              *Endpoint
+	Token                      *Endpoint
+	Introspection              *Endpoint
+	Userinfo                   *Endpoint
+	Revocation                 *Endpoint
+	EndSession                 *Endpoint
+	CheckSessionIframe         *Endpoint
+	JwksURI                    *Endpoint
+	DeviceAuthorization        *Endpoint
+	BackchannelAuthentication  *Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -418,6 +423,19 @@ func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
 	return o.config.DeviceAuthorization
 }
 
+func (o *Provider) BackchannelAuthentication() BackchannelAuthenticationConfig {
+	return o.config.BackchannelAuthentication
+}
+
+func (o *Provider) GrantTypeBackchannelAuthenticationSupported() bool {
+	_, ok := o.storage.(BackchannelAuthenticationStorage)
+	return ok
+}
+
+func (o *Provider) BackchannelAuthenticationEndpoint() *Endpoint {
+	return o.endpoints.BackchannelAuthentication
+}
+
 func (o *Provider) BackChannelLogoutSupported() bool {
 	return o.config.BackChannelLogoutSupported
 }
@@ -583,6 +601,16 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 			return err
 		}
 		o.endpoints.DeviceAuthorization = endpoint
+		return nil
+	}
+}
+
+func WithCustomBackchannelAuthenticationEndpoint(endpoint *Endpoint) Option {
+	return func(o *Provider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.BackchannelAuthentication = endpoint
 		return nil
 	}
 }
