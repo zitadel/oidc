@@ -28,7 +28,7 @@ type AccessTokenClient interface {
 }
 
 func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
-	ctx, span := tracer.Start(ctx, "CreateTokenResponse")
+	ctx, span := Tracer.Start(ctx, "CreateTokenResponse")
 	defer span.End()
 
 	var accessToken, newRefreshToken string
@@ -77,7 +77,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 //   - When needsRefreshToken() returns false: calls CreateAccessToken only.
 //     The newRefreshToken will be an empty string in this case.
 func createTokens(ctx context.Context, tokenRequest TokenRequest, storage Storage, refreshToken string, client AccessTokenClient) (id, newRefreshToken string, exp time.Time, err error) {
-	ctx, span := tracer.Start(ctx, "createTokens")
+	ctx, span := Tracer.Start(ctx, "createTokens")
 	defer span.End()
 
 	if needsRefreshToken(tokenRequest, client) {
@@ -112,7 +112,7 @@ func needsRefreshToken(tokenRequest TokenRequest, client AccessTokenClient) bool
 //
 // The function returns both tokens to support all flows with a single signature.
 func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTokenType AccessTokenType, creator TokenCreator, client AccessTokenClient, refreshToken string) (accessToken, newRefreshToken string, validity time.Duration, err error) {
-	ctx, span := tracer.Start(ctx, "CreateAccessToken")
+	ctx, span := Tracer.Start(ctx, "CreateAccessToken")
 	defer span.End()
 
 	id, newRefreshToken, exp, err := createTokens(ctx, tokenRequest, creator.Storage(), refreshToken, client)
@@ -128,7 +128,7 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 		accessToken, err = CreateJWT(ctx, IssuerFromContext(ctx), tokenRequest, exp, id, client, creator.Storage())
 		return accessToken, newRefreshToken, validity, err
 	}
-	_, span = tracer.Start(ctx, "CreateBearerToken")
+	_, span = Tracer.Start(ctx, "CreateBearerToken")
 	accessToken, err = CreateBearerToken(id, tokenRequest.GetSubject(), creator.Crypto())
 	span.End()
 	return accessToken, newRefreshToken, validity, err
@@ -143,7 +143,7 @@ type TokenActorRequest interface {
 }
 
 func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, exp time.Time, id string, client AccessTokenClient, storage Storage) (string, error) {
-	ctx, span := tracer.Start(ctx, "CreateJWT")
+	ctx, span := Tracer.Start(ctx, "CreateJWT")
 	defer span.End()
 
 	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
@@ -199,7 +199,7 @@ type IDTokenRequest interface {
 }
 
 func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, client Client) (string, error) {
-	ctx, span := tracer.Start(ctx, "CreateIDToken")
+	ctx, span := Tracer.Start(ctx, "CreateIDToken")
 	defer span.End()
 
 	exp := time.Now().UTC().Add(client.ClockSkew()).Add(validity)
