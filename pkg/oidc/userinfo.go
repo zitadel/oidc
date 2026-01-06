@@ -1,5 +1,35 @@
 package oidc
 
+import (
+	"fmt"
+)
+
+type Bool bool
+
+// UnmarshalJSON handles both standard JSON boolean values and string representations.
+// This is necessary because some OIDC providers (notably AWS Cognito) incorrectly return
+// boolean fields like email_verified and phone_number_verified as strings ("true"/"false")
+// instead of proper JSON booleans, violating the OIDC specification.
+//
+// The method first attempts standard boolean unmarshaling, and falls back to string
+// parsing if that fails, making it compatible with both compliant and non-compliant providers.
+//
+// Ref:
+// - https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
+// - https://docs.aws.amazon.com/cognito/latest/developerguide/userinfo-endpoint.html
+func (bs *Bool) UnmarshalJSON(data []byte) error {
+	s := string(data)
+	switch s {
+	case "true", `"true"`:
+		*bs = true
+	case "false", `"false"`:
+		*bs = false
+	default:
+		return fmt.Errorf("cannot unmarshal %s into Bool", s)
+	}
+	return nil
+}
+
 // UserInfo implements OpenID Connect Core 1.0, section 5.1.
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type UserInfo struct {
@@ -64,25 +94,12 @@ type UserInfoProfile struct {
 type UserInfoEmail struct {
 	Email string `json:"email,omitempty"`
 
-	// Handle providers that return email_verified as a string
-	// https://forums.aws.amazon.com/thread.jspa?messageID=949441&#949441
-	// https://discuss.elastic.co/t/openid-error-after-authenticating-against-aws-cognito/206018/11
 	EmailVerified Bool `json:"email_verified,omitempty"`
-}
-
-type Bool bool
-
-func (bs *Bool) UnmarshalJSON(data []byte) error {
-	if string(data) == "true" || string(data) == `"true"` {
-		*bs = true
-	}
-
-	return nil
 }
 
 type UserInfoPhone struct {
 	PhoneNumber         string `json:"phone_number,omitempty"`
-	PhoneNumberVerified bool   `json:"phone_number_verified,omitempty"`
+	PhoneNumberVerified Bool   `json:"phone_number_verified,omitempty"`
 }
 
 type UserInfoAddress struct {
