@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -300,3 +302,47 @@ func (r *RequestObject) GetIssuer() string {
 }
 
 func (*RequestObject) SetSignatureAlgorithm(algorithm jose.SignatureAlgorithm) {}
+
+type Duration time.Duration
+
+func (d Duration) AsDuration() time.Duration {
+	return time.Duration(d)
+}
+
+func (d *Duration) UnmarshalJSON(data []byte) error {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("oidc.Duration: %w", err)
+	}
+	switch x := v.(type) {
+	case int64:
+		*d = Duration(time.Second * time.Duration(x))
+	case float64:
+		mod := math.Mod(x, 1)
+		if mod > 0 {
+			return fmt.Errorf("oidc.Duration: unable to parse type %T with value %v", x, x)
+		}
+		*d = Duration(time.Second * time.Duration(x))
+	case string:
+		// Compatibility with EntraID:
+		// https://github.com/zitadel/oidc/issues/815
+		i, err := strconv.Atoi(x)
+		if err != nil {
+			return fmt.Errorf("oidc.Duration: %w", err)
+		}
+		*d = Duration(time.Second * time.Duration(i))
+	case nil:
+		*d = 0
+	default:
+		return fmt.Errorf("oidc.Duration: unable to parse type %T with value %v", x, x)
+	}
+	if *d < 0 {
+		return fmt.Errorf("oidc.Duration: cannot be a negative time (%v)", *d)
+	}
+	return nil
+}
+
+func (d Duration) MarshalJSON() ([]byte, error) {
+	s := int64(d.AsDuration().Seconds())
+	return []byte(strconv.FormatInt(s, 10)), nil
+}
