@@ -343,7 +343,7 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    oidc.BearerToken,
-		ExpiresIn:    uint64(validity.Seconds()),
+		ExpiresIn:    oidc.Duration(validity),
 		Scope:        tokenRequest.GetScopes(),
 	}
 

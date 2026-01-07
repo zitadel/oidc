@@ -5,6 +5,52 @@ All commands are executed from the root of the project that imports oidc package
 on non-GNU systems, such as MacOS.
 Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 
+## V3 to V4
+
+**TL;DR** this chapter has no full `sed` script: the module path can be replaced
+automatically, the `ExpiresIn` change cannot.
+
+As first steps we will:
+1. Download the latest v4 module;
+2. Replace imports in all Go files;
+3. Tidy the module file;
+
+```bash
+go get -u github.com/zitadel/oidc/v4
+find . -type f -name '*.go' | xargs sed -i \
+    -e 's/github\.com\/zitadel\/oidc\/v3/github.com\/zitadel\/oidc\/v4/g'
+go mod tidy
+```
+
+### oidc
+
+#### `exp` claim in `AccessTokenResponse` and `TokenExchangeResponse`
+
+The type of the `ExpiresIn` field has been changed from an `int64` to an `oidc.Duration` type. 
+Unfortunately this upgrade cannot be described in a sed command and has to be done manually.
+
+Example:
+```go
+validity := 30 * time.Seconds
+oidc.AccessTokenResponse{
+    AccessToken: accessToken,
+    TokenType:   oidc.BearerToken,
+    ExpiresIn:   uint64(validity.Seconds()),
+    Scope:       tokenRequest.GetScopes(),
+}
+```
+becomes
+```go
+validity := 30 * time.Seconds
+oidc.AccessTokenResponse{
+    AccessToken: accessToken,
+    TokenType:   oidc.BearerToken,
+    ExpiresIn:   oidc.Duration(validity),
+    Scope:       tokenRequest.GetScopes(),
+}
+```
+
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
