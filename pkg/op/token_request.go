@@ -28,7 +28,7 @@ type Exchanger interface {
 
 func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tracer.Start(r.Context(), "tokenHandler")
+		ctx, span := Tracer.Start(r.Context(), "tokenHandler")
 		defer span.End()
 
 		Exchange(w, r.WithContext(ctx), exchanger)
@@ -37,7 +37,7 @@ func tokenHandler(exchanger Exchanger) func(w http.ResponseWriter, r *http.Reque
 
 // Exchange performs a token exchange appropriate for the grant type
 func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	ctx, span := tracer.Start(r.Context(), "Exchange")
+	ctx, span := Tracer.Start(r.Context(), "Exchange")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -88,7 +88,7 @@ type AuthenticatedTokenRequest interface {
 // ParseAuthenticatedTokenRequest parses the client_id and client_secret from the HTTP request from either
 // HTTP Basic Auth header or form body and sets them into the provided authenticatedTokenRequest interface
 func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder, request AuthenticatedTokenRequest) error {
-	ctx, span := tracer.Start(r.Context(), "ParseAuthenticatedTokenRequest")
+	ctx, span := Tracer.Start(r.Context(), "ParseAuthenticatedTokenRequest")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -119,7 +119,7 @@ func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder,
 
 // AuthorizeClientIDSecret authorizes a client by validating the client_id and client_secret (Basic Auth and POST)
 func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string, storage Storage) error {
-	ctx, span := tracer.Start(ctx, "AuthorizeClientIDSecret")
+	ctx, span := Tracer.Start(ctx, "AuthorizeClientIDSecret")
 	defer span.End()
 
 	err := storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
@@ -152,7 +152,7 @@ func AuthorizeCodeChallenge(codeVerifier string, challenge *oidc.CodeChallenge) 
 // AuthorizePrivateJWTKey authorizes a client by validating the client_assertion's signature with a previously
 // registered public key (JWT Profile)
 func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchanger JWTAuthorizationGrantExchanger) (Client, error) {
-	ctx, span := tracer.Start(ctx, "AuthorizePrivateJWTKey")
+	ctx, span := Tracer.Start(ctx, "AuthorizePrivateJWTKey")
 	defer span.End()
 
 	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))

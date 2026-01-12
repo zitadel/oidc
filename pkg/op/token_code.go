@@ -11,7 +11,7 @@ import (
 // CodeExchange handles the OAuth 2.0 authorization_code grant, including
 // parsing, validating, authorizing the client and finally exchanging the code for tokens
 func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	ctx, span := tracer.Start(r.Context(), "CodeExchange")
+	ctx, span := Tracer.Start(r.Context(), "CodeExchange")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -49,7 +49,7 @@ func ParseAccessTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc
 // ValidateAccessTokenRequest validates the token request parameters including authorization check of the client
 // and returns the previous created auth request corresponding to the auth code
 func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (AuthRequest, Client, error) {
-	ctx, span := tracer.Start(ctx, "ValidateAccessTokenRequest")
+	ctx, span := Tracer.Start(ctx, "ValidateAccessTokenRequest")
 	defer span.End()
 
 	authReq, client, err := AuthorizeCodeClient(ctx, tokenReq, exchanger)
@@ -71,7 +71,7 @@ func ValidateAccessTokenRequest(ctx context.Context, tokenReq *oidc.AccessTokenR
 // AuthorizeCodeClient checks the authorization of the client and that the used method was the one previously registered.
 // It than returns the auth request corresponding to the auth code
 func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest, exchanger Exchanger) (request AuthRequest, client Client, err error) {
-	ctx, span := tracer.Start(ctx, "AuthorizeCodeClient")
+	ctx, span := Tracer.Start(ctx, "AuthorizeCodeClient")
 	defer span.End()
 
 	request, err = AuthRequestByCode(ctx, exchanger.Storage(), tokenReq.Code)
@@ -123,7 +123,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 
 // AuthRequestByCode returns the AuthRequest previously created from Storage corresponding to the auth code or an error
 func AuthRequestByCode(ctx context.Context, storage Storage, code string) (AuthRequest, error) {
-	ctx, span := tracer.Start(ctx, "AuthRequestByCode")
+	ctx, span := Tracer.Start(ctx, "AuthRequestByCode")
 	defer span.End()
 
 	authReq, err := storage.AuthRequestByCode(ctx, code)

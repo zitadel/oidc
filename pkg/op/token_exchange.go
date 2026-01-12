@@ -134,7 +134,7 @@ func (r *tokenExchangeRequest) SetSubject(subject string) {
 
 // TokenExchange handles the OAuth 2.0 token exchange grant ("urn:ietf:params:oauth:grant-type:token-exchange")
 func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
-	ctx, span := tracer.Start(r.Context(), "TokenExchange")
+	ctx, span := Tracer.Start(r.Context(), "TokenExchange")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -193,7 +193,7 @@ func ValidateTokenExchangeRequest(
 	clientID, clientSecret string,
 	exchanger Exchanger,
 ) (TokenExchangeRequest, Client, error) {
-	ctx, span := tracer.Start(ctx, "ValidateTokenExchangeRequest")
+	ctx, span := Tracer.Start(ctx, "ValidateTokenExchangeRequest")
 	defer span.End()
 
 	if oidcTokenExchangeRequest.SubjectToken == "" {
@@ -234,7 +234,7 @@ func CreateTokenExchangeRequest(
 	client Client,
 	exchanger Exchanger,
 ) (TokenExchangeRequest, error) {
-	ctx, span := tracer.Start(ctx, "CreateTokenExchangeRequest")
+	ctx, span := Tracer.Start(ctx, "CreateTokenExchangeRequest")
 	defer span.End()
 
 	teStorage, ok := exchanger.Storage().(TokenExchangeStorage)
@@ -300,7 +300,7 @@ func GetTokenIDAndSubjectFromToken(
 	tokenType oidc.TokenType,
 	isActor bool,
 ) (tokenIDOrToken, subject string, claims map[string]any, ok bool) {
-	ctx, span := tracer.Start(ctx, "GetTokenIDAndSubjectFromToken")
+	ctx, span := Tracer.Start(ctx, "GetTokenIDAndSubjectFromToken")
 	defer span.End()
 
 	switch tokenType {
@@ -350,7 +350,7 @@ func GetTokenIDAndSubjectFromToken(
 
 // AuthorizeTokenExchangeClient authorizes a client by validating the client_id and client_secret
 func AuthorizeTokenExchangeClient(ctx context.Context, clientID, clientSecret string, exchanger Exchanger) (client Client, err error) {
-	ctx, span := tracer.Start(ctx, "AuthorizeTokenExchangeClient")
+	ctx, span := Tracer.Start(ctx, "AuthorizeTokenExchangeClient")
 	defer span.End()
 
 	if err := AuthorizeClientIDSecret(ctx, clientID, clientSecret, exchanger.Storage()); err != nil {
@@ -371,7 +371,7 @@ func CreateTokenExchangeResponse(
 	client Client,
 	creator TokenCreator,
 ) (_ *oidc.TokenExchangeResponse, err error) {
-	ctx, span := tracer.Start(ctx, "CreateTokenExchangeResponse")
+	ctx, span := Tracer.Start(ctx, "CreateTokenExchangeResponse")
 	defer span.End()
 
 	var (

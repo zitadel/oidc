@@ -16,7 +16,7 @@ type JWTAuthorizationGrantExchanger interface {
 
 // JWTProfile handles the OAuth 2.0 JWT Profile Authorization Grant https://tools.ietf.org/html/rfc7523#section-2.1
 func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizationGrantExchanger) {
-	ctx, span := tracer.Start(r.Context(), "JWTProfile")
+	ctx, span := Tracer.Start(r.Context(), "JWTProfile")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -60,7 +60,7 @@ func ParseJWTProfileGrantRequest(r *http.Request, decoder httphelper.Decoder) (*
 // CreateJWTTokenResponse creates an access_token response for a JWT Profile Grant request
 // by default the access_token is an opaque string, but can be specified by implementing the JWTProfileTokenStorage interface
 func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator) (*oidc.AccessTokenResponse, error) {
-	ctx, span := tracer.Start(ctx, "CreateJWTTokenResponse")
+	ctx, span := Tracer.Start(ctx, "CreateJWTTokenResponse")
 	defer span.End()
 
 	// return an opaque token as default to not break current implementations
