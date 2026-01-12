@@ -78,7 +78,7 @@ func (s *LegacyServer) Endpoints() Endpoints {
 // AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
 func (s *LegacyServer) AuthCallbackURL() func(context.Context, string) string {
 	return func(ctx context.Context, requestID string) string {
-		ctx, span := tracer.Start(ctx, "LegacyServer.AuthCallbackURL")
+		ctx, span := Tracer.Start(ctx, "LegacyServer.AuthCallbackURL")
 		defer span.End()
 
 		return s.endpoints.Authorization.Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + requestID
@@ -100,7 +100,7 @@ func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Respon
 }
 
 func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.Discovery")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.Discovery")
 	defer span.End()
 
 	return NewResponse(
@@ -109,7 +109,7 @@ func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Re
 }
 
 func (s *LegacyServer) Keys(ctx context.Context, r *Request[struct{}]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.Keys")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.Keys")
 	defer span.End()
 
 	keys, err := s.provider.Storage().KeySet(ctx)
@@ -127,7 +127,7 @@ var (
 )
 
 func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.VerifyAuthRequest")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.VerifyAuthRequest")
 	defer span.End()
 
 	if r.Data.RequestParam != "" {
@@ -154,7 +154,7 @@ func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.Au
 }
 
 func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.Authorize")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.Authorize")
 	defer span.End()
 
 	userID, err := ValidateAuthReqIDTokenHint(ctx, r.Data.IDTokenHint, s.provider.IDTokenHintVerifier(ctx))
@@ -169,7 +169,7 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 }
 
 func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest[oidc.DeviceAuthorizationRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.DeviceAuthorization")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.DeviceAuthorization")
 	defer span.End()
 
 	response, err := createDeviceAuthorization(ctx, r.Data, r.Client.GetID(), s.provider)
@@ -180,7 +180,7 @@ func (s *LegacyServer) DeviceAuthorization(ctx context.Context, r *ClientRequest
 }
 
 func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.VerifyClient")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.VerifyClient")
 	defer span.End()
 
 	if oidc.GrantType(r.Form.Get("grant_type")) == oidc.GrantTypeClientCredentials {
@@ -223,7 +223,7 @@ func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCreden
 }
 
 func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.AccessTokenRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.CodeExchange")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.CodeExchange")
 	defer span.End()
 
 	authReq, err := AuthRequestByCode(ctx, s.provider.Storage(), r.Data.Code)
@@ -246,7 +246,7 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 }
 
 func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.RefreshToken")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.RefreshToken")
 	defer span.End()
 
 	if !s.provider.GrantTypeRefreshTokenSupported() {
@@ -270,7 +270,7 @@ func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.R
 }
 
 func (s *LegacyServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfileGrantRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.JWTProfile")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.JWTProfile")
 	defer span.End()
 
 	exchanger, ok := s.provider.(JWTAuthorizationGrantExchanger)
@@ -294,7 +294,7 @@ func (s *LegacyServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfil
 }
 
 func (s *LegacyServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.TokenExchangeRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.TokenExchange")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.TokenExchange")
 	defer span.End()
 
 	if !s.provider.GrantTypeTokenExchangeSupported() {
@@ -312,7 +312,7 @@ func (s *LegacyServer) TokenExchange(ctx context.Context, r *ClientRequest[oidc.
 }
 
 func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientRequest[oidc.ClientCredentialsRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.ClientCredentialsExchange")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.ClientCredentialsExchange")
 	defer span.End()
 
 	storage, ok := s.provider.Storage().(ClientCredentialsStorage)
@@ -331,7 +331,7 @@ func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientR
 }
 
 func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.DeviceAccessTokenRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.DeviceToken")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.DeviceToken")
 	defer span.End()
 
 	if !s.provider.GrantTypeDeviceCodeSupported() {
@@ -354,7 +354,7 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 }
 
 func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *ClientCredentials) (string, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.authenticateResourceClient")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.authenticateResourceClient")
 	defer span.End()
 
 	if cc.ClientAssertion != "" {
@@ -370,7 +370,7 @@ func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *Clien
 }
 
 func (s *LegacyServer) Introspect(ctx context.Context, r *Request[IntrospectionRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.Introspect")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.Introspect")
 	defer span.End()
 
 	clientID, err := s.authenticateResourceClient(ctx, r.Data.ClientCredentials)
@@ -391,7 +391,7 @@ func (s *LegacyServer) Introspect(ctx context.Context, r *Request[IntrospectionR
 }
 
 func (s *LegacyServer) UserInfo(ctx context.Context, r *Request[oidc.UserInfoRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.UserInfo")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.UserInfo")
 	defer span.End()
 
 	tokenID, subject, ok := getTokenIDAndSubject(ctx, s.provider, r.Data.AccessToken)
@@ -407,7 +407,7 @@ func (s *LegacyServer) UserInfo(ctx context.Context, r *Request[oidc.UserInfoReq
 }
 
 func (s *LegacyServer) Revocation(ctx context.Context, r *ClientRequest[oidc.RevocationRequest]) (*Response, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.Revocation")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.Revocation")
 	defer span.End()
 
 	var subject string
@@ -439,7 +439,7 @@ func (s *LegacyServer) Revocation(ctx context.Context, r *ClientRequest[oidc.Rev
 }
 
 func (s *LegacyServer) EndSession(ctx context.Context, r *Request[oidc.EndSessionRequest]) (*Redirect, error) {
-	ctx, span := tracer.Start(ctx, "LegacyServer.EndSession")
+	ctx, span := Tracer.Start(ctx, "LegacyServer.EndSession")
 	defer span.End()
 
 	session, err := ValidateEndSessionRequest(ctx, r.Data, s.provider)

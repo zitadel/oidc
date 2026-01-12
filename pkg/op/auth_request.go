@@ -83,7 +83,7 @@ func AuthorizeCallbackHandler(authorizer Authorizer) func(http.ResponseWriter, *
 // Authorize handles the authorization request, including
 // parsing, validating, storing and finally redirecting to the login handler
 func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	ctx, span := tracer.Start(r.Context(), "Authorize")
+	ctx, span := Tracer.Start(r.Context(), "Authorize")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -231,7 +231,7 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 //
 // Deprecated: Use [ValidateAuthRequestClient] to prevent querying for the Client twice.
 func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
-	ctx, span := tracer.Start(ctx, "ValidateAuthRequest")
+	ctx, span := Tracer.Start(ctx, "ValidateAuthRequest")
 	defer span.End()
 
 	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
@@ -244,7 +244,7 @@ func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage
 // ValidateAuthRequestClient validates the Auth request against the passed client.
 // If id_token_hint is part of the request, the subject of the token is returned.
 func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, client Client, verifier *IDTokenHintVerifier) (sub string, err error) {
-	ctx, span := tracer.Start(ctx, "ValidateAuthRequestClient")
+	ctx, span := Tracer.Start(ctx, "ValidateAuthRequestClient")
 	defer span.End()
 
 	if err := ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
@@ -432,7 +432,7 @@ func RedirectToLogin(authReqID string, client Client, w http.ResponseWriter, r *
 
 // AuthorizeCallback handles the callback after authentication in the Login UI
 func AuthorizeCallback(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
-	ctx, span := tracer.Start(r.Context(), "AuthorizeCallback")
+	ctx, span := Tracer.Start(r.Context(), "AuthorizeCallback")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -468,7 +468,7 @@ func ParseAuthorizeCallbackRequest(r *http.Request) (id string, err error) {
 
 // AuthResponse creates the successful authentication response (either code or tokens)
 func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "AuthResponse")
+	ctx, span := Tracer.Start(r.Context(), "AuthResponse")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -486,7 +486,7 @@ func AuthResponse(authReq AuthRequest, authorizer Authorizer, w http.ResponseWri
 
 // AuthResponseCode handles the creation of a successful authentication response using an authorization code
 func AuthResponseCode(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer) {
-	ctx, span := tracer.Start(r.Context(), "AuthResponseCode")
+	ctx, span := Tracer.Start(r.Context(), "AuthResponseCode")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -552,7 +552,7 @@ func BuildAuthResponseCallbackURL(ctx context.Context, authReq AuthRequest, auth
 
 // AuthResponseToken creates the successful token(s) authentication response
 func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthRequest, authorizer Authorizer, client Client) {
-	ctx, span := tracer.Start(r.Context(), "AuthResponseToken")
+	ctx, span := Tracer.Start(r.Context(), "AuthResponseToken")
 	defer span.End()
 	r = r.WithContext(ctx)
 
@@ -583,7 +583,7 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 
 // CreateAuthRequestCode creates and stores a code for the auth code response
 func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Storage, crypto Crypto) (string, error) {
-	ctx, span := tracer.Start(ctx, "CreateAuthRequestCode")
+	ctx, span := Tracer.Start(ctx, "CreateAuthRequestCode")
 	defer span.End()
 
 	code, err := BuildAuthRequestCode(authReq, crypto)

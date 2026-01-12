@@ -92,7 +92,7 @@ type ClientJWTProfile interface {
 }
 
 func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier ClientJWTProfile) (clientID string, err error) {
-	ctx, span := tracer.Start(ctx, "ClientJWTAuth")
+	ctx, span := Tracer.Start(ctx, "ClientJWTAuth")
 	defer span.End()
 
 	if ca.ClientAssertion == "" {
@@ -107,7 +107,7 @@ func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier 
 }
 
 func ClientBasicAuth(r *http.Request, storage Storage) (clientID string, err error) {
-	ctx, span := tracer.Start(r.Context(), "ClientBasicAuth")
+	ctx, span := Tracer.Start(r.Context(), "ClientBasicAuth")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -158,7 +158,7 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 		return "", false, oidc.ErrInvalidRequest().WithDescription("cannot parse form").WithParent(err)
 	}
 
-	ctx, span := tracer.Start(r.Context(), "ClientIDFromRequest")
+	ctx, span := Tracer.Start(r.Context(), "ClientIDFromRequest")
 	r = r.WithContext(ctx)
 	defer span.End()
 
