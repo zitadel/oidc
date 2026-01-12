@@ -32,7 +32,7 @@ func revocationHandler(revoker Revoker) func(http.ResponseWriter, *http.Request)
 }
 
 func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
-	ctx, span := tracer.Start(r.Context(), "Revoke")
+	ctx, span := Tracer.Start(r.Context(), "Revoke")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -72,7 +72,7 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 }
 
 func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, tokenTypeHint, clientID string, err error) {
-	ctx, span := tracer.Start(r.Context(), "ParseTokenRevocationRequest")
+	ctx, span := Tracer.Start(r.Context(), "ParseTokenRevocationRequest")
 	r = r.WithContext(ctx)
 	defer span.End()
 
@@ -156,7 +156,7 @@ func RevocationError(err error) StatusError {
 }
 
 func getTokenIDAndSubjectForRevocation(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
-	ctx, span := tracer.Start(ctx, "getTokenIDAndSubjectForRevocation")
+	ctx, span := Tracer.Start(ctx, "getTokenIDAndSubjectForRevocation")
 	defer span.End()
 
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)

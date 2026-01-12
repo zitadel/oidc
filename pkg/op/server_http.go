@@ -125,7 +125,7 @@ func (s *webServer) createRouter() {
 func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {
 	if e != nil {
 		traceHandler := func(w http.ResponseWriter, r *http.Request) {
-			ctx, span := tracer.Start(r.Context(), e.Relative())
+			ctx, span := Tracer.Start(r.Context(), e.Relative())
 			r = r.WithContext(ctx)
 			hf(w, r)
 			defer span.End()
@@ -139,7 +139,7 @@ type clientHandler func(w http.ResponseWriter, r *http.Request, client Client)
 
 func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tracer.Start(r.Context(), r.URL.Path)
+		ctx, span := Tracer.Start(r.Context(), r.URL.Path)
 		defer span.End()
 		r = r.WithContext(ctx)
 
