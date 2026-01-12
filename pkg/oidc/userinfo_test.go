@@ -62,58 +62,112 @@ func TestUserInfoMarshal(t *testing.T) {
 	assert.Equal(t, out, out2)
 }
 
-func TestUserInfoEmailVerifiedUnmarshal(t *testing.T) {
+// TestUserInfoVerifiedFieldsUnmarshal ensures email_verified and phone_number_verified
+// handle both standard booleans and AWS Cognito's non-compliant strings.
+func TestUserInfoVerifiedFieldsUnmarshal(t *testing.T) {
 	t.Parallel()
 
-	t.Run("unmarshal email_verified from json bool true", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": true}`)
+	tests := []struct {
+		name              string
+		json              string
+		wantEmailVerified Bool
+		wantPhoneVerified Bool
+	}{
+		{
+			name:              "booleans true",
+			json:              `{"email_verified": true, "phone_number_verified": true}`,
+			wantEmailVerified: true,
+			wantPhoneVerified: true,
+		},
+		{
+			name:              "booleans false",
+			json:              `{"email_verified": false, "phone_number_verified": false}`,
+			wantEmailVerified: false,
+			wantPhoneVerified: false,
+		},
+		{
+			name:              "strings true",
+			json:              `{"email_verified": "true", "phone_number_verified": "true"}`,
+			wantEmailVerified: true,
+			wantPhoneVerified: true,
+		},
+		{
+			name:              "strings false",
+			json:              `{"email_verified": "false", "phone_number_verified": "false"}`,
+			wantEmailVerified: false,
+			wantPhoneVerified: false,
+		},
+		{
+			name:              "mixed bool/string",
+			json:              `{"email_verified": true, "phone_number_verified": "false"}`,
+			wantEmailVerified: true,
+			wantPhoneVerified: false,
+		},
+	}
 
-		var uie UserInfoEmail
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got UserInfo
+			err := json.Unmarshal([]byte(tt.json), &got)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantEmailVerified, got.EmailVerified)
+			assert.Equal(t, tt.wantPhoneVerified, got.PhoneNumberVerified)
+		})
+	}
+}
 
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: true,
-		}, uie)
-	})
+// TestBoolUnmarshal verifies the Bool type handles various inputs correctly.
+func TestBoolUnmarshal(t *testing.T) {
+	t.Parallel()
 
-	t.Run("unmarshal email_verified from json string true", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "true"}`)
+	tests := []struct {
+		name    string
+		input   string
+		want    Bool
+		wantErr bool
+	}{
+		{
+			name:  "bool true",
+			input: `true`,
+			want:  true,
+		},
+		{
+			name:  "bool false",
+			input: `false`,
+			want:  false,
+		},
+		{
+			name:  "string true",
+			input: `"true"`,
+			want:  true,
+		},
+		{
+			name:  "string false",
+			input: `"false"`,
+			want:  false,
+		},
+		{
+			name:    "invalid string",
+			input:   `"yes"`,
+			wantErr: true,
+		},
+		{
+			name:    "number",
+			input:   `1`,
+			wantErr: true,
+		},
+	}
 
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: true,
-		}, uie)
-	})
-
-	t.Run("unmarshal email_verified from json bool false", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": false}`)
-
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: false,
-		}, uie)
-	})
-
-	t.Run("unmarshal email_verified from json string false", func(t *testing.T) {
-		jsonBool := []byte(`{"email": "my@email.com", "email_verified": "false"}`)
-
-		var uie UserInfoEmail
-
-		err := json.Unmarshal(jsonBool, &uie)
-		assert.NoError(t, err)
-		assert.Equal(t, UserInfoEmail{
-			Email:         "my@email.com",
-			EmailVerified: false,
-		}, uie)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got Bool
+			err := json.Unmarshal([]byte(tt.input), &got)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
