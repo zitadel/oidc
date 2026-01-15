@@ -31,13 +31,40 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 	tokenReq, err := ParseRefreshTokenRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err, exchanger.Logger())
+		return
 	}
 	validatedRequest, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
 		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
-	resp, err := CreateTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
+	tokenCtx := r.Context()
+	// Enforce mTLS client authentication for mTLS clients (RFC 8705).
+	if client.AuthMethod() == oidc.AuthMethodTLSClientAuth || client.AuthMethod() == oidc.AuthMethodSelfSignedTLSClientAuth {
+		mtlsProvider, ok := exchanger.(mtlsClientAuthSupport)
+		if !ok {
+			RequestError(w, r, oidc.ErrInvalidClient().WithDescription("mTLS authentication not supported"), exchanger.Logger())
+			return
+		}
+		tokenCtx, err = validateMTLSClientAuthForClient(tokenCtx, r, mtlsProvider, client)
+		if err != nil {
+			RequestError(w, r, err, exchanger.Logger())
+			return
+		}
+	}
+	// Set certificate thumbprint in context for certificate-bound tokens (RFC 8705)
+	if mtlsProvider, ok := exchanger.(interface{ MTLSConfig() *MTLSConfig }); ok {
+		boundSupported := false
+		if s, ok := exchanger.(interface{ TLSClientCertificateBoundAccessTokensSupported() bool }); ok {
+			boundSupported = s.TLSClientCertificateBoundAccessTokensSupported()
+		}
+		tokenCtx, err = SetCertThumbprintInContext(tokenCtx, r, client, mtlsProvider.MTLSConfig(), boundSupported)
+		if err != nil {
+			RequestError(w, r, err, exchanger.Logger())
+			return
+		}
+	}
+	resp, err := CreateTokenResponse(tokenCtx, validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
 	if err != nil {
 		RequestError(w, r, err, exchanger.Logger())
 		return
@@ -123,6 +150,14 @@ func AuthorizeRefreshClient(ctx context.Context, tokenReq *oidc.RefreshTokenRequ
 	}
 	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
 		return nil, nil, oidc.ErrInvalidClient()
+	}
+	// mTLS authentication (tls_client_auth, self_signed_tls_client_auth)
+	// The actual mTLS validation is performed in ClientIDFromRequest/ClientMTLSAuth.
+	// If we reach here with an mTLS auth method, the client was already authenticated.
+	if client.AuthMethod() == oidc.AuthMethodTLSClientAuth ||
+		client.AuthMethod() == oidc.AuthMethodSelfSignedTLSClientAuth {
+		request, err = RefreshTokenRequestByRefreshToken(ctx, exchanger.Storage(), tokenReq.RefreshToken)
+		return request, client, err
 	}
 	if client.AuthMethod() == oidc.AuthMethodNone {
 		request, err = RefreshTokenRequestByRefreshToken(ctx, exchanger.Storage(), tokenReq.RefreshToken)

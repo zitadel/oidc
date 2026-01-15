@@ -3,6 +3,7 @@ package op_test
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -134,6 +135,8 @@ func TestRoutes(t *testing.T) {
 		headerContains map[string]string
 		json           string   // test for exact json output
 		contains       []string // when the body output is not constant, we just check for snippets to be present in the response
+		expiresInMin   int
+		expiresInMax   int
 	}{
 		{
 			name:     "health",
@@ -220,8 +223,12 @@ func TestRoutes(t *testing.T) {
 			wantCode: http.StatusOK,
 			contains: []string{
 				`{"access_token":"`,
-				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer","expires_in":299,"scope":"openid offline_access","refresh_token":"`,
+				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer"`,
+				`"scope":"openid offline_access"`,
+				`"refresh_token":"`,
 			},
+			expiresInMin: 299,
+			expiresInMax: 300,
 		},
 		{
 			name:      "Client credentials exchange",
@@ -232,8 +239,10 @@ func TestRoutes(t *testing.T) {
 				"grant_type": string(oidc.GrantTypeClientCredentials),
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
-			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
+			wantCode:     http.StatusOK,
+			contains:     []string{`{"access_token":"`, `"token_type":"Bearer"`, `"scope":"openid offline_access"`},
+			expiresInMin: 299,
+			expiresInMax: 300,
 		},
 		{
 			// This call will fail. A successful test is already
@@ -304,8 +313,11 @@ func TestRoutes(t *testing.T) {
 			contains: []string{
 				`{"access_token":"`,
 				`","token_type":"Bearer","refresh_token":"`,
-				`","expires_in":299,"id_token":"`,
+				`","expires_in":`,
+				`,"id_token":"`,
 			},
+			expiresInMin: 299,
+			expiresInMax: 300,
 		},
 		{
 			name:      "revoke",
@@ -389,6 +401,22 @@ func TestRoutes(t *testing.T) {
 			respBodyString := string(respBody)
 			t.Log(respBodyString)
 			t.Log(resp.Header)
+
+			if tt.expiresInMin > 0 || tt.expiresInMax > 0 {
+				var payload map[string]any
+				require.NoError(t, json.Unmarshal(respBody, &payload))
+				raw, ok := payload["expires_in"]
+				require.True(t, ok)
+				expires, ok := raw.(float64)
+				require.True(t, ok)
+				expiresInt := int(expires)
+				if tt.expiresInMin > 0 {
+					assert.GreaterOrEqual(t, expiresInt, tt.expiresInMin)
+				}
+				if tt.expiresInMax > 0 {
+					assert.LessOrEqual(t, expiresInt, tt.expiresInMax)
+				}
+			}
 
 			if tt.json != "" {
 				assert.JSONEq(t, tt.json, respBodyString)

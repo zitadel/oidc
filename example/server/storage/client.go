@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"crypto/x509"
 	"time"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -34,6 +35,11 @@ type Client struct {
 	clockSkew                      time.Duration
 	postLogoutRedirectURIGlobs     []string
 	redirectURIGlobs               []string
+
+	// mTLS authentication (RFC 8705)
+	mtlsConfig           *op.MTLSClientConfig // for tls_client_auth
+	registeredCerts      []string             // for self_signed_tls_client_auth (PEM-encoded)
+	registeredCertsParsed []*x509.Certificate // parsed certificates (internal)
 }
 
 // GetID must return the client_id
@@ -127,6 +133,18 @@ func (c *Client) ClockSkew() time.Duration {
 	return c.clockSkew
 }
 
+// GetMTLSConfig returns the mTLS client configuration for tls_client_auth.
+// Implements op.HasMTLSConfig interface.
+func (c *Client) GetMTLSConfig() *op.MTLSClientConfig {
+	return c.mtlsConfig
+}
+
+// GetRegisteredCertificates returns the registered certificates for self_signed_tls_client_auth.
+// Implements op.HasSelfSignedCertificate interface.
+func (c *Client) GetRegisteredCertificates() []string {
+	return c.registeredCerts
+}
+
 // RegisterClients enables you to register clients for the example implementation
 // there are some clients (web and native) to try out different cases
 // add more if necessary
@@ -208,6 +226,66 @@ func DeviceClient(id, secret string) *Client {
 		devMode:                        false,
 		idTokenUserinfoClaimsAssertion: false,
 		clockSkew:                      0,
+	}
+}
+
+// MTLSClient creates a client that uses tls_client_auth (PKI-based mTLS authentication).
+// The client is identified by Subject DN or SAN (DNS/URI/IP/Email) in the certificate.
+// This implements RFC 8705 Section 2.1.1.
+//
+// Parameters:
+//   - id: client identifier
+//   - mtlsConfig: mTLS client configuration specifying how to identify the client
+//   - boundTokens: if true, access tokens will be certificate-bound (cnf claim)
+//
+// Example:
+//
+//	MTLSClient("mtls-client", &op.MTLSClientConfig{
+//	    SubjectDN: "CN=client1,O=Example,C=US",
+//	    TLSClientCertificateBoundAccessTokens: true,
+//	})
+func MTLSClient(id string, mtlsConfig *op.MTLSClientConfig) *Client {
+	return &Client{
+		id:              id,
+		applicationType: op.ApplicationTypeWeb,
+		authMethod:      oidc.AuthMethodTLSClientAuth,
+		loginURL:        defaultLoginURL,
+		responseTypes:   []oidc.ResponseType{oidc.ResponseTypeCode},
+		grantTypes:      []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeClientCredentials},
+		accessTokenType: op.AccessTokenTypeJWT, // Required for certificate-bound tokens
+		mtlsConfig:      mtlsConfig,
+	}
+}
+
+// SelfSignedTLSClient creates a client that uses self_signed_tls_client_auth.
+// The client authenticates by presenting a certificate that matches one of the
+// pre-registered certificates (compared by thumbprint).
+// This implements RFC 8705 Section 2.1.2.
+//
+// Parameters:
+//   - id: client identifier
+//   - certificates: PEM-encoded certificates to register for this client
+//   - boundTokens: if true, access tokens will be certificate-bound (cnf claim)
+//
+// Example:
+//
+//	certPEM := `-----BEGIN CERTIFICATE-----
+//	MIIBkTCB+wIJAK...
+//	-----END CERTIFICATE-----`
+//	SelfSignedTLSClient("self-signed-client", true, certPEM)
+func SelfSignedTLSClient(id string, boundTokens bool, certificates ...string) *Client {
+	return &Client{
+		id:              id,
+		applicationType: op.ApplicationTypeWeb,
+		authMethod:      oidc.AuthMethodSelfSignedTLSClientAuth,
+		loginURL:        defaultLoginURL,
+		responseTypes:   []oidc.ResponseType{oidc.ResponseTypeCode},
+		grantTypes:      []oidc.GrantType{oidc.GrantTypeCode, oidc.GrantTypeRefreshToken, oidc.GrantTypeClientCredentials},
+		accessTokenType: op.AccessTokenTypeJWT, // Required for certificate-bound tokens
+		registeredCerts: certificates,
+		mtlsConfig: &op.MTLSClientConfig{
+			TLSClientCertificateBoundAccessTokens: boundTokens,
+		},
 	}
 }
 

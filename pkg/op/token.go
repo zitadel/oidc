@@ -178,6 +178,15 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	if actorReq, ok := tokenRequest.(TokenActorRequest); ok {
 		claims.Actor = actorReq.GetActor()
 	}
+	// Add certificate-bound token cnf claim if thumbprint is in context (RFC 8705)
+	if thumbprint := CertThumbprintFromContext(ctx); thumbprint != "" {
+		if claims.Claims == nil {
+			claims.Claims = make(map[string]any)
+		}
+		claims.Claims["cnf"] = map[string]string{
+			"x5t#S256": thumbprint,
+		}
+	}
 	signingKey, err := storage.SigningKey(ctx)
 	if err != nil {
 		return "", err
