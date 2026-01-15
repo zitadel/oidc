@@ -510,8 +510,7 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *
 	}
 
 	introspection.Expiration = oidc.FromTime(token.Expiration)
-	isExpired := time.Until(token.Expiration).Seconds() < 0
-	if isExpired {
+	if token.Expiration.Before(time.Now()) {
 		return fmt.Errorf("token is expired")
 	}
 	// check if the client is part of the requested audience
