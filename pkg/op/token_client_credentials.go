@@ -19,21 +19,118 @@ func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger
 	request, err := ParseClientCredentialsRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err, exchanger.Logger())
-	}
-
-	validatedRequest, client, err := ValidateClientCredentialsRequest(r.Context(), request, exchanger)
-	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 
-	resp, err := CreateClientCredentialsTokenResponse(r.Context(), validatedRequest, exchanger, client)
+	var (
+		validatedRequest TokenRequest
+		client           Client
+	)
+
+	// mTLS client authentication for client_credentials (RFC 8705)
+	// Unlike other flows, this handler doesn't use ClientIDFromRequest, so we must validate here.
+	if mtls, ok := exchanger.(mtlsClientCredentialsSupport); ok && request.ClientID != "" &&
+		(mtls.AuthMethodTLSClientAuthSupported() || mtls.AuthMethodSelfSignedTLSClientAuthSupported()) {
+		c, err := exchanger.Storage().GetClientByClientID(r.Context(), request.ClientID)
+		if err == nil && (c.AuthMethod() == oidc.AuthMethodTLSClientAuth || c.AuthMethod() == oidc.AuthMethodSelfSignedTLSClientAuth) {
+			validatedRequest, client, err = validateClientCredentialsRequestMTLS(r.Context(), r, request, exchanger, c)
+			if err != nil {
+				RequestError(w, r, err, exchanger.Logger())
+				return
+			}
+		}
+	}
+
+	if validatedRequest == nil {
+		validatedRequest, client, err = ValidateClientCredentialsRequest(r.Context(), request, exchanger)
+		if err != nil {
+			RequestError(w, r, err, exchanger.Logger())
+			return
+		}
+	}
+
+	// Set certificate thumbprint in context for certificate-bound tokens (RFC 8705)
+	tokenCtx := r.Context()
+	if mtlsProvider, ok := exchanger.(interface{ MTLSConfig() *MTLSConfig }); ok {
+		boundSupported := false
+		if s, ok := exchanger.(interface{ TLSClientCertificateBoundAccessTokensSupported() bool }); ok {
+			boundSupported = s.TLSClientCertificateBoundAccessTokensSupported()
+		}
+		tokenCtx, err = SetCertThumbprintInContext(tokenCtx, r, client, mtlsProvider.MTLSConfig(), boundSupported)
+		if err != nil {
+			RequestError(w, r, err, exchanger.Logger())
+			return
+		}
+	}
+	resp, err := CreateClientCredentialsTokenResponse(tokenCtx, validatedRequest, exchanger, client)
 	if err != nil {
 		RequestError(w, r, err, exchanger.Logger())
 		return
 	}
 
 	httphelper.MarshalJSON(w, resp)
+}
+
+type mtlsClientCredentialsSupport interface {
+	MTLSConfig() *MTLSConfig
+	AuthMethodTLSClientAuthSupported() bool
+	AuthMethodSelfSignedTLSClientAuthSupported() bool
+}
+
+func validateClientCredentialsRequestMTLS(ctx context.Context, r *http.Request, request *oidc.ClientCredentialsRequest, exchanger Exchanger, client Client) (TokenRequest, Client, error) {
+	storage, ok := exchanger.Storage().(ClientCredentialsStorage)
+	if !ok {
+		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
+	}
+	mtls, ok := exchanger.(mtlsClientCredentialsSupport)
+	if !ok {
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("mTLS authentication not supported")
+	}
+	mtlsConfig := mtls.MTLSConfig()
+
+	certs, err := ClientCertificateFromRequest(r, mtlsConfig)
+	if err != nil || len(certs) == 0 {
+		return nil, nil, oidc.ErrInvalidClient().WithDescription("no client certificate provided")
+	}
+
+	switch client.AuthMethod() {
+	case oidc.AuthMethodTLSClientAuth:
+		if !mtls.AuthMethodTLSClientAuthSupported() {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("tls_client_auth not supported")
+		}
+		mtlsClient, ok := client.(HasMTLSConfig)
+		if !ok {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("client does not support mTLS configuration")
+		}
+		if err := ValidateTLSClientAuth(certs, mtlsConfig, mtlsClient.GetMTLSConfig()); err != nil {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("mTLS client authentication failed").WithParent(err)
+		}
+
+	case oidc.AuthMethodSelfSignedTLSClientAuth:
+		if !mtls.AuthMethodSelfSignedTLSClientAuthSupported() {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("self_signed_tls_client_auth not supported")
+		}
+		selfSignedClient, ok := client.(HasSelfSignedCertificate)
+		if !ok {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("client does not support self-signed certificates")
+		}
+		if err := ValidateSelfSignedTLSClientAuth(certs[0], selfSignedClient.GetRegisteredCertificates()); err != nil {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("mTLS client authentication failed").WithParent(err)
+		}
+
+	default:
+		return nil, nil, oidc.ErrInvalidClient()
+	}
+
+	if !ValidateGrantType(client, oidc.GrantTypeClientCredentials) {
+		return nil, nil, oidc.ErrUnauthorizedClient()
+	}
+
+	tokenRequest, err := storage.ClientCredentialsTokenRequest(ctx, request.ClientID, request.Scope)
+	if err != nil {
+		return nil, nil, err
+	}
+	return tokenRequest, client, nil
 }
 
 // ParseClientCredentialsRequest parsed the http request into a oidc.ClientCredentialsRequest

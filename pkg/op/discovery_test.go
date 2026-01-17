@@ -46,6 +46,47 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
+func TestDiscover_MTLSEndpointAliases(t *testing.T) {
+	rec := httptest.NewRecorder()
+	config := &oidc.DiscoveryConfiguration{
+		Issuer: "https://issuer.com",
+		MTLSEndpointAliases: &oidc.MTLSEndpointAliases{
+			TokenEndpoint:         "https://mtls.example.com/oauth/token",
+			IntrospectionEndpoint: "https://mtls.example.com/oauth/introspect",
+			RevocationEndpoint:    "https://mtls.example.com/revoke",
+			UserinfoEndpoint:      "https://mtls.example.com/userinfo",
+		},
+	}
+
+	op.Discover(rec, config)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{
+		"issuer":"https://issuer.com",
+		"mtls_endpoint_aliases":{
+			"token_endpoint":"https://mtls.example.com/oauth/token",
+			"introspection_endpoint":"https://mtls.example.com/oauth/introspect",
+			"revocation_endpoint":"https://mtls.example.com/revoke",
+			"userinfo_endpoint":"https://mtls.example.com/userinfo"
+		},
+		"request_uri_parameter_supported":false
+	}`, rec.Body.String())
+}
+
+func TestCreateDiscoveryConfig_MTLSEndpointAliases(t *testing.T) {
+	cfg := *testConfig
+	cfg.MTLSEndpointAliases = &oidc.MTLSEndpointAliases{
+		TokenEndpoint:         "https://mtls.example.com/oauth/token",
+		IntrospectionEndpoint: "https://mtls.example.com/oauth/introspect",
+		RevocationEndpoint:    "https://mtls.example.com/revoke",
+		UserinfoEndpoint:      "https://mtls.example.com/userinfo",
+	}
+	provider := newTestProvider(&cfg)
+	ctx := op.ContextWithIssuer(context.Background(), testIssuer)
+
+	got := op.CreateDiscoveryConfig(ctx, provider, provider.Storage())
+	require.Equal(t, cfg.MTLSEndpointAliases, got.MTLSEndpointAliases)
+}
+
 func TestCreateDiscoveryConfig(t *testing.T) {
 	type args struct {
 		ctx context.Context

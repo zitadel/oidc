@@ -17,6 +17,13 @@ type UserinfoProvider interface {
 	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 }
 
+// UserinfoMTLSProvider is an optional interface for providers that support
+// certificate-bound access token verification at the UserInfo endpoint (RFC 8705).
+type UserinfoMTLSProvider interface {
+	UserinfoProvider
+	MTLSConfig() *MTLSConfig
+}
+
 func userinfoHandler(userinfoProvider UserinfoProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		Userinfo(w, r, userinfoProvider)
@@ -33,11 +40,25 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		http.Error(w, "access token missing", http.StatusUnauthorized)
 		return
 	}
-	tokenID, subject, ok := getTokenIDAndSubject(r.Context(), userinfoProvider, accessToken)
+	tokenID, subject, claims, ok := getTokenIDAndSubjectAndClaims(r.Context(), userinfoProvider, accessToken)
 	if !ok {
 		http.Error(w, "access token invalid", http.StatusUnauthorized)
 		return
 	}
+
+	// Verify certificate-bound token if cnf claim is present (RFC 8705)
+	if cnfThumbprint := GetCnfThumbprintFromClaims(claims); cnfThumbprint != "" {
+		mtlsProvider, ok := userinfoProvider.(UserinfoMTLSProvider)
+		if !ok {
+			http.Error(w, "certificate-bound token not supported", http.StatusUnauthorized)
+			return
+		}
+		if err := VerifyCertificateBindingFromRequest(r, mtlsProvider.MTLSConfig(), cnfThumbprint); err != nil {
+			http.Error(w, "certificate binding verification failed", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	info := new(oidc.UserInfo)
 	err = userinfoProvider.Storage().SetUserinfoFromToken(r.Context(), info, tokenID, subject, r.Header.Get("origin"))
 	if err != nil {
@@ -85,20 +106,28 @@ func getAccessToken(r *http.Request) (string, error) {
 }
 
 func getTokenIDAndSubject(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, bool) {
-	ctx, span := Tracer.Start(ctx, "getTokenIDAndSubject")
+	tokenID, subject, _, ok := getTokenIDAndSubjectAndClaims(ctx, userinfoProvider, accessToken)
+	return tokenID, subject, ok
+}
+
+// getTokenIDAndSubjectAndClaims returns token ID, subject, and claims (for JWT tokens).
+// For opaque tokens, claims will be nil.
+func getTokenIDAndSubjectAndClaims(ctx context.Context, userinfoProvider UserinfoProvider, accessToken string) (string, string, map[string]any, bool) {
+	ctx, span := Tracer.Start(ctx, "getTokenIDAndSubjectAndClaims")
 	defer span.End()
 
 	tokenIDSubject, err := userinfoProvider.Crypto().Decrypt(accessToken)
 	if err == nil {
 		splitToken := strings.Split(tokenIDSubject, ":")
 		if len(splitToken) != 2 {
-			return "", "", false
+			return "", "", nil, false
 		}
-		return splitToken[0], splitToken[1], true
+		// Opaque token - no claims available directly
+		return splitToken[0], splitToken[1], nil, true
 	}
 	accessTokenClaims, err := VerifyAccessToken[*oidc.AccessTokenClaims](ctx, accessToken, userinfoProvider.AccessTokenVerifier(ctx))
 	if err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
-	return accessTokenClaims.JWTID, accessTokenClaims.Subject, true
+	return accessTokenClaims.JWTID, accessTokenClaims.Subject, accessTokenClaims.Claims, true
 }

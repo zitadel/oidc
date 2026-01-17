@@ -153,6 +153,23 @@ type DiscoveryConfiguration struct {
 	// BackChannelLogoutSessionSupported specifies whether the OP can pass a sid (session ID) Claim in the Logout Token to identify the RP session with the OP.
 	// If supported, the sid Claim is also included in ID Tokens issued by the OP. If omitted, the default value is false.
 	BackChannelLogoutSessionSupported bool `json:"backchannel_logout_session_supported,omitempty"`
+
+	// TLSClientCertificateBoundAccessTokens indicates whether the authorization server supports
+	// issuing certificate-bound access tokens as defined in RFC 8705.
+	TLSClientCertificateBoundAccessTokens bool `json:"tls_client_certificate_bound_access_tokens,omitempty"`
+
+	// MTLSEndpointAliases contains alternative endpoints for mTLS client authentication.
+	// These endpoints require mutual TLS authentication.
+	MTLSEndpointAliases *MTLSEndpointAliases `json:"mtls_endpoint_aliases,omitempty"`
+}
+
+// MTLSEndpointAliases contains alternative endpoints for mTLS client authentication
+// as defined in RFC 8705 Section 5.
+type MTLSEndpointAliases struct {
+	TokenEndpoint         string `json:"token_endpoint,omitempty"`
+	IntrospectionEndpoint string `json:"introspection_endpoint,omitempty"`
+	RevocationEndpoint    string `json:"revocation_endpoint,omitempty"`
+	UserinfoEndpoint      string `json:"userinfo_endpoint,omitempty"`
 }
 
 type AuthMethod string
@@ -162,8 +179,13 @@ const (
 	AuthMethodPost          AuthMethod = "client_secret_post"
 	AuthMethodNone          AuthMethod = "none"
 	AuthMethodPrivateKeyJWT AuthMethod = "private_key_jwt"
+
+	// RFC 8705: OAuth 2.0 Mutual-TLS Client Authentication
+	AuthMethodTLSClientAuth           AuthMethod = "tls_client_auth"
+	AuthMethodSelfSignedTLSClientAuth AuthMethod = "self_signed_tls_client_auth"
 )
 
 var AllAuthMethods = []AuthMethod{
 	AuthMethodBasic, AuthMethodPost, AuthMethodNone, AuthMethodPrivateKeyJWT,
+	AuthMethodTLSClientAuth, AuthMethodSelfSignedTLSClientAuth,
 }

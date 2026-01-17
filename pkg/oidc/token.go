@@ -207,6 +207,14 @@ func (i *IDTokenClaims) UnmarshalJSON(data []byte) error {
 	return unmarshalJSONMulti(data, (*itcAlias)(i), &i.Claims)
 }
 
+// Confirmation represents the "cnf" (confirmation) claim as defined in RFC 7800.
+// This is used for certificate-bound access tokens per RFC 8705.
+type Confirmation struct {
+	// X509CertificateSHA256Thumbprint is the SHA-256 thumbprint of the X.509 certificate
+	// that the access token is bound to, base64url encoded.
+	X509CertificateSHA256Thumbprint string `json:"x5t#S256,omitempty"`
+}
+
 // ActorClaims provides the `act` claims used for impersonation or delegation Token Exchange.
 //
 // An actor can be nested in case an obtained token is used as actor token to obtain impersonation or delegation.

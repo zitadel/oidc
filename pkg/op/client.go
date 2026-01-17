@@ -91,6 +91,86 @@ type ClientJWTProfile interface {
 	JWTProfileVerifier(context.Context) *JWTProfileVerifier
 }
 
+// ClientMTLSProvider is an optional interface for providers that support mTLS client authentication.
+type ClientMTLSProvider interface {
+	ClientProvider
+	MTLSConfig() *MTLSConfig
+	AuthMethodTLSClientAuthSupported() bool
+	AuthMethodSelfSignedTLSClientAuthSupported() bool
+}
+
+// ClientMTLSAuth authenticates a client using mTLS certificate.
+// Returns:
+//   - (clientID, true, nil) on successful authentication
+//   - ("", false, nil) when mTLS is not configured or no certificate present (fallback to other methods)
+//   - ("", false, error) on authentication failure
+func ClientMTLSAuth(r *http.Request, p ClientMTLSProvider) (clientID string, authenticated bool, err error) {
+	ctx, span := Tracer.Start(r.Context(), "ClientMTLSAuth")
+	defer span.End()
+
+	mtlsConfig := p.MTLSConfig()
+	// Determine client_id to identify which client needs to be validated.
+	// RFC 8705 requires the client_id parameter for mTLS client authentication, but
+	// we also check the BasicAuth username to fail-closed for mTLS-only clients.
+	clientID = r.FormValue("client_id")
+	if clientID == "" {
+		if basicID, _, ok := r.BasicAuth(); ok {
+			if decoded, err := url.QueryUnescape(basicID); err == nil {
+				clientID = decoded
+			}
+		}
+	}
+	if clientID == "" {
+		return "", false, nil // cannot identify client, fallback
+	}
+
+	// Get client from storage
+	client, err := p.Storage().GetClientByClientID(ctx, clientID)
+	if err != nil {
+		return "", false, nil // Client not found, fallback
+	}
+
+	// Check if client uses mTLS authentication
+	authMethod := client.AuthMethod()
+	if authMethod != oidc.AuthMethodTLSClientAuth && authMethod != oidc.AuthMethodSelfSignedTLSClientAuth {
+		return "", false, nil // Client doesn't use mTLS, fallback
+	}
+
+	// Try to extract certificate from request (required for mTLS clients)
+	certs, err := ClientCertificateFromRequest(r, mtlsConfig)
+	if err != nil || len(certs) == 0 {
+		return "", false, oidc.ErrInvalidClient().WithDescription("no client certificate provided")
+	}
+	cert := certs[0]
+
+	// Validate mTLS based on authentication method
+	if authMethod == oidc.AuthMethodTLSClientAuth {
+		if !p.AuthMethodTLSClientAuthSupported() {
+			return "", false, oidc.ErrInvalidClient().WithDescription("tls_client_auth not supported")
+		}
+		mtlsClient, ok := client.(HasMTLSConfig)
+		if !ok {
+			return "", false, oidc.ErrInvalidClient().WithDescription("client does not support mTLS configuration")
+		}
+		if err := ValidateTLSClientAuth(certs, mtlsConfig, mtlsClient.GetMTLSConfig()); err != nil {
+			return "", false, oidc.ErrInvalidClient().WithDescription("mTLS client authentication failed").WithParent(err)
+		}
+	} else { // self_signed_tls_client_auth
+		if !p.AuthMethodSelfSignedTLSClientAuthSupported() {
+			return "", false, oidc.ErrInvalidClient().WithDescription("self_signed_tls_client_auth not supported")
+		}
+		selfSignedClient, ok := client.(HasSelfSignedCertificate)
+		if !ok {
+			return "", false, oidc.ErrInvalidClient().WithDescription("client does not support self-signed certificates")
+		}
+		if err := ValidateSelfSignedTLSClientAuth(cert, selfSignedClient.GetRegisteredCertificates()); err != nil {
+			return "", false, oidc.ErrInvalidClient().WithDescription("mTLS client authentication failed").WithParent(err)
+		}
+	}
+
+	return clientID, true, nil
+}
+
 func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier ClientJWTProfile) (clientID string, err error) {
 	ctx, span := Tracer.Start(ctx, "ClientJWTAuth")
 	defer span.End()
@@ -140,15 +220,14 @@ type clientData struct {
 }
 
 // ClientIDFromRequest parses the request form and tries to obtain the client ID
-// and reports if it is authenticated, using a JWT or static client secrets over
+// and reports if it is authenticated, using mTLS, JWT, or static client secrets over
 // http basic auth.
 //
-// If the Provider implements IntrospectorJWTProfile and "client_assertion" is
-// present in the form data, JWT assertion will be verified and the
-// client ID is taken from there.
-// If any of them is absent, basic auth is attempted.
-// In absence of basic auth data, the unauthenticated client id from the form
-// data is returned.
+// Authentication methods are tried in this order:
+//  1. mTLS (if provider implements ClientMTLSProvider and client uses tls_client_auth/self_signed_tls_client_auth)
+//  2. JWT assertion (if provider implements ClientJWTProfile and client_assertion is present)
+//  3. Basic auth (client_secret_basic)
+//  4. Form body (client_secret_post / none)
 //
 // If no client id can be obtained by any method, oidc.ErrInvalidClient
 // is returned with ErrMissingClientID wrapped in it.
@@ -165,6 +244,18 @@ func ClientIDFromRequest(r *http.Request, p ClientProvider) (clientID string, au
 	data := new(clientData)
 	if err = p.Decoder().Decode(data, r.Form); err != nil {
 		return "", false, err
+	}
+
+	// Try mTLS authentication first (RFC 8705)
+	if mtlsProvider, ok := p.(ClientMTLSProvider); ok {
+		clientID, authenticated, err = ClientMTLSAuth(r, mtlsProvider)
+		if err != nil {
+			return "", false, err // mTLS auth failed
+		}
+		if authenticated {
+			return clientID, true, nil // mTLS auth succeeded
+		}
+		// Fallback to other auth methods
 	}
 
 	JWTProfile, ok := p.(ClientJWTProfile)

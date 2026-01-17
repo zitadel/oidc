@@ -14,6 +14,30 @@ type DiscoverStorage interface {
 	SignatureAlgorithms(context.Context) ([]jose.SignatureAlgorithm, error)
 }
 
+type mtlsDiscoveryConfig interface {
+	AuthMethodTLSClientAuthSupported() bool
+	AuthMethodSelfSignedTLSClientAuthSupported() bool
+	TLSClientCertificateBoundAccessTokensSupported() bool
+}
+
+type mtlsEndpointAliasesProvider interface {
+	MTLSEndpointAliases() *oidc.MTLSEndpointAliases
+}
+
+func tlsClientCertificateBoundAccessTokensSupported(c Configuration) bool {
+	if mc, ok := c.(mtlsDiscoveryConfig); ok {
+		return mc.TLSClientCertificateBoundAccessTokensSupported()
+	}
+	return false
+}
+
+func mtlsEndpointAliases(c Configuration) *oidc.MTLSEndpointAliases {
+	if mc, ok := c.(mtlsEndpointAliasesProvider); ok {
+		return mc.MTLSEndpointAliases()
+	}
+	return nil
+}
+
 var DefaultSupportedScopes = []string{
 	oidc.ScopeOpenID,
 	oidc.ScopeProfile,
@@ -64,6 +88,8 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
 		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
+		TLSClientCertificateBoundAccessTokens:              tlsClientCertificateBoundAccessTokensSupported(config),
+		MTLSEndpointAliases:                                mtlsEndpointAliases(config),
 	}
 }
 
@@ -97,6 +123,8 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
 		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
+		TLSClientCertificateBoundAccessTokens:              tlsClientCertificateBoundAccessTokensSupported(config),
+		MTLSEndpointAliases:                                mtlsEndpointAliases(config),
 	}
 }
 
@@ -176,6 +204,15 @@ func AuthMethodsTokenEndpoint(c Configuration) []oidc.AuthMethod {
 	if c.AuthMethodPrivateKeyJWTSupported() {
 		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
 	}
+	// mTLS authentication methods (RFC 8705)
+	if mc, ok := c.(mtlsDiscoveryConfig); ok {
+		if mc.AuthMethodTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodTLSClientAuth)
+		}
+		if mc.AuthMethodSelfSignedTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodSelfSignedTLSClientAuth)
+		}
+	}
 	return authMethods
 }
 
@@ -200,6 +237,15 @@ func AuthMethodsIntrospectionEndpoint(c Configuration) []oidc.AuthMethod {
 	if c.AuthMethodPrivateKeyJWTSupported() {
 		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
 	}
+	// mTLS authentication methods (RFC 8705)
+	if mc, ok := c.(mtlsDiscoveryConfig); ok {
+		if mc.AuthMethodTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodTLSClientAuth)
+		}
+		if mc.AuthMethodSelfSignedTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodSelfSignedTLSClientAuth)
+		}
+	}
 	return authMethods
 }
 
@@ -220,6 +266,15 @@ func AuthMethodsRevocationEndpoint(c Configuration) []oidc.AuthMethod {
 	}
 	if c.AuthMethodPrivateKeyJWTSupported() {
 		authMethods = append(authMethods, oidc.AuthMethodPrivateKeyJWT)
+	}
+	// mTLS authentication methods (RFC 8705)
+	if mc, ok := c.(mtlsDiscoveryConfig); ok {
+		if mc.AuthMethodTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodTLSClientAuth)
+		}
+		if mc.AuthMethodSelfSignedTLSClientAuthSupported() {
+			authMethods = append(authMethods, oidc.AuthMethodSelfSignedTLSClientAuth)
+		}
 	}
 	return authMethods
 }
