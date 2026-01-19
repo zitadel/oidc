@@ -171,6 +171,14 @@ type Config struct {
 	DeviceAuthorization               DeviceAuthorizationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
+
+	// mTLS settings (RFC 8705)
+	AuthMethodTLSClientAuth               bool
+	AuthMethodSelfSignedTLSClientAuth     bool
+	TLSClientCertificateBoundAccessTokens bool
+	MTLSConfig                            *MTLSConfig
+	// MTLSEndpointAliases provides alternative endpoints for mTLS connections.
+	MTLSEndpointAliases *oidc.MTLSEndpointAliases
 }
 
 // Endpoints defines endpoint routes.
@@ -275,6 +283,9 @@ func NewProvider(
 		if err := optFunc(o); err != nil {
 			return nil, err
 		}
+	}
+	if err := ValidateMTLSConfig(config.MTLSConfig); err != nil {
+		return nil, err
 	}
 
 	o.issuer, err = issuer(o.insecure)
@@ -429,6 +440,26 @@ func (o *Provider) BackChannelLogoutSupported() bool {
 
 func (o *Provider) BackChannelLogoutSessionSupported() bool {
 	return o.config.BackChannelLogoutSessionSupported
+}
+
+func (o *Provider) AuthMethodTLSClientAuthSupported() bool {
+	return o.config.AuthMethodTLSClientAuth
+}
+
+func (o *Provider) AuthMethodSelfSignedTLSClientAuthSupported() bool {
+	return o.config.AuthMethodSelfSignedTLSClientAuth
+}
+
+func (o *Provider) TLSClientCertificateBoundAccessTokensSupported() bool {
+	return o.config.TLSClientCertificateBoundAccessTokens
+}
+
+func (o *Provider) MTLSConfig() *MTLSConfig {
+	return o.config.MTLSConfig
+}
+
+func (o *Provider) MTLSEndpointAliases() *oidc.MTLSEndpointAliases {
+	return o.config.MTLSEndpointAliases
 }
 
 func (o *Provider) Storage() Storage {

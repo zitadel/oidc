@@ -130,6 +130,22 @@ func newOP(
 			UserFormPath: "/device",
 			UserCode:     op.UserCodeBase20,
 		},
+
+		// mTLS authentication (RFC 8705) - uncomment to enable
+		// To use mTLS clients, you need to:
+		// 1. Configure TLS on your server to request client certificates
+		// 2. Set up a Trust Store with your CA certificates
+		// 3. Register clients using storage.MTLSClient() or storage.SelfSignedTLSClient()
+		//
+		// AuthMethodTLSClientAuth:               true,
+		// AuthMethodSelfSignedTLSClientAuth:     true,
+		// TLSClientCertificateBoundAccessTokens: true,
+		// MTLSConfig: &op.MTLSConfig{
+		//     TrustStore: yourCACertPool, // x509.CertPool with trusted CAs
+		//     // Optional: restrict by Policy OID or EKU
+		//     // RequiredPolicyOIDs: []asn1.ObjectIdentifier{...},
+		//     // RequiredEKUs: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		// },
 	}
 	handler, err := op.NewOpenIDProvider(issuer, config, storage,
 		append([]op.Option{

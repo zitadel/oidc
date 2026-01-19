@@ -101,8 +101,9 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 		}
 		return "", "", "", err
 	}
-	clientID, clientSecret, ok := r.BasicAuth()
-	if ok {
+
+	var basicID, basicSecret string
+	if clientID, clientSecret, ok := r.BasicAuth(); ok {
 		clientID, err = url.QueryUnescape(clientID)
 		if err != nil {
 			return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
@@ -111,10 +112,33 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 		if err != nil {
 			return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
 		}
-		if err = AuthorizeClientIDSecret(r.Context(), clientID, clientSecret, revoker.Storage()); err != nil {
+		basicID = clientID
+		basicSecret = clientSecret
+	}
+
+	candidateClientID := req.ClientID
+	if candidateClientID == "" {
+		candidateClientID = basicID
+	}
+	if candidateClientID != "" {
+		if client, err := revoker.Storage().GetClientByClientID(r.Context(), candidateClientID); err == nil &&
+			(client.AuthMethod() == oidc.AuthMethodTLSClientAuth || client.AuthMethod() == oidc.AuthMethodSelfSignedTLSClientAuth) {
+			mtlsProvider, ok := revoker.(mtlsClientAuthSupport)
+			if !ok {
+				return "", "", "", oidc.ErrInvalidClient().WithDescription("mTLS authentication not supported")
+			}
+			if _, err := validateMTLSClientAuthForClient(r.Context(), r, mtlsProvider, client); err != nil {
+				return "", "", "", err
+			}
+			return req.Token, req.TokenTypeHint, client.GetID(), nil
+		}
+	}
+
+	if basicID != "" {
+		if err = AuthorizeClientIDSecret(r.Context(), basicID, basicSecret, revoker.Storage()); err != nil {
 			return "", "", "", err
 		}
-		return req.Token, req.TokenTypeHint, clientID, nil
+		return req.Token, req.TokenTypeHint, basicID, nil
 	}
 	if req.ClientID == "" {
 		return "", "", "", oidc.ErrInvalidClient().WithDescription("invalid authorization")
