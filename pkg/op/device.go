@@ -144,7 +144,7 @@ func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuth
 		return nil, err
 	}
 	if !ValidateGrantType(client, oidc.GrantTypeDeviceCode) {
-		return nil, oidc.ErrUnauthorizedClient().WithDescription("client missing grant type " + string(oidc.GrantTypeCode))
+		return nil, oidc.ErrUnauthorizedClient().WithDescription("client missing grant type " + string(oidc.GrantTypeDeviceCode))
 	}
 
 	req := new(oidc.DeviceAuthorizationRequest)
