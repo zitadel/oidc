@@ -115,16 +115,12 @@ func (c *CookieHandler) CheckQueryCookie(r *http.Request, name string) (string, 
 	return value, nil
 }
 
-func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) error {
-	if c.IsRequestAware() {
-		return errors.New("Cookie handler is request aware")
-	}
-
+func (c *CookieHandler) CreateCookie(name, value string) (*http.Cookie, error) {
 	encoded, err := c.securecookie.Encode(name, value)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	http.SetCookie(w, &http.Cookie{
+	return &http.Cookie{
 		Name:     name,
 		Value:    encoded,
 		Domain:   c.domain,
@@ -133,36 +129,56 @@ func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) err
 		HttpOnly: true,
 		Secure:   c.secureOnly,
 		SameSite: c.sameSite,
-	})
+	}, nil
+}
+
+func (c *CookieHandler) CreateSecureCookie(r *http.Request, name, value string) (*http.Cookie, error) {
+	secureCookie, err := c.secureCookieFunc(r)
+	if err != nil {
+		return nil, err
+	}
+
+	encoded, err := secureCookie.Encode(name, value)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Cookie{
+		Name:     name,
+		Value:    encoded,
+		Domain:   c.domain,
+		Path:     c.path,
+		MaxAge:   c.maxAge,
+		HttpOnly: true,
+		Secure:   c.secureOnly,
+		SameSite: c.sameSite,
+	}, nil
+}
+
+func (c *CookieHandler) SetCookie(w http.ResponseWriter, name, value string) error {
+	if c.IsRequestAware() {
+		return errors.New("cookie handler is request aware")
+	}
+
+	cookie, err := c.CreateCookie(name, value)
+	if err != nil {
+		return err
+	}
+
+	http.SetCookie(w, cookie)
 	return nil
 }
 
 func (c *CookieHandler) SetRequestAwareCookie(r *http.Request, w http.ResponseWriter, name string, value string) error {
 	if !c.IsRequestAware() {
-		return errors.New("Cookie handler is not request aware")
+		return errors.New("cookie handler is not request aware")
 	}
 
-	secureCookie, err := c.secureCookieFunc(r)
+	cookie, err := c.CreateSecureCookie(r, name, value)
 	if err != nil {
 		return err
 	}
 
-	encoded, err := secureCookie.Encode(name, value)
-	if err != nil {
-		return err
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    encoded,
-		Domain:   c.domain,
-		Path:     c.path,
-		MaxAge:   c.maxAge,
-		HttpOnly: true,
-		Secure:   c.secureOnly,
-		SameSite: c.sameSite,
-	})
-
+	http.SetCookie(w, cookie)
 	return nil
 }
 
