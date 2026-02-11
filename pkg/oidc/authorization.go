@@ -64,6 +64,12 @@ const (
 	PromptSelectAccount = "select_account"
 )
 
+var ResponseTypeMap = map[string]ResponseType{
+	string(ResponseTypeCode):        ResponseTypeCode,
+	string(ResponseTypeIDToken):     ResponseTypeIDToken,
+	string(ResponseTypeIDTokenOnly): ResponseTypeIDTokenOnly,
+}
+
 // AuthRequest according to:
 // https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 type AuthRequest struct {

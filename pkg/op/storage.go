@@ -157,10 +157,14 @@ type CanGetPrivateClaimsFromRequest interface {
 	GetPrivateClaimsFromRequest(ctx context.Context, request TokenRequest, restrictedScopes []string) (map[string]any, error)
 }
 
-// Storage is a required parameter for NewOpenIDProvider(). In addition to the
-// embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
-// then the grant type "client_credentials" will be supported. In that case, the access
-// token returned by CreateAccessToken should be a JWT.
+// Storage is a required parameter for NewOpenIDProvider().
+//
+// In addition to the embedded interfaces below,
+//
+//   - if the passed Storage implements ClientCredentialsStorage then the grant type "client_credentials" will be
+//     supported. In that case, the access token returned by CreateAccessToken should be a JWT.
+//   - if the passed Storage implemenets ClientsStorage, then dynamic client registration will be supported.
+//
 // See https://datatracker.ietf.org/doc/html/rfc6749#section-1.3.4 for context.
 type Storage interface {
 	AuthStorage
@@ -203,6 +207,136 @@ func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 	storage, ok := s.(DeviceAuthorizationStorage)
 	if !ok {
 		return nil, oidc.ErrUnsupportedGrantType().WithDescription("device_code grant not supported")
+	}
+	return storage, nil
+}
+
+var (
+	ErrInvalidClient                  = errors.New("invalid client")
+	ErrInvalidRegistrationAccessToken = errors.New("invalid registration access token")
+	ErrClientNoPermission             = errors.New("client no permission")
+	ErrInvalidRedirectURI             = errors.New("invalid redirect_uri")
+	ErrInvalidClientMetadata          = errors.New("invalid client metadata")
+	ErrInvalidSoftwareStatement       = errors.New("invalid software statement")
+	ErrUnapprovedSoftwareStatement    = errors.New("unapproved software statement")
+	ErrInvalidInitialAccessToken      = errors.New("invalid initial access token")
+	ErrClientUpdateNotAllowed         = errors.New("client update not allowed")
+	ErrClientDeleteNotSupported       = errors.New("client delete not supported")
+	ErrClientDeleteNotAllowed         = errors.New("client delete not allowed")
+)
+
+// ClientsStorage is required to implement dynamic client registration.
+type ClientsStorage interface {
+	// RegisterClient handles the Client Registration Request according to [RFC7591].
+	//
+	// If the value of one or more redirection URIs is invalid, return an ErrInvalidRedirectURI.
+	//
+	// If the value of one of the client metadata fields is invalid and the server has rejected this request,
+	// return an ErrInvalidClientMetadata.
+	//
+	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591#section-3.1
+	RegisterClient(ctx context.Context, c *oidc.ClientRegistrationRequest) (*oidc.ClientRegistrationResponse, error)
+
+	// ReadClient handles the Client Read Request according to [RFC7592].
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.1
+	ReadClient(ctx context.Context, clientID string) (*oidc.ClientReadResponse, error)
+
+	// UpdateClient handles the Client Update Request according to [RFC7592].
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// If the value of one or more redirection URIs is invalid, return an ErrInvalidRedirectURI.
+	//
+	// If the value of one of the client metadata fields is invalid and the server has rejected this request,
+	// return an ErrInvalidClientMetadata.
+	//
+	// If the client is not allowed to update its records, return an ErrClientUpdateNotAllowed.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.2
+	UpdateClient(ctx context.Context, c *oidc.ClientUpdateRequest) (*oidc.ClientInformationResponse, error)
+
+	// DeleteClient handles the Client Delete Request according to [RFC7592].
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// If the server does not support the delete method, return ErrClientDeleteNotSupported.
+	//
+	// If the client is not allowed to delete itself, return ErrClientDeleteNotAllowed.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592.html#section-2.3
+	DeleteClient(ctx context.Context, clientID string) error
+
+	// AuthorizeClientRegistration will check if a Client Registration Request ([RFC7591]) is authorized by parsing
+	// either:
+	//
+	//	- an initial access token (OAuth 2.0 access token optionally issued by an authorization server to a developer
+	//		or client and used to authorize calls to the client registration endpoint.), or
+	//	- a software statement (A digitally signed or MACed JSON Web Token (JWT) [RFC7519] that asserts metadata
+	// 		values about the client software.)
+	//
+	// If the initial access token is invalid, return an ErrInvalidInitialAccessToken.
+	//
+	// If the software statement is invalid, return an ErrInvalidSoftwareStatement.
+	//
+	// If the software statement presented is not approved for use by this authorization server, return an
+	// ErrUnapprovedSoftwareStatement.
+	//
+	// [RFC7591]: https://www.rfc-editor.org/rfc/rfc7591
+	// [RFC7519]: https://www.rfc-editor.org/rfc/rfc7519
+	AuthorizeClientRegistration(ctx context.Context, initialAccessToken string, c *oidc.ClientRegistrationRequest) error
+
+	// AuthorizeClientRead will check if a Client Read Request ([RFC7592]) is authorized for
+	// [Protected Dynamic Client Registration].
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// If the Registration Access Token used is invalid, return an ErrInvalidRegistrationAccessToken.
+	//
+	// If the Client does not have permission to read its record,
+	// return an ErrClientNoPermission.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	// [Protected Dynamic Client Registration]: https://www.rfc-editor.org/rfc/rfc7591#appendix-A.1.2
+	AuthorizeClientRead(ctx context.Context, clientID, registrationAccessToken string) error
+
+	// AuthorizeClientUpdate will check if a Client Update Request ([RFC7592]) is authorized.
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// If the Registration Access Token used is invalid, return an ErrInvalidRegistrationAccessToken.
+	//
+	// If the Client does not have permission to read its record,
+	// return an ErrClientNoPermission.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	AuthorizeClientUpdate(ctx context.Context, clientID, registrationAccessToken string) error
+
+	// AuthorizeClientDelete will check if a Client Delete Request ([RFC7592]) is authorized.
+	//
+	// If the Client does not exist on this server,
+	// or the Client is invalid, return an ErrInvalidClient.
+	//
+	// If the Registration Access Token used is invalid, return an ErrInvalidRegistrationAccessToken.
+	//
+	// If the Client does not have permission to read its record,
+	// return an ErrClientNoPermission.
+	//
+	// [RFC7592]: https://www.rfc-editor.org/rfc/rfc7592
+	AuthorizeClientDelete(ctx context.Context, clientID, registrationAccessToken string) error
+}
+
+func assertClientStorage(s Storage) (ClientsStorage, error) {
+	storage, ok := s.(ClientsStorage)
+	if !ok {
+		return nil, oidc.ErrUnsupportedGrantType().WithDescription("Dynamic client registration not supported")
 	}
 	return storage, nil
 }
