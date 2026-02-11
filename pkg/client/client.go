@@ -25,6 +25,10 @@ var (
 	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
 )
 
+type ClientSecretBasicAuthRequest interface {
+	Auth(req *http.Request)
+}
+
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
 func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
@@ -71,6 +75,11 @@ func callTokenEndpoint(ctx context.Context, request any, authFn any, caller Toke
 	if err != nil {
 		return nil, err
 	}
+
+	if basicAuthRequest, ok := request.(ClientSecretBasicAuthRequest); ok {
+		basicAuthRequest.Auth(req)
+	}
+
 	tokenRes := new(oidc.AccessTokenResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &tokenRes); err != nil {
 		return nil, err
@@ -145,6 +154,12 @@ type RevokeRequest struct {
 	ClientSecret  string `schema:"client_secret"`
 }
 
+func (r RevokeRequest) Auth(req *http.Request) {
+	if r.ClientSecret != "" {
+		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+	}
+}
+
 func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller RevokeCaller) error {
 	ctx, span := Tracer.Start(ctx, "CallRevokeEndpoint")
 	defer span.End()
@@ -158,6 +173,11 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	if err != nil {
 		return err
 	}
+
+	if basicAuthRequest, ok := request.(ClientSecretBasicAuthRequest); ok {
+		basicAuthRequest.Auth(req)
+	}
+
 	client := caller.HttpClient()
 	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 		return http.ErrUseLastResponse
@@ -238,9 +258,7 @@ func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCr
 	if err != nil {
 		return nil, err
 	}
-	if request.ClientSecret != "" {
-		req.SetBasicAuth(request.ClientID, request.ClientSecret)
-	}
+	request.Auth(req)
 
 	resp := new(oidc.DeviceAuthorizationResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
@@ -254,6 +272,12 @@ type DeviceAccessTokenRequest struct {
 	oidc.DeviceAccessTokenRequest
 }
 
+func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
+	if r.ClientSecret != "" {
+		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+	}
+}
+
 func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAccessTokenEndpoint")
 	defer span.End()
@@ -262,9 +286,7 @@ func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTok
 	if err != nil {
 		return nil, err
 	}
-	if request.ClientSecret != "" {
-		req.SetBasicAuth(request.ClientID, request.ClientSecret)
-	}
+	request.Auth(req)
 
 	resp := new(oidc.AccessTokenResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {

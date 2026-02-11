@@ -3,6 +3,7 @@ package oidc
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"slices"
 	"time"
 
@@ -242,4 +243,10 @@ type ClientCredentialsRequest struct {
 	ClientSecret        string              `schema:"client_secret"`
 	ClientAssertion     string              `schema:"client_assertion,omitempty"`
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
+}
+
+func (r *ClientCredentialsRequest) Auth(req *http.Request) {
+	if r.ClientSecret != "" {
+		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+	}
 }
