@@ -506,7 +506,12 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *
 		return token, ok
 	}()
 	if !ok {
-		return fmt.Errorf("token is invalid or has expired")
+		return fmt.Errorf("token is invalid")
+	}
+
+	introspection.Expiration = oidc.FromTime(token.Expiration)
+	if token.Expiration.Before(time.Now()) {
+		return fmt.Errorf("token is expired")
 	}
 	// check if the client is part of the requested audience
 	for _, aud := range token.Audience {
@@ -676,7 +681,7 @@ func (s *Storage) setUserinfo(ctx context.Context, userInfo *oidc.UserInfo, user
 			userInfo.Locale = oidc.NewLocale(user.PreferredLanguage)
 		case oidc.ScopePhone:
 			userInfo.PhoneNumber = user.Phone
-			userInfo.PhoneNumberVerified = user.PhoneVerified
+			userInfo.PhoneNumberVerified = oidc.Bool(user.PhoneVerified)
 		case CustomScope:
 			// you can also have a custom scope and assert public or custom claims based on that
 			userInfo.AppendClaims(CustomClaim, customClaim(clientID))
