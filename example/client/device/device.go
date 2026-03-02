@@ -47,6 +47,7 @@ import (
 
 	"github.com/zitadel/oidc/v4/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 var (
@@ -97,4 +98,18 @@ func main() {
 		logrus.Fatal(err)
 	}
 	logrus.Infof("successfully obtained token: %#v", token)
+
+	logrus.Infof("Going to refresh token")
+	refreshedToken, err := rp.RefreshTokens[*oidc.IDTokenClaims](ctx, provider, token.RefreshToken, "", "")
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	logrus.Infof("refreshedToken: %#v", refreshedToken.Token)
+
+	logrus.Infof("Going to revoke token")
+	err = rp.RevokeToken(ctx, provider, token.AccessToken, "refresh_token")
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	logrus.Info("Token revoked")
 }
