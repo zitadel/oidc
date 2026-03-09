@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -52,6 +53,51 @@ type TokenClaims struct {
 
 	// Additional information set by this framework
 	SignatureAlg jose.SignatureAlgorithm `json:"-"`
+}
+
+type tokenClaimsJSON struct {
+	Issuer                              string         `json:"iss,omitempty"`
+	Subject                             string         `json:"sub,omitempty"`
+	Audience                            Audience       `json:"aud,omitempty"`
+	Expiration                          Time           `json:"exp,omitempty"`
+	IssuedAt                            Time           `json:"iat,omitempty"`
+	AuthTime                            Time           `json:"auth_time,omitempty"`
+	NotBefore                           Time           `json:"nbf,omitempty"`
+	Nonce                               string         `json:"nonce,omitempty"`
+	AuthenticationContextClassReference string         `json:"acr,omitempty"`
+	AuthenticationMethodsReferences     authMethodRefs `json:"amr,omitempty"`
+	AuthorizedParty                     string         `json:"azp,omitempty"`
+	ClientID                            string         `json:"client_id,omitempty"`
+	JWTID                               string         `json:"jti,omitempty"`
+	Actor                               *ActorClaims   `json:"act,omitempty"`
+}
+
+func (j tokenClaimsJSON) tokenClaims() TokenClaims {
+	return TokenClaims{
+		Issuer:                              j.Issuer,
+		Subject:                             j.Subject,
+		Audience:                            j.Audience,
+		Expiration:                          j.Expiration,
+		IssuedAt:                            j.IssuedAt,
+		AuthTime:                            j.AuthTime,
+		NotBefore:                           j.NotBefore,
+		Nonce:                               j.Nonce,
+		AuthenticationContextClassReference: j.AuthenticationContextClassReference,
+		AuthenticationMethodsReferences:     []string(j.AuthenticationMethodsReferences),
+		AuthorizedParty:                     j.AuthorizedParty,
+		ClientID:                            j.ClientID,
+		JWTID:                               j.JWTID,
+		Actor:                               j.Actor,
+	}
+}
+
+func (c *TokenClaims) UnmarshalJSON(data []byte) error {
+	var dst tokenClaimsJSON
+	if err := json.Unmarshal(data, &dst); err != nil {
+		return fmt.Errorf("oidc: %w into %T", err, c)
+	}
+	*c = dst.tokenClaims()
+	return nil
 }
 
 func (c *TokenClaims) GetIssuer() string {
@@ -130,7 +176,16 @@ func (a *AccessTokenClaims) MarshalJSON() ([]byte, error) {
 }
 
 func (a *AccessTokenClaims) UnmarshalJSON(data []byte) error {
-	return unmarshalJSONMulti(data, (*atcAlias)(a), &a.Claims)
+	var dst struct {
+		tokenClaimsJSON
+		Scopes SpaceDelimitedArray `json:"scope,omitempty"`
+	}
+	if err := json.Unmarshal(data, &dst); err != nil {
+		return fmt.Errorf("oidc: %w into %T", err, (*atcAlias)(a))
+	}
+	a.TokenClaims = dst.tokenClaims()
+	a.Scopes = dst.Scopes
+	return unmarshalJSONMulti(data, &a.Claims)
 }
 
 // IDTokenClaims extends TokenClaims by further implementing
@@ -204,7 +259,30 @@ func (i *IDTokenClaims) MarshalJSON() ([]byte, error) {
 }
 
 func (i *IDTokenClaims) UnmarshalJSON(data []byte) error {
-	return unmarshalJSONMulti(data, (*itcAlias)(i), &i.Claims)
+	var dst struct {
+		tokenClaimsJSON
+		NotBefore       Time   `json:"nbf,omitempty"`
+		AccessTokenHash string `json:"at_hash,omitempty"`
+		CodeHash        string `json:"c_hash,omitempty"`
+		SessionID       string `json:"sid,omitempty"`
+		UserInfoProfile
+		UserInfoEmail
+		UserInfoPhone
+		Address *UserInfoAddress `json:"address,omitempty"`
+	}
+	if err := json.Unmarshal(data, &dst); err != nil {
+		return fmt.Errorf("oidc: %w into %T", err, (*itcAlias)(i))
+	}
+	i.TokenClaims = dst.tokenClaims()
+	i.NotBefore = dst.NotBefore
+	i.AccessTokenHash = dst.AccessTokenHash
+	i.CodeHash = dst.CodeHash
+	i.SessionID = dst.SessionID
+	i.UserInfoProfile = dst.UserInfoProfile
+	i.UserInfoEmail = dst.UserInfoEmail
+	i.UserInfoPhone = dst.UserInfoPhone
+	i.Address = dst.Address
+	return unmarshalJSONMulti(data, &i.Claims)
 }
 
 // ActorClaims provides the `act` claims used for impersonation or delegation Token Exchange.
