@@ -67,6 +67,10 @@ func CallTokenEndpoint(ctx context.Context, request any, caller TokenEndpointCal
 	return callTokenEndpoint(ctx, request, nil, caller)
 }
 
+func CallTokenEndpointWithAuthFn(ctx context.Context, request any, authFn any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
+	return callTokenEndpoint(ctx, request, authFn, caller)
+}
+
 func callTokenEndpoint(ctx context.Context, request any, authFn any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	ctx, span := Tracer.Start(ctx, "callTokenEndpoint")
 	defer span.End()
@@ -154,12 +158,6 @@ type RevokeRequest struct {
 	ClientSecret  string `schema:"client_secret"`
 }
 
-func (r RevokeRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
-	}
-}
-
 func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller RevokeCaller) error {
 	ctx, span := Tracer.Start(ctx, "CallRevokeEndpoint")
 	defer span.End()
@@ -172,10 +170,6 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	req, err := httphelper.FormRequest(ctx, endpoint, request, Encoder, authFn)
 	if err != nil {
 		return err
-	}
-
-	if basicAuthRequest, ok := request.(ClientSecretBasicAuthRequest); ok {
-		basicAuthRequest.Auth(req)
 	}
 
 	client := caller.HttpClient()
@@ -258,7 +252,6 @@ func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCr
 	if err != nil {
 		return nil, err
 	}
-	request.Auth(req)
 
 	resp := new(oidc.DeviceAuthorizationResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
@@ -272,21 +265,16 @@ type DeviceAccessTokenRequest struct {
 	oidc.DeviceAccessTokenRequest
 }
 
-func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
-	}
-}
-
-func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+// CallDeviceAccessTokenEndpointWithAuthFn code moved from the CallDeviceAccessTokenEndpoint function
+// but allows for the authFn function to be passed in.
+func CallDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller, authFn any) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAccessTokenEndpoint")
 	defer span.End()
 
-	req, err := httphelper.FormRequest(ctx, caller.TokenEndpoint(), request, Encoder, nil)
+	req, err := httphelper.FormRequest(ctx, caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
-	request.Auth(req)
 
 	resp := new(oidc.AccessTokenResponse)
 	if err := httphelper.HttpRequest(caller.HttpClient(), req, &resp); err != nil {
@@ -295,7 +283,15 @@ func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTok
 	return resp, nil
 }
 
-func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+// CallDeviceAccessTokenEndpoint code moved to CallDeviceAccessTokenEndpointWithAuthFn
+// Deprecated: Use CallDeviceAccessTokenEndpointWithAuthFn instead.
+func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	return CallDeviceAccessTokenEndpointWithAuthFn(ctx, request, caller, nil)
+}
+
+// PollDeviceAccessTokenEndpointWithAuthFn code moved from the PollDeviceAccessTokenEndpoint function
+// but allows for the authFn function to be passed in.
+func PollDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller, authFn any) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "PollDeviceAccessTokenEndpoint")
 	defer span.End()
 
@@ -310,7 +306,7 @@ func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, 
 		ctx, cancel := context.WithTimeout(ctx, interval)
 		defer cancel()
 
-		resp, err := CallDeviceAccessTokenEndpoint(ctx, request, caller)
+		resp, err := CallDeviceAccessTokenEndpointWithAuthFn(ctx, request, caller, authFn)
 		if err == nil {
 			return resp, nil
 		}
@@ -331,4 +327,10 @@ func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, 
 			return nil, err
 		}
 	}
+}
+
+// PollDeviceAccessTokenEndpoint code moved to PollDeviceAccessTokenEndpointWithAuthFn
+// Deprecated: Use PollDeviceAccessTokenEndpointWithAuthFn instead.
+func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
+	return PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, request, caller, nil)
 }

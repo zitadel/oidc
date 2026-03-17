@@ -325,6 +325,35 @@ func Test_webServer_verifyRequestClient(t *testing.T) {
 				statusCode: UnimplementedStatusCode,
 			},
 		},
+		{
+			// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+			name:    "basic auth and client_assertion",
+			decoder: testDecoder,
+			r: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_assertion=xxx&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"))
+				r.SetBasicAuth("web", "secret")
+				return r
+			}(),
+			wantErr: oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method"),
+		},
+		{
+			// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+			name:    "basic auth and client_secret in body",
+			decoder: testDecoder,
+			r: func() *http.Request {
+				r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=web&client_secret=secret"))
+				r.SetBasicAuth("web", "secret")
+				return r
+			}(),
+			wantErr: oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method"),
+		},
+		{
+			// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+			name:    "client_secret and client_assertion",
+			decoder: testDecoder,
+			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=web&client_secret=secret&client_assertion=xxx&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer")),
+			wantErr: oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
