@@ -10,11 +10,11 @@ import (
 )
 
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
-	confg := rp.OAuthConfig()
+	config := rp.OAuthConfig()
 	req := &oidc.ClientCredentialsRequest{
 		Scope:        scopes,
-		ClientID:     confg.ClientID,
-		ClientSecret: confg.ClientSecret,
+		ClientID:     config.ClientID,
+		ClientSecret: config.ClientSecret,
 	}
 
 	if signer := rp.Signer(); signer != nil {

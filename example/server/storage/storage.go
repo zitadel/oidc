@@ -185,7 +185,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 	// typically, you'll fill your storage / storage model with the information of the passed object
 	request := authRequestToInternal(authReq, userID)
 
-	// you'll also have to create a unique id for the request (this might be done by your database; we'll use a uuid)
+	// you'll also have to create a unique id for the request (this might be done by your database; we'll use an uuid)
 	request.ID = uuid.NewString()
 
 	// and save it in your database (for demonstration purposed we will use a simple map)
@@ -511,9 +511,9 @@ func (s *Storage) SetIntrospectionFromToken(ctx context.Context, introspection *
 	// check if the client is part of the requested audience
 	for _, aud := range token.Audience {
 		if aud == clientID {
-			// the introspection response only has to return a boolean (active) if the token is active
-			// this will automatically be done by the library if you don't return an error
-			// you can also return further information about the user / associated token
+			// The introspection response only has to return a boolean (active) if the token is active.
+			// This will automatically be done by the library if you don't return an error.
+			// You can also return further information about the user / associated token.
 			// e.g. the userinfo (equivalent to userinfo endpoint)
 
 			userInfo := new(oidc.UserInfo)

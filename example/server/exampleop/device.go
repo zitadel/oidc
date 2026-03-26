@@ -18,13 +18,13 @@ type deviceAuthenticate interface {
 	CheckUsernamePasswordSimple(username, password string) error
 	op.DeviceAuthorizationStorage
 
-	// GetDeviceAuthorizationByUserCode resturns the current state of the device authorization flow,
+	// GetDeviceAuthorizationByUserCode returns the current state of the device authorization flow,
 	// identified by the user code.
 	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error)
 
 	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
 	// identified by userCode. The Subject is added to the state, so that
-	// GetDeviceAuthorizatonState can use it to create a new Access Token.
+	// GetDeviceAuthorizationState can use it to create a new Access Token.
 	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
 
 	// DenyDeviceAuthorization marks a device authorization entry as Denied.

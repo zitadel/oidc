@@ -45,7 +45,7 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 	httphelper.MarshalJSON(w, resp)
 }
 
-// ParseRefreshTokenRequest parsed the http request into a oidc.RefreshTokenRequest
+// ParseRefreshTokenRequest parsed the http request into an oidc.RefreshTokenRequest
 func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.RefreshTokenRequest, error) {
 	request := new(oidc.RefreshTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)

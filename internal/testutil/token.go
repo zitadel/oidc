@@ -1,4 +1,4 @@
-// Package testuril helps setting up required data for testing,
+// Package testutil helps to set up required data for testing,
 // such as tokens, claims and verifiers.
 package testutil
 
@@ -16,7 +16,7 @@ import (
 // KeySet implements oidc.Keys
 type KeySet struct{}
 
-// VerifySignature implments op.KeySet.
+// VerifySignature implements op.KeySet.
 func (KeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
 	if err = ctx.Err(); err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func NewAccessTokenCustom(issuer, subject string, audience []string, expiration 
 	return token, claims
 }
 
-// NewAcccessToken creates a new AccessTokenClaims with passed data and returns a signed token and claims.
+// NewAccessToken creates a new AccessTokenClaims with passed data and returns a signed token and claims.
 func NewAccessToken(issuer, subject string, audience []string, expiration time.Time, jwtid, clientID string, skew time.Duration) (string, *oidc.AccessTokenClaims) {
 	return NewAccessTokenCustom(issuer, subject, audience, expiration, jwtid, clientID, skew, nil)
 }
