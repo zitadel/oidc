@@ -252,7 +252,7 @@ find . -type f -name '*.go' | xargs sed -i \
 
 #### UserinfoCallback
 
-`UserinfoCallback` has an additional type argument fot the `UserInfo` object. Typically, the type argument can be inferred by the compiler, by the function that is passed. The actual code update cannot be done by a simple `sed` script and depends on how the caller implemented the function.
+`UserinfoCallback` has an additional type argument for the `UserInfo` object. Typically, the type argument can be inferred by the compiler, by the function that is passed. The actual code update cannot be done by a simple `sed` script and depends on how the caller implemented the function.
 
 
 #### IDTokenVerifier

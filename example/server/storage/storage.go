@@ -185,7 +185,7 @@ func (s *Storage) CreateAuthRequest(ctx context.Context, authReq *oidc.AuthReque
 	// typically, you'll fill your storage / storage model with the information of the passed object
 	request := authRequestToInternal(authReq, userID)
 
-	// you'll also have to create a unique id for the request (this might be done by your database; we'll use an uuid)
+	// you'll also have to create a unique id for the request (this might be done by your database; we'll use a UUID)
 	request.ID = uuid.NewString()
 
 	// and save it in your database (for demonstration purposed we will use a simple map)

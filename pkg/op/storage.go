@@ -189,7 +189,7 @@ type DeviceAuthorizationStorage interface {
 	// ErrDuplicateUserCode signals the caller should try again with a new code.
 	//
 	// Note that user codes are low entropy keys and when many exist in the
-	// database, the change for collisions increases. Therefore, implementers
+	// database, the chance for collisions increases. Therefore, implementers
 	// of this interface must make sure that user codes of expired authentication flows are purged,
 	// after some time.
 	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error

@@ -132,7 +132,7 @@ type StatusError struct {
 // If a returned error is not a StatusError, the framework
 // will set a statusCode based on what the standard specifies,
 // which is [http.StatusBadRequest] for most of the time.
-// If the error encountered can describe clearly with a [oidc.Error],
+// If the encountered error can be clearly described by an [oidc.Error],
 // do not use this function, as it might break standard rules!
 func NewStatusError(parent error, statusCode int) StatusError {
 	return StatusError{

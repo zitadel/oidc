@@ -213,7 +213,7 @@ func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ..
 	return NewProvider(config, storage, StaticIssuer(issuer), opOpts...)
 }
 
-// NewForwardedOpenIDProvider tries to establishe the issuer from the request Host.
+// NewForwardedOpenIDProvider tries to establish the issuer from the request Host.
 //
 // Deprecated: use [NewProvider] with an issuer function direct.
 func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {

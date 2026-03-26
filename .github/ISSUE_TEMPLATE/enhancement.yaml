@@ -1,5 +1,5 @@
 name: 🛠️ Improvement
-description: "Create an new issue for an improvement in ZITADEL"
+description: "Create a new issue for an improvement in ZITADEL"
 labels: ["enhancement"]
 type: enhancement
 body:

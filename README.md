@@ -88,8 +88,7 @@ The library uses build tags to enable or disable features. The following build t
 
 ### Server configuration
 
-Example server allows extra configuration using environment variables and could be used for end-to-end 
-testing of your services.
+Example server allows extra configuration using environment variables and could be used for end-to-end testing of your services.
 
 | Name         | Format                           | Description                           |
 | ------------ | -------------------------------- | ------------------------------------- |

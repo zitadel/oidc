@@ -11,7 +11,7 @@ import (
 
 // MyCustomClaims extends the TokenClaims base,
 // so it implements the oidc.Claims interface.
-// Instead of carrying a map, we add needed fields// to the struct for type safe access.
+// Instead of carrying a map, we add the needed fields to the struct for type-safe access.
 type MyCustomClaims struct {
 	oidc.TokenClaims
 	NotBefore       oidc.Time `json:"nbf,omitempty"`

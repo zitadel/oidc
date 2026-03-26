@@ -24,7 +24,7 @@ type deviceAuthenticate interface {
 
 	// CompleteDeviceAuthorization marks a device authorization entry as Completed,
 	// identified by userCode. The Subject is added to the state, so that
-	// GetDeviceAuthorizationState can use it to create a new Access Token.
+	// GetDeviceAuthorizatonState can use it to create a new Access Token.
 	CompleteDeviceAuthorization(ctx context.Context, userCode, subject string) error
 
 	// DenyDeviceAuthorization marks a device authorization entry as Denied.
