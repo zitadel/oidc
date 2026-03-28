@@ -39,9 +39,14 @@ func Userinfo(w http.ResponseWriter, r *http.Request, userinfoProvider UserinfoP
 		return
 	}
 
+	var claims map[string]any
+	if accessTokenClaims != nil {
+		claims = accessTokenClaims.Claims
+	}
+
 	info := &oidc.UserInfo{
 		Subject: subject,
-		Claims:  accessTokenClaims.Claims,
+		Claims:  claims,
 	}
 	err = userinfoProvider.Storage().SetUserinfoFromToken(r.Context(), info, tokenID, subject, r.Header.Get("origin"))
 	if err != nil {
