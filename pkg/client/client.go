@@ -64,14 +64,10 @@ type TokenEndpointCaller interface {
 }
 
 func CallTokenEndpoint(ctx context.Context, request any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
-	return callTokenEndpoint(ctx, request, nil, caller)
+	return CallTokenEndpointWithAuthFn(ctx, request, nil, caller)
 }
 
 func CallTokenEndpointWithAuthFn(ctx context.Context, request any, authFn any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
-	return callTokenEndpoint(ctx, request, authFn, caller)
-}
-
-func callTokenEndpoint(ctx context.Context, request any, authFn any, caller TokenEndpointCaller) (newToken *oauth2.Token, err error) {
 	ctx, span := Tracer.Start(ctx, "callTokenEndpoint")
 	defer span.End()
 
@@ -265,8 +261,7 @@ type DeviceAccessTokenRequest struct {
 	oidc.DeviceAccessTokenRequest
 }
 
-// CallDeviceAccessTokenEndpointWithAuthFn code moved from the CallDeviceAccessTokenEndpoint function
-// but allows for the authFn function to be passed in.
+// CallDeviceAccessTokenEndpointWithAuthFn calls the device access token endpoint, accepting an authFn for custom authentication.
 func CallDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller, authFn any) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAccessTokenEndpoint")
 	defer span.End()
@@ -283,14 +278,12 @@ func CallDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, request *Devic
 	return resp, nil
 }
 
-// CallDeviceAccessTokenEndpoint code moved to CallDeviceAccessTokenEndpointWithAuthFn
 // Deprecated: Use CallDeviceAccessTokenEndpointWithAuthFn instead.
 func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
 	return CallDeviceAccessTokenEndpointWithAuthFn(ctx, request, caller, nil)
 }
 
-// PollDeviceAccessTokenEndpointWithAuthFn code moved from the PollDeviceAccessTokenEndpoint function
-// but allows for the authFn function to be passed in.
+// PollDeviceAccessTokenEndpointWithAuthFn polls the device access token endpoint, accepting an authFn for custom authentication.
 func PollDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller, authFn any) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "PollDeviceAccessTokenEndpoint")
 	defer span.End()
@@ -329,7 +322,6 @@ func PollDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, interval time.
 	}
 }
 
-// PollDeviceAccessTokenEndpoint code moved to PollDeviceAccessTokenEndpointWithAuthFn
 // Deprecated: Use PollDeviceAccessTokenEndpointWithAuthFn instead.
 func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
 	return PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, request, caller, nil)
