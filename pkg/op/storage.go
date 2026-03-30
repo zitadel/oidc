@@ -196,6 +196,9 @@ type DeviceAuthorizationStorage interface {
 
 	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
 	// The method is polled until the authorization is either Completed, Expired or Denied.
+	//
+	// Note: The method name is misspelled ("Authorizaton" instead of "Authorization") and kept for
+	// backward compatibility. A correctly spelled alternative may be introduced in a future major version.
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
 }
 
