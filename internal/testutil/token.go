@@ -16,7 +16,7 @@ import (
 // KeySet implements oidc.Keys
 type KeySet struct{}
 
-// VerifySignature implments op.KeySet.
+// VerifySignature implements oidc.KeySet.
 func (KeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSignature) (payload []byte, err error) {
 	if err = ctx.Err(); err != nil {
 		return nil, err

@@ -10,7 +10,7 @@ import (
 // claims map into a single JSON object.
 // Registered fields overwrite custom claims.
 func mergeAndMarshalClaims(registered any, extraClaims map[string]any) ([]byte, error) {
-	// Use a buffer for memory re-use, instead off letting
+	// Use a buffer for memory re-use, instead of letting
 	// json allocate a new []byte for every step.
 	buf := new(bytes.Buffer)
 
@@ -27,7 +27,7 @@ func mergeAndMarshalClaims(registered any, extraClaims map[string]any) ([]byte, 
 
 		// Merge JSON data into custom claims.
 		// The full-read action by the decoder resets the buffer
-		// to zero len, while retaining underlaying cap.
+		// to zero len, while retaining underlying cap.
 		if err := json.NewDecoder(buf).Decode(&merged); err != nil {
 			return nil, fmt.Errorf("oidc registered claims: %w", err)
 		}

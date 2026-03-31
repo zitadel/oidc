@@ -297,7 +297,7 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	return scopes, nil
 }
 
-// checkURIAgainstRedirects just checks aginst the valid redirect URIs and ignores
+// checkURIAgainstRedirects just checks against the valid redirect URIs and ignores
 // other factors.
 func checkURIAgainstRedirects(client Client, uri string) error {
 	if slices.Contains(client.RedirectURIs(), uri) {
