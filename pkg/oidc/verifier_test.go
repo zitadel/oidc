@@ -17,7 +17,7 @@ func TestDecryptToken(t *testing.T) {
 }
 
 func TestDefaultACRVerifier(t *testing.T) {
-	acrVerfier := DefaultACRVerifier([]string{"foo", "bar"})
+	acrVerifier := DefaultACRVerifier([]string{"foo", "bar"})
 
 	tests := []struct {
 		name    string
@@ -36,7 +36,7 @@ func TestDefaultACRVerifier(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := acrVerfier(tt.acr)
+			err := acrVerifier(tt.acr)
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 				return

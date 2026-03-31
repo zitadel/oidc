@@ -21,7 +21,7 @@ We add the label "good first issue" for problems we think are a good starting po
 
 ### Make a PR
 
-If you like to contribute fork the OIDC repository. After you implemented the new feature create a PullRequest in the OIDC reposiotry.
+If you like to contribute fork the OIDC repository. After you implemented the new feature create a PullRequest in the OIDC repository.
 
 Make sure you use semantic release:
 

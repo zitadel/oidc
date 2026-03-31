@@ -36,7 +36,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	httphelper.MarshalJSON(w, resp)
 }
 
-// ParseAccessTokenRequest parsed the http request into a oidc.AccessTokenRequest
+// ParseAccessTokenRequest parsed the http request into an oidc.AccessTokenRequest
 func ParseAccessTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.AccessTokenRequest, error) {
 	request := new(oidc.AccessTokenRequest)
 	err := ParseAuthenticatedTokenRequest(r, decoder, request)

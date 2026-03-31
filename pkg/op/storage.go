@@ -96,7 +96,7 @@ type TokenExchangeStorage interface {
 	// - scopes (and update them using SetCurrentScopes method)
 	// - set new subject if it differs from exchange subject (impersonation flow)
 	//
-	// Request will include subject's and/or actor's token claims if correspinding tokens are access/id_token issued by op
+	// Request will include subject's and/or actor's token claims if corresponding tokens are access/id_token issued by op
 	// or third party tokens parsed by TokenExchangeTokensVerifierStorage interface methods.
 	ValidateTokenExchangeRequest(ctx context.Context, request TokenExchangeRequest) error
 
@@ -184,18 +184,21 @@ type EndSessionRequest struct {
 var ErrDuplicateUserCode = errors.New("user code already exists")
 
 type DeviceAuthorizationStorage interface {
-	// StoreDeviceAuthorizationRequest stores a new device authorization request in the database.
+	// StoreDeviceAuthorization stores a new device authorization request in the database.
 	// User code will be used by the user to complete the login flow and must be unique.
 	// ErrDuplicateUserCode signals the caller should try again with a new code.
 	//
 	// Note that user codes are low entropy keys and when many exist in the
-	// database, the change for collisions increases. Therefore implementers
+	// database, the chance for collisions increases. Therefore, implementers
 	// of this interface must make sure that user codes of expired authentication flows are purged,
 	// after some time.
 	StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error
 
 	// GetDeviceAuthorizatonState returns the current state of the device authorization flow in the database.
-	// The method is polled untill the the authorization is eighter Completed, Expired or Denied.
+	// The method is polled until the authorization is either Completed, Expired or Denied.
+	//
+	// Note: The method name is misspelled ("Authorizaton" instead of "Authorization") and kept for
+	// backward compatibility. A correctly spelled alternative may be introduced in a future major version.
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
 }
 
