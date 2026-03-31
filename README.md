@@ -88,8 +88,7 @@ The library uses build tags to enable or disable features. The following build t
 
 ### Server configuration
 
-Example server allows extra configuration using environment variables and could be used for end to
-end testing of your services.
+Example server allows extra configuration using environment variables and could be used for end-to-end testing of your services.
 
 | Name         | Format                           | Description                           |
 | ------------ | -------------------------------- | ------------------------------------- |
@@ -189,7 +188,7 @@ The `go-oidc` does only support `RP` and is not feasible to use as `OP` that's w
 
 [https://github.com/ory/fosite](https://github.com/ory/fosite)
 
-We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely on the golang provided package. Nonetheless this is a great project.
+We did not choose `fosite` because it implements `OAuth 2.0` on its own and does not rely on the golang provided package. Nonetheless, this is a great project.
 
 ## License
 

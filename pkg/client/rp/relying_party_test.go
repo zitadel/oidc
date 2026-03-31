@@ -38,12 +38,12 @@ func Test_verifyTokenResponse(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "succes, oauth2 only",
+			name:       "success, oauth2 only",
 			oauth2Only: true,
 			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
-				accesToken, _ := tu.ValidAccessToken()
+				accessToken, _ := tu.ValidAccessToken()
 				token := &oauth2.Token{
-					AccessToken: accesToken,
+					AccessToken: accessToken,
 				}
 				return token, &oidc.Tokens[*oidc.IDTokenClaims]{
 					Token: token,
@@ -54,9 +54,9 @@ func Test_verifyTokenResponse(t *testing.T) {
 			name:       "id_token missing error",
 			oauth2Only: false,
 			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
-				accesToken, _ := tu.ValidAccessToken()
+				accessToken, _ := tu.ValidAccessToken()
 				token := &oauth2.Token{
-					AccessToken: accesToken,
+					AccessToken: accessToken,
 				}
 				return token, &oidc.Tokens[*oidc.IDTokenClaims]{
 					Token: token,
@@ -68,9 +68,9 @@ func Test_verifyTokenResponse(t *testing.T) {
 			name:       "verify tokens error",
 			oauth2Only: false,
 			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
-				accesToken, _ := tu.ValidAccessToken()
+				accessToken, _ := tu.ValidAccessToken()
 				token := &oauth2.Token{
-					AccessToken: accesToken,
+					AccessToken: accessToken,
 				}
 				token = token.WithExtra(map[string]any{
 					"id_token": "foobar",
@@ -83,9 +83,9 @@ func Test_verifyTokenResponse(t *testing.T) {
 			name:       "success, with id_token",
 			oauth2Only: false,
 			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
-				accesToken, _ := tu.ValidAccessToken()
+				accessToken, _ := tu.ValidAccessToken()
 				token := &oauth2.Token{
-					AccessToken: accesToken,
+					AccessToken: accessToken,
 				}
 				idToken, claims := tu.ValidIDToken()
 				token = token.WithExtra(map[string]any{

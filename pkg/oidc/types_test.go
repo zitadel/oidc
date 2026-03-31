@@ -371,7 +371,7 @@ func TestLocales_UnmarshalJSON(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "space seperated string",
+			name: "space separated string",
 			args: args{
 				data: []byte(spaceSepStr),
 			},
