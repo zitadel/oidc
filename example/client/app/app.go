@@ -180,7 +180,7 @@ func main() {
 
 	// simple counter for request IDs
 	var counter atomic.Int64
-	// enable incomming request logging
+	// enable incoming request logging
 	mw := logging.Middleware(
 		logging.WithLogger(logger),
 		logging.WithGroup("server"),

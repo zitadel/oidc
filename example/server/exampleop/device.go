@@ -18,7 +18,7 @@ type deviceAuthenticate interface {
 	CheckUsernamePasswordSimple(username, password string) error
 	op.DeviceAuthorizationStorage
 
-	// GetDeviceAuthorizationByUserCode resturns the current state of the device authorization flow,
+	// GetDeviceAuthorizationByUserCode returns the current state of the device authorization flow,
 	// identified by the user code.
 	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error)
 

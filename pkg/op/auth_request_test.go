@@ -699,7 +699,7 @@ func TestLoopbackOrLocalhost(t *testing.T) {
 			true,
 		},
 		{
-			"locahost no port ok",
+			"localhost no port ok",
 			args{url: "http://localhost/test"},
 			true,
 		},
@@ -1014,7 +1014,7 @@ func (m *mockEncoder) Encode(src any, dst map[string][]string) error {
 
 // mockCrypto implements the op.Crypto interface
 // and in always equals out. (It doesn't crypt anything).
-// When returnErr != nil, that error is always returned instread.
+// When returnErr != nil, that error is always returned instead.
 type mockCrypto struct {
 	returnErr error
 }

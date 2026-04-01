@@ -122,7 +122,7 @@ func TestServerRoutes(t *testing.T) {
 			headerContains: map[string]string{"Location": "/login/username?authRequestID="},
 		},
 		{
-			// This call will fail. A successfull test is already
+			// This call will fail. A successful test is already
 			// part of client/integration_test.go
 			name:   "code exchange",
 			method: http.MethodGet,
