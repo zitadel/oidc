@@ -30,7 +30,7 @@ type ClientSecretBasicAuthRequest interface {
 }
 
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
-// It accepts an optional argument "wellknownUrl" which can be used to overide the dicovery endpoint url
+// It accepts an optional argument "wellknownUrl" which can be used to override the discovery endpoint url
 func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
 	ctx, span := Tracer.Start(ctx, "Discover")
 	defer span.End()

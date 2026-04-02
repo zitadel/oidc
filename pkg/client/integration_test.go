@@ -92,7 +92,7 @@ func TestRelyingPartySession(t *testing.T) {
 		// Write a separator for the block key.
 		_, err = h.Write([]byte("ENCRYPTION"))
 		require.NoError(t, err)
-		block := h.Sum(nil)[:32] // Sum is 64 bytes but we only want 32 for AES-256.
+		block := h.Sum(nil)[:32] // Sum is 64 bytes, but we only want 32 for AES-256.
 
 		return securecookie.New(hash, block), nil
 	}, httphelper.WithUnsecure())
@@ -290,7 +290,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 	resourceServer, err := rs.NewResourceServerClientCredentials(CTX, opServer.URL, clientID, clientSecret)
 	require.NoError(t, err, "new resource server")
 
-	t.Log("------- exchage refresh tokens (impersonation)  ------")
+	t.Log("------- exchange refresh tokens (impersonation)  ------")
 
 	tokenExchangeResponse, err := tokenexchange.ExchangeToken(
 		CTX,
@@ -321,7 +321,7 @@ func testResourceServerTokenExchange(t *testing.T, wrapServer bool) {
 		t.Logf("no redirect")
 	}
 
-	t.Log("------- attempt exchage again (should fail)  ------")
+	t.Log("------- attempt exchange again (should fail)  ------")
 
 	tokenExchangeResponse, err = tokenexchange.ExchangeToken(
 		CTX,
@@ -468,8 +468,8 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 	resp = capturedW.Result()
 
 	authorizedURL, err := resp.Location()
-	require.NoError(t, err, "get fully-authorizied redirect location")
-	require.Equal(t, targetURL, authorizedURL.String(), "fully-authorizied redirect location")
+	require.NoError(t, err, "get fully-authorized redirect location")
+	require.Equal(t, targetURL, authorizedURL.String(), "fully-authorized redirect location")
 
 	require.NotEmpty(t, tokens.IDToken, "id token")
 	assert.NotEmpty(t, tokens.RefreshToken, "refresh token")

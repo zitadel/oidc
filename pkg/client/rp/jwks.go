@@ -26,11 +26,11 @@ func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKe
 }
 
 // SkipRemoteCheck will suppress checking for new remote keys if signature validation fails with cached keys
-// and no kid header is set in the JWT
+// and no kid header is set in the JWT.
 //
-// this might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
-// there is only a single remote key
-// please notice that remote keys will then only be fetched if cached keys are empty
+// This might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
+// there is only a single remote key.
+// Please notice that remote keys will then only be fetched if cached keys are empty.
 func SkipRemoteCheck() func(set *remoteKeySet) {
 	return func(set *remoteKeySet) {
 		set.skipRemoteCheck = true

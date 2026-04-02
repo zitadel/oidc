@@ -1,6 +1,6 @@
 module github.com/zitadel/oidc/v3
 
-go 1.24.10
+go 1.25.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
@@ -18,10 +18,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/zitadel/logging v0.7.0
 	github.com/zitadel/schema v1.3.2
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
-	golang.org/x/oauth2 v0.35.0
-	golang.org/x/text v0.34.0
+	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel/trace v1.42.0
+	golang.org/x/oauth2 v0.36.0
+	golang.org/x/text v0.35.0
 )
 
 require (
@@ -32,7 +32,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.40.0 // indirect
+	go.opentelemetry.io/otel/metric v1.42.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
