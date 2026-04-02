@@ -204,7 +204,7 @@ func TestRoutes(t *testing.T) {
 				"assertion":  jwtToken,
 			},
 			wantCode: http.StatusBadRequest,
-			json:     "{\"error\":\"server_error\",\"error_description\":\"audience is not valid: Audience must contain client_id \\\"https://localhost:9998/\\\"\"}",
+			json:     "{\"error\":\"invalid_grant\",\"error_description\":\"audience is not valid: Audience must contain client_id \\\"https://localhost:9998/\\\"\"}",
 		},
 		{
 			name:      "Token exchange",
