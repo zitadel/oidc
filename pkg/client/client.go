@@ -25,10 +25,6 @@ var (
 	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
 )
 
-type ClientSecretBasicAuthRequest interface {
-	Auth(req *http.Request)
-}
-
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to override the discovery endpoint url
 func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
@@ -74,10 +70,6 @@ func CallTokenEndpointWithAuthFn(ctx context.Context, request any, authFn any, c
 	req, err := httphelper.FormRequest(ctx, caller.TokenEndpoint(), request, Encoder, authFn)
 	if err != nil {
 		return nil, err
-	}
-
-	if basicAuthRequest, ok := request.(ClientSecretBasicAuthRequest); ok {
-		basicAuthRequest.Auth(req)
 	}
 
 	tokenRes := new(oidc.AccessTokenResponse)
