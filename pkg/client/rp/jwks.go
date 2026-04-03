@@ -3,9 +3,9 @@ package rp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	jose "github.com/go-jose/go-jose/v4"
@@ -14,8 +14,6 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
-
-const joseUnknownKeyTypeErrMsg = "go-jose/go-jose: unknown json web key type '"
 
 func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKeySet)) oidc.KeySet {
 	keyset := &remoteKeySet{httpClient: client, jwksURL: jwksURL}
@@ -246,7 +244,7 @@ func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	for i, key := range raw.Keys {
 		webKey := new(jose.JSONWebKey)
 		if err = webKey.UnmarshalJSON(key); err != nil {
-			if strings.HasPrefix(err.Error(), joseUnknownKeyTypeErrMsg) {
+			if errors.Is(err, jose.ErrUnsupportedKeyType) {
 				continue
 			}
 
