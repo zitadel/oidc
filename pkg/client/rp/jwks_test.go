@@ -63,7 +63,7 @@ func TestJsonWebKeySet_UnmarshalJSON(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.NotContains(t, err.Error(), jose.ErrUnsupportedKeyType)
+				assert.NotErrorIs(t, err, jose.ErrUnsupportedKeyType)
 				assert.True(t, strings.HasPrefix(err.Error(), tt.errPrefix))
 
 			} else {
