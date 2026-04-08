@@ -175,7 +175,9 @@ func CheckAZPVerifier(claims Claims, azp AZPVerifier) error {
 func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
 	jws, err := jose.ParseSigned(token, toJoseSignatureAlgorithms(supportedSigAlgs))
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "go-jose/go-jose: unexpected signature algorithm") {
+		var unexpectedSigAlgErr *jose.ErrUnexpectedSignatureAlgorithm
+		if errors.As(err, &unexpectedSigAlgErr) ||
+			errors.Is(err, jose.ErrUnsupportedAlgorithm) {
 			// TODO(v4): we should wrap errors instead of returning static ones.
 			// This is a workaround so we keep returning the same error for now.
 			return ErrSignatureUnsupportedAlg
