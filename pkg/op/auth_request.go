@@ -582,11 +582,11 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 }
 
 // CreateAuthRequestCode creates and stores a code for the auth code response
-func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Storage, crypto Crypto) (string, error) {
+func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Storage, encrypter Encrypter) (string, error) {
 	ctx, span := Tracer.Start(ctx, "CreateAuthRequestCode")
 	defer span.End()
 
-	code, err := BuildAuthRequestCode(authReq, crypto)
+	code, err := BuildAuthRequestCode(authReq, encrypter)
 	if err != nil {
 		return "", err
 	}
@@ -597,8 +597,8 @@ func CreateAuthRequestCode(ctx context.Context, authReq AuthRequest, storage Sto
 }
 
 // BuildAuthRequestCode builds the string representation of the auth code
-func BuildAuthRequestCode(authReq AuthRequest, crypto Crypto) (string, error) {
-	return crypto.Encrypt(authReq.GetID())
+func BuildAuthRequestCode(authReq AuthRequest, encrypter Encrypter) (string, error) {
+	return encrypter.Encrypt(authReq.GetID())
 }
 
 // AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
