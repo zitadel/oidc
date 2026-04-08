@@ -19,8 +19,7 @@ For example:
 Replace this example text with a concise list of additional changes that this PR introduces, that are not directly solving the initial problem but are related.
 For example:
 - The docs explicitly describe that the property XY is mandatory
-- Adds missing translations for validations.
-- Terminology updates follow issue #5888 and `TERMINOLOGY.md` (including catalog updates for newly introduced terms).
+- Adds missing descriptions for errors.
 
 # Additional Context
 
