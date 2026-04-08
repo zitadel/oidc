@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,7 +63,7 @@ func TestJsonWebKeySet_UnmarshalJSON(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.NotContains(t, err.Error(), joseUnknownKeyTypeErrMsg)
+				assert.NotErrorIs(t, err, jose.ErrUnsupportedKeyType)
 				assert.True(t, strings.HasPrefix(err.Error(), tt.errPrefix))
 
 			} else {
