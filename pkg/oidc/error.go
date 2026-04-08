@@ -212,24 +212,14 @@ func (e *Error) IsRedirectDisabled() bool {
 // DefaultToServerError checks if the error is an Error
 // if not the provided error will be wrapped into a ServerError
 func DefaultToServerError(err error, description string) *Error {
-	err = mapVerifierError(err, description)
-	oauth := new(Error)
-	if ok := errors.As(err, &oauth); !ok {
-		oauth.ErrorType = ServerError
-		oauth.Description = description
-		oauth.Parent = err
-	}
-	return oauth
-}
-
-func mapVerifierError(err error, description string) error {
 	oidcErr := new(Error)
 	if ok := errors.As(err, &oidcErr); ok {
-		return err
+		clone := *oidcErr
+		return &clone
 	}
 	switch {
 	case errors.Is(err, ErrParse):
-		err = ErrInvalidRequest().WithParent(err).WithDescription("%s", description)
+		oidcErr = ErrInvalidRequest().WithParent(err).WithDescription("%s", description)
 	case errors.Is(err, ErrIssuerInvalid),
 		errors.Is(err, ErrSubjectMissing),
 		errors.Is(err, ErrAudience),
@@ -249,11 +239,13 @@ func mapVerifierError(err error, description string) error {
 		errors.Is(err, ErrAuthTimeNotPresent),
 		errors.Is(err, ErrAuthTimeToOld),
 		errors.Is(err, ErrAtHash):
-		err = ErrInvalidGrant().WithParent(err).WithDescription("%s", description)
+		oidcErr = ErrInvalidGrant().WithParent(err).WithDescription("%s", description)
 	case errors.Is(err, ErrDiscoveryFailed):
-		err = ErrServerError().WithParent(err).WithDescription("%s", description)
+		fallthrough
+	default:
+		oidcErr = ErrServerError().WithParent(err).WithDescription("%s", description)
 	}
-	return err
+	return oidcErr
 }
 
 func (e *Error) LogLevel() slog.Level {
