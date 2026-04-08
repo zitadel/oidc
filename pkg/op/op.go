@@ -159,6 +159,7 @@ func authCallbackPath(o OpenIDProvider) string {
 
 type Config struct {
 	CryptoKey                         [32]byte // for encrypting access token via NewAESCrypto; will be overwritten by WithCrypto
+	CryptoKeyId                       string
 	DefaultLogoutRedirectURI          string
 	CodeMethodS256                    bool
 	AuthMethodPost                    bool
@@ -259,12 +260,20 @@ func NewProvider(
 	opOpts ...Option,
 ) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
+	easgcmCrypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
+	crypto := NewCompositeCrypto(
+		easgcmCrypto,
+		[]Decrypter{
+			easgcmCrypto,
+			NewAESCrypto(config.CryptoKey),
+		},
+	)
 	o := &Provider{
 		config:            config,
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
-		crypto:            NewAESCrypto(config.CryptoKey),
+		crypto:            crypto,
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,

@@ -134,7 +134,7 @@ func CreateAccessToken(ctx context.Context, tokenRequest TokenRequest, accessTok
 	return accessToken, newRefreshToken, validity, err
 }
 
-func CreateBearerToken(tokenID, subject string, crypto Crypto) (string, error) {
+func CreateBearerToken(tokenID, subject string, crypto Encrypter) (string, error) {
 	return crypto.Encrypt(tokenID + ":" + subject)
 }
 
