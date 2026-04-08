@@ -164,6 +164,8 @@ func (d *deviceLogin) loginHandler(w http.ResponseWriter, r *http.Request) {
 	cookie := &http.Cookie{
 		Name:     userCodeCookieName,
 		Value:    encoded,
+		Path:     "/",
+		HttpOnly: true,
 	}
 	http.SetCookie(w, cookie)
 	renderConfirmPage(w, username, state.ClientID, state.Scopes)
