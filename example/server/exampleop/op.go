@@ -35,6 +35,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	// the OpenID Provider requires a 32-byte key for (token) encryption
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
+	keyId := "key1"
 
 	router := chi.NewRouter()
 	router.Use(logging.Middleware(
@@ -55,6 +56,7 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 		storage,
 		issuer,
 		key,
+		keyId,
 		logger,
 		extraOptions...,
 	)
@@ -97,11 +99,13 @@ func newOP(
 	storage op.Storage,
 	issuer string,
 	key [32]byte, // encryption key
+	keyId string,
 	logger *slog.Logger,
 	extraOptions ...op.Option,
 ) (op.OpenIDProvider, error) {
 	config := &op.Config{
-		CryptoKey: key,
+		CryptoKey:   key,
+		CryptoKeyId: keyId,
 
 		// will be used if the end_session endpoint is called without a post_logout_redirect_uri
 		DefaultLogoutRedirectURI: pathLoggedOut,

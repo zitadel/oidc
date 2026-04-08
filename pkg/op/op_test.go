@@ -24,6 +24,7 @@ var (
 	testProvider op.OpenIDProvider
 	testConfig   = &op.Config{
 		CryptoKey:                sha256.Sum256([]byte("test")),
+		CryptoKeyId:              "key1",
 		DefaultLogoutRedirectURI: pathLoggedOut,
 		CodeMethodS256:           true,
 		AuthMethodPost:           true,

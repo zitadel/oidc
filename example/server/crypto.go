@@ -7,7 +7,8 @@ import (
 	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
-var _ op.Crypto = &myCrypto{}
+var _ op.Encrypter = &myCrypto{}
+var _ op.Decrypter = &myCrypto{}
 
 // myCrypto demonstrates how to provide your custom implementation of op.Crypto.
 type myCrypto struct {

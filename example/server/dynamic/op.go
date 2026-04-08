@@ -46,6 +46,7 @@ func main() {
 	//the OpenID Provider requires a 32-byte key for (token) encryption
 	//be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
+	keyId := "key1"
 
 	router := chi.NewRouter()
 
@@ -64,7 +65,7 @@ func main() {
 	storage := storage.NewMultiStorage(issuers)
 
 	//creation of the OpenIDProvider with the just created in-memory Storage
-	provider, err := newDynamicOP(ctx, storage, key)
+	provider, err := newDynamicOP(ctx, storage, key, keyId)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,9 +101,10 @@ func main() {
 // newDynamicOP will create an OpenID Provider for localhost on a specified port with a given encryption key
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
-func newDynamicOP(ctx context.Context, storage op.Storage, key [32]byte) (*op.Provider, error) {
+func newDynamicOP(ctx context.Context, storage op.Storage, key [32]byte, keyId string) (*op.Provider, error) {
 	config := &op.Config{
-		CryptoKey: key,
+		CryptoKey:   key,
+		CryptoKeyId: keyId,
 
 		//will be used if the end_session endpoint is called without a post_logout_redirect_uri
 		DefaultLogoutRedirectURI: pathLoggedOut,
