@@ -6,6 +6,7 @@ titleOnly: true
 types:
   - feat      # new feature
   - fix       # bug fix
+  - example   # code in example/
   - docs      # documentation only (no code change)
   - refactor  # code restructuring without behaviour change
   - perf      # performance improvement
