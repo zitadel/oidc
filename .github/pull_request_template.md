@@ -1,16 +1,31 @@
-### Definition of Ready
+<!--
+Please inform yourself about the contribution guidelines on submitting a PR here: https://github.com/zitadel/oidc/blob/main/CONTRIBUTING.md#submit-a-pull-request-pr. Take note of how PR/commit titles should be written and replace the template texts in the sections below. Don't remove any of the sections. It is important that the commit history clearly shows what is changed and why.
+-->
 
-- [ ] I am happy with the code
-- [ ] Short description of the feature/issue is added in the pr description
-- [ ] PR is linked to the corresponding user story
-- [ ] Acceptance criteria are met
-- [ ] All open todos and follow ups are defined in a new ticket and justified
-- [ ] Deviations from the acceptance criteria and design are agreed with the PO and documented.
-- [ ] No debug or dead code
-- [ ] My code has no repetitions
-- [ ] Critical parts are tested automatically
-- [ ] Where possible E2E tests are implemented
-- [ ] Documentation/examples are up-to-date
-- [ ] All non-functional requirements are met
-- [ ] Functionality of the acceptance criteria is checked manually on the dev system.
+# Which Problems Are Solved
 
+Replace this example text with a concise list of problems that this PR solves.
+For example:
+- If the property XY is not given, the system crashes with a nil pointer exception.
+
+# How the Problems Are Solved
+
+Replace this example text with a concise list of changes that this PR introduces.
+For example:
+- Validates if property XY is given and throws an error if not
+
+# Additional Changes
+
+Replace this example text with a concise list of additional changes that this PR introduces, that are not directly solving the initial problem but are related.
+For example:
+- The docs explicitly describe that the property XY is mandatory
+- Adds missing descriptions for errors.
+
+# Additional Context
+
+Replace this example with links to related issues, discussions, discord threads, or other sources with more context.
+Use the Closing #issue syntax for issues that are resolved with this PR.
+- Closes #xxx
+- Discussion #xxx
+- Follow-up for PR #xxx
+- https://discord.com/channels/xxx/xxx

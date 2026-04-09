@@ -19,15 +19,27 @@ We add the label "good first issue" for problems we think are a good starting po
 * [Issues for first time contributors](https://github.com/zitadel/oidc/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 * [All issues](https://github.com/zitadel/oidc/issues)
 
-### Make a PR
+## Submitting a pull request (PR)
 
-If you like to contribute fork the OIDC repository. After you implemented the new feature create a PullRequest in the OIDC repository.
+If you like to contribute fork the OIDC repository. After you implemented the new feature create a Pull Request in the OIDC repository.
 
-Make sure you use semantic release:
+Make sure you use [semantic release messages format](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#type).
 
-* feat: New Feature
-* fix: Bug Fix
-* docs: Documentation
+`<type>(<scope>): <short summary>`
+
+### Type
+
+Allowed values are listed in [`.github/semantic.yml`](.github/semantic.yml) under `types:`.
+
+### Scope
+
+This is optional to indicate which component is affected.
+Allowed values are listed in [`.github/semantic.yml`](.github/semantic.yml) under `scopes:`.
+When in doubt, omit the scope — `<type>: <short summary>` is always valid.
+
+#### Short summary
+
+Provide a brief description of the change.
 
 ## Want to use the library?
 
