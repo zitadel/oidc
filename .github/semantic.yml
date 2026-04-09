@@ -1,0 +1,37 @@
+# Always validate the PR title, and ignore the commits
+titleOnly: true
+
+# Allowed types — the PR title type must be one of these.
+# This list is the single source of truth referenced by CONTRIBUTING.md.
+types:
+  - feat      # new feature
+  - fix       # bug fix
+  - example   # code in example/
+  - docs      # documentation only (no code change)
+  - refactor  # code restructuring without behaviour change
+  - perf      # performance improvement
+  - test      # adding or fixing tests
+  - build     # build system or tooling
+  - ci        # CI/CD pipeline
+  - chore     # maintenance (deps, config, etc.)
+  - revert    # reverts a previous commit
+
+# Allowed scopes — if a scope is provided it must match one of these.
+# Scopes are optional; omit rather than invent one not on this list.
+# Note: 'docs' is a type, not a scope — use the type 'docs' for documentation changes.
+# This list is the single source of truth referenced by CONTRIBUTING.md.
+scopes:
+  # Domain areas
+  - oidc   # Shared definitions in pkg/oidc.
+  - op     # OpenID Provider (OP) implementation in pkg/op.
+  - client # Shared client code in pkg/client.
+  - rp     # Relying Party (RP) implementation in pkg/client/rp.
+  - rs     # Resource Server (RS) implementation in pkg/client/rs.
+  - crypto # Cryptographic utilities in pkg/crypto.
+  - http   # HTTP utilities in pkg/http.
+  # Miscellaneous
+  - build
+  - ci
+  - deps
+  - security
+  - test
