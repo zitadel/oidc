@@ -72,6 +72,9 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slo
 	if e.ErrorType == oidc.InvalidClient {
 		status = http.StatusUnauthorized
 	}
+	if e.ErrorType == oidc.ServerError {
+		status = http.StatusInternalServerError
+	}
 	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
 	httphelper.MarshalJSONWithStatus(w, e, status)
 }
