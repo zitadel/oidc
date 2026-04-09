@@ -70,22 +70,22 @@ func TestAudience_UnmarshalText(t *testing.T) {
 	}
 }
 
-func TestAuthMethodRefs_UnmarshalJSON(t *testing.T) {
+func TestAuthenticationMethodsReferences_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    authMethodRefs
+		want    AuthenticationMethodsReferences
 		wantErr bool
 	}{
 		{
 			name:  "single auth method",
 			input: `{"amr":"pwd"}`,
-			want:  authMethodRefs{"pwd"},
+			want:  AuthenticationMethodsReferences{"pwd"},
 		},
 		{
 			name:  "multiple auth methods",
 			input: `{"amr":["pwd","mfa"]}`,
-			want:  authMethodRefs{"pwd", "mfa"},
+			want:  AuthenticationMethodsReferences{"pwd", "mfa"},
 		},
 		{
 			name:  "null",
@@ -101,7 +101,7 @@ func TestAuthMethodRefs_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got struct {
-				AMR authMethodRefs `json:"amr,omitempty"`
+				AMR AuthenticationMethodsReferences `json:"amr,omitempty"`
 			}
 			err := json.Unmarshal([]byte(tt.input), &got)
 			if tt.wantErr {

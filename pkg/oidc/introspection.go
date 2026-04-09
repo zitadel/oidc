@@ -1,11 +1,6 @@
 package oidc
 
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/muhlemmer/gu"
-)
+import "github.com/muhlemmer/gu"
 
 type IntrospectionRequest struct {
 	Token string `schema:"token"`
@@ -21,21 +16,21 @@ type ClientAssertionParams struct {
 // https://www.rfc-editor.org/rfc/rfc7662.html#section-2.2.
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims.
 type IntrospectionResponse struct {
-	Active                          bool                `json:"active"`
-	Scope                           SpaceDelimitedArray `json:"scope,omitempty"`
-	ClientID                        string              `json:"client_id,omitempty"`
-	TokenType                       string              `json:"token_type,omitempty"`
-	Expiration                      Time                `json:"exp,omitempty"`
-	IssuedAt                        Time                `json:"iat,omitempty"`
-	AuthTime                        Time                `json:"auth_time,omitempty"`
-	NotBefore                       Time                `json:"nbf,omitempty"`
-	Subject                         string              `json:"sub,omitempty"`
-	Audience                        Audience            `json:"aud,omitempty"`
-	AuthenticationMethodsReferences []string            `json:"amr,omitempty"`
-	Issuer                          string              `json:"iss,omitempty"`
-	JWTID                           string              `json:"jti,omitempty"`
-	Username                        string              `json:"username,omitempty"`
-	Actor                           *ActorClaims        `json:"act,omitempty"`
+	Active                          bool                            `json:"active"`
+	Scope                           SpaceDelimitedArray             `json:"scope,omitempty"`
+	ClientID                        string                          `json:"client_id,omitempty"`
+	TokenType                       string                          `json:"token_type,omitempty"`
+	Expiration                      Time                            `json:"exp,omitempty"`
+	IssuedAt                        Time                            `json:"iat,omitempty"`
+	AuthTime                        Time                            `json:"auth_time,omitempty"`
+	NotBefore                       Time                            `json:"nbf,omitempty"`
+	Subject                         string                          `json:"sub,omitempty"`
+	Audience                        Audience                        `json:"aud,omitempty"`
+	AuthenticationMethodsReferences AuthenticationMethodsReferences `json:"amr,omitempty"`
+	Issuer                          string                          `json:"iss,omitempty"`
+	JWTID                           string                          `json:"jti,omitempty"`
+	Username                        string                          `json:"username,omitempty"`
+	Actor                           *ActorClaims                    `json:"act,omitempty"`
 	UserInfoProfile
 	UserInfoEmail
 	UserInfoPhone
@@ -80,48 +75,5 @@ func (i *IntrospectionResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (i *IntrospectionResponse) UnmarshalJSON(data []byte) error {
-	var dst struct {
-		Active                          bool                `json:"active"`
-		Scope                           SpaceDelimitedArray `json:"scope,omitempty"`
-		ClientID                        string              `json:"client_id,omitempty"`
-		TokenType                       string              `json:"token_type,omitempty"`
-		Expiration                      Time                `json:"exp,omitempty"`
-		IssuedAt                        Time                `json:"iat,omitempty"`
-		AuthTime                        Time                `json:"auth_time,omitempty"`
-		NotBefore                       Time                `json:"nbf,omitempty"`
-		Subject                         string              `json:"sub,omitempty"`
-		Audience                        Audience            `json:"aud,omitempty"`
-		AuthenticationMethodsReferences authMethodRefs      `json:"amr,omitempty"`
-		Issuer                          string              `json:"iss,omitempty"`
-		JWTID                           string              `json:"jti,omitempty"`
-		Username                        string              `json:"username,omitempty"`
-		Actor                           *ActorClaims        `json:"act,omitempty"`
-		UserInfoProfile
-		UserInfoEmail
-		UserInfoPhone
-		Address *UserInfoAddress `json:"address,omitempty"`
-	}
-	if err := json.Unmarshal(data, &dst); err != nil {
-		return fmt.Errorf("oidc: %w into %T", err, (*introspectionResponseAlias)(i))
-	}
-	i.Active = dst.Active
-	i.Scope = dst.Scope
-	i.ClientID = dst.ClientID
-	i.TokenType = dst.TokenType
-	i.Expiration = dst.Expiration
-	i.IssuedAt = dst.IssuedAt
-	i.AuthTime = dst.AuthTime
-	i.NotBefore = dst.NotBefore
-	i.Subject = dst.Subject
-	i.Audience = dst.Audience
-	i.AuthenticationMethodsReferences = []string(dst.AuthenticationMethodsReferences)
-	i.Issuer = dst.Issuer
-	i.JWTID = dst.JWTID
-	i.Username = dst.Username
-	i.Actor = dst.Actor
-	i.UserInfoProfile = dst.UserInfoProfile
-	i.UserInfoEmail = dst.UserInfoEmail
-	i.UserInfoPhone = dst.UserInfoPhone
-	i.Address = dst.Address
-	return unmarshalJSONMulti(data, &i.Claims)
+	return unmarshalJSONMulti(data, (*introspectionResponseAlias)(i), &i.Claims)
 }

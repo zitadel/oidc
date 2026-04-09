@@ -248,14 +248,14 @@ func TestIDTokenClaims_UnmarshalJSON_StringAMR(t *testing.T) {
 	var got IDTokenClaims
 	err := json.Unmarshal([]byte(`{"iss":"zitadel","sub":"hello@me.com","aud":"foo","exp":12345,"iat":12000,"amr":"pwd"}`), &got)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"pwd"}, got.AuthenticationMethodsReferences)
+	assert.Equal(t, AuthenticationMethodsReferences{"pwd"}, got.AuthenticationMethodsReferences)
 }
 
 func TestIntrospectionResponse_UnmarshalJSON_StringAMR(t *testing.T) {
 	var got IntrospectionResponse
 	err := json.Unmarshal([]byte(`{"active":true,"sub":"hello@me.com","amr":"pwd"}`), &got)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"pwd"}, got.AuthenticationMethodsReferences)
+	assert.Equal(t, AuthenticationMethodsReferences{"pwd"}, got.AuthenticationMethodsReferences)
 }
 
 func TestNewLogoutTokenClaims(t *testing.T) {

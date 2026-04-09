@@ -35,9 +35,9 @@ func (a *Audience) UnmarshalJSON(text []byte) error {
 	return nil
 }
 
-type authMethodRefs []string
+type AuthenticationMethodsReferences []string
 
-func (a *authMethodRefs) UnmarshalJSON(data []byte) error {
+func (a *AuthenticationMethodsReferences) UnmarshalJSON(data []byte) error {
 	var dst any
 	if err := json.Unmarshal(data, &dst); err != nil {
 		return fmt.Errorf("oidc amr: %w", err)
@@ -47,13 +47,13 @@ func (a *authMethodRefs) UnmarshalJSON(data []byte) error {
 	case nil:
 		*a = nil
 	case string:
-		*a = authMethodRefs{v}
+		*a = AuthenticationMethodsReferences{v}
 	case []any:
 		refs, err := gu.AssertInterfaces[string](v)
 		if err != nil {
 			return fmt.Errorf("oidc amr: %w", err)
 		}
-		*a = refs
+		*a = AuthenticationMethodsReferences(refs)
 	default:
 		return fmt.Errorf("oidc amr: unsupported type: %T", v)
 	}
