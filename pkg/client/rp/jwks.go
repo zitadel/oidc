@@ -3,9 +3,9 @@ package rp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	jose "github.com/go-jose/go-jose/v4"
@@ -14,8 +14,6 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
-
-const joseUnknownKeyTypeErrMsg = "go-jose/go-jose: unknown json web key type '"
 
 func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKeySet)) oidc.KeySet {
 	keyset := &remoteKeySet{httpClient: client, jwksURL: jwksURL}
@@ -26,11 +24,11 @@ func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKe
 }
 
 // SkipRemoteCheck will suppress checking for new remote keys if signature validation fails with cached keys
-// and no kid header is set in the JWT
+// and no kid header is set in the JWT.
 //
-// this might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
-// there is only a single remote key
-// please notice that remote keys will then only be fetched if cached keys are empty
+// This might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
+// there is only a single remote key.
+// Please notice that remote keys will then only be fetched if cached keys are empty.
 func SkipRemoteCheck() func(set *remoteKeySet) {
 	return func(set *remoteKeySet) {
 		set.skipRemoteCheck = true
@@ -246,7 +244,7 @@ func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	for i, key := range raw.Keys {
 		webKey := new(jose.JSONWebKey)
 		if err = webKey.UnmarshalJSON(key); err != nil {
-			if strings.HasPrefix(err.Error(), joseUnknownKeyTypeErrMsg) {
+			if errors.Is(err, jose.ErrUnsupportedKeyType) {
 				continue
 			}
 

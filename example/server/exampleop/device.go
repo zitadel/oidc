@@ -18,7 +18,7 @@ type deviceAuthenticate interface {
 	CheckUsernamePasswordSimple(username, password string) error
 	op.DeviceAuthorizationStorage
 
-	// GetDeviceAuthorizationByUserCode resturns the current state of the device authorization flow,
+	// GetDeviceAuthorizationByUserCode returns the current state of the device authorization flow,
 	// identified by the user code.
 	GetDeviceAuthorizationByUserCode(ctx context.Context, userCode string) (*op.DeviceAuthorizationState, error)
 
@@ -162,9 +162,10 @@ func (d *deviceLogin) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cookie := &http.Cookie{
-		Name:  userCodeCookieName,
-		Value: encoded,
-		Path:  "/",
+		Name:     userCodeCookieName,
+		Value:    encoded,
+		Path:     "/",
+		HttpOnly: true,
 	}
 	http.SetCookie(w, cookie)
 	renderConfirmPage(w, username, state.ClientID, state.Scopes)

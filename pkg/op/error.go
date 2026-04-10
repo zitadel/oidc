@@ -72,6 +72,9 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slo
 	if e.ErrorType == oidc.InvalidClient {
 		status = http.StatusUnauthorized
 	}
+	if e.ErrorType == oidc.ServerError {
+		status = http.StatusInternalServerError
+	}
 	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
 	httphelper.MarshalJSONWithStatus(w, e, status)
 }
@@ -117,7 +120,7 @@ func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error,
 	return NewRedirect(url), nil
 }
 
-// StatusError wraps an error with a HTTP status code.
+// StatusError wraps an error with an HTTP status code.
 // The status code is passed to the handler's writer.
 type StatusError struct {
 	parent     error
@@ -127,12 +130,12 @@ type StatusError struct {
 // NewStatusError sets the parent and statusCode to a new StatusError.
 // It is recommended for parent to be an [oidc.Error].
 //
-// Typically implementations should only use this to signal something
+// Typically, implementations should only use this to signal something
 // very specific, like an internal server error.
 // If a returned error is not a StatusError, the framework
 // will set a statusCode based on what the standard specifies,
 // which is [http.StatusBadRequest] for most of the time.
-// If the error encountered can described clearly with a [oidc.Error],
+// If the encountered error can be clearly described by an [oidc.Error],
 // do not use this function, as it might break standard rules!
 func NewStatusError(parent error, statusCode int) StatusError {
 	return StatusError{
@@ -143,7 +146,7 @@ func NewStatusError(parent error, statusCode int) StatusError {
 
 // AsStatusError unwraps a StatusError from err
 // and returns it unmodified if found.
-// If no StatuError was found, a new one is returned
+// If no StatusError was found, a new one is returned
 // with statusCode set to it as a default.
 func AsStatusError(err error, statusCode int) (target StatusError) {
 	if errors.As(err, &target) {

@@ -54,7 +54,7 @@ type RelyingParty interface {
 	// CookieHandler returns a http cookie handler used for various state transfer cookies
 	CookieHandler() *httphelper.CookieHandler
 
-	// HttpClient returns a http client used for calls to the openid provider, e.g. calling token endpoint
+	// HttpClient returns an http client used for calls to the openid provider, e.g. calling token endpoint
 	HttpClient() *http.Client
 
 	// IsOAuth2Only specifies whether relaying party handles only oauth2 or oidc calls
@@ -322,7 +322,7 @@ func WithPKCE(cookieHandler *httphelper.CookieHandler) Option {
 }
 
 // WithPKCEFromDiscovery enables Oauth2 Code Challenge if support is found in the discovery response from the OP.
-// Passing this option to a Oauth2-only RP will result in an error, as there is no discovery call.
+// Passing this option to an Oauth2-only RP will result in an error, as there is no discovery call.
 // It also sets a `CookieHandler` for securing the various redirects
 // and exchanging the code challenge
 func WithPKCEFromDiscovery(cookieHandler *httphelper.CookieHandler) Option {
@@ -450,7 +450,7 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	return rp.OAuthConfig().AuthCodeURL(state, authOpts...)
 }
 
-// AuthURLHandler extends the `AuthURL` method with a http redirect handler
+// AuthURLHandler extends the `AuthURL` method with an http redirect handler
 // including handling setting cookie for secure `state` transfer.
 // Custom parameters can optionally be set to the redirect URL.
 func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
@@ -552,7 +552,7 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 //
 // As there is no user associated to the request an ID Token can never be returned.
 // Client Credentials are undefined in OpenID Connect and is a pure OAuth2 grant.
-// Furthermore the server SHOULD NOT return a refresh token.
+// Furthermore, the server SHOULD NOT return a refresh token.
 //
 // [RFC 6749, section 4.4]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.Values) (token *oauth2.Token, err error) {
@@ -574,7 +574,7 @@ func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.
 
 type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp RelyingParty)
 
-// CodeExchangeHandler extends the `CodeExchange` method with a http handler
+// CodeExchangeHandler extends the `CodeExchange` method with an http handler
 // including cookie handling for secure `state` transfer
 // and optional PKCE code verifier checking.
 // Custom parameters can optionally be set to the token URL.

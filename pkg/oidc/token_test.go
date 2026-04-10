@@ -158,7 +158,7 @@ func TestNewAccessTokenClaims(t *testing.T) {
 
 	// test if the dynamic timestamps are around now,
 	// allowing for a delta of 1, just in case we flip on
-	// either side of a second boundry.
+	// either side of a second boundary.
 	nowMinusSkew := NowTime() - 1
 	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
 	assert.InDelta(t, int64(nowMinusSkew), int64(got.NotBefore), 1)
@@ -221,7 +221,7 @@ func TestNewIDTokenClaims(t *testing.T) {
 
 	// test if the dynamic timestamp is around now,
 	// allowing for a delta of 1, just in case we flip on
-	// either side of a second boundry.
+	// either side of a second boundary.
 	nowMinusSkew := NowTime() - 1
 	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
 
@@ -284,7 +284,7 @@ func TestNewLogoutTokenClaims(t *testing.T) {
 
 	// test if the dynamic timestamp is around now,
 	// allowing for a delta of 1, just in case we flip on
-	// either side of a second boundry.
+	// either side of a second boundary.
 	nowMinusSkew := NowTime() - 1
 	assert.InDelta(t, int64(nowMinusSkew), int64(got.IssuedAt), 1)
 

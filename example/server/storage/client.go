@@ -129,7 +129,7 @@ func (c *Client) ClockSkew() time.Duration {
 
 // RegisterClients enables you to register clients for the example implementation
 // there are some clients (web and native) to try out different cases
-// add more if necessary
+// add more if necessary.
 //
 // RegisterClients should be called before the Storage is used so that there are
 // no race conditions.
@@ -225,7 +225,7 @@ func (c hasRedirectGlobs) PostLogoutRedirectURIGlobs() []string {
 	return c.postLogoutRedirectURIGlobs
 }
 
-// RedirectGlobsClient wraps the client in a op.HasRedirectGlobs
+// RedirectGlobsClient wraps the client in an op.HasRedirectGlobs
 // only if DevMode is enabled.
 func RedirectGlobsClient(client *Client) op.Client {
 	if client.devMode {

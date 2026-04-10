@@ -224,7 +224,7 @@ func TestRequestError(t *testing.T) {
 		{
 			name:     "server error",
 			err:      io.ErrClosedPipe,
-			wantCode: http.StatusBadRequest,
+			wantCode: http.StatusInternalServerError,
 			wantBody: `{"error":"server_error", "error_description":"io: read/write on closed pipe"}`,
 			wantLog: `{
 				"level":"ERROR",
@@ -234,6 +234,20 @@ func TestRequestError(t *testing.T) {
 					"parent":"io: read/write on closed pipe",
 					"description":"io: read/write on closed pipe",
 					"type":"server_error"}
+				}`,
+		},
+		{
+			name:     "invalid request",
+			err:      oidc.ErrInvalidRequest().WithDescription("missing param"),
+			wantCode: http.StatusBadRequest,
+			wantBody: `{"error":"invalid_request", "error_description":"missing param"}`,
+			wantLog: `{
+				"level":"WARN",
+				"msg":"request error",
+				"time":"not",
+				"oidc_error":{
+					"description":"missing param",
+					"type":"invalid_request"}
 				}`,
 		},
 		{

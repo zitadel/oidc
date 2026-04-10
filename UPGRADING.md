@@ -45,11 +45,11 @@ import "github.com/zitadel/oidc/v3/pkg/op"
 #### Logger
 
 This version of OIDC adds logging to the framework. For this we use the new Go standard library `log/slog`. (Until v3.12.0 we used `x/exp/slog`).
-Mostly OIDC will use error level logs where it's returning an error through a HTTP handler. OIDC errors that are user facing don't carry much context, also for security reasons. With logging we are now able to print the error context, so that developers can more easily find the source of their issues. Previously we just discarded such context.
+Mostly OIDC will use error level logs where it's returning an error through an HTTP handler. OIDC errors that are user facing don't carry much context, also for security reasons. With logging we are now able to print the error context, so that developers can more easily find the source of their issues. Previously we just discarded such context.
 
-Most users of the OP package with the storage interface will not experience breaking changes. However if you use `RequestError()` directly in your code, you now need to give it a `Logger` as final argument.
+Most users of the OP package with the storage interface will not experience breaking changes. However, if you use `RequestError()` directly in your code, you now need to give it a `Logger` as final argument.
 
-The `OpenIDProvider` and sub-interfaces like `Authorizer` and `Exchanger` got a `Logger()` method to return the configured logger. This logger is in turn used by `AuthRequestError()`. You configure the logger with the `WithLogger()` for the `Provider`. By default the `slog.Default()` is used.
+The `OpenIDProvider` and sub-interfaces like `Authorizer` and `Exchanger` got a `Logger()` method to return the configured logger. This logger is in turn used by `AuthRequestError()`. You configure the logger with the `WithLogger()` for the `Provider`. By default, the `slog.Default()` is used.
 
 We also provide a new optional interface: [`LogAuthRequest`](https://pkg.go.dev/github.com/zitadel/oidc/v3/pkg/op#LogAuthRequest). If an `AuthRequest` implements this interface, it is completely passed into the logger after an error. Its `LogValue()` will be used by `slog` to print desired fields. This allows omitting sensitive fields you wish not no print. If the interface is not implemented, no `AuthRequest` details will ever be printed.
 
@@ -136,7 +136,7 @@ instead of the `config.IssuerFromRequest()` method.
 
 `CreateRouter` now returns a `chi.Router` instead of `*mux.Router`.
 Usually this function is called when the Provider is constructed and not by package consumers.
-However if your project does call this function directly, manual update of the code is required.
+However, if your project does call this function directly, manual update of the code is required.
 
 #### DeviceAuthorizationStorage
 
@@ -185,7 +185,7 @@ The `keyFile` struct type is now exported a `KeyFile` and returned by the `Confi
 
 ### client/profile
 
-The package now defines a new interface `TokenSource` which compliments the `oauth2.TokenSource` with a `TokenCtx` method, so that a context can be explicitly added on each call. Users can migrate to the new method when they whish.
+The package now defines a new interface `TokenSource` which compliments the `oauth2.TokenSource` with a `TokenCtx` method, so that a context can be explicitly added on each call. Users can migrate to the new method when they wish.
 
 `NewJWTProfileTokenSource` now takes a context as first argument, so do the related `NewJWTProfileTokenSourceFromKeyFile` and `NewJWTProfileTokenSourceFromKeyFileData`. The context is used for the Discovery request.
 
@@ -252,7 +252,7 @@ find . -type f -name '*.go' | xargs sed -i \
 
 #### UserinfoCallback
 
-`UserinfoCallback` has an additional type argument fot the `UserInfo` object. Typically the type argument can be inferred by the compiler, by the function that is passed. The actual code update cannot be done by a simple `sed` script and depends on how the caller implemented the function.
+`UserinfoCallback` has an additional type argument for the `UserInfo` object. Typically, the type argument can be inferred by the compiler, by the function that is passed. The actual code update cannot be done by a simple `sed` script and depends on how the caller implemented the function.
 
 
 #### IDTokenVerifier
@@ -321,7 +321,7 @@ using defaults such as `context.TODO()` where possible.
 Warnings:
 - Again, this is written for **GNU sed** not the posix variant.
 - Assumes imports that use the package names, not aliases.
-- Do this on a project with version control (eg Git), that allows you to rollback if things went wrong.
+- Do this on a project with version control (e.g. Git), that allows you to rollback if things went wrong.
 - The script has been tested on the [ZITADEL](https://github.com/zitadel/zitadel) project, but we do not use all affected symbols. Parts of the script are mere guesswork.
 
 ```bash

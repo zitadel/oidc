@@ -1,12 +1,14 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 	"github.com/zitadel/oidc/v3/pkg/op"
-	"log/slog"
 )
 
-var _ op.Crypto = &myCrypto{}
+var _ op.Encrypter = &myCrypto{}
+var _ op.Decrypter = &myCrypto{}
 
 // myCrypto demonstrates how to provide your custom implementation of op.Crypto.
 type myCrypto struct {

@@ -159,6 +159,7 @@ func authCallbackPath(o OpenIDProvider) string {
 
 type Config struct {
 	CryptoKey                         [32]byte // for encrypting access token via NewAESCrypto; will be overwritten by WithCrypto
+	CryptoKeyId                       string
 	DefaultLogoutRedirectURI          string
 	CodeMethodS256                    bool
 	AuthMethodPost                    bool
@@ -204,7 +205,7 @@ type Endpoints struct {
 //
 // This does not include login. Login is handled with a redirect that includes the
 // request ID. The redirect for logins is specified per-client by Client.LoginURL().
-// Successful logins should mark the request as authorized and redirect back to to
+// Successful logins should mark the request as authorized and redirect back to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
 //
@@ -213,7 +214,7 @@ func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ..
 	return NewProvider(config, storage, StaticIssuer(issuer), opOpts...)
 }
 
-// NewForwardedOpenIDProvider tries to establishes the issuer from the request Host.
+// NewForwardedOpenIDProvider tries to establish the issuer from the request Host.
 //
 // Deprecated: use [NewProvider] with an issuer function direct.
 func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
@@ -249,7 +250,7 @@ func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, op
 //
 // This does not include login. Login is handled with a redirect that includes the
 // request ID. The redirect for logins is specified per-client by Client.LoginURL().
-// Successful logins should mark the request as authorized and redirect back to to
+// Successful logins should mark the request as authorized and redirect back to
 // op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
 // to the AuthCallbackURL, the request id should be passed as the "id" parameter.
 func NewProvider(
@@ -259,12 +260,20 @@ func NewProvider(
 	opOpts ...Option,
 ) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
+	easgcmCrypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
+	crypto := NewCompositeCrypto(
+		easgcmCrypto,
+		[]Decrypter{
+			easgcmCrypto,
+			NewAESCrypto(config.CryptoKey),
+		},
+	)
 	o := &Provider{
 		config:            config,
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
-		crypto:            NewAESCrypto(config.CryptoKey),
+		crypto:            crypto,
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,
@@ -593,7 +602,7 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 }
 
 // WithCustomEndpoints sets multiple endpoints at once.
-// Non of the endpoints may be nil, or an error will
+// None of the endpoints may be nil, or an error will
 // be returned when the Option used by the Provider.
 func WithCustomEndpoints(auth, token, userInfo, revocation, endSession, keys *Endpoint) Option {
 	return func(o *Provider) error {

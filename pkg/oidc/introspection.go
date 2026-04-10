@@ -40,7 +40,7 @@ type IntrospectionResponse struct {
 }
 
 // SetUserInfo copies all relevant fields from UserInfo
-// into the IntroSpectionResponse.
+// into the IntrospectionResponse.
 func (i *IntrospectionResponse) SetUserInfo(u *UserInfo) {
 	i.Subject = u.Subject
 	i.Username = u.PreferredUsername
