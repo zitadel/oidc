@@ -3,6 +3,7 @@ package oidc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -42,6 +43,51 @@ func TestDefaultToServerError(t *testing.T) {
 			want: &Error{
 				ErrorType:   AccessDenied,
 				Description: "The authorization request was denied.",
+			},
+		},
+		{
+			name: "verifier error invalid request",
+			args: args{
+				err:         fmt.Errorf("%w: parse error", ErrParse),
+				description: "parse error",
+			},
+			want: &Error{
+				ErrorType:   InvalidRequest,
+				Description: "parse error",
+			},
+		},
+		{
+			name: "verifier error invalid grant",
+			args: args{
+				err:         ErrAudience,
+				description: "wrong audience",
+			},
+			want: &Error{
+				ErrorType:   InvalidGrant,
+				Description: "wrong audience",
+			},
+		},
+		{
+			name: "verifier error server error",
+			args: args{
+				err:         ErrDiscoveryFailed,
+				description: "discovery failed",
+			},
+			want: &Error{
+				ErrorType:   ServerError,
+				Description: "discovery failed",
+			},
+		},
+		{
+			name: "generic error",
+			args: args{
+				err:         errors.New("generic error"),
+				description: "something went wrong",
+			},
+			want: &Error{
+				ErrorType:   ServerError,
+				Description: "something went wrong",
+				Parent:      errors.New("generic error"),
 			},
 		},
 	}
