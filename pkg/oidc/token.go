@@ -35,20 +35,20 @@ type Tokens[C IDClaims] struct {
 // TokenClaims implements the Claims interface,
 // and can be used to extend larger claim types by embedding.
 type TokenClaims struct {
-	Issuer                              string       `json:"iss,omitempty"`
-	Subject                             string       `json:"sub,omitempty"`
-	Audience                            Audience     `json:"aud,omitempty"`
-	Expiration                          Time         `json:"exp,omitempty"`
-	IssuedAt                            Time         `json:"iat,omitempty"`
-	AuthTime                            Time         `json:"auth_time,omitempty"`
-	NotBefore                           Time         `json:"nbf,omitempty"`
-	Nonce                               string       `json:"nonce,omitempty"`
-	AuthenticationContextClassReference string       `json:"acr,omitempty"`
-	AuthenticationMethodsReferences     []string     `json:"amr,omitempty"`
-	AuthorizedParty                     string       `json:"azp,omitempty"`
-	ClientID                            string       `json:"client_id,omitempty"`
-	JWTID                               string       `json:"jti,omitempty"`
-	Actor                               *ActorClaims `json:"act,omitempty"`
+	Issuer                              string                          `json:"iss,omitempty"`
+	Subject                             string                          `json:"sub,omitempty"`
+	Audience                            Audience                        `json:"aud,omitempty"`
+	Expiration                          Time                            `json:"exp,omitempty"`
+	IssuedAt                            Time                            `json:"iat,omitempty"`
+	AuthTime                            Time                            `json:"auth_time,omitempty"`
+	NotBefore                           Time                            `json:"nbf,omitempty"`
+	Nonce                               string                          `json:"nonce,omitempty"`
+	AuthenticationContextClassReference string                          `json:"acr,omitempty"`
+	AuthenticationMethodsReferences     AuthenticationMethodsReferences `json:"amr,omitempty"`
+	AuthorizedParty                     string                          `json:"azp,omitempty"`
+	ClientID                            string                          `json:"client_id,omitempty"`
+	JWTID                               string                          `json:"jti,omitempty"`
+	Actor                               *ActorClaims                    `json:"act,omitempty"`
 
 	// Additional information set by this framework
 	SignatureAlg jose.SignatureAlgorithm `json:"-"`
