@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -106,7 +105,7 @@ type JWTProfileKeyStorage interface {
 // SubjectIsIssuer
 func SubjectIsIssuer(request *oidc.JWTTokenRequest) error {
 	if request.Issuer != request.Subject {
-		return errors.New("delegation not allowed, issuer and sub must be identical")
+		return oidc.ErrSubjectInvalid
 	}
 	return nil
 }
