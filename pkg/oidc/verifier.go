@@ -42,6 +42,7 @@ var (
 	ErrIssuerInvalid           = errors.New("issuer does not match")
 	ErrDiscoveryFailed         = errors.New("OpenID Provider Configuration Discovery has failed")
 	ErrSubjectMissing          = errors.New("subject missing")
+	ErrSubjectInvalid          = errors.New("delegation not allowed, issuer and sub must be identical")
 	ErrAudience                = errors.New("audience is not valid")
 	ErrAzpMissing              = errors.New("authorized party is not set. If Token is valid for multiple audiences, azp must not be empty")
 	ErrAzpInvalid              = errors.New("authorized party is not valid")
@@ -194,7 +195,7 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 
 	signedPayload, err := set.VerifySignature(ctx, jws)
 	if err != nil {
-		return fmt.Errorf("%w (%v)", ErrSignatureInvalid, err)
+		return fmt.Errorf("%w (%w)", ErrSignatureInvalid, err)
 	}
 
 	if !bytes.Equal(signedPayload, payload) {
