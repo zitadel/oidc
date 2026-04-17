@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"time"
 
@@ -247,6 +248,6 @@ type ClientCredentialsRequest struct {
 
 func (r *ClientCredentialsRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
 	}
 }
