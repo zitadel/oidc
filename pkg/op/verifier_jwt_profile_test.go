@@ -38,13 +38,13 @@ func TestVerifyJWTAssertion(t *testing.T) {
 		name     string
 		ctx      context.Context
 		newToken func() (string, *oidc.JWTTokenRequest)
-		wantErr  bool
+		wantErr  error
 	}{
 		{
 			name:     "parse error",
 			ctx:      context.Background(),
 			newToken: func() (string, *oidc.JWTTokenRequest) { return "!", nil },
-			wantErr:  true,
+			wantErr:  oidc.ErrParse,
 		},
 		{
 			name: "wrong audience",
@@ -55,7 +55,7 @@ func TestVerifyJWTAssertion(t *testing.T) {
 					time.Now(), tu.ValidExpiration,
 				)
 			},
-			wantErr: true,
+			wantErr: oidc.ErrAudience,
 		},
 		{
 			name: "expired",
@@ -66,7 +66,7 @@ func TestVerifyJWTAssertion(t *testing.T) {
 					time.Now(), time.Now().Add(-time.Hour),
 				)
 			},
-			wantErr: true,
+			wantErr: oidc.ErrExpired,
 		},
 		{
 			name: "invalid iat",
@@ -77,7 +77,7 @@ func TestVerifyJWTAssertion(t *testing.T) {
 					time.Now().Add(time.Hour), tu.ValidExpiration,
 				)
 			},
-			wantErr: true,
+			wantErr: oidc.ErrIatInFuture,
 		},
 		{
 			name: "invalid subject",
@@ -88,13 +88,13 @@ func TestVerifyJWTAssertion(t *testing.T) {
 					time.Now(), tu.ValidExpiration,
 				)
 			},
-			wantErr: true,
+			wantErr: oidc.ErrSubjectInvalid,
 		},
 		{
 			name:     "check signature fail",
 			ctx:      errCtx,
 			newToken: tu.ValidJWTProfileAssertion,
-			wantErr:  true,
+			wantErr:  context.Canceled,
 		},
 		{
 			name:     "ok",
@@ -106,8 +106,8 @@ func TestVerifyJWTAssertion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assertion, want := tt.newToken()
 			got, err := op.VerifyJWTAssertion(tt.ctx, assertion, verifier)
-			if tt.wantErr {
-				assert.Error(t, err)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
