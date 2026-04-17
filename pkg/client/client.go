@@ -156,7 +156,7 @@ type RevokeRequest struct {
 
 func (r RevokeRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
 	}
 }
 
@@ -274,7 +274,7 @@ type DeviceAccessTokenRequest struct {
 
 func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
 	}
 }
 
