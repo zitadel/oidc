@@ -48,7 +48,7 @@ func Revoke(w http.ResponseWriter, r *http.Request, revoker Revoker) {
 		if err != nil {
 			// An invalid refresh token means that we'll try other things (leaving doDecrypt==true)
 			if !errors.Is(err, ErrInvalidRefreshToken) {
-				RevocationRequestError(w, r, oidc.ErrServerError().WithParent(err))
+				RevocationRequestError(w, r, err)
 				return
 			}
 		} else {
