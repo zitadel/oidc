@@ -818,7 +818,7 @@ type RefreshTokenRequest struct {
 
 func (r RefreshTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
-		req.SetBasicAuth(r.ClientID, r.ClientSecret)
+		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
 	}
 }
 
