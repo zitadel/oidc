@@ -117,6 +117,19 @@ func ValidateEndSessionPostLogoutRedirectURI(postLogoutRedirectURI string, clien
 			return nil
 		}
 	}
+	// For native clients, RFC 8252 section 7.3 allows the use of dynamic ports
+	// on the loopback interface (127.0.0.1 / ::1 / localhost). Match the incoming
+	// post_logout_redirect_uri against registered loopback URIs while ignoring the port.
+	if client.ApplicationType() == ApplicationTypeNative {
+		if parsedURL, isLoopback := HTTPLoopbackOrLocalhost(postLogoutRedirectURI); isLoopback {
+			for _, uri := range client.PostLogoutRedirectURIs() {
+				registeredURL, ok := HTTPLoopbackOrLocalhost(uri)
+				if ok && equalURI(parsedURL, registeredURL) {
+					return nil
+				}
+			}
+		}
+	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.PostLogoutRedirectURIGlobs() {
 			isMatch, err := path.Match(uriGlob, postLogoutRedirectURI)
