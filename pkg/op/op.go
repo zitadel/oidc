@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -30,6 +31,7 @@ const (
 	defaultEndSessionEndpoint    = "end_session"
 	defaultKeysEndpoint          = "keys"
 	defaultDeviceAuthzEndpoint   = "/device_authorization"
+	defaultRegistrationEndpoint  = "oauth/register"
 )
 
 var (
@@ -42,6 +44,7 @@ var (
 		EndSession:          NewEndpoint(defaultEndSessionEndpoint),
 		JwksURI:             NewEndpoint(defaultKeysEndpoint),
 		DeviceAuthorization: NewEndpoint(defaultDeviceAuthzEndpoint),
+		Registration:        NewEndpoint(defaultRegistrationEndpoint),
 	}
 
 	DefaultSupportedClaims = []string{
@@ -143,6 +146,8 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 	router.HandleFunc(o.EndSessionEndpoint().Relative(), endSessionHandler(o))
 	router.HandleFunc(o.KeysEndpoint().Relative(), keysHandler(o.Storage()))
 	router.HandleFunc(o.DeviceAuthorizationEndpoint().Relative(), DeviceAuthorizationHandler(o))
+	router.HandleFunc(o.RegistrationEndpoint().Relative(), clientRegistrationHandler(o))
+	router.HandleFunc(path.Join(o.RegistrationEndpoint().Relative(), "{client_id}"), clientReadUpdateDeleteHandler(o))
 	return router
 }
 
@@ -185,6 +190,7 @@ type Endpoints struct {
 	CheckSessionIframe  *Endpoint
 	JwksURI             *Endpoint
 	DeviceAuthorization *Endpoint
+	Registration        *Endpoint
 }
 
 // NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
@@ -355,6 +361,10 @@ func (o *Provider) DeviceAuthorizationEndpoint() *Endpoint {
 
 func (o *Provider) CheckSessionIframe() *Endpoint {
 	return o.endpoints.CheckSessionIframe
+}
+
+func (o *Provider) RegistrationEndpoint() *Endpoint {
+	return o.endpoints.Registration
 }
 
 func (o *Provider) KeysEndpoint() *Endpoint {
@@ -597,6 +607,16 @@ func WithCustomDeviceAuthorizationEndpoint(endpoint *Endpoint) Option {
 			return err
 		}
 		o.endpoints.DeviceAuthorization = endpoint
+		return nil
+	}
+}
+
+func WithCustomRegisterEndpoint(endpoint *Endpoint) Option {
+	return func(o *Provider) error {
+		if err := endpoint.Validate(); err != nil {
+			return err
+		}
+		o.endpoints.Registration = endpoint
 		return nil
 	}
 }
