@@ -83,6 +83,8 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 type AuthenticatedTokenRequest interface {
 	SetClientID(string)
 	SetClientSecret(string)
+	IsSetClientAssertion() bool
+	IsSetClientIDAndClientSecret() bool
 }
 
 // ParseAuthenticatedTokenRequest parses the client_id and client_secret from the HTTP request from either
@@ -100,9 +102,17 @@ func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder,
 	if err != nil {
 		return oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	if request.IsSetClientAssertion() && request.IsSetClientIDAndClientSecret() {
+		return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+	}
 	clientID, clientSecret, ok := r.BasicAuth()
 	if !ok {
 		return nil
+	}
+	if request.IsSetClientAssertion() || request.IsSetClientIDAndClientSecret() {
+		return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
 	}
 	clientID, err = url.QueryUnescape(clientID)
 	if err != nil {

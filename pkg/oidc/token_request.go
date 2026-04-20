@@ -3,8 +3,6 @@ package oidc
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"slices"
 	"time"
 
@@ -94,6 +92,14 @@ func (a *AccessTokenRequest) SetClientSecret(clientSecret string) {
 	a.ClientSecret = clientSecret
 }
 
+func (a *AccessTokenRequest) IsSetClientAssertion() bool {
+	return a.ClientAssertion != "" && a.ClientAssertionType != ""
+}
+
+func (a *AccessTokenRequest) IsSetClientIDAndClientSecret() bool {
+	return a.ClientID != "" && a.ClientSecret != ""
+}
+
 // RefreshTokenRequest is not useful for making refresh requests because the
 // grant_type is not included explicitly but rather implied.
 type RefreshTokenRequest struct {
@@ -117,6 +123,14 @@ func (a *RefreshTokenRequest) SetClientID(clientID string) {
 // SetClientSecret implements op.AuthenticatedTokenRequest
 func (a *RefreshTokenRequest) SetClientSecret(clientSecret string) {
 	a.ClientSecret = clientSecret
+}
+
+func (a *RefreshTokenRequest) IsSetClientAssertion() bool {
+	return a.ClientAssertion != "" && a.ClientAssertionType != ""
+}
+
+func (a *RefreshTokenRequest) IsSetClientIDAndClientSecret() bool {
+	return a.ClientID != "" && a.ClientSecret != ""
 }
 
 type JWTTokenRequest struct {
@@ -244,10 +258,4 @@ type ClientCredentialsRequest struct {
 	ClientSecret        string              `schema:"client_secret"`
 	ClientAssertion     string              `schema:"client_assertion,omitempty"`
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
-}
-
-func (r *ClientCredentialsRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
-	}
 }
