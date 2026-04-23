@@ -77,9 +77,12 @@ func getAccessToken(r *http.Request) (string, error) {
 	if authHeader == "" {
 		return "", errors.New("no auth header")
 	}
+	if len(authHeader) < len(oidc.PrefixBearer) {
+		return "", errors.New("invalid auth header")
+	}
 
 	scheme, token := authHeader[0:len(oidc.PrefixBearer)], authHeader[len(oidc.PrefixBearer):]
-	if strings.ToLower(scheme) != strings.ToLower(oidc.PrefixBearer) {
+	if !strings.EqualFold(scheme, oidc.PrefixBearer) {
 		return "", errors.New("invalid auth header")
 	}
 	return token, nil
