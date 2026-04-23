@@ -227,7 +227,7 @@ func TestServerRoutes(t *testing.T) {
 			},
 		},
 		{
-			name:   "user info",
+			name:   "user info lowercase bearer",
 			method: http.MethodGet,
 			path:   testProvider.UserinfoEndpoint().Relative(),
 			header: map[string]string{
