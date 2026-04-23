@@ -231,6 +231,16 @@ func TestServerRoutes(t *testing.T) {
 			method: http.MethodGet,
 			path:   testProvider.UserinfoEndpoint().Relative(),
 			header: map[string]string{
+				"authorization": "bearer " + accessToken,
+			},
+			wantCode: http.StatusOK,
+			json:     `{"sub":"id1","name":"Test User","given_name":"Test","family_name":"User","locale":"de","preferred_username":"test-user@localhost","email":"test-user@zitadel.ch","email_verified":true}`,
+		},
+		{
+			name:   "user info",
+			method: http.MethodGet,
+			path:   testProvider.UserinfoEndpoint().Relative(),
+			header: map[string]string{
 				"authorization": "Bearer " + accessToken,
 			},
 			wantCode: http.StatusOK,
