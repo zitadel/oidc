@@ -21,7 +21,7 @@ jobs:
           # to the issue
           project-url: https://github.com/orgs/zitadel/projects/2
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
-      - uses: tspascoal/get-user-teams-membership@v3
+      - uses: tspascoal/get-user-teams-membership@v4
         id: checkUserMember
         if: github.actor != 'dependabot[bot]'
         with:
