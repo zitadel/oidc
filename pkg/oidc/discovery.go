@@ -38,6 +38,10 @@ type DiscoveryConfiguration struct {
 	// RegistrationEndpoint is the URL for the Dynamic Client Registration.
 	RegistrationEndpoint string `json:"registration_endpoint,omitempty"`
 
+	// ClientIDMetadataDocumentSupported indicates whether the OP can resolve a client_id that is an
+	// HTTPS URL pointing to a client metadata document, per the OAuth Client ID Metadata Document spec.
+	ClientIDMetadataDocumentSupported bool `json:"client_id_metadata_document_supported,omitempty"`
+
 	// ScopesSupported lists an array of supported scopes. This list must not include every supported scope by the OP.
 	ScopesSupported []string `json:"scopes_supported,omitempty"`
 
