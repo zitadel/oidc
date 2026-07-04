@@ -128,6 +128,17 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer)
 		return
 	}
+	// A custom AuthorizeValidator (see the AuthorizeValidator interface) replaces the
+	// default validation closure that assigns client above, so client may still be nil
+	// here. RedirectToLogin dereferences client (client.LoginURL), so fetch it if a
+	// custom validator left it unset, to avoid a nil pointer panic.
+	if client == nil {
+		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
+		if err != nil {
+			AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer)
+			return
+		}
+	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
