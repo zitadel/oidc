@@ -639,7 +639,7 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 		r = r.WithContext(ctx)
 		defer span.End()
 
-		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
+		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.Type(), tokens.IDTokenClaims.GetSubject(), rp)
 		if err != nil {
 			unauthorizedError(w, r, "userinfo failed: "+err.Error(), state, rp)
 			return
