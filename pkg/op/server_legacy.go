@@ -235,11 +235,11 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 			return nil, err
 		}
 	}
+	if r.Client.GetID() != authReq.GetClientID() {
+		return nil, oidc.ErrInvalidGrant()
+	}
 	if r.Data.RedirectURI != authReq.GetRedirectURI() {
 		return nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
-	}
-	if r.Client.GetID() != authReq.GetClientID() {
-		return nil, oidc.ErrInvalidGrant().WithDescription("authorization code was not issued to this client")
 	}
 	resp, err := CreateTokenResponse(ctx, authReq, r.Client, s.provider, true, r.Data.Code, "")
 	if err != nil {
