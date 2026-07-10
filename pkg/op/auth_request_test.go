@@ -107,6 +107,44 @@ func TestAuthorizeCustomValidator(t *testing.T) {
 	assert.Equal(t, "/login?authRequestID=authReqID", resp.Header.Get("Location"))
 }
 
+// TestAuthorizeCustomValidatorClientLookupError covers the fallback client
+// lookup failing after a custom AuthorizeValidator succeeded. Because the
+// library cannot assume the custom validator verified the redirect_uri, the
+// error must be rendered directly instead of redirecting to the (potentially
+// unvalidated) redirect_uri, which would be an open redirect.
+func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock.NewMockStorage(ctrl)
+
+	authorizer := &customAuthorizeValidator{
+		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+			// succeeds without assigning Authorize's local client variable
+			return "userID", nil
+		},
+	}
+	expect := authorizer.MockAuthorizer.EXPECT()
+	expect.Decoder().Return(schema.NewDecoder())
+	expect.Storage().Return(storage).AnyTimes()
+	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+	expect.Logger().Return(slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(nil, errors.New("client not found"))
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/authorize?client_id=native&redirect_uri=http%3A%2F%2Flocalhost%3A9999%2Fcallback&scope=openid&response_type=code",
+		nil)
+	w := httptest.NewRecorder()
+	op.Authorize(w, req, authorizer)
+
+	resp := w.Result()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Empty(t, resp.Header.Get("Location"))
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "unable to retrieve client by id")
+}
+
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
 		r       *http.Request

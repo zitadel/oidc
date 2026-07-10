@@ -135,7 +135,9 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if client == nil {
 		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
 		if err != nil {
-			AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to retrieve client by id"), authorizer)
+			// The library cannot assume the custom validator verified the redirect_uri
+			// against the client, so disable the error redirect to avoid an open redirect.
+			AuthRequestError(w, r, authReq, oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err), authorizer)
 			return
 		}
 	}
