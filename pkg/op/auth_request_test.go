@@ -52,6 +52,61 @@ func TestAuthorize(t *testing.T) {
 	}
 }
 
+// customAuthorizeValidator is an Authorizer that also implements
+// AuthorizeValidator, replacing the default validation closure in Authorize.
+type customAuthorizeValidator struct {
+	*mock.MockAuthorizer
+	validate func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error)
+}
+
+func (c *customAuthorizeValidator) ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage op.Storage, verifier *op.IDTokenHintVerifier) (string, error) {
+	return c.validate(ctx, authReq, storage, verifier)
+}
+
+type stubAuthRequest struct {
+	op.AuthRequest
+	id string
+}
+
+func (s *stubAuthRequest) GetID() string { return s.id }
+
+// TestAuthorizeCustomValidator authorizes with an Authorizer that implements
+// AuthorizeValidator. The custom validator replaces the default validation
+// closure, which is what assigns Authorize's local client, so Authorize must
+// resolve the client itself before RedirectToLogin dereferences it.
+// Used to panic with a nil-pointer dereference, see issue #909.
+func TestAuthorizeCustomValidator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock.NewMockStorage(ctrl)
+	client := mock.NewMockClient(ctrl)
+
+	authorizer := &customAuthorizeValidator{
+		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+			// succeeds without assigning Authorize's local client variable
+			return "userID", nil
+		},
+	}
+	expect := authorizer.MockAuthorizer.EXPECT()
+	expect.Decoder().Return(schema.NewDecoder())
+	expect.Storage().Return(storage).AnyTimes()
+	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+
+	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(client, nil)
+	storage.EXPECT().CreateAuthRequest(gomock.Any(), gomock.Any(), "userID").Return(&stubAuthRequest{id: "authReqID"}, nil)
+	client.EXPECT().LoginURL("authReqID").Return("/login?authRequestID=authReqID")
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/authorize?client_id=native&redirect_uri=http%3A%2F%2Flocalhost%3A9999%2Fcallback&scope=openid&response_type=code",
+		nil)
+	w := httptest.NewRecorder()
+	op.Authorize(w, req, authorizer)
+
+	resp := w.Result()
+	require.Equal(t, http.StatusFound, resp.StatusCode)
+	assert.Equal(t, "/login?authRequestID=authReqID", resp.Header.Get("Location"))
+}
+
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
 		r       *http.Request
