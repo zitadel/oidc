@@ -25,10 +25,11 @@ var (
 	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
 )
 
-// Deprecated: This interface function Auth will not invoke anymore because it violate
+// Deprecated: This interface function Auth() will not invoke anymore because it violate
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
 // Please replace with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
+// Or use the input "authFn" in related functions for custom needs. 
 type ClientSecretBasicAuthRequest interface {
 	Auth(req *http.Request)
 }
@@ -158,6 +159,7 @@ type RevokeRequest struct {
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
 // Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
+// Or use the input "authFn" in related functions for custom needs. 
 func (r RevokeRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
@@ -275,6 +277,7 @@ type DeviceAccessTokenRequest struct {
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
 // Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
+// Or use the input "authFn" in related functions for custom needs. 
 func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
