@@ -61,9 +61,7 @@ func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Dur
 			GrantType:  oidc.GrantTypeDeviceCode,
 			DeviceCode: deviceCode,
 		},
-		ClientCredentialsRequest: &oidc.ClientCredentialsRequest{
-			Scope: nil,
-		},
+		ClientCredentialsRequest: &oidc.ClientCredentialsRequest{},
 	}
 
 	var authFn httphelper.RequestAuthorization
