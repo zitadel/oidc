@@ -816,6 +816,16 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
+// Deprecated: This Function will not invoke anymore because it violate 
+// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+//
+// Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader] 
+func (r RefreshTokenRequest) Auth(req *http.Request) {
+	if r.ClientSecret != "" {
+		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
+	}
+}
+
 // RefreshTokens performs a token refresh. If it doesn't error, it will always
 // provide a new AccessToken. It may provide a new RefreshToken, and if it does, then
 // the old one should be considered invalid.
