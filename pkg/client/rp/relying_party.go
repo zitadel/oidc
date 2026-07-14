@@ -902,7 +902,7 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 // tokenTypeHint should be either "id_token" or "refresh_token".
 func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHint string) error {
 	ctx = logCtxWithRPData(ctx, rp, "function", "RevokeToken")
-	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	ctx, span := client.Tracer.Start(ctx, "RevokeToken")
 	defer span.End()
 
 	request := client.RevokeRequest{
