@@ -25,11 +25,11 @@ var (
 	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
 )
 
-// Deprecated: This interface function Auth() will not invoke anymore because it violate
+// Deprecated: This interface function Auth() is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
-// Please replace with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
-// Or use the input "authFn" in related functions for custom needs. 
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 type ClientSecretBasicAuthRequest interface {
 	Auth(req *http.Request)
 }
@@ -155,11 +155,11 @@ type RevokeRequest struct {
 	ClientSecret  string `schema:"client_secret"`
 }
 
-// Deprecated: This Function will not invoke anymore because it violate
+// Deprecated: This function is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
-// Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
-// Or use the input "authFn" in related functions for custom needs. 
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r RevokeRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
@@ -273,11 +273,11 @@ type DeviceAccessTokenRequest struct {
 	oidc.DeviceAccessTokenRequest
 }
 
-// Deprecated: This Function will not invoke anymore because it violate
+// Deprecated: This function is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
-// Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
-// Or use the input "authFn" in related functions for custom needs. 
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))

@@ -83,6 +83,12 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 type AuthenticatedTokenRequest interface {
 	SetClientID(string)
 	SetClientSecret(string)
+}
+
+// AuthenticatedTokenRequestAuthMethodChecker is a helper interface for IsSetClientAssertion and IsSetClientIDAndClientSecret
+// it is implemented by oidc.AuthRequest and oidc.RefreshTokenRequest
+// implements it can prevent the client from using more than one authentication method in each request
+type AuthenticatedTokenRequestAuthMethodChecker interface {
 	IsSetClientAssertion() bool
 	IsSetClientIDAndClientSecret() bool
 }
@@ -102,18 +108,30 @@ func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder,
 	if err != nil {
 		return oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
-	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
-	// The client MUST NOT use more than one authentication method in each request.
-	if request.IsSetClientAssertion() && request.IsSetClientIDAndClientSecret() {
-		return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+
+	var clientID, clientSecret string
+	if checker, ok := request.(AuthenticatedTokenRequestAuthMethodChecker); ok {
+		// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+		// The client MUST NOT use more than one authentication method in each request.
+		if checker.IsSetClientAssertion() && checker.IsSetClientIDAndClientSecret() {
+			return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+		var ok bool
+		clientID, clientSecret, ok = r.BasicAuth()
+		if !ok {
+			return nil
+		}
+		if checker.IsSetClientAssertion() || checker.IsSetClientIDAndClientSecret() {
+			return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+	} else {
+		var ok bool
+		clientID, clientSecret, ok = r.BasicAuth()
+		if !ok {
+			return nil
+		}
 	}
-	clientID, clientSecret, ok := r.BasicAuth()
-	if !ok {
-		return nil
-	}
-	if request.IsSetClientAssertion() || request.IsSetClientIDAndClientSecret() {
-		return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
-	}
+
 	clientID, err = url.QueryUnescape(clientID)
 	if err != nil {
 		return oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)

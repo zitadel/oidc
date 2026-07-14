@@ -91,12 +91,15 @@ type HasUnauthorizedHandler interface {
 	UnauthorizedHandler() func(w http.ResponseWriter, r *http.Request, desc string, state string)
 }
 
-type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
-type UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+type (
+	ErrorHandler        func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
+	UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+)
 
 var DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 	http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 }
+
 var DefaultUnauthorizedHandler UnauthorizedHandler = func(w http.ResponseWriter, r *http.Request, desc string, state string) {
 	http.Error(w, desc, http.StatusUnauthorized)
 }
@@ -816,11 +819,11 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
-// Deprecated: This Function will not invoke anymore because it violate 
+// Deprecated: This function is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
-// Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
-// Or use the input "authFn" in related functions for custom needs.  
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r RefreshTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))

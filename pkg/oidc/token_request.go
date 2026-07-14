@@ -94,10 +94,12 @@ func (a *AccessTokenRequest) SetClientSecret(clientSecret string) {
 	a.ClientSecret = clientSecret
 }
 
+// IsSetClientAssertion implements op.AuthenticatedTokenRequestAuthMethodChecker
 func (a *AccessTokenRequest) IsSetClientAssertion() bool {
 	return a.ClientAssertion != "" && a.ClientAssertionType != ""
 }
 
+// IsSetClientIDAndClientSecret implements op.AuthenticatedTokenRequestAuthMethodChecker
 func (a *AccessTokenRequest) IsSetClientIDAndClientSecret() bool {
 	return a.ClientID != "" && a.ClientSecret != ""
 }
@@ -127,10 +129,12 @@ func (a *RefreshTokenRequest) SetClientSecret(clientSecret string) {
 	a.ClientSecret = clientSecret
 }
 
+// IsSetClientAssertion implements op.AuthenticatedTokenRequestAuthMethodChecker
 func (a *RefreshTokenRequest) IsSetClientAssertion() bool {
 	return a.ClientAssertion != "" && a.ClientAssertionType != ""
 }
 
+// IsSetClientIDAndClientSecret implements op.AuthenticatedTokenRequestAuthMethodChecker
 func (a *RefreshTokenRequest) IsSetClientIDAndClientSecret() bool {
 	return a.ClientID != "" && a.ClientSecret != ""
 }
@@ -262,11 +266,11 @@ type ClientCredentialsRequest struct {
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
 }
 
-// Deprecated: This Function will not invoke anymore because it violate
+// Deprecated: This function is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
-// Please replace it with set up [rp.OAuthConfig().Endpoint.AuthStyle] to [oauth2.AuthStyleInHeader]
-// Or use the input "authFn" in related functions for custom needs. 
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r *ClientCredentialsRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
