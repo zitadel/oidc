@@ -41,7 +41,7 @@ import (
 var Logger = slog.New(
 	slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelDebug,
+		Level:     slog.LevelInfo,
 	}),
 )
 

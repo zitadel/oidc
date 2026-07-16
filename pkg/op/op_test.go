@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,6 +20,17 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"golang.org/x/text/language"
 )
+
+func TestDeprecatedWithLogger(t *testing.T) {
+	previous := slog.Default()
+	configured := slog.New(slog.NewTextHandler(new(strings.Builder), nil))
+
+	require.NoError(t, op.WithLogger(configured)(&op.Provider{}))
+	assert.Same(t, previous, slog.Default())
+	assert.NotPanics(t, func() {
+		require.NoError(t, op.WithLogger(nil)(&op.Provider{}))
+	})
+}
 
 var (
 	testProvider op.OpenIDProvider

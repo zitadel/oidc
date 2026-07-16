@@ -13,9 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-
-	"github.com/zitadel/logging"
 
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
@@ -25,6 +22,7 @@ import (
 var (
 	callbackPath = "/auth/callback"
 	key          = []byte("test1234test1234")
+	requestCount atomic.Uint64
 )
 
 func main() {
@@ -42,7 +40,8 @@ func main() {
 		var err error
 		pkce, err = strconv.ParseBool(pkceEnv)
 		if err != nil {
-			logrus.Fatalf("error parsing PKCE %s", err.Error())
+			slog.Error("error parsing PKCE", "error", err)
+			os.Exit(1)
 		}
 	}
 	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
@@ -54,19 +53,16 @@ func main() {
 			Level:     slog.LevelDebug,
 		}),
 	)
+	slog.SetDefault(logger)
 	client := &http.Client{
-		Timeout: time.Minute,
+		Timeout:   time.Minute,
+		Transport: loggingRoundTripper{base: http.DefaultTransport},
 	}
-	// enable outgoing request logging
-	logging.EnableHTTPClient(client,
-		logging.WithClientGroup("client"),
-	)
 
 	options := []rp.Option{
 		rp.WithCookieHandler(cookieHandler),
 		rp.WithVerifierOpts(rp.WithIssuedAtOffset(5 * time.Second)),
 		rp.WithHTTPClient(client),
-		rp.WithLogger(logger),
 		rp.WithSigningAlgsFromDiscovery(),
 	}
 	if clientSecret == "" {
@@ -75,7 +71,8 @@ func main() {
 	if keyPath != "" {
 		signingKey, err := os.ReadFile(keyPath)
 		if err != nil {
-			logrus.Fatalf("error reading key file %s", err.Error())
+			slog.Error("error reading key file", "error", err)
+			os.Exit(1)
 		}
 		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(signingKey, keyID)))
 	}
@@ -83,12 +80,11 @@ func main() {
 		options = append(options, rp.WithPKCE(cookieHandler))
 	}
 
-	// One can add a logger to the context,
-	// pre-defining log attributes as required.
-	ctx := logging.ToContext(context.TODO(), logger)
+	ctx := context.TODO()
 	provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, redirectURI, scopes, options...)
 	if err != nil {
-		logrus.Fatalf("error creating provider %s", err.Error())
+		slog.Error("error creating provider", "error", err)
+		os.Exit(1)
 	}
 
 	// generate some state (representing the state of the user in your application,
@@ -178,22 +174,60 @@ func main() {
 	//
 	// http.Handle(callbackPath, rp.CodeExchangeHandler(marshalToken, provider))
 
-	// simple counter for request IDs
-	var counter atomic.Int64
-	// enable incoming request logging
-	mw := logging.Middleware(
-		logging.WithLogger(logger),
-		logging.WithGroup("server"),
-		logging.WithIDFunc(func() slog.Attr {
-			return slog.Int64("id", counter.Add(1))
-		}),
-	)
-
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	logger.Info("server listening, press ctrl+c to stop", "addr", lis)
-	err = http.ListenAndServe(lis, mw(http.DefaultServeMux))
+	slog.Info("server listening, press ctrl+c to stop", "addr", lis)
+	err = http.ListenAndServe(lis, requestLoggingMiddleware(http.DefaultServeMux))
 	if err != http.ErrServerClosed {
-		logger.Error("server terminated", "error", err)
+		slog.Error("server terminated", "error", err)
 		os.Exit(1)
 	}
+}
+
+// requestLoggingMiddleware demonstrates request IDs and structured incoming
+// request logs using only the standard library.
+func requestLoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := requestCount.Add(1)
+		w.Header().Set("X-Request-ID", strconv.FormatUint(requestID, 10))
+		started := time.Now()
+
+		next.ServeHTTP(w, r)
+
+		slog.InfoContext(r.Context(), "http request",
+			"request_id", requestID,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration", time.Since(started),
+		)
+	})
+}
+
+// loggingRoundTripper demonstrates lightweight tracing of outbound discovery
+// and token requests. A production application could replace this with its
+// preferred tracing transport.
+type loggingRoundTripper struct {
+	base http.RoundTripper
+}
+
+func (t loggingRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	started := time.Now()
+	response, err := t.base.RoundTrip(r)
+	if err != nil {
+		slog.DebugContext(r.Context(), "http client request",
+			"method", r.Method,
+			"host", r.URL.Host,
+			"path", r.URL.Path,
+			"duration", time.Since(started),
+			"error", err,
+		)
+		return nil, err
+	}
+	slog.DebugContext(r.Context(), "http client request",
+		"method", r.Method,
+		"host", r.URL.Host,
+		"path", r.URL.Path,
+		"status_code", response.StatusCode,
+		"duration", time.Since(started),
+	)
+	return response, nil
 }

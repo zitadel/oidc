@@ -28,20 +28,20 @@ type LogAuthRequest interface {
 
 func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthRequest, err error, authorizer Authorizer) {
 	e := oidc.DefaultToServerError(err, err.Error())
-	logger := authorizer.Logger().With("oidc_error", e)
+	args := []any{"oidc_error", e.LogValue()}
 
 	if authReq == nil {
-		logger.Log(r.Context(), e.LogLevel(), "auth request")
+		slog.Log(r.Context(), e.LogLevel(), "auth request", args...)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if logAuthReq, ok := authReq.(LogAuthRequest); ok {
-		logger = logger.With("auth_request", logAuthReq)
+		args = append(args, "auth_request", logAuthReq)
 	}
 
 	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
-		logger.Log(r.Context(), e.LogLevel(), "auth request: not redirecting")
+		slog.Log(r.Context(), e.LogLevel(), "auth request: not redirecting", args...)
 		http.Error(w, e.Description, http.StatusBadRequest)
 		return
 	}
@@ -58,15 +58,16 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	}
 	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, authorizer.Encoder())
 	if err != nil {
-		logger.ErrorContext(r.Context(), "auth response URL", "error", err)
+		args = append(args, "error", err)
+		slog.ErrorContext(r.Context(), "auth response URL", args...)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	logger.Log(r.Context(), e.LogLevel(), "auth request")
+	slog.Log(r.Context(), e.LogLevel(), "auth request", args...)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
+func RequestError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Logger) {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	if e.ErrorType == oidc.InvalidClient {
@@ -75,28 +76,28 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, logger *slo
 	if e.ErrorType == oidc.ServerError {
 		status = http.StatusInternalServerError
 	}
-	logger.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
+	slog.Log(r.Context(), e.LogLevel(), "request error", "oidc_error", e)
 	httphelper.MarshalJSONWithStatus(w, e, status)
 }
 
 // TryErrorRedirect tries to handle an error by redirecting a client.
 // If this attempt fails, an error is returned that must be returned
 // to the client instead.
-func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder, logger *slog.Logger) (*Redirect, error) {
+func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder, _ *slog.Logger) (*Redirect, error) {
 	e := oidc.DefaultToServerError(parent, parent.Error())
-	logger = logger.With("oidc_error", e)
+	args := []any{"oidc_error", e.LogValue()}
 
 	if authReq == nil {
-		logger.Log(ctx, e.LogLevel(), "auth request")
+		slog.Log(ctx, e.LogLevel(), "auth request", args...)
 		return nil, AsStatusError(e, http.StatusBadRequest)
 	}
 
 	if logAuthReq, ok := authReq.(LogAuthRequest); ok {
-		logger = logger.With("auth_request", logAuthReq)
+		args = append(args, "auth_request", logAuthReq)
 	}
 
 	if authReq.GetRedirectURI() == "" || e.IsRedirectDisabled() {
-		logger.Log(ctx, e.LogLevel(), "auth request: not redirecting")
+		slog.Log(ctx, e.LogLevel(), "auth request: not redirecting", args...)
 		return nil, AsStatusError(e, http.StatusBadRequest)
 	}
 
@@ -113,10 +114,12 @@ func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error,
 	}
 	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder)
 	if err != nil {
-		logger.ErrorContext(ctx, "auth response URL", "error", err)
+		args = append(args, "error", err)
+		slog.ErrorContext(ctx, "auth response URL", args...)
 		return nil, AsStatusError(err, http.StatusBadRequest)
 	}
-	logger.Log(ctx, e.LogLevel(), "auth request redirect", "url", url)
+	args = append(args, "url", url)
+	slog.Log(ctx, e.LogLevel(), "auth request redirect", args...)
 	return NewRedirect(url), nil
 }
 
@@ -177,12 +180,12 @@ func (e StatusError) Is(err error) bool {
 // If no `oidc.Error` was found in the parent, the error type defaults to [oidc.ServerError].
 // When there was no `StatusError` and the `oidc.Error` is of type `oidc.ServerError`,
 // the status code will be set to [http.StatusInternalServerError]
-func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.Logger) {
+func WriteError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Logger) {
 	var statusError StatusError
 	if errors.As(err, &statusError) {
 		writeError(w, r,
 			oidc.DefaultToServerError(statusError.parent, statusError.parent.Error()),
-			statusError.statusCode, logger,
+			statusError.statusCode,
 		)
 		return
 	}
@@ -191,10 +194,10 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error, logger *slog.
 	if e.ErrorType == oidc.ServerError {
 		statusCode = http.StatusInternalServerError
 	}
-	writeError(w, r, e, statusCode, logger)
+	writeError(w, r, e, statusCode)
 }
 
-func writeError(w http.ResponseWriter, r *http.Request, err *oidc.Error, statusCode int, logger *slog.Logger) {
-	logger.Log(r.Context(), err.LogLevel(), "request error", "oidc_error", err, "status_code", statusCode)
+func writeError(w http.ResponseWriter, r *http.Request, err *oidc.Error, statusCode int) {
+	slog.Log(r.Context(), err.LogLevel(), "request error", "oidc_error", err, "status_code", statusCode)
 	httphelper.MarshalJSONWithStatus(w, err, statusCode)
 }

@@ -16,8 +16,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
-	"github.com/zitadel/logging"
-
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -82,7 +80,8 @@ type RelyingParty interface {
 	// ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 
-	// Logger from the context, or a fallback if set.
+	// Logger is retained for source compatibility.
+	// Deprecated: configure logging with slog.SetDefault. It always returns nil, false.
 	Logger(context.Context) (logger *slog.Logger, ok bool)
 }
 
@@ -123,7 +122,6 @@ type relyingParty struct {
 	idTokenVerifier     *IDTokenVerifier
 	verifierOpts        []VerifierOption
 	signer              jose.Signer
-	logger              *slog.Logger
 }
 
 func (rp *relyingParty) OAuthConfig() *oauth2.Config {
@@ -191,12 +189,10 @@ func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Re
 	return rp.unauthorizedHandler
 }
 
-func (rp *relyingParty) Logger(ctx context.Context) (logger *slog.Logger, ok bool) {
-	logger, ok = logging.FromContext(ctx)
-	if ok {
-		return logger, ok
-	}
-	return rp.logger, rp.logger != nil
+// Logger is retained for source compatibility.
+// Deprecated: configure logging with [slog.SetDefault]. It always returns nil, false.
+func (rp *relyingParty) Logger(context.Context) (*slog.Logger, bool) {
+	return nil, false
 }
 
 // NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
@@ -258,7 +254,6 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 			return nil, err
 		}
 	}
-	ctx = logCtxWithRPData(ctx, rp, "function", "NewRelyingPartyOIDC")
 	discoveryConfiguration, err := client.Discover(ctx, rp.issuer, rp.httpClient, rp.DiscoveryEndpoint)
 	if err != nil {
 		return nil, err
@@ -393,11 +388,10 @@ func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	}
 }
 
-// WithLogger sets a logger that is used
-// in case the request context does not contain a logger.
-func WithLogger(logger *slog.Logger) Option {
-	return func(rp *relyingParty) error {
-		rp.logger = logger
+// WithLogger is retained for source compatibility.
+// Deprecated: use [slog.SetDefault]. This option has no effect.
+func WithLogger(*slog.Logger) Option {
+	return func(*relyingParty) error {
 		return nil
 	}
 }
@@ -534,7 +528,6 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 	ctx, codeExchangeSpan := client.Tracer.Start(ctx, "CodeExchange")
 	defer codeExchangeSpan.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "CodeExchange")
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
@@ -559,7 +552,6 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 //
 // [RFC 6749, section 4.4]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.Values) (token *oauth2.Token, err error) {
-	ctx = logCtxWithRPData(ctx, rp, "function", "ClientCredentials")
 	ctx, span := client.Tracer.Start(ctx, "ClientCredentials")
 	defer span.End()
 
@@ -659,7 +651,6 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 // [UserInfo]: https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
 func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject string, rp RelyingParty) (userinfo U, err error) {
 	var nilU U
-	ctx = logCtxWithRPData(ctx, rp, "function", "Userinfo")
 	ctx, span := client.Tracer.Start(ctx, "Userinfo")
 	defer span.End()
 
@@ -841,8 +832,6 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "RefreshTokens")
-
 	var authFn httphelper.RequestAuthorization
 	request := RefreshTokenRequest{
 		RefreshToken: refreshToken,
@@ -883,7 +872,6 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 }
 
 func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState, optionalLogoutHint string, optionalLocales oidc.Locales) (*url.URL, error) {
-	ctx = logCtxWithRPData(ctx, rp, "function", "EndSession")
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
 
@@ -904,7 +892,6 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 //
 // tokenTypeHint should be either "id_token" or "refresh_token".
 func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHint string) error {
-	ctx = logCtxWithRPData(ctx, rp, "function", "RevokeToken")
 	ctx, span := client.Tracer.Start(ctx, "RevokeToken")
 	defer span.End()
 

@@ -18,18 +18,18 @@ func ClientCredentialsExchange(w http.ResponseWriter, r *http.Request, exchanger
 
 	request, err := ParseClientCredentialsRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 	}
 
 	validatedRequest, client, err := ValidateClientCredentialsRequest(r.Context(), request, exchanger)
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 		return
 	}
 
 	resp, err := CreateClientCredentialsTokenResponse(r.Context(), validatedRequest, exchanger, client)
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 		return
 	}
 

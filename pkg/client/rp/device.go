@@ -38,7 +38,6 @@ func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, 
 	ctx, span := client.Tracer.Start(ctx, "DeviceAuthorization")
 	defer span.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAuthorization")
 	req, err := newDeviceClientCredentialsRequest(scopes, rp)
 	if err != nil {
 		return nil, err
@@ -53,8 +52,6 @@ func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, 
 func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Duration, rp RelyingParty) (resp *oidc.AccessTokenResponse, err error) {
 	ctx, span := client.Tracer.Start(ctx, "DeviceAccessToken")
 	defer span.End()
-
-	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAccessToken")
 
 	req := &client.DeviceAccessTokenRequest{
 		DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{

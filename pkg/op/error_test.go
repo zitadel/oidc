@@ -17,6 +17,13 @@ import (
 	"github.com/zitadel/schema"
 )
 
+func setDefaultTestLogger(t *testing.T, logger *slog.Logger) {
+	t.Helper()
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() { slog.SetDefault(previous) })
+}
+
 func TestAuthRequestError(t *testing.T) {
 	type args struct {
 		authReq ErrAuthRequest
@@ -181,13 +188,14 @@ func TestAuthRequestError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logOut := new(strings.Builder)
+			logger := slog.New(
+				slog.NewJSONHandler(logOut, &slog.HandlerOptions{
+					Level: slog.LevelInfo,
+				}).WithAttrs([]slog.Attr{slog.String("time", "not")}),
+			)
+			setDefaultTestLogger(t, logger)
 			authorizer := &Provider{
 				encoder: schema.NewEncoder(),
-				logger: slog.New(
-					slog.NewJSONHandler(logOut, &slog.HandlerOptions{
-						Level: slog.LevelInfo,
-					}).WithAttrs([]slog.Attr{slog.String("time", "not")}),
-				),
 			}
 
 			w := httptest.NewRecorder()
@@ -273,6 +281,7 @@ func TestRequestError(t *testing.T) {
 					Level: slog.LevelInfo,
 				}).WithAttrs([]slog.Attr{slog.String("time", "not")}),
 			)
+			setDefaultTestLogger(t, logger)
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", "/path", nil)
 			RequestError(w, r, tt.err, logger)
@@ -471,6 +480,7 @@ func TestTryErrorRedirect(t *testing.T) {
 					Level: slog.LevelInfo,
 				}).WithAttrs([]slog.Attr{slog.String("time", "not")}),
 			)
+			setDefaultTestLogger(t, logger)
 			encoder := schema.NewEncoder()
 
 			got, err := TryErrorRedirect(tt.args.ctx, tt.args.authReq, tt.args.parent, encoder, logger)
@@ -681,6 +691,7 @@ func TestWriteError(t *testing.T) {
 					Level: slog.LevelInfo,
 				}).WithAttrs([]slog.Attr{slog.String("time", "not")}),
 			)
+			setDefaultTestLogger(t, logger)
 			r := httptest.NewRequest("GET", "/target", nil)
 			w := httptest.NewRecorder()
 

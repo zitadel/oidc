@@ -37,17 +37,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 var (
@@ -74,42 +73,48 @@ func main() {
 	if keyPath != "" {
 		signingKey, err := os.ReadFile(keyPath)
 		if err != nil {
-			logrus.Fatalf("error reading key file %s", err.Error())
+			slog.Error("error reading key file", "error", err)
+			os.Exit(1)
 		}
 		options = append(options, rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(signingKey, keyID)))
 	}
 
 	provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, "", scopes, options...)
 	if err != nil {
-		logrus.Fatalf("error creating provider %s", err.Error())
+		slog.Error("error creating provider", "error", err)
+		os.Exit(1)
 	}
 
-	logrus.Info("starting device authorization flow")
+	slog.Info("starting device authorization flow")
 	resp, err := rp.DeviceAuthorization(ctx, scopes, provider, nil)
 	if err != nil {
-		logrus.Fatal(err)
+		slog.Error("device authorization failed", "error", err)
+		os.Exit(1)
 	}
-	logrus.Info("resp", resp)
+	slog.Info("device authorization response", "response", resp)
 	fmt.Printf("\nPlease browse to %s and enter code %s\n", resp.VerificationURI, resp.UserCode)
 
-	logrus.Info("start polling")
+	slog.Info("start polling")
 	token, err := rp.DeviceAccessToken(ctx, resp.DeviceCode, time.Duration(resp.Interval)*time.Second, provider)
 	if err != nil {
-		logrus.Fatal(err)
+		slog.Error("device access token failed", "error", err)
+		os.Exit(1)
 	}
-	logrus.Infof("successfully obtained token: %#v", token)
+	slog.Info("successfully obtained token", "token", token)
 
-	logrus.Infof("Going to refresh token")
+	slog.Info("going to refresh token")
 	refreshedToken, err := rp.RefreshTokens[*oidc.IDTokenClaims](ctx, provider, token.RefreshToken, "", "")
 	if err != nil {
-		logrus.Fatal(err)
+		slog.Error("refresh token failed", "error", err)
+		os.Exit(1)
 	}
-	logrus.Infof("refreshedToken: %#v", refreshedToken.Token)
+	slog.Info("refreshed token", "token", refreshedToken.Token)
 
-	logrus.Infof("Going to revoke token")
+	slog.Info("going to revoke token")
 	err = rp.RevokeToken(ctx, provider, token.AccessToken, "refresh_token")
 	if err != nil {
-		logrus.Fatal(err)
+		slog.Error("revoke token failed", "error", err)
+		os.Exit(1)
 	}
-	logrus.Info("Token revoked")
+	slog.Info("token revoked")
 }

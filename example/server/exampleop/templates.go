@@ -3,8 +3,7 @@ package exampleop
 import (
 	"embed"
 	"html/template"
-
-	"github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 var (
@@ -21,6 +20,6 @@ func errMsg(err error) string {
 	if err == nil {
 		return ""
 	}
-	logrus.Error(err)
+	slog.Error("template error", "error", err)
 	return err.Error()
 }
