@@ -17,6 +17,8 @@ import (
 	"github.com/zitadel/schema"
 )
 
+// setDefaultTestLogger installs a process-wide default logger for the duration of t.
+// Do not use with t.Parallel(): slog.SetDefault is global and races across parallel tests.
 func setDefaultTestLogger(t *testing.T, logger *slog.Logger) {
 	t.Helper()
 	previous := slog.Default()
@@ -149,6 +151,7 @@ func TestAuthRequestError(t *testing.T) {
 					},
 					"oidc_error":{
 						"description":"sign in",
+						"state":"state1",
 						"type":"interaction_required"
 					}
 				}`,
@@ -180,6 +183,7 @@ func TestAuthRequestError(t *testing.T) {
 					},
 					"oidc_error":{
 						"description":"sign in",
+						"state":"state1",
 						"type":"interaction_required"
 					}
 				}`,
@@ -432,6 +436,7 @@ func TestTryErrorRedirect(t *testing.T) {
 					},
 					"oidc_error":{
 						"description":"sign in",
+						"state":"state1",
 						"type":"interaction_required"
 					}
 				}`,
@@ -466,6 +471,7 @@ func TestTryErrorRedirect(t *testing.T) {
 						},
 						"oidc_error":{
 							"description":"sign in",
+							"state":"state1",
 							"type":"interaction_required"
 						},
 						"url":"http://example.com/callback?error=interaction_required&error_description=sign+in&state=state1"

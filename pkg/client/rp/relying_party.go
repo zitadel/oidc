@@ -80,8 +80,8 @@ type RelyingParty interface {
 	// ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 
-	// Logger is retained for source compatibility.
-	// Deprecated: configure logging with slog.SetDefault. It always returns nil, false.
+	// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
+	// Deprecated: configure logging with [slog.SetDefault].
 	Logger(context.Context) (logger *slog.Logger, ok bool)
 }
 
@@ -122,6 +122,7 @@ type relyingParty struct {
 	idTokenVerifier     *IDTokenVerifier
 	verifierOpts        []VerifierOption
 	signer              jose.Signer
+	logger              *slog.Logger
 }
 
 func (rp *relyingParty) OAuthConfig() *oauth2.Config {
@@ -189,10 +190,13 @@ func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Re
 	return rp.unauthorizedHandler
 }
 
-// Logger is retained for source compatibility.
-// Deprecated: configure logging with [slog.SetDefault]. It always returns nil, false.
+// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
+// Deprecated: configure logging with [slog.SetDefault].
 func (rp *relyingParty) Logger(context.Context) (*slog.Logger, bool) {
-	return nil, false
+	if rp.logger != nil {
+		return rp.logger, true
+	}
+	return slog.Default(), true
 }
 
 // NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
@@ -388,10 +392,12 @@ func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	}
 }
 
-// WithLogger is retained for source compatibility.
-// Deprecated: use [slog.SetDefault]. This option has no effect.
-func WithLogger(*slog.Logger) Option {
-	return func(*relyingParty) error {
+// WithLogger sets the logger returned by [RelyingParty.Logger].
+// OIDC package logging uses the global [slog] default; prefer [slog.SetDefault].
+// Deprecated: use [slog.SetDefault].
+func WithLogger(logger *slog.Logger) Option {
+	return func(rp *relyingParty) error {
+		rp.logger = logger
 		return nil
 	}
 }

@@ -18,6 +18,7 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
 		RequestError(w, r, err, nil)
+		return
 	}
 	if tokenReq.Code == "" {
 		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"), nil)

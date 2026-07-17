@@ -19,7 +19,7 @@ To disable OIDC logs, install a discard handler instead:
 slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 ```
 
-Per-instance loggers are no longer supported. The exported `WithLogger`, `WithFallbackLogger`, and `Logger` APIs remain for source compatibility but are deprecated; the options are no-ops. The deprecated `op.Provider.Logger()` returns the current `slog.Default()`, while `rp.Logger()` returns `(nil, false)`. Logger arguments on `RequestError`, `WriteError`, and `TryErrorRedirect` are also retained but ignored.
+OIDC package logging always uses the process-wide `slog` default. The exported `WithLogger`, `WithFallbackLogger`, and `Logger` APIs remain for source compatibility but are deprecated. `op.WithLogger` / `op.WithFallbackLogger` are no-ops; `op.Provider.Logger()` returns `slog.Default()`. `rp.WithLogger` still stores a logger returned by `rp.Logger()` (falling back to `slog.Default()`), but the RP package itself no longer writes through that logger. Logger arguments on `RequestError`, `WriteError`, and `TryErrorRedirect` are also retained but ignored.
 
 Remove uses of `logging.ToContext` and `github.com/zitadel/logging` middleware. Applications that need request logging or context enrichment should provide their own middleware and `slog.Handler`. Discovery debug records are now sent to the global logger without first checking for a context logger; use the global handler's level configuration to suppress them. RP records no longer receive the `rp` attribute group or its function-name enrichment.
 
