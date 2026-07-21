@@ -1,0 +1,24 @@
+name: Add new issues and PRs to kanban project
+
+on:
+  issues:
+    types:
+      - opened
+  pull_request_target:
+    types:
+      - opened
+
+permissions:
+  contents: read
+
+jobs:
+  add-to-kanban:
+    name: Add issue/PR to kanban
+    if: github.actor != 'dependabot[bot]'
+    uses: zitadel/.github/.github/workflows/kanban.yml@main
+    secrets:
+      PROJECT_APP_ID: ${{ secrets.PROJECT_APP_ID }}
+      PROJECT_APP_PRIVATE_KEY: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
+    with:
+      issue_url: ${{ github.event_name == 'issues' && github.event.issue.html_url || '' }}
+      pr_url: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.html_url || '' }}
