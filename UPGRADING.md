@@ -5,6 +5,24 @@ All commands are executed from the root of the project that imports oidc package
 on non-GNU systems, such as MacOS.
 Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 
+## Global `slog` logger migration
+
+OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
+
+```go
+slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
+```
+
+To disable OIDC logs, install a discard handler instead:
+
+```go
+slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+```
+
+OIDC package logging always uses the process-wide `slog` default. The exported `WithLogger`, `WithFallbackLogger`, and `Logger` APIs remain for source compatibility but are deprecated. `op.WithLogger` / `op.WithFallbackLogger` are no-ops; `op.Provider.Logger()` returns `slog.Default()`. `rp.WithLogger` still stores a logger returned by `rp.Logger()` (falling back to `slog.Default()`), but the RP package itself no longer writes through that logger. Logger arguments on `RequestError`, `WriteError`, and `TryErrorRedirect` are also retained but ignored.
+
+Remove uses of `logging.ToContext` and `github.com/zitadel/logging` middleware. Applications that need request logging or context enrichment should provide their own middleware and `slog.Handler`. Discovery debug records are now sent to the global logger without first checking for a context logger; use the global handler's level configuration to suppress them. RP records no longer receive the `rp` attribute group or its function-name enrichment.
+
 ## V2 to V3
 
 **TL;DR** at the [bottom](#full-script) of this chapter is a full `sed` script
@@ -43,6 +61,9 @@ import "github.com/zitadel/oidc/v3/pkg/op"
 ```
 
 #### Logger
+
+> [!NOTE]
+> Current versions use the process-wide logger described in [Global `slog` logger migration](#global-slog-logger-migration). The text below describes the historical V2 to V3 change.
 
 This version of OIDC adds logging to the framework. For this we use the new Go standard library `log/slog`. (Until v3.12.0 we used `x/exp/slog`).
 Mostly OIDC will use error level logs where it's returning an error through an HTTP handler. OIDC errors that are user facing don't carry much context, also for security reasons. With logging we are now able to print the error context, so that developers can more easily find the source of their issues. Previously we just discarded such context.

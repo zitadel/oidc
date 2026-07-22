@@ -5,11 +5,11 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/zitadel/logging"
 	"golang.org/x/text/language"
 
 	"github.com/zitadel/oidc/v3/pkg/op"
@@ -25,8 +25,7 @@ type Storage interface {
 	deviceAuthenticate
 }
 
-// simple counter for request IDs
-var counter atomic.Int64
+var requestCounter atomic.Uint64
 
 // SetupServer creates an OIDC server with Issuer=http://localhost:<port>
 //
@@ -36,19 +35,15 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 	keyId := "key1"
+	slog.SetDefault(logger)
 
 	router := chi.NewRouter()
-	router.Use(logging.Middleware(
-		logging.WithLogger(logger),
-		logging.WithIDFunc(func() slog.Attr {
-			return slog.Int64("id", counter.Add(1))
-		}),
-	))
+	router.Use(requestLoggingMiddleware)
 
 	// for simplicity, we provide a very small default page for users who have signed out
 	router.HandleFunc(pathLoggedOut, func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("signed out successfully"))
-		// no need to check/log error, this will be handled by the middleware.
+		// The example middleware logs the completed request.
 	})
 
 	// creation of the OpenIDProvider with the just created in-memory Storage
@@ -57,7 +52,6 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 		issuer,
 		key,
 		keyId,
-		logger,
 		extraOptions...,
 	)
 	if err != nil {
@@ -92,6 +86,25 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	return router
 }
 
+// requestLoggingMiddleware demonstrates request IDs and structured HTTP logging
+// without coupling the OIDC library to a particular middleware package.
+func requestLoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := requestCounter.Add(1)
+		w.Header().Set("X-Request-ID", strconv.FormatUint(requestID, 10))
+		started := time.Now()
+
+		next.ServeHTTP(w, r)
+
+		slog.InfoContext(r.Context(), "http request",
+			"request_id", requestID,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration", time.Since(started),
+		)
+	})
+}
+
 // newOP will create an OpenID Provider for localhost on a specified port
 // and a predefined default logout uri
 // it will enable all options (see descriptions)
@@ -100,7 +113,6 @@ func newOP(
 	issuer string,
 	key [32]byte, // encryption key
 	keyId string,
-	logger *slog.Logger,
 	extraOptions ...op.Option,
 ) (op.OpenIDProvider, error) {
 	config := &op.Config{
@@ -141,8 +153,6 @@ func newOP(
 			op.WithAllowInsecure(),
 			// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 			op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
-			// Pass our logger to the OP
-			op.WithLogger(logger.WithGroup("op")),
 		}, extraOptions...)...,
 	)
 	if err != nil {

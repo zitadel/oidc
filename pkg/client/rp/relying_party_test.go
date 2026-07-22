@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,27 @@ import (
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
+
+func TestDeprecatedLoggerCompatibility(t *testing.T) {
+	previous := slog.Default()
+	configured := slog.New(slog.NewTextHandler(new(strings.Builder), nil))
+
+	rp := &relyingParty{}
+	require.NoError(t, WithLogger(configured)(rp))
+	assert.Same(t, previous, slog.Default())
+
+	logger, ok := rp.Logger(context.Background())
+	assert.Same(t, configured, logger)
+	assert.True(t, ok)
+
+	assert.NotPanics(t, func() {
+		require.NoError(t, WithLogger(nil)(&relyingParty{}))
+	})
+
+	logger, ok = (&relyingParty{}).Logger(context.Background())
+	assert.Same(t, previous, logger)
+	assert.True(t, ok)
+}
 
 func Test_verifyTokenResponse(t *testing.T) {
 	verifier := &IDTokenVerifier{
