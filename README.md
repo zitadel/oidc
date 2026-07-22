@@ -176,8 +176,8 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 For your convenience you can find the relevant guides linked below.
 
-- [OpenID Connect Core 1.0 incorporating errata set 1](https://openid.net/specs/openid-connect-core-1_0.html)
-- [OIDC/OAuth Flow in Zitadel (using this library)](https://zitadel.com/docs/guides/integrate/login-users)
+- [OpenID Connect Core 1.0 incorporating errata set 2](https://openid.net/specs/openid-connect-core-1_0.html)
+- [OIDC/OAuth Flow in Zitadel (using this library)](https://zitadel.com/docs/guides/integrate/login/oidc/login-users)
 
 ## Supported Go Versions
 
