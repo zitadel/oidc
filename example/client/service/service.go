@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/pkg/client/profile"
@@ -27,7 +27,8 @@ func main() {
 	if keyPath != "" {
 		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(context.TODO(), issuer, keyPath, scopes)
 		if err != nil {
-			logrus.Fatalf("error creating token source %s", err.Error())
+			slog.Error("error creating token source", "error", err)
+			os.Exit(1)
 		}
 		client = oauth2.NewClient(context.Background(), ts)
 	}
@@ -145,8 +146,11 @@ func main() {
 		}
 	})
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	logrus.Infof("listening on http://%s/", lis)
-	logrus.Fatal(http.ListenAndServe("127.0.0.1:"+port, nil))
+	slog.Info("listening", "url", "http://"+lis+"/")
+	if err := http.ListenAndServe(lis, nil); err != nil {
+		slog.Error("server terminated", "error", err)
+		os.Exit(1)
+	}
 }
 
 func callExampleEndpoint(client *http.Client, testURL string) (any, error) {

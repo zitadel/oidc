@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/zitadel/logging"
 	"github.com/zitadel/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
@@ -53,9 +53,7 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 	if err != nil {
 		return nil, errors.Join(oidc.ErrDiscoveryFailed, err)
 	}
-	if logger, ok := logging.FromContext(ctx); ok {
-		logger.Debug("discover", "config", discoveryConfig)
-	}
+	slog.DebugContext(ctx, "discover", "config", discoveryConfig)
 
 	if discoveryConfig.Issuer != issuer {
 		return nil, oidc.ErrIssuerInvalid

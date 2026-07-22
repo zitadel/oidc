@@ -109,6 +109,7 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 
 	// Deprecated: Provider now implements http.Handler directly.
@@ -277,7 +278,6 @@ func NewProvider(
 		endpoints:         DefaultEndpoints,
 		timer:             make(<-chan time.Time),
 		corsOpts:          &defaultCORSOptions,
-		logger:            slog.Default(),
 	}
 
 	for _, optFunc := range opOpts {
@@ -314,7 +314,6 @@ type Provider struct {
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 	corsOpts                *cors.Options
-	logger                  *slog.Logger
 }
 
 func (o *Provider) IssuerFromRequest(r *http.Request) string {
@@ -482,8 +481,10 @@ func (o *Provider) CORSOptions() *cors.Options {
 	return o.corsOpts
 }
 
+// Logger returns the global default logger.
+// Deprecated: configure logging with [slog.SetDefault].
 func (o *Provider) Logger() *slog.Logger {
-	return o.logger
+	return slog.Default()
 }
 
 // Deprecated: Provider now implements http.Handler directly.
@@ -667,10 +668,10 @@ func WithCORSOptions(opts *cors.Options) Option {
 	}
 }
 
-// WithLogger lets a logger other than slog.Default().
-func WithLogger(logger *slog.Logger) Option {
-	return func(o *Provider) error {
-		o.logger = logger
+// WithLogger is retained for source compatibility.
+// Deprecated: use [slog.SetDefault]. This option has no effect.
+func WithLogger(*slog.Logger) Option {
+	return func(*Provider) error {
 		return nil
 	}
 }
