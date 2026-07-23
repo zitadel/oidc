@@ -21,13 +21,13 @@ jobs:
         go: ['1.25', '1.26']
     name: Go ${{ matrix.go }} test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
       - run: go test -race -v -coverprofile=profile.cov -coverpkg=./pkg/... ./pkg/...
-      - uses: codecov/codecov-action@v6.0.1
+      - uses: codecov/codecov-action@v7.0.0
         with:
           file: ./profile.cov
           name: codecov-go
@@ -39,7 +39,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - name: Source checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Semantic Release
       uses: cycjimmy/semantic-release-action@v6
       with:

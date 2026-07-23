@@ -52,6 +52,7 @@ type Authorizer interface {
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 }
 
@@ -127,6 +128,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	if authReq.RequestParam != "" {
 		AuthRequestError(w, r, authReq, oidc.ErrRequestNotSupported(), authorizer)
 		return
+	}
+	// A custom AuthorizeValidator (see the AuthorizeValidator interface) replaces the
+	// default validation closure that assigns client above, so client may still be nil
+	// here. RedirectToLogin dereferences client (client.LoginURL), so fetch it if a
+	// custom validator left it unset, to avoid a nil pointer panic.
+	if client == nil {
+		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
+		if err != nil {
+			// The library cannot assume the custom validator verified the redirect_uri
+			// against the client, so disable the error redirect to avoid an open redirect.
+			AuthRequestError(w, r, authReq, oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err), authorizer)
+			return
+		}
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {

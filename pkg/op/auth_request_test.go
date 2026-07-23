@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -41,7 +40,6 @@ func TestAuthorize(t *testing.T) {
 
 			expect := authorizer.EXPECT()
 			expect.Decoder().Return(schema.NewDecoder())
-			expect.Logger().Return(slog.Default())
 
 			if tt.expect != nil {
 				tt.expect(expect)
@@ -50,6 +48,98 @@ func TestAuthorize(t *testing.T) {
 			op.Authorize(w, tt.req, authorizer)
 		})
 	}
+}
+
+// customAuthorizeValidator is an Authorizer that also implements
+// AuthorizeValidator, replacing the default validation closure in Authorize.
+type customAuthorizeValidator struct {
+	*mock.MockAuthorizer
+	validate func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error)
+}
+
+func (c *customAuthorizeValidator) ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage op.Storage, verifier *op.IDTokenHintVerifier) (string, error) {
+	return c.validate(ctx, authReq, storage, verifier)
+}
+
+type stubAuthRequest struct {
+	op.AuthRequest
+	id string
+}
+
+func (s *stubAuthRequest) GetID() string { return s.id }
+
+// TestAuthorizeCustomValidator authorizes with an Authorizer that implements
+// AuthorizeValidator. The custom validator replaces the default validation
+// closure, which is what assigns Authorize's local client, so Authorize must
+// resolve the client itself before RedirectToLogin dereferences it.
+// Used to panic with a nil-pointer dereference, see issue #909.
+func TestAuthorizeCustomValidator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock.NewMockStorage(ctrl)
+	client := mock.NewMockClient(ctrl)
+
+	authorizer := &customAuthorizeValidator{
+		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+			// succeeds without assigning Authorize's local client variable
+			return "userID", nil
+		},
+	}
+	expect := authorizer.MockAuthorizer.EXPECT()
+	expect.Decoder().Return(schema.NewDecoder())
+	expect.Storage().Return(storage).AnyTimes()
+	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+
+	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(client, nil)
+	storage.EXPECT().CreateAuthRequest(gomock.Any(), gomock.Any(), "userID").Return(&stubAuthRequest{id: "authReqID"}, nil)
+	client.EXPECT().LoginURL("authReqID").Return("/login?authRequestID=authReqID")
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/authorize?client_id=native&redirect_uri=http%3A%2F%2Flocalhost%3A9999%2Fcallback&scope=openid&response_type=code",
+		nil)
+	w := httptest.NewRecorder()
+	op.Authorize(w, req, authorizer)
+
+	resp := w.Result()
+	require.Equal(t, http.StatusFound, resp.StatusCode)
+	assert.Equal(t, "/login?authRequestID=authReqID", resp.Header.Get("Location"))
+}
+
+// TestAuthorizeCustomValidatorClientLookupError covers the fallback client
+// lookup failing after a custom AuthorizeValidator succeeded. Because the
+// library cannot assume the custom validator verified the redirect_uri, the
+// error must be rendered directly instead of redirecting to the (potentially
+// unvalidated) redirect_uri, which would be an open redirect.
+func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	storage := mock.NewMockStorage(ctrl)
+
+	authorizer := &customAuthorizeValidator{
+		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+			// succeeds without assigning Authorize's local client variable
+			return "userID", nil
+		},
+	}
+	expect := authorizer.MockAuthorizer.EXPECT()
+	expect.Decoder().Return(schema.NewDecoder())
+	expect.Storage().Return(storage).AnyTimes()
+	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+
+	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(nil, errors.New("client not found"))
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/authorize?client_id=native&redirect_uri=http%3A%2F%2Flocalhost%3A9999%2Fcallback&scope=openid&response_type=code",
+		nil)
+	w := httptest.NewRecorder()
+	op.Authorize(w, req, authorizer)
+
+	resp := w.Result()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Empty(t, resp.Header.Get("Location"))
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "unable to retrieve client by id")
 }
 
 func TestParseAuthorizeRequest(t *testing.T) {
@@ -1065,7 +1155,6 @@ func TestAuthResponseCode(t *testing.T) {
 					authorizer.EXPECT().Crypto().Return(&mockCrypto{
 						returnErr: io.ErrClosedPipe,
 					})
-					authorizer.EXPECT().Logger().Return(slog.Default())
 					return authorizer
 				},
 			},

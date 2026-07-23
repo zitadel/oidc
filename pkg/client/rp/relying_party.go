@@ -16,8 +16,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
-	"github.com/zitadel/logging"
-
 	"github.com/zitadel/oidc/v3/pkg/client"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -82,7 +80,8 @@ type RelyingParty interface {
 	// ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
 
-	// Logger from the context, or a fallback if set.
+	// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
+	// Deprecated: configure logging with [slog.SetDefault].
 	Logger(context.Context) (logger *slog.Logger, ok bool)
 }
 
@@ -91,12 +90,15 @@ type HasUnauthorizedHandler interface {
 	UnauthorizedHandler() func(w http.ResponseWriter, r *http.Request, desc string, state string)
 }
 
-type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
-type UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+type (
+	ErrorHandler        func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
+	UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+)
 
 var DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 	http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 }
+
 var DefaultUnauthorizedHandler UnauthorizedHandler = func(w http.ResponseWriter, r *http.Request, desc string, state string) {
 	http.Error(w, desc, http.StatusUnauthorized)
 }
@@ -188,12 +190,13 @@ func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Re
 	return rp.unauthorizedHandler
 }
 
-func (rp *relyingParty) Logger(ctx context.Context) (logger *slog.Logger, ok bool) {
-	logger, ok = logging.FromContext(ctx)
-	if ok {
-		return logger, ok
+// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
+// Deprecated: configure logging with [slog.SetDefault].
+func (rp *relyingParty) Logger(context.Context) (*slog.Logger, bool) {
+	if rp.logger != nil {
+		return rp.logger, true
 	}
-	return rp.logger, rp.logger != nil
+	return slog.Default(), true
 }
 
 // NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
@@ -255,7 +258,6 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 			return nil, err
 		}
 	}
-	ctx = logCtxWithRPData(ctx, rp, "function", "NewRelyingPartyOIDC")
 	discoveryConfiguration, err := client.Discover(ctx, rp.issuer, rp.httpClient, rp.DiscoveryEndpoint)
 	if err != nil {
 		return nil, err
@@ -390,8 +392,9 @@ func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	}
 }
 
-// WithLogger sets a logger that is used
-// in case the request context does not contain a logger.
+// WithLogger sets the logger returned by [RelyingParty.Logger].
+// OIDC package logging uses the global [slog] default; prefer [slog.SetDefault].
+// Deprecated: use [slog.SetDefault].
 func WithLogger(logger *slog.Logger) Option {
 	return func(rp *relyingParty) error {
 		rp.logger = logger
@@ -531,7 +534,6 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 	ctx, codeExchangeSpan := client.Tracer.Start(ctx, "CodeExchange")
 	defer codeExchangeSpan.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "CodeExchange")
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
@@ -556,7 +558,6 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 //
 // [RFC 6749, section 4.4]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 func ClientCredentials(ctx context.Context, rp RelyingParty, endpointParams url.Values) (token *oauth2.Token, err error) {
-	ctx = logCtxWithRPData(ctx, rp, "function", "ClientCredentials")
 	ctx, span := client.Tracer.Start(ctx, "ClientCredentials")
 	defer span.End()
 
@@ -639,7 +640,7 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 		r = r.WithContext(ctx)
 		defer span.End()
 
-		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.TokenType, tokens.IDTokenClaims.GetSubject(), rp)
+		info, err := Userinfo[U](r.Context(), tokens.AccessToken, tokens.Type(), tokens.IDTokenClaims.GetSubject(), rp)
 		if err != nil {
 			unauthorizedError(w, r, "userinfo failed: "+err.Error(), state, rp)
 			return
@@ -656,7 +657,6 @@ func UserinfoCallback[C oidc.IDClaims, U SubjectGetter](f CodeExchangeUserinfoCa
 // [UserInfo]: https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
 func Userinfo[U SubjectGetter](ctx context.Context, token, tokenType, subject string, rp RelyingParty) (userinfo U, err error) {
 	var nilU U
-	ctx = logCtxWithRPData(ctx, rp, "function", "Userinfo")
 	ctx, span := client.Tracer.Start(ctx, "Userinfo")
 	defer span.End()
 
@@ -816,6 +816,11 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
+// Deprecated: This function is no longer invoked because it violates
+// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+//
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r RefreshTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
@@ -833,17 +838,33 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "RefreshTokens")
+	var authFn httphelper.RequestAuthorization
 	request := RefreshTokenRequest{
-		RefreshToken:        refreshToken,
-		Scopes:              rp.OAuthConfig().Scopes,
-		ClientID:            rp.OAuthConfig().ClientID,
-		ClientSecret:        rp.OAuthConfig().ClientSecret,
-		ClientAssertion:     clientAssertion,
-		ClientAssertionType: clientAssertionType,
-		GrantType:           oidc.GrantTypeRefreshToken,
+		RefreshToken: refreshToken,
+		Scopes:       rp.OAuthConfig().Scopes,
+		GrantType:    oidc.GrantTypeRefreshToken,
 	}
-	newToken, err := client.CallTokenEndpoint(ctx, request, tokenEndpointCaller{RelyingParty: rp})
+
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	switch rp.OAuthConfig().Endpoint.AuthStyle {
+	case oauth2.AuthStyleInHeader:
+		if clientAssertion != "" {
+			return nil, errors.New("client assertion is not supported with AuthStyleInHeader")
+		}
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	default:
+		// use client id and secret in the request body
+		if clientAssertion != "" && clientAssertionType != "" {
+			request.ClientAssertion = clientAssertion
+			request.ClientAssertionType = clientAssertionType
+		} else {
+			request.ClientID = rp.OAuthConfig().ClientID
+			request.ClientSecret = rp.OAuthConfig().ClientSecret
+		}
+	}
+
+	newToken, err := client.CallTokenEndpointWithAuthFn(ctx, request, authFn, tokenEndpointCaller{RelyingParty: rp})
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +878,6 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 }
 
 func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState, optionalLogoutHint string, optionalLocales oidc.Locales) (*url.URL, error) {
-	ctx = logCtxWithRPData(ctx, rp, "function", "EndSession")
 	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
 	defer span.End()
 
@@ -878,17 +898,28 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 //
 // tokenTypeHint should be either "id_token" or "refresh_token".
 func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHint string) error {
-	ctx = logCtxWithRPData(ctx, rp, "function", "RevokeToken")
-	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	ctx, span := client.Tracer.Start(ctx, "RevokeToken")
 	defer span.End()
+
 	request := client.RevokeRequest{
 		Token:         token,
 		TokenTypeHint: tokenTypeHint,
-		ClientID:      rp.OAuthConfig().ClientID,
-		ClientSecret:  rp.OAuthConfig().ClientSecret,
 	}
+	var authFn httphelper.RequestAuthorization
+
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	switch rp.OAuthConfig().Endpoint.AuthStyle {
+	case oauth2.AuthStyleInHeader:
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	default:
+		// use client id and secret in the request body
+		request.ClientID = rp.OAuthConfig().ClientID
+		request.ClientSecret = rp.OAuthConfig().ClientSecret
+	}
+
 	if rc, ok := rp.(client.RevokeCaller); ok && rc.GetRevokeEndpoint() != "" {
-		return client.CallRevokeEndpoint(ctx, request, nil, rc)
+		return client.CallRevokeEndpoint(ctx, request, authFn, rc)
 	}
 	return ErrRelyingPartyNotSupportRevokeCaller
 }

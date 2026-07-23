@@ -23,6 +23,7 @@ type Exchanger interface {
 	GrantTypeDeviceCodeSupported() bool
 	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 }
 
@@ -72,10 +73,10 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 			return
 		}
 	case "":
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), exchanger.Logger())
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), nil)
 		return
 	}
-	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), exchanger.Logger())
+	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), nil)
 }
 
 // AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
@@ -83,6 +84,14 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 type AuthenticatedTokenRequest interface {
 	SetClientID(string)
 	SetClientSecret(string)
+}
+
+// AuthenticatedTokenRequestAuthMethodChecker is a helper interface for IsSetClientAssertion and IsSetClientIDAndClientSecret
+// it is implemented by oidc.AccessTokenRequest and oidc.RefreshTokenRequest
+// implements it can prevent the client from using more than one authentication method in each request
+type AuthenticatedTokenRequestAuthMethodChecker interface {
+	IsSetClientAssertion() bool
+	IsSetClientIDAndClientSecret() bool
 }
 
 // ParseAuthenticatedTokenRequest parses the client_id and client_secret from the HTTP request from either
@@ -100,10 +109,30 @@ func ParseAuthenticatedTokenRequest(r *http.Request, decoder httphelper.Decoder,
 	if err != nil {
 		return oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
-	clientID, clientSecret, ok := r.BasicAuth()
-	if !ok {
-		return nil
+
+	var clientID, clientSecret string
+	if checker, ok := request.(AuthenticatedTokenRequestAuthMethodChecker); ok {
+		// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+		// The client MUST NOT use more than one authentication method in each request.
+		if checker.IsSetClientAssertion() && checker.IsSetClientIDAndClientSecret() {
+			return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+		var ok bool
+		clientID, clientSecret, ok = r.BasicAuth()
+		if !ok {
+			return nil
+		}
+		if checker.IsSetClientAssertion() || checker.IsSetClientIDAndClientSecret() {
+			return oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+	} else {
+		var ok bool
+		clientID, clientSecret, ok = r.BasicAuth()
+		if !ok {
+			return nil
+		}
 	}
+
 	clientID, err = url.QueryUnescape(clientID)
 	if err != nil {
 		return oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)

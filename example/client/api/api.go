@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sirupsen/logrus"
 
 	"github.com/zitadel/oidc/v3/pkg/client/rs"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -30,7 +29,8 @@ func main() {
 
 	provider, err := rs.NewResourceServerFromKeyFile(context.TODO(), issuer, keyPath)
 	if err != nil {
-		logrus.Fatalf("error creating provider %s", err.Error())
+		slog.Error("error creating provider", "error", err)
+		os.Exit(1)
 	}
 
 	router := chi.NewRouter()
@@ -86,8 +86,11 @@ func main() {
 	})
 
 	lis := fmt.Sprintf("127.0.0.1:%s", port)
-	log.Printf("listening on http://%s/", lis)
-	log.Fatal(http.ListenAndServe(lis, router))
+	slog.Info("listening", "url", "http://"+lis+"/")
+	if err := http.ListenAndServe(lis, router); err != nil {
+		slog.Error("server terminated", "error", err)
+		os.Exit(1)
+	}
 }
 
 func checkToken(w http.ResponseWriter, r *http.Request) (bool, string) {

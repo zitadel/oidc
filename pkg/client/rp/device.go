@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/zitadel/oidc/v3/pkg/client"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"golang.org/x/oauth2"
 )
 
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
@@ -36,7 +38,6 @@ func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, 
 	ctx, span := client.Tracer.Start(ctx, "DeviceAuthorization")
 	defer span.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAuthorization")
 	req, err := newDeviceClientCredentialsRequest(scopes, rp)
 	if err != nil {
 		return nil, err
@@ -52,18 +53,34 @@ func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Dur
 	ctx, span := client.Tracer.Start(ctx, "DeviceAccessToken")
 	defer span.End()
 
-	ctx = logCtxWithRPData(ctx, rp, "function", "DeviceAccessToken")
 	req := &client.DeviceAccessTokenRequest{
 		DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{
 			GrantType:  oidc.GrantTypeDeviceCode,
 			DeviceCode: deviceCode,
 		},
+		ClientCredentialsRequest: &oidc.ClientCredentialsRequest{},
 	}
 
-	req.ClientCredentialsRequest, err = newDeviceClientCredentialsRequest(nil, rp)
-	if err != nil {
-		return nil, err
-	}
+	var authFn httphelper.RequestAuthorization
 
-	return client.PollDeviceAccessTokenEndpoint(ctx, interval, req, tokenEndpointCaller{rp})
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	switch rp.OAuthConfig().Endpoint.AuthStyle {
+	case oauth2.AuthStyleInHeader:
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	default:
+		if signer := rp.Signer(); signer != nil {
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, signer)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build assertion: %w", err)
+			}
+			req.ClientAssertion = assertion
+			req.ClientAssertionType = oidc.ClientAssertionTypeJWTAssertion
+		} else {
+			req.ClientID = rp.OAuthConfig().ClientID
+			req.ClientSecret = rp.OAuthConfig().ClientSecret
+		}
+
+	}
+	return client.PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, req, tokenEndpointCaller{rp}, authFn)
 }

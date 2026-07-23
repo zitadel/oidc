@@ -163,7 +163,7 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 	}
 	req, err := s.provider.Storage().CreateAuthRequest(ctx, r.Data, userID)
 	if err != nil {
-		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), s.provider.Logger())
+		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), nil)
 	}
 	return NewRedirect(r.Client.LoginURL(req.GetID())), nil
 }
@@ -234,6 +234,9 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 		if err = AuthorizeCodeChallenge(r.Data.CodeVerifier, authReq.GetCodeChallenge()); err != nil {
 			return nil, err
 		}
+	}
+	if r.Client.GetID() != authReq.GetClientID() {
+		return nil, oidc.ErrInvalidGrant()
 	}
 	if r.Data.RedirectURI != authReq.GetRedirectURI() {
 		return nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
