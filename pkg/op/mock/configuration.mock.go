@@ -455,3 +455,17 @@ func (mr *MockConfigurationMockRecorder) UserinfoEndpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserinfoEndpoint", reflect.TypeOf((*MockConfiguration)(nil).UserinfoEndpoint))
 }
+
+// RegistrationEndpoint mocks base method.
+func (m *MockConfiguration) RegistrationEndpoint() *op.Endpoint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegistrationEndpoint")
+	ret0, _ := ret[0].(*op.Endpoint)
+	return ret0
+}
+
+// RegistrationEndpoint indicates an expected call of RegistrationEndpoint.
+func (mr *MockConfigurationMockRecorder) RegistrationEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegistrationEndpoint", reflect.TypeOf((*MockConfiguration)(nil).RegistrationEndpoint))
+}
