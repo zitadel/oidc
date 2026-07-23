@@ -44,7 +44,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	redirectURI := fmt.Sprintf("http://localhost:%v%v", port, callbackPath)
+	redirectURI := fmt.Sprintf("http://127.0.0.1:%v%v", port, callbackPath)
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 
 	logger := slog.New(

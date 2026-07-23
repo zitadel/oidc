@@ -29,7 +29,7 @@ func main() {
 	rpConfig := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		RedirectURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
+		RedirectURL:  fmt.Sprintf("http://127.0.0.1:%v%v", port, callbackPath),
 		Scopes:       []string{"repo", "repo_deployment"},
 		Endpoint:     githubOAuth.Endpoint,
 	}
