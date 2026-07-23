@@ -32,8 +32,7 @@ func TestDiscover(t *testing.T) {
 				httptest.NewRecorder(),
 				&oidc.DiscoveryConfiguration{Issuer: "https://issuer.com"},
 			},
-			`{"issuer":"https://issuer.com","request_uri_parameter_supported":false}
-`,
+			`{"issuer":"https://issuer.com","request_uri_parameter_supported":false}`,
 		},
 		{
 			"client_id_metadata_document_supported",
@@ -44,8 +43,7 @@ func TestDiscover(t *testing.T) {
 					ClientIDMetadataDocumentSupported: true,
 				},
 			},
-			`{"issuer":"https://issuer.com","client_id_metadata_document_supported":true,"request_uri_parameter_supported":false}
-`,
+			`{"issuer":"https://issuer.com","client_id_metadata_document_supported":true,"request_uri_parameter_supported":false}`,
 		},
 	}
 	for _, tt := range tests {
@@ -53,7 +51,7 @@ func TestDiscover(t *testing.T) {
 			op.Discover(tt.args.w, tt.args.config)
 			rec := tt.args.w.(*httptest.ResponseRecorder)
 			require.Equal(t, http.StatusOK, rec.Code)
-			require.Equal(t, tt.want, rec.Body.String())
+			require.JSONEq(t, tt.want, rec.Body.String())
 		})
 	}
 }
