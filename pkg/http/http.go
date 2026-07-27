@@ -94,8 +94,8 @@ func URLEncodeParams(resp any, encoder Encoder) (url.Values, error) {
 	return values, nil
 }
 
-func StartServer(ctx context.Context, port string) {
-	server := &http.Server{Addr: port}
+func StartServer(ctx context.Context, address string) {
+	server := &http.Server{Addr: address}
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("ListenAndServe(): %v", err)
