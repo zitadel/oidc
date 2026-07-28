@@ -84,10 +84,10 @@ type ISSVerifier func(string) error
 
 // DefaultISSVerifier implements `ISSVerifier` returning an error
 // if the iss claim is set and doesn't match the issuer.
-func DefaultISSVerifier(issuer string) ISSVerifier {
-	return func(iss string) error {
-		if iss != issuer {
-			return fmt.Errorf("%w: expected %q but was %q", ErrIssuerInvalid, issuer, iss)
+func DefaultISSVerifier(expectIssuer string) ISSVerifier {
+	return func(inputIssuer string) error {
+		if inputIssuer != expectIssuer {
+			return fmt.Errorf("%w: expected %q but was %q", ErrIssuerInvalid, expectIssuer, inputIssuer)
 		}
 		return nil
 	}
