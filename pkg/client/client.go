@@ -87,7 +87,7 @@ func callTokenEndpoint(ctx context.Context, request any, authFn any, caller Toke
 		AccessToken:  tokenRes.AccessToken,
 		TokenType:    tokenRes.TokenType,
 		RefreshToken: tokenRes.RefreshToken,
-		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
+		Expiry:       time.Now().UTC().Add(tokenRes.ExpiresIn.AsDuration()),
 	}
 	if tokenRes.IDToken != "" {
 		token = token.WithExtra(map[string]any{
