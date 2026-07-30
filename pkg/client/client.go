@@ -100,7 +100,7 @@ func CallTokenEndpointWithAuthFn(ctx context.Context, request any, authFn any, c
 		AccessToken:  tokenRes.AccessToken,
 		TokenType:    tokenRes.TokenType,
 		RefreshToken: tokenRes.RefreshToken,
-		Expiry:       time.Now().UTC().Add(time.Duration(tokenRes.ExpiresIn) * time.Second),
+		Expiry:       time.Now().UTC().Add(tokenRes.ExpiresIn.AsDuration()),
 	}
 	return token.WithExtra(extra), nil
 }

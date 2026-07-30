@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,6 +19,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
+
+type testTokenEndpointCaller struct {
+	endpoint string
+	client   *http.Client
+}
+
+func (c testTokenEndpointCaller) TokenEndpoint() string    { return c.endpoint }
+func (c testTokenEndpointCaller) HttpClient() *http.Client { return c.client }
 
 func TestDiscover(t *testing.T) {
 	type wantFields struct {
@@ -317,4 +326,35 @@ func TestSignedJWTProfileAssertion_JWTID(t *testing.T) {
 	first, second := jti(), jti()
 	assert.NotEmpty(t, first)
 	assert.NotEqual(t, first, second)
+}
+
+func TestCallTokenEndpointExpiry(t *testing.T) {
+	for _, expiresIn := range []int64{1, 10, 3600, 86401} {
+		t.Run(fmt.Sprintf("%d_seconds", expiresIn), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = fmt.Fprintf(w,
+					`{"access_token":"token","token_type":"Bearer","expires_in":%d}`,
+					expiresIn,
+				)
+			}))
+			defer server.Close()
+
+			caller := testTokenEndpointCaller{
+				endpoint: server.URL,
+				client:   server.Client(),
+			}
+
+			before := time.Now().UTC().Unix()
+			token, err := CallTokenEndpoint(context.Background(), struct{}{}, caller)
+			require.NoError(t, err)
+			after := time.Now().UTC().Unix()
+			tokenExp := token.Expiry.Unix()
+
+			// To prevent test failures where a second ticks just after we measure time.Now
+			// we check (before+expiresIn) <= tokenExp <= (after+expiresIn)
+			require.GreaterOrEqual(t, tokenExp, before+expiresIn)
+			require.LessOrEqual(t, tokenExp, after+expiresIn)
+		})
+	}
 }
