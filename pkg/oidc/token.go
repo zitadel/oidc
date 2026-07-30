@@ -147,7 +147,15 @@ type IDTokenClaims struct {
 	UserInfoEmail
 	UserInfoPhone
 	Address *UserInfoAddress `json:"address,omitempty"`
-	Claims  map[string]any   `json:"-"`
+
+	// Confirmation carries the `cnf` claim for a key-bound ID Token, as
+	// defined by OpenID Connect Key Binding 1.0, Section 4. It is nil for
+	// bearer (unbound) ID Tokens.
+	//
+	// EXPERIMENTAL: may change until v4
+	Confirmation *Confirmation `json:"cnf,omitempty"`
+
+	Claims map[string]any `json:"-"`
 }
 
 // GetAccessTokenHash implements the IDTokenClaims interface

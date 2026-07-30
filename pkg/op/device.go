@@ -98,7 +98,29 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	}
 
 	expires := time.Now().Add(config.Lifetime)
-	err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
+	boundStorage, keyBindingIntegrated := storage.(BoundKeyDeviceAuthorizationStorage)
+	if req.DPoPJKT != "" && !keyBindingIntegrated {
+		// The storage has not integrated key binding on this flow, so there is
+		// nowhere to persist the thumbprint. Ignore the binding entirely rather
+		// than erroring, matching how the code flow treats a storage that does
+		// not implement BoundKeyRequest (Key Binding 1.0, Section 2.1).
+		//
+		// The `bound_key` scope has to be dropped along with dpop_jkt, not just
+		// the latter: DeviceAuthorizationState always implements BoundKeyRequest,
+		// so a retained scope with an empty thumbprint would look like a lost
+		// binding and fail closed at the token endpoint. Dropping both makes this
+		// an ordinary unbound request. A key-binding RP still fails closed, since
+		// it rejects an ID Token that lacks the expected `typ` and `cnf`.
+		req.DPoPJKT = ""
+		req.Scopes = slices.DeleteFunc(req.Scopes, func(scope string) bool {
+			return scope == oidc.ScopeBoundKey
+		})
+	}
+	if req.DPoPJKT != "" {
+		err = boundStorage.StoreBoundKeyDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes, req.DPoPJKT)
+	} else {
+		err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
+	}
 	if err != nil {
 		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
@@ -153,7 +175,46 @@ func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuth
 	}
 	req.ClientID = clientID
 
+	if err := ValidateDeviceAuthReqBoundKey(req, client); err != nil {
+		return nil, err
+	}
+
 	return req, nil
+}
+
+// ValidateDeviceAuthReqBoundKey validates the pairing of the `bound_key` scope
+// and the `dpop_jkt` parameter on a Device Authorization Request, as required by
+// OpenID Connect Key Binding 1.0, Section 3.1.
+//
+// `bound_key` is stripped when the client is not allowed to use it, mirroring
+// how [ValidateAuthReqScopes] gates extension scopes on the code flow. If the
+// remaining scopes do not contain `bound_key`, any dpop_jkt is cleared and
+// ignored without error, since dpop_jkt is also a valid [RFC 9449, Section 10]
+// parameter for plain access-token DPoP binding.
+//
+// EXPERIMENTAL: may change until v4
+//
+// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
+func ValidateDeviceAuthReqBoundKey(req *oidc.DeviceAuthorizationRequest, client Client) error {
+	if slices.Contains(req.Scopes, oidc.ScopeBoundKey) && !client.IsScopeAllowed(oidc.ScopeBoundKey) {
+		req.Scopes = slices.DeleteFunc(req.Scopes, func(scope string) bool {
+			return scope == oidc.ScopeBoundKey
+		})
+	}
+	if !slices.Contains(req.Scopes, oidc.ScopeBoundKey) {
+		req.DPoPJKT = ""
+		return nil
+	}
+	if !slices.Contains(req.Scopes, oidc.ScopeOpenID) {
+		return oidc.ErrInvalidRequest().WithDescription("scope openid is required for bound_key")
+	}
+	if req.DPoPJKT == "" {
+		return oidc.ErrInvalidRequest().WithDescription("dpop_jkt is required for bound_key")
+	}
+	if !oidc.ValidDPoPJKT(req.DPoPJKT) {
+		return oidc.ErrInvalidRequest().WithDescription("dpop_jkt must be a base64url-encoded SHA-256 JWK thumbprint")
+	}
+	return nil
 }
 
 // 16 bytes gives 128 bit of entropy.
@@ -237,7 +298,14 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 			WithDescription("confidential client requires authentication")
 	}
 
-	resp, err := CreateDeviceTokenResponse(r.Context(), tokenRequest, exchanger, client)
+	// OpenID Connect Key Binding 1.0, Section 3.3: the proof is bound to the
+	// device code rather than an authorization code.
+	confirmation, err := verifyProviderBoundKey(r.Context(), r.Header, r.Method, tokenRequest, req.DeviceCode, exchanger)
+	if err != nil {
+		return err
+	}
+
+	resp, err := createDeviceTokenResponse(r.Context(), tokenRequest, exchanger, client, confirmation)
 	if err != nil {
 		return err
 	}
@@ -265,10 +333,24 @@ type DeviceAuthorizationState struct {
 	Done     bool      // The user authenticated and approved the authorization request
 	Denied   bool      // The user authenticated and denied the authorization request
 
+	// DPoPJKT is the dpop_jkt thumbprint committed to by the Device
+	// Authorization Request, empty when the flow is not key-bound. It makes
+	// DeviceAuthorizationState implement [BoundKeyRequest].
+	//
+	// EXPERIMENTAL: may change until v4
+	DPoPJKT string
+
 	// The following fields are populated after Done == true
 	Subject  string
 	AMR      []string
 	AuthTime time.Time
+}
+
+// GetDPoPJKT implements [BoundKeyRequest].
+//
+// EXPERIMENTAL: may change until v4
+func (r *DeviceAuthorizationState) GetDPoPJKT() string {
+	return r.DPoPJKT
 }
 
 func (r *DeviceAuthorizationState) GetAMR() []string {
@@ -327,6 +409,10 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
+	return createDeviceTokenResponse(ctx, tokenRequest, creator, client, nil)
+}
+
+func createDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client, confirmation *oidc.Confirmation) (*oidc.AccessTokenResponse, error) {
 	/* TODO(v4):
 	Change the TokenRequest argument type to *DeviceAuthorizationState.
 	Breaking change that can not be done for v3.
@@ -349,7 +435,7 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 
 	// TODO(v4): remove type assertion
 	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
-		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
+		response.IDToken, err = createIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client, confirmation)
 		if err != nil {
 			return nil, err
 		}

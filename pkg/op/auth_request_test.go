@@ -404,6 +404,74 @@ func TestValidateAuthReqScopes(t *testing.T) {
 	}
 }
 
+func TestValidateAuthReqBoundKey(t *testing.T) {
+	const validJKT = "dnfb1T9jil_gOhti60baHs_WD_a4D8JN9VDJXbmBmGw"
+	tests := []struct {
+		name      string
+		request   *oidc.AuthRequest
+		wantError bool
+		wantJKT   string
+	}{
+		{
+			name:    "unbound request",
+			request: &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID}},
+		},
+		{
+			name:    "dpop_jkt without bound_key is ignored",
+			request: &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID}, DPoPJKT: validJKT},
+		},
+		{
+			name:      "bound_key requires dpop_jkt",
+			request:   &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}},
+			wantError: true,
+		},
+		{
+			name:      "bound_key requires openid",
+			request:   &oidc.AuthRequest{Scopes: []string{oidc.ScopeBoundKey}, ResponseType: oidc.ResponseTypeCode, DPoPJKT: validJKT},
+			wantError: true,
+			wantJKT:   validJKT,
+		},
+		{
+			name:      "bound_key rejects malformed dpop_jkt",
+			request:   &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}, DPoPJKT: "invalid"},
+			wantError: true,
+			wantJKT:   "invalid",
+		},
+		{
+			name:    "bound request",
+			request: &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}, ResponseType: oidc.ResponseTypeCode, DPoPJKT: validJKT},
+			wantJKT: validJKT,
+		},
+		{
+			name:      "bound request rejects implicit flow",
+			request:   &oidc.AuthRequest{Scopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}, ResponseType: oidc.ResponseTypeIDTokenOnly, DPoPJKT: validJKT},
+			wantError: true,
+			wantJKT:   validJKT,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := op.ValidateAuthReqBoundKey(tt.request)
+			if tt.wantError {
+				require.ErrorIs(t, err, oidc.ErrInvalidRequest())
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantJKT, tt.request.DPoPJKT)
+		})
+	}
+}
+
+func TestCopyRequestObjectToAuthRequest_DPoPJKT(t *testing.T) {
+	const jkt = "dnfb1T9jil_gOhti60baHs_WD_a4D8JN9VDJXbmBmGw"
+	authReq := &oidc.AuthRequest{RequestParam: "request-object"}
+
+	op.CopyRequestObjectToAuthRequest(authReq, &oidc.RequestObject{AuthRequest: oidc.AuthRequest{DPoPJKT: jkt}})
+
+	assert.Equal(t, jkt, authReq.DPoPJKT)
+	assert.Empty(t, authReq.RequestParam)
+}
+
 func TestValidateAuthReqRedirectURI(t *testing.T) {
 	type args struct {
 		uri          string

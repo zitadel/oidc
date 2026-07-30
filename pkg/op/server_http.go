@@ -234,6 +234,9 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return nil, err
 	}
+	if err := ValidateAuthReqBoundKey(authReq); err != nil {
+		return nil, err
+	}
 	if err := ValidateAuthReqResponseType(cr.Client, authReq.ResponseType); err != nil {
 		return nil, err
 	}

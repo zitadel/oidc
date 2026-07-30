@@ -241,7 +241,11 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 	if r.Data.RedirectURI != authReq.GetRedirectURI() {
 		return nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
 	}
-	resp, err := CreateTokenResponse(ctx, authReq, r.Client, s.provider, true, r.Data.Code, "")
+	confirmation, err := verifyBoundKey(r.Header, r.Method, s.endpoints.Token.Absolute(IssuerFromContext(ctx)), authReq, r.Data.Code)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := createTokenResponse(ctx, authReq, r.Client, s.provider, true, r.Data.Code, "", confirmation)
 	if err != nil {
 		return nil, err
 	}
@@ -262,10 +266,17 @@ func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.R
 	if r.Client.GetID() != request.GetClientID() {
 		return nil, oidc.ErrInvalidGrant()
 	}
-	if err = ValidateRefreshTokenScopes(r.Data.Scopes, request); err != nil {
+	if err = validateRefreshTokenScopes(r.Data.Scopes, request); err != nil {
 		return nil, err
 	}
-	resp, err := CreateTokenResponse(ctx, request, r.Client, s.provider, true, "", r.Data.RefreshToken)
+	confirmation, err := verifyBoundKey(r.Header, r.Method, s.endpoints.Token.Absolute(IssuerFromContext(ctx)), request, "")
+	if err != nil {
+		return nil, err
+	}
+	if len(r.Data.Scopes) > 0 {
+		request.SetCurrentScopes(r.Data.Scopes)
+	}
+	resp, err := createTokenResponse(ctx, request, r.Client, s.provider, true, "", r.Data.RefreshToken, confirmation)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +360,13 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	if err != nil {
 		return nil, err
 	}
-	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)
+	// OpenID Connect Key Binding 1.0, Section 3.3: the proof is bound to the
+	// device code rather than an authorization code.
+	confirmation, err := verifyBoundKey(r.Header, r.Method, s.endpoints.Token.Absolute(IssuerFromContext(ctx)), tokenRequest, r.Data.DeviceCode)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := createDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client, confirmation)
 	if err != nil {
 		return nil, err
 	}

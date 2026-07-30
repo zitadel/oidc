@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/golang/mock/gomock"
@@ -77,6 +78,16 @@ func TestCreateDiscoveryConfig(t *testing.T) {
 	}
 }
 
+// scopeConfiguration is a minimal op.Configuration that is not a *op.Provider,
+// used to verify that Scopes() honours any implementation advertising scopes.
+// Only ScopesSupported is exercised, so the embedded interface stays nil.
+type scopeConfiguration struct {
+	op.Configuration
+	scopes []string
+}
+
+func (c scopeConfiguration) ScopesSupported() []string { return c.scopes }
+
 func Test_scopes(t *testing.T) {
 	type args struct {
 		c op.Configuration
@@ -96,6 +107,23 @@ func Test_scopes(t *testing.T) {
 			args{newTestProvider(&op.Config{SupportedScopes: []string{"test1", "test2"}})},
 			[]string{"test1", "test2"},
 		},
+		{
+			// A Configuration advertising no scopes must fall back to the
+			// defaults rather than an empty scopes_supported.
+			"empty custom scopes",
+			args{newTestProvider(&op.Config{SupportedScopes: []string{}})},
+			op.DefaultSupportedScopes,
+		},
+		{
+			"non-provider configuration advertising scopes",
+			args{scopeConfiguration{scopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}}},
+			[]string{oidc.ScopeOpenID, oidc.ScopeBoundKey},
+		},
+		{
+			"non-provider configuration advertising no scopes",
+			args{scopeConfiguration{}},
+			op.DefaultSupportedScopes,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -103,6 +131,15 @@ func Test_scopes(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestDPoPSigningAlgorithms(t *testing.T) {
+	assert.Nil(t, op.DPoPSigningAlgorithms(newTestProvider(&op.Config{})))
+	assert.Equal(t,
+		op.DPoPSigAlgorithms(op.DefaultDPoPSigningAlgs),
+		op.DPoPSigningAlgorithms(newTestProvider(&op.Config{SupportedScopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}})),
+	)
+	assert.Empty(t, op.DPoPSigAlgorithms([]jose.SignatureAlgorithm{jose.HS256}))
 }
 
 func Test_ResponseTypes(t *testing.T) {
@@ -630,4 +667,100 @@ func Test_CodeChallengeMethods(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// nonDeviceStorage is an op.Storage that does not support the device_code grant,
+// so WithKeyBinding has no device storage requirement to enforce.
+type nonDeviceStorage struct{ op.Storage }
+
+// deviceStorageWithoutBoundKey supports device_code but has not implemented the
+// key-binding extension, which WithKeyBinding must reject at construction.
+type deviceStorageWithoutBoundKey struct{ op.Storage }
+
+func (deviceStorageWithoutBoundKey) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	return nil
+}
+
+func (deviceStorageWithoutBoundKey) GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*op.DeviceAuthorizationState, error) {
+	return nil, nil
+}
+
+type deviceStorageWithBoundKey struct{ deviceStorageWithoutBoundKey }
+
+func (deviceStorageWithBoundKey) StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
+	return nil
+}
+
+// TestWithKeyBinding covers the provider option: it must make discovery
+// advertise the feature, must not mutate the caller's Config, and must reject a
+// device-capable storage that cannot persist dpop_jkt.
+func TestWithKeyBinding(t *testing.T) {
+	newProvider := func(t *testing.T, config *op.Config, storage op.Storage, opts ...op.Option) (*op.Provider, error) {
+		t.Helper()
+		return op.NewOpenIDProvider(testIssuer, config, storage,
+			append([]op.Option{op.WithAllowInsecure()}, opts...)...)
+	}
+
+	t.Run("advertises bound_key and DPoP algorithms", func(t *testing.T) {
+		config := &op.Config{CryptoKey: testConfig.CryptoKey}
+		provider, err := newProvider(t, config, nonDeviceStorage{}, op.WithKeyBinding())
+		require.NoError(t, err)
+
+		assert.Contains(t, provider.ScopesSupported(), oidc.ScopeBoundKey)
+		assert.Equal(t, op.DPoPSigAlgorithms(nil), op.DPoPSigningAlgorithms(provider))
+		// The caller's Config must be left alone.
+		assert.Nil(t, config.SupportedScopes)
+	})
+
+	t.Run("disabled by default", func(t *testing.T) {
+		provider, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, nonDeviceStorage{})
+		require.NoError(t, err)
+
+		assert.NotContains(t, provider.ScopesSupported(), oidc.ScopeBoundKey)
+		assert.Empty(t, op.DPoPSigningAlgorithms(provider))
+	})
+
+	t.Run("appends to custom scopes without duplicating", func(t *testing.T) {
+		provider, err := newProvider(t,
+			&op.Config{CryptoKey: testConfig.CryptoKey, SupportedScopes: []string{oidc.ScopeOpenID}},
+			nonDeviceStorage{}, op.WithKeyBinding())
+		require.NoError(t, err)
+		assert.Equal(t, []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}, provider.ScopesSupported())
+
+		// Already advertised explicitly: must not be added twice.
+		provider, err = newProvider(t,
+			&op.Config{CryptoKey: testConfig.CryptoKey, SupportedScopes: []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}},
+			nonDeviceStorage{}, op.WithKeyBinding())
+		require.NoError(t, err)
+		assert.Equal(t, []string{oidc.ScopeOpenID, oidc.ScopeBoundKey}, provider.ScopesSupported())
+	})
+
+	t.Run("option order does not matter", func(t *testing.T) {
+		first, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, nonDeviceStorage{},
+			op.WithKeyBinding(), op.WithCustomAuthEndpoint(op.NewEndpoint("auth")))
+		require.NoError(t, err)
+		second, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, nonDeviceStorage{},
+			op.WithCustomAuthEndpoint(op.NewEndpoint("auth")), op.WithKeyBinding())
+		require.NoError(t, err)
+		assert.Equal(t, first.ScopesSupported(), second.ScopesSupported())
+	})
+
+	t.Run("device storage without bound key support is rejected at construction", func(t *testing.T) {
+		_, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey},
+			deviceStorageWithoutBoundKey{}, op.WithKeyBinding())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "BoundKeyDeviceAuthorizationStorage")
+	})
+
+	t.Run("device storage with bound key support is accepted", func(t *testing.T) {
+		provider, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey},
+			deviceStorageWithBoundKey{}, op.WithKeyBinding())
+		require.NoError(t, err)
+		assert.Contains(t, provider.ScopesSupported(), oidc.ScopeBoundKey)
+	})
+
+	t.Run("device storage without bound key support is fine when not enabled", func(t *testing.T) {
+		_, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, deviceStorageWithoutBoundKey{})
+		require.NoError(t, err)
+	})
 }

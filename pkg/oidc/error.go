@@ -33,6 +33,14 @@ const (
 	// the requested target or audience is invalid.
 	// [RFC 8693, Section 2.2.2: Error Response](https://www.rfc-editor.org/rfc/rfc8693#section-2.2.2)
 	InvalidTarget errorType = "invalid_target"
+
+	// InvalidDPoPProof error is returned by the token endpoint when the
+	// DPoP header is missing, malformed, or otherwise fails the checks
+	// defined in [RFC 9449, Section 4.3] or OpenID Connect Key Binding 1.0.
+	// [RFC 9449, Section 12.2: OAuth Extensions Error Registration](https://www.rfc-editor.org/rfc/rfc9449#section-12.2)
+	//
+	// EXPERIMENTAL: may change until v4
+	InvalidDPoPProof errorType = "invalid_dpop_proof"
 )
 
 var (
@@ -124,6 +132,16 @@ var (
 		return &Error{
 			ErrorType:   InvalidTarget,
 			Description: "The requested audience or target is invalid.",
+		}
+	}
+
+	// ErrInvalidDPoPProof is returned by the token endpoint when the DPoP
+	// proof JWT fails validation.
+	//
+	// EXPERIMENTAL: may change until v4
+	ErrInvalidDPoPProof = func() *Error {
+		return &Error{
+			ErrorType: InvalidDPoPProof,
 		}
 	}
 )

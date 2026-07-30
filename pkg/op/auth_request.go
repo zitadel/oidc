@@ -45,6 +45,17 @@ type AuthRequestSessionState interface {
 	GetSessionState() string
 }
 
+// BoundKeyRequest should be implemented by persisted authorization and
+// refresh-token requests that support OpenID Connect Key Binding.
+//
+// EXPERIMENTAL: may change until v4
+type BoundKeyRequest interface {
+	// GetDPoPJKT returns the dpop_jkt value committed to by the
+	// Authentication Request, or an empty string if the request did not
+	// request a key-bound ID Token.
+	GetDPoPJKT() string
+}
+
 type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
@@ -110,6 +121,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	}
 
 	var client Client
+	customValidation := false
 	validation := func(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
 		client, err = authorizer.Storage().GetClientByClientID(ctx, authReq.ClientID)
 		if err != nil {
@@ -119,6 +131,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 	}
 	if validator, ok := authorizer.(AuthorizeValidator); ok {
 		validation = validator.ValidateAuthRequest
+		customValidation = true
 	}
 	userID, err := validation(ctx, authReq, authorizer.Storage(), authorizer.IDTokenHintVerifier(ctx))
 	if err != nil {
@@ -139,6 +152,21 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			// The library cannot assume the custom validator verified the redirect_uri
 			// against the client, so disable the error redirect to avoid an open redirect.
 			AuthRequestError(w, r, authReq, oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err), authorizer)
+			return
+		}
+	}
+	if customValidation && (authReq.DPoPJKT != "" || slices.Contains(authReq.Scopes, oidc.ScopeBoundKey)) {
+		if err = ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType); err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
+		authReq.Scopes, err = ValidateAuthReqScopes(client, authReq.Scopes)
+		if err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
+		if err = ValidateAuthReqBoundKey(authReq); err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
 			return
 		}
 	}
@@ -238,6 +266,9 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 	if requestObject.CodeChallengeMethod != "" {
 		authReq.CodeChallengeMethod = requestObject.CodeChallengeMethod
 	}
+	if requestObject.DPoPJKT != "" {
+		authReq.DPoPJKT = requestObject.DPoPJKT
+	}
 	authReq.RequestParam = ""
 }
 
@@ -272,6 +303,9 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err != nil {
 		return "", err
 	}
+	if err := ValidateAuthReqBoundKey(authReq); err != nil {
+		return "", err
+	}
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
@@ -293,6 +327,12 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 
 // ValidateAuthReqScopes validates the passed scopes and deletes any unsupported scopes.
 // An error is returned if scopes is empty.
+//
+// The standard OpenID Connect scopes listed below are always kept, without
+// consulting the client. Every other scope, including extension scopes such as
+// `bound_key`, is kept only if client.IsScopeAllowed reports it as allowed.
+// So a client that must not use key binding simply has `bound_key` stripped
+// here, and [ValidateAuthReqBoundKey] then treats the request as unbound.
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	if len(scopes) == 0 {
 		return nil, oidc.ErrInvalidRequest().
@@ -309,6 +349,46 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 			!client.IsScopeAllowed(scope)
 	})
 	return scopes, nil
+}
+
+// ValidateAuthReqBoundKey validates the pairing of the `bound_key` scope
+// and the `dpop_jkt` parameter, as required by OpenID Connect Key Binding
+// 1.0, Section 2.1.
+//
+// It must only be called after the client's requested scopes have already
+// been filtered by [ValidateAuthReqScopes] (so that a `bound_key` scope
+// the client is not allowed to request has already been stripped), and
+// after the redirect_uri has already been validated, since it returns an
+// [oidc.Error] that redirects to authReq.RedirectURI.
+//
+// If the (possibly filtered) scopes do not contain `bound_key`, any
+// dpop_jkt value is cleared and ignored without error: per the
+// specification, an OP (or client) that does not support key binding
+// SHOULD simply ignore the parameter, since dpop_jkt is also a valid
+// [RFC 9449, Section 10] parameter for plain access-token DPoP binding,
+// unrelated to key binding.
+//
+// EXPERIMENTAL: may change until v4
+//
+// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
+func ValidateAuthReqBoundKey(authReq *oidc.AuthRequest) error {
+	if !slices.Contains(authReq.Scopes, oidc.ScopeBoundKey) {
+		authReq.DPoPJKT = ""
+		return nil
+	}
+	if !slices.Contains(authReq.Scopes, oidc.ScopeOpenID) {
+		return oidc.ErrInvalidRequest().WithDescription("openid is required when the bound_key scope is requested")
+	}
+	if authReq.DPoPJKT == "" {
+		return oidc.ErrInvalidRequest().WithDescription("dpop_jkt is required when the bound_key scope is requested")
+	}
+	if !oidc.ValidDPoPJKT(authReq.DPoPJKT) {
+		return oidc.ErrInvalidRequest().WithDescription("dpop_jkt is not a valid JWK SHA-256 thumbprint")
+	}
+	if authReq.ResponseType != oidc.ResponseTypeCode {
+		return oidc.ErrInvalidRequest().WithDescription("bound_key is only supported with the authorization code flow")
+	}
+	return nil
 }
 
 // checkURIAgainstRedirects just checks against the valid redirect URIs and ignores

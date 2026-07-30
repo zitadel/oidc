@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	jose "github.com/go-jose/go-jose/v4"
 
@@ -60,6 +61,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
 		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		DPoPSigningAlgValuesSupported:                      DPoPSigningAlgorithms(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
@@ -93,6 +95,7 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
 		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		DPoPSigningAlgValuesSupported:                      DPoPSigningAlgorithms(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
@@ -101,11 +104,27 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 }
 
 func Scopes(c Configuration) []string {
-	provider, ok := c.(*Provider)
-	if ok && provider.config.SupportedScopes != nil {
-		return provider.config.SupportedScopes
+	// Any Configuration may advertise its own scopes, not just *Provider,
+	// so that DPoPSigningAlgorithms and discovery agree on whether
+	// key binding is enabled.
+	if provider, ok := c.(interface{ ScopesSupported() []string }); ok {
+		if scopes := provider.ScopesSupported(); len(scopes) > 0 {
+			return scopes
+		}
 	}
 	return DefaultSupportedScopes
+}
+
+// DPoPSigningAlgorithms returns the dpop_signing_alg_values_supported
+// discovery metadata. It is empty unless the OP advertises the `bound_key`
+// scope, since key binding is the only DPoP feature implemented.
+//
+// EXPERIMENTAL: may change until v4
+func DPoPSigningAlgorithms(c Configuration) []string {
+	if !slices.Contains(Scopes(c), oidc.ScopeBoundKey) {
+		return nil
+	}
+	return DPoPSigAlgorithms(nil)
 }
 
 func ResponseTypes(c Configuration) []string {

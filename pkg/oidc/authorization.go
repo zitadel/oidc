@@ -87,6 +87,16 @@ type AuthRequest struct {
 	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
 
+	// DPoPJKT is the `dpop_jkt` parameter defined by OpenID Connect Key
+	// Binding 1.0 / [RFC 9449, Section 10]. It carries the RFC 7638 JWK
+	// SHA-256 Thumbprint of the RP's proof-of-possession public key and,
+	// together with the `bound_key` scope, requests a key-bound ID Token.
+	//
+	// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
+	//
+	// EXPERIMENTAL: may change until v4
+	DPoPJKT string `json:"dpop_jkt,omitempty" schema:"dpop_jkt"`
+
 	// RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)
 	RequestParam string `schema:"request"`
 }

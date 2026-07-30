@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -79,6 +80,7 @@ var (
 			"Accept-Language",
 			"Authorization",
 			"Content-Type",
+			oidc.DPoPHeader,
 			"X-Requested-With",
 		},
 		AllowedMethods: []string{
@@ -314,6 +316,7 @@ type Provider struct {
 	accessTokenVerifierOpts []AccessTokenVerifierOpt
 	idTokenHintVerifierOpts []IDTokenHintVerifierOpt
 	corsOpts                *cors.Options
+	keyBinding              bool
 }
 
 func (o *Provider) IssuerFromRequest(r *http.Request) string {
@@ -427,6 +430,20 @@ func (o *Provider) SupportedUILocales() []language.Tag {
 	return o.config.SupportedUILocales
 }
 
+// ScopesSupported returns the scopes advertised by discovery.
+func (o *Provider) ScopesSupported() []string {
+	scopes := DefaultSupportedScopes
+	if o.config.SupportedScopes != nil {
+		scopes = o.config.SupportedScopes
+	}
+	// Added here rather than by mutating config.SupportedScopes, so the option
+	// is order-independent and the caller's Config is left untouched.
+	if o.keyBinding && !slices.Contains(scopes, oidc.ScopeBoundKey) {
+		scopes = slices.Concat(scopes, []string{oidc.ScopeBoundKey})
+	}
+	return scopes
+}
+
 func (o *Provider) DeviceAuthorization() DeviceAuthorizationConfig {
 	return o.config.DeviceAuthorization
 }
@@ -518,6 +535,34 @@ type Option func(o *Provider) error
 func WithAllowInsecure() Option {
 	return func(o *Provider) error {
 		o.insecure = true
+		return nil
+	}
+}
+
+// WithKeyBinding enables OpenID Connect Key Binding 1.0 on the provider.
+//
+// It advertises the `bound_key` scope in `scopes_supported` and populates
+// `dpop_signing_alg_values_supported`, so discovery reflects what the OP does.
+// If the storage supports the device_code grant it must also implement
+// [BoundKeyDeviceAuthorizationStorage]; that is checked here so a misconfigured
+// OP fails at construction instead of returning errors at the token endpoint.
+//
+// Note that this option controls advertisement and start-up validation, not
+// whether the code and refresh flows will honour a binding. Those are driven by
+// the storage: an authorization or refresh request that implements
+// [BoundKeyRequest] is treated as key-bound, and one that does not causes
+// `bound_key` to be ignored. Whether an individual client may use `bound_key` at
+// all remains subject to Client.IsScopeAllowed.
+//
+// EXPERIMENTAL: may change until v4
+func WithKeyBinding() Option {
+	return func(o *Provider) error {
+		if o.GrantTypeDeviceCodeSupported() {
+			if _, ok := o.storage.(BoundKeyDeviceAuthorizationStorage); !ok {
+				return fmt.Errorf("op: key binding with the device_code grant requires the storage to implement BoundKeyDeviceAuthorizationStorage")
+			}
+		}
+		o.keyBinding = true
 		return nil
 	}
 }
