@@ -202,6 +202,32 @@ type DeviceAuthorizationStorage interface {
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
 }
 
+// BoundKeyDeviceAuthorizationStorage is an optional extension of
+// [DeviceAuthorizationStorage] for OPs that support OpenID Connect Key Binding
+// on the Device Authorization flow.
+//
+// It is separate because StoreDeviceAuthorization cannot gain a parameter without
+// breaking every existing implementation.
+//
+// Implementing this enables key binding on the device flow, as [BoundKeyRequest]
+// does for the code and refresh flows. A storage without it cannot persist
+// dpop_jkt, so `bound_key` and dpop_jkt are ignored and an unbound token is
+// issued; [WithKeyBinding] rejects such a storage at construction.
+//
+// EXPERIMENTAL: may change until v4
+type BoundKeyDeviceAuthorizationStorage interface {
+	DeviceAuthorizationStorage
+
+	// StoreBoundKeyDeviceAuthorization behaves like StoreDeviceAuthorization,
+	// and additionally persists the dpop_jkt thumbprint committed to by the
+	// Device Authorization Request. The stored value must be returned from
+	// DeviceAuthorizationState.DPoPJKT by GetDeviceAuthorizatonState.
+	//
+	// dpopJKT is never empty; requests without key binding continue to go
+	// through StoreDeviceAuthorization.
+	StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error
+}
+
 func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 	storage, ok := s.(DeviceAuthorizationStorage)
 	if !ok {

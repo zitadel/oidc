@@ -153,6 +153,8 @@ func newOP(
 			op.WithAllowInsecure(),
 			// as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 			op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
+			// enable OpenID Connect Key Binding (advertises the bound_key scope)
+			op.WithKeyBinding(),
 		}, extraOptions...)...,
 	)
 	if err != nil {

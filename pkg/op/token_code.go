@@ -29,7 +29,12 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		RequestError(w, r, err, nil)
 		return
 	}
-	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code, "")
+	confirmation, err := verifyProviderBoundKey(r.Context(), r.Header, r.Method, authReq, tokenReq.Code, exchanger)
+	if err != nil {
+		RequestError(w, r, err, nil)
+		return
+	}
+	resp, err := createTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code, "", confirmation)
 	if err != nil {
 		RequestError(w, r, err, nil)
 		return

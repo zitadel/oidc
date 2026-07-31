@@ -119,13 +119,10 @@ func CanonicalJWK(jwk *jose.JSONWebKey) (json.RawMessage, error) {
 }
 
 // ValidateDPoPKeyStrength enforces minimum key strength for a DPoP
-// proof-of-possession key: RSA keys must be 2048-8192 bits and EC keys must use
-// curve P-256, P-384 or P-521. Ed25519 keys are always allowed, as their
-// strength is fixed. Any other key type is accepted here; callers are expected
-// to have already restricted the key to a public asymmetric type.
-//
-// Shared by the OP (validating a received proof) and the RP (validating its own
-// configured binding key) so the two cannot drift apart.
+// proof-of-possession key: RSA 2048-8192 bits, EC curve P-256, P-384 or P-521,
+// and Ed25519 (fixed strength). Other key types pass; callers are expected to
+// have already restricted the key to a public asymmetric type. Shared by the OP
+// and RP so the two cannot drift apart.
 //
 // EXPERIMENTAL: may change until v4
 func ValidateDPoPKeyStrength(key any) error {

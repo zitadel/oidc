@@ -280,7 +280,7 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 	}
 
 	// get the information depending on the request type / implementation
-	applicationID, authTime, amr := getInfoFromRequest(request)
+	applicationID, authTime, amr, dpopJKT := getInfoFromRequest(request)
 
 	// if currentRefreshToken is empty (Code Flow) we will have to create a new refresh token
 	if currentRefreshToken == "" {
@@ -289,7 +289,7 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 		if err != nil {
 			return "", "", time.Time{}, err
 		}
-		refreshToken, err := s.createRefreshToken(accessToken, amr, authTime)
+		refreshToken, err := s.createRefreshToken(accessToken, amr, authTime, dpopJKT)
 		if err != nil {
 			return "", "", time.Time{}, err
 		}
@@ -323,7 +323,7 @@ func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExch
 		return "", "", time.Time{}, err
 	}
 
-	refreshToken, err := s.createRefreshToken(accessToken, nil, authTime)
+	refreshToken, err := s.createRefreshToken(accessToken, nil, authTime, "")
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
@@ -591,7 +591,7 @@ func (s *Storage) Health(ctx context.Context) error {
 }
 
 // createRefreshToken will store a refresh_token in-memory based on the provided information
-func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime time.Time) (string, error) {
+func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime time.Time, dpopJKT string) (string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	token := &RefreshToken{
@@ -604,6 +604,7 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 		Audience:      accessToken.Audience,
 		Expiration:    time.Now().Add(5 * time.Hour),
 		Scopes:        accessToken.Scopes,
+		DPoPJKT:       dpopJKT,
 		AccessToken:   accessToken.ID,
 	}
 	s.refreshTokens[token.ID] = token
@@ -786,16 +787,20 @@ func (s *Storage) getTokenExchangeClaims(ctx context.Context, request op.TokenEx
 }
 
 // getInfoFromRequest returns the clientID, authTime and amr depending on the op.TokenRequest type / implementation
-func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Time, amr []string) {
+func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Time, amr []string, dpopJKT string) {
 	authReq, ok := req.(*AuthRequest) // Code Flow (with scope offline_access)
 	if ok {
-		return authReq.ApplicationID, authReq.authTime, authReq.GetAMR()
+		return authReq.ApplicationID, authReq.authTime, authReq.GetAMR(), authReq.DPoPJKT
 	}
 	refreshReq, ok := req.(*RefreshTokenRequest) // Refresh Token Request
 	if ok {
-		return refreshReq.ApplicationID, refreshReq.AuthTime, refreshReq.AMR
+		return refreshReq.ApplicationID, refreshReq.AuthTime, refreshReq.AMR, refreshReq.DPoPJKT
 	}
-	return "", time.Time{}, nil
+	deviceReq, ok := req.(*op.DeviceAuthorizationState) // Device Authorization Flow
+	if ok {
+		return deviceReq.ClientID, deviceReq.AuthTime, deviceReq.AMR, deviceReq.DPoPJKT
+	}
+	return "", time.Time{}, nil, ""
 }
 
 // customClaim demonstrates how to return custom claims based on provided information
@@ -821,6 +826,17 @@ type deviceAuthorizationEntry struct {
 }
 
 func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	return s.storeDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, scopes, "")
+}
+
+// StoreBoundKeyDeviceAuthorization implements op.BoundKeyDeviceAuthorizationStorage,
+// persisting the dpop_jkt so the DPoP proof can be verified at the token
+// endpoint. It must be returned from the DeviceAuthorizationState.
+func (s *Storage) StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
+	return s.storeDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, scopes, dpopJKT)
+}
+
+func (s *Storage) storeDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -839,6 +855,7 @@ func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, device
 			ClientID: clientID,
 			Scopes:   scopes,
 			Expires:  expires,
+			DPoPJKT:  dpopJKT,
 		},
 	}
 

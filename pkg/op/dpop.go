@@ -18,13 +18,10 @@ import (
 )
 
 // DefaultDPoPSigningAlgs is the default, and recommended, allow-list of JWS
-// algorithms accepted for DPoP proof JWTs. It intentionally excludes "none"
-// and symmetric (HMAC) algorithms, which [RFC 9449, Section 4.2] forbids.
-//
-// This list is also used to derive the dpop_signing_alg_values_supported
-// discovery metadata (see [DPoPSigAlgorithms]), so that the algorithms
-// advertised in discovery and the algorithms actually accepted by the
-// token endpoint never drift apart.
+// algorithms accepted for DPoP proof JWTs. It excludes "none" and symmetric
+// (HMAC) algorithms, which [RFC 9449, Section 4.2] forbids. It also derives the
+// dpop_signing_alg_values_supported metadata (see [DPoPSigAlgorithms]), so
+// discovery and the token endpoint cannot drift apart.
 //
 // EXPERIMENTAL: may change until v4
 //
@@ -53,10 +50,8 @@ const DefaultDPoPProofMaxAge = time.Minute
 // It does not implement `jti` replay detection ([RFC 9449, Section 11.1]);
 // callers relying solely on this verifier should keep ProofMaxAge short.
 //
-// NOTE: the built-in token endpoint paths construct their verifier with
-// [NewDPoPProofVerifier], so the fields below apply only when you call Verify
-// yourself. They are not yet a configuration surface for an OP built with
-// [NewOpenIDProvider]; such a provider always uses [DefaultDPoPSigningAlgs] and
+// NOTE: the fields below apply only when you call Verify yourself. An OP built
+// with [NewOpenIDProvider] always uses [DefaultDPoPSigningAlgs] and
 // [DefaultDPoPProofMaxAge], which is what discovery advertises.
 //
 // EXPERIMENTAL: may change until v4
@@ -123,19 +118,15 @@ func (v *DPoPProofVerifier) maxAge() time.Duration {
 	return DefaultDPoPProofMaxAge
 }
 
-// Verify validates the single DPoP proof JWT found in header against the
-// current request's method and target URI (htu, without query or fragment),
-// and confirms it was created for the public key committed to by
-// expectedJKT (the dpop_jkt value from the Authentication Request).
+// Verify validates the single DPoP proof JWT in header against the request's
+// method and target URI (htu, without query or fragment), and confirms it was
+// created for the key committed to by expectedJKT. On success it returns the
+// confirmation to embed in the ID Token's `cnf` claim.
 //
-// If boundCode is non-empty, the proof's c_s256 claim MUST match the
-// SHA-256 hash of boundCode (the authorization code or device code), per
-// OpenID Connect Key Binding 1.0, Sections 2.3 and 3.3. If boundCode is
-// empty (the Refresh Request case, per Section 5), no c_s256 claim is
-// required.
-//
-// On success, Verify returns the confirmation to embed in the ID Token's
-// `cnf` claim.
+// A non-empty boundCode (authorization code or device code) requires the proof's
+// c_s256 claim to match its SHA-256 hash, per Key Binding 1.0 Sections 2.3 and
+// 3.3; an empty boundCode is the Refresh Request case (Section 5), where no
+// c_s256 is required.
 //
 // EXPERIMENTAL: may change until v4
 func (v *DPoPProofVerifier) Verify(header http.Header, method, htu, expectedJKT, boundCode string) (*oidc.Confirmation, error) {
@@ -144,16 +135,11 @@ func (v *DPoPProofVerifier) Verify(header http.Header, method, htu, expectedJKT,
 		return nil, oidc.ErrInvalidDPoPProof().WithParent(err).WithDescription("%s", err.Error())
 	}
 
-	// Check 1: a DPoP proof is a JWT, so it MUST use the JWS Compact
-	// Serialization (RFC 7519 §3). ParseSignedCompact, unlike ParseSigned,
-	// refuses the JWS JSON Serialization; that matters because the JSON form
-	// carries an unprotected header whose values are not covered by the
-	// signature, which would let an attacker inject `typ` and `jwk` into an
-	// unrelated JWS signed by the same key and pass it off as a proof.
-	//
-	// It also enforces that alg is present in v.signAlgs(), which by
-	// construction never contains "none" or a symmetric algorithm. This is
-	// RFC 9449 §4.3 checks 2 and 5.
+	// RFC 9449 §4.3 checks 2 and 5. Do NOT substitute ParseSigned: it accepts the
+	// JWS JSON Serialization, whose unprotected header is not covered by the
+	// signature, letting an attacker inject `typ` and `jwk` and pass an unrelated
+	// JWS off as a proof. A proof is a JWT, so compact serialization is required
+	// (RFC 7519 §3). This also enforces alg is in v.signAlgs().
 	jws, err := jose.ParseSignedCompact(proof, v.signAlgs())
 	if err != nil {
 		return nil, oidc.ErrInvalidDPoPProof().WithParent(err).WithDescription("malformed DPoP proof: %s", err.Error())
@@ -286,17 +272,8 @@ func verifyBoundKey(header http.Header, method, htu string, request IDTokenReque
 }
 
 // keyBindingIntegrated reports whether the OP's storage has integrated key
-// binding at all, which is true exactly when the persisted request type
-// implements [BoundKeyRequest].
-//
-// Implementing that interface is the effective opt-in for the feature: a
-// storage predating key binding cannot have the method, so `bound_key` is
-// ignored for it rather than failing. This matters because `bound_key` is
-// granted through Client.IsScopeAllowed, and a permissive implementation
-// (written before this scope existed) may grant scopes it knows nothing about.
-// OpenID Connect Key Binding 1.0, Section 2.1 explicitly allows an OP that does
-// not support key binding to ignore the request parameters, and the RP still
-// fails closed because it verifies the returned `typ` and `cnf`.
+// binding, which is true exactly when the persisted request type implements
+// [BoundKeyRequest].
 func keyBindingIntegrated(request IDTokenRequest) (BoundKeyRequest, bool) {
 	boundRequest, ok := request.(BoundKeyRequest)
 	return boundRequest, ok

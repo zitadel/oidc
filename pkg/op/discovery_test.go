@@ -737,12 +737,13 @@ func TestWithKeyBinding(t *testing.T) {
 
 	t.Run("option order does not matter", func(t *testing.T) {
 		first, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, nonDeviceStorage{},
-			op.WithKeyBinding(), op.WithCustomAuthEndpoint(op.NewEndpoint("auth")))
+			op.WithKeyBinding(), op.WithAllowInsecure())
 		require.NoError(t, err)
 		second, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, nonDeviceStorage{},
-			op.WithCustomAuthEndpoint(op.NewEndpoint("auth")), op.WithKeyBinding())
+			op.WithAllowInsecure(), op.WithKeyBinding())
 		require.NoError(t, err)
 		assert.Equal(t, first.ScopesSupported(), second.ScopesSupported())
+		assert.Contains(t, first.ScopesSupported(), oidc.ScopeBoundKey)
 	})
 
 	t.Run("device storage without bound key support is rejected at construction", func(t *testing.T) {

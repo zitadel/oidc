@@ -351,26 +351,15 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 	return scopes, nil
 }
 
-// ValidateAuthReqBoundKey validates the pairing of the `bound_key` scope
-// and the `dpop_jkt` parameter, as required by OpenID Connect Key Binding
-// 1.0, Section 2.1.
+// ValidateAuthReqBoundKey validates the pairing of the `bound_key` scope and the
+// `dpop_jkt` parameter, as required by OpenID Connect Key Binding 1.0, Section 2.1.
+// Without `bound_key`, dpop_jkt is cleared and ignored rather than rejected.
 //
-// It must only be called after the client's requested scopes have already
-// been filtered by [ValidateAuthReqScopes] (so that a `bound_key` scope
-// the client is not allowed to request has already been stripped), and
-// after the redirect_uri has already been validated, since it returns an
-// [oidc.Error] that redirects to authReq.RedirectURI.
-//
-// If the (possibly filtered) scopes do not contain `bound_key`, any
-// dpop_jkt value is cleared and ignored without error: per the
-// specification, an OP (or client) that does not support key binding
-// SHOULD simply ignore the parameter, since dpop_jkt is also a valid
-// [RFC 9449, Section 10] parameter for plain access-token DPoP binding,
-// unrelated to key binding.
+// Call only after [ValidateAuthReqScopes] has filtered the scopes and after
+// redirect_uri validation, since it returns an [oidc.Error] that redirects to
+// authReq.RedirectURI.
 //
 // EXPERIMENTAL: may change until v4
-//
-// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
 func ValidateAuthReqBoundKey(authReq *oidc.AuthRequest) error {
 	if !slices.Contains(authReq.Scopes, oidc.ScopeBoundKey) {
 		authReq.DPoPJKT = ""

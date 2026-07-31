@@ -132,6 +132,8 @@ func newDynamicOP(ctx context.Context, storage op.Storage, key [32]byte, keyId s
 		op.WithAllowInsecure(),
 		//as an example on how to customize an endpoint this will change the authorization_endpoint from /authorize to /auth
 		op.WithCustomAuthEndpoint(op.NewEndpoint("auth")),
+		// enable OpenID Connect Key Binding (advertises the bound_key scope)
+		op.WithKeyBinding(),
 	)
 	if err != nil {
 		return nil, err

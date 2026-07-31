@@ -37,6 +37,7 @@ type AuthRequest struct {
 	ResponseType  oidc.ResponseType
 	ResponseMode  oidc.ResponseMode
 	Nonce         string
+	DPoPJKT       string
 	CodeChallenge *OIDCCodeChallenge
 
 	done     bool
@@ -90,6 +91,10 @@ func (a *AuthRequest) GetCodeChallenge() *oidc.CodeChallenge {
 
 func (a *AuthRequest) GetNonce() string {
 	return a.Nonce
+}
+
+func (a *AuthRequest) GetDPoPJKT() string {
+	return a.DPoPJKT
 }
 
 func (a *AuthRequest) GetRedirectURI() string {
@@ -165,6 +170,7 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 		ResponseType:  authReq.ResponseType,
 		ResponseMode:  authReq.ResponseMode,
 		Nonce:         authReq.Nonce,
+		DPoPJKT:       authReq.DPoPJKT,
 		CodeChallenge: codeChallenge,
 	}
 }
@@ -220,6 +226,10 @@ func (r *RefreshTokenRequest) GetAuthTime() time.Time {
 
 func (r *RefreshTokenRequest) GetClientID() string {
 	return r.ApplicationID
+}
+
+func (r *RefreshTokenRequest) GetDPoPJKT() string {
+	return r.DPoPJKT
 }
 
 func (r *RefreshTokenRequest) GetScopes() []string {

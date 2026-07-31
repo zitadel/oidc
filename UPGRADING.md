@@ -5,6 +5,75 @@ All commands are executed from the root of the project that imports oidc package
 on non-GNU systems, such as MacOS.
 Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 
+## OpenID Connect Key Binding
+
+Key Binding is opt-in and off by default. Existing OPs and RPs need no changes: an OP only performs key binding once its storage implements `op.BoundKeyRequest`, so a storage predating this feature is unaffected even if its `Client.IsScopeAllowed` happens to permit the `bound_key` scope.
+
+Key Binding 1.0 is still an OpenID draft, so the API is marked `EXPERIMENTAL: may change until v4`.
+
+### Relying party
+
+Pass a `crypto.Signer` (including KMS- or HSM-backed ones) and its algorithm:
+
+```go
+provider, err := rp.NewRelyingPartyOIDC(ctx, issuer, clientID, clientSecret, redirectURI,
+    scopes, rp.WithKeyBinding(signer, jose.ES256))
+```
+
+The RP then appends the `bound_key` scope, sends `dpop_jkt` on the Authentication Request, signs a DPoP proof for the code and refresh token requests, and verifies that the returned ID Token is actually bound to `signer`. A stripped binding is an error rather than a silent downgrade to a bearer ID Token.
+
+The Device Authorization flow is supported as well: `rp.DeviceAuthorization` adds `bound_key` and `dpop_jkt`, and `rp.DeviceAccessToken` signs a proof bound to the `device_code` on every poll and verifies the returned ID Token. No code change is needed beyond `WithKeyBinding`.
+
+### OpenID Provider
+
+Two changes are required.
+
+1. Enable the feature, which advertises the `bound_key` scope in `scopes_supported` and populates `dpop_signing_alg_values_supported`:
+
+```go
+provider, err := op.NewOpenIDProvider(issuer, config, storage, op.WithKeyBinding())
+```
+
+   Adding `oidc.ScopeBoundKey` to `op.Config.SupportedScopes` yourself is equivalent for discovery purposes. `op.WithKeyBinding()` is preferred because it also validates the storage at construction (see the device flow below).
+
+2. Persist `dpop_jkt` and expose it from your stored authorization request and refresh token request types by implementing the optional `op.BoundKeyRequest` interface:
+
+```go
+type BoundKeyRequest interface {
+    GetDPoPJKT() string
+}
+```
+
+Store `oidc.AuthRequest.DPoPJKT` when the Authentication Request is created and carry it across refresh token rotation. See `example/server/storage` for a complete implementation.
+
+Implementing `op.BoundKeyRequest` is the signal that your storage can honour a binding:
+
+- If the persisted request does not implement `op.BoundKeyRequest`, key binding is not integrated, so `bound_key` is ignored and an ordinary bearer ID Token is issued. Section 2.1 of the specification permits this, and a key-binding RP still fails closed because it verifies the returned `typ` and `cnf`. This is deliberate: `bound_key` is granted via `Client.IsScopeAllowed`, and a permissive implementation written before this scope existed may grant scopes it knows nothing about. Such an OP must not start returning errors.
+- If the persisted request implements it but returns an empty or malformed `GetDPoPJKT()` for a request granted `bound_key`, that is a bug in the OP, not an unsupported feature, so the token endpoint fails with `server_error` rather than issuing an unbound token.
+
+The same check is enforced centrally in `CreateIDToken`, so flows that do not implement key binding, i.e. Token Exchange and the implicit/hybrid flows, reject a bound request rather than returning an unbound ID Token.
+
+### Device Authorization flow
+
+If you support the `device_code` grant and use `op.WithKeyBinding()`, your storage must also implement `op.BoundKeyDeviceAuthorizationStorage`. This is checked at construction and `op.NewOpenIDProvider` returns an error rather than letting the OP start in a state where key-bound device requests fail.
+
+```go
+StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string,
+    expires time.Time, scopes []string, dpopJKT string) error
+```
+
+This exists as a separate optional interface because `StoreDeviceAuthorization` cannot gain a parameter without breaking every implementation. Persist `dpopJKT` and return it from `op.DeviceAuthorizationState.DPoPJKT` in `GetDeviceAuthorizatonState`; the proof is bound to the `device_code` (`c_s256 = SHA256(device_code)`).
+
+Implementing this interface is what enables key binding on the device flow, just as `op.BoundKeyRequest` does for the code and refresh flows. If the storage does not implement it, a `bound_key` device authorization request is downgraded to an ordinary unbound one: both `bound_key` and `dpop_jkt` are dropped before the authorization is stored. The scope has to be dropped along with the thumbprint because `op.DeviceAuthorizationState` always satisfies `op.BoundKeyRequest`, so a retained scope with no thumbprint would look like a lost binding and fail closed at the token endpoint. Because `op.WithKeyBinding()` rejects such a storage at construction, this downgrade can only affect an OP that never enabled key binding, and a key-binding RP still fails closed on the missing `cnf`.
+
+If the device grant also issues refresh tokens, carry the thumbprint onto the refresh token record as well — see the `getInfoFromRequest` case for `*op.DeviceAuthorizationState` in `example/server/storage`.
+
+Two storage requirements are worth calling out explicitly, because the library cannot enforce them for you:
+
+Access tokens remain bearer tokens; only the ID Token is bound. DPoP headers on requests without a binding are ignored, so DPoP-bound access-token clients are unaffected.
+
+A key-bound ID Token is rejected as a Token Exchange `subject_token` / `actor_token`, because possession of the binding key cannot be proven on that request; accepting it would convert a proof-of-possession token back into a bearer token.
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:

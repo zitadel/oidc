@@ -22,5 +22,6 @@ type RefreshToken struct {
 	ApplicationID string
 	Expiration    time.Time
 	Scopes        []string
+	DPoPJKT       string
 	AccessToken   string // Token.ID
 }

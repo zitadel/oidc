@@ -246,6 +246,27 @@ type DeviceAuthorizationCaller interface {
 }
 
 func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCredentialsRequest, caller DeviceAuthorizationCaller, authFn any) (*oidc.DeviceAuthorizationResponse, error) {
+	return callDeviceAuthorizationEndpoint(ctx, request, caller, authFn)
+}
+
+// BoundKeyDeviceAuthorizationRequest adds the `dpop_jkt` parameter of OpenID
+// Connect Key Binding 1.0, Section 3.1 to a Device Authorization Request.
+//
+// EXPERIMENTAL: may change until v4
+type BoundKeyDeviceAuthorizationRequest struct {
+	*oidc.ClientCredentialsRequest
+	DPoPJKT string `schema:"dpop_jkt,omitempty"`
+}
+
+// CallDeviceAuthorizationEndpointWithBoundKey is [CallDeviceAuthorizationEndpoint]
+// for a request that additionally commits to a proof-of-possession key.
+//
+// EXPERIMENTAL: may change until v4
+func CallDeviceAuthorizationEndpointWithBoundKey(ctx context.Context, request *BoundKeyDeviceAuthorizationRequest, caller DeviceAuthorizationCaller, authFn any) (*oidc.DeviceAuthorizationResponse, error) {
+	return callDeviceAuthorizationEndpoint(ctx, request, caller, authFn)
+}
+
+func callDeviceAuthorizationEndpoint(ctx context.Context, request any, caller DeviceAuthorizationCaller, authFn any) (*oidc.DeviceAuthorizationResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAuthorizationEndpoint")
 	defer span.End()
 

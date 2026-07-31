@@ -100,17 +100,11 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	expires := time.Now().Add(config.Lifetime)
 	boundStorage, keyBindingIntegrated := storage.(BoundKeyDeviceAuthorizationStorage)
 	if req.DPoPJKT != "" && !keyBindingIntegrated {
-		// The storage has not integrated key binding on this flow, so there is
-		// nowhere to persist the thumbprint. Ignore the binding entirely rather
-		// than erroring, matching how the code flow treats a storage that does
-		// not implement BoundKeyRequest (Key Binding 1.0, Section 2.1).
-		//
-		// The `bound_key` scope has to be dropped along with dpop_jkt, not just
-		// the latter: DeviceAuthorizationState always implements BoundKeyRequest,
-		// so a retained scope with an empty thumbprint would look like a lost
-		// binding and fail closed at the token endpoint. Dropping both makes this
-		// an ordinary unbound request. A key-binding RP still fails closed, since
-		// it rejects an ID Token that lacks the expected `typ` and `cnf`.
+		// Nowhere to persist the thumbprint, so ignore the binding rather than
+		// erroring (Key Binding 1.0, Section 2.1). The scope must be dropped
+		// alongside dpop_jkt: DeviceAuthorizationState always implements
+		// BoundKeyRequest, so a retained scope with an empty thumbprint would look
+		// like a lost binding and fail closed at the token endpoint.
 		req.DPoPJKT = ""
 		req.Scopes = slices.DeleteFunc(req.Scopes, func(scope string) bool {
 			return scope == oidc.ScopeBoundKey
@@ -182,19 +176,14 @@ func ParseDeviceCodeRequest(r *http.Request, o OpenIDProvider) (*oidc.DeviceAuth
 	return req, nil
 }
 
-// ValidateDeviceAuthReqBoundKey validates the pairing of the `bound_key` scope
-// and the `dpop_jkt` parameter on a Device Authorization Request, as required by
-// OpenID Connect Key Binding 1.0, Section 3.1.
-//
-// `bound_key` is stripped when the client is not allowed to use it, mirroring
-// how [ValidateAuthReqScopes] gates extension scopes on the code flow. If the
-// remaining scopes do not contain `bound_key`, any dpop_jkt is cleared and
-// ignored without error, since dpop_jkt is also a valid [RFC 9449, Section 10]
-// parameter for plain access-token DPoP binding.
+// ValidateDeviceAuthReqBoundKey validates the pairing of the `bound_key` scope and
+// the `dpop_jkt` parameter on a Device Authorization Request, as required by
+// OpenID Connect Key Binding 1.0, Section 3.1. `bound_key` is stripped when
+// Client.IsScopeAllowed denies it, mirroring how [ValidateAuthReqScopes] gates
+// extension scopes; without it, dpop_jkt is cleared and ignored rather than
+// rejected.
 //
 // EXPERIMENTAL: may change until v4
-//
-// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
 func ValidateDeviceAuthReqBoundKey(req *oidc.DeviceAuthorizationRequest, client Client) error {
 	if slices.Contains(req.Scopes, oidc.ScopeBoundKey) && !client.IsScopeAllowed(oidc.ScopeBoundKey) {
 		req.Scopes = slices.DeleteFunc(req.Scopes, func(scope string) bool {

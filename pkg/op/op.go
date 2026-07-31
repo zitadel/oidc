@@ -542,17 +542,13 @@ func WithAllowInsecure() Option {
 // WithKeyBinding enables OpenID Connect Key Binding 1.0 on the provider.
 //
 // It advertises the `bound_key` scope in `scopes_supported` and populates
-// `dpop_signing_alg_values_supported`, so discovery reflects what the OP does.
-// If the storage supports the device_code grant it must also implement
-// [BoundKeyDeviceAuthorizationStorage]; that is checked here so a misconfigured
-// OP fails at construction instead of returning errors at the token endpoint.
+// `dpop_signing_alg_values_supported`. If the storage supports the device_code
+// grant it must also implement [BoundKeyDeviceAuthorizationStorage], checked here
+// so a misconfigured OP fails at construction rather than at the token endpoint.
 //
-// Note that this option controls advertisement and start-up validation, not
-// whether the code and refresh flows will honour a binding. Those are driven by
-// the storage: an authorization or refresh request that implements
-// [BoundKeyRequest] is treated as key-bound, and one that does not causes
-// `bound_key` to be ignored. Whether an individual client may use `bound_key` at
-// all remains subject to Client.IsScopeAllowed.
+// This controls advertisement and start-up validation only, not whether the code
+// and refresh flows honour a binding: that is driven by the storage implementing
+// [BoundKeyRequest], and per-client by Client.IsScopeAllowed.
 //
 // EXPERIMENTAL: may change until v4
 func WithKeyBinding() Option {

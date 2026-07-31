@@ -325,6 +325,12 @@ func GetTokenIDAndSubjectFromToken(
 			break
 		}
 
+		// A key-bound ID Token must never be accepted as a bearer credential.
+		// TODO: Add key-binding DPoP support for Token Exchange
+		if idTokenClaims.Confirmation != nil {
+			break
+		}
+
 		tokenIDOrToken, subject, claims, ok = token, idTokenClaims.Subject, idTokenClaims.Claims, true
 	}
 

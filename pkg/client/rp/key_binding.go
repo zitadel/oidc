@@ -42,17 +42,14 @@ type KeyBindingRelyingParty interface {
 	SignDPoPProof(method, htu, code string) (string, error)
 }
 
-// WithKeyBinding enables OpenID Connect Key Binding for the authorization
-// code and refresh flows. The RP appends the `bound_key` scope, adds the
-// `dpop_jkt` authorization request parameter, signs a DPoP proof for each
-// token request, and verifies that the returned ID Token is actually bound
-// to signer (`typ` and `cnf`), so a stripped binding fails closed.
+// WithKeyBinding enables OpenID Connect Key Binding for the authorization code,
+// refresh and device authorization flows. The RP appends the `bound_key` scope,
+// adds the `dpop_jkt` authorization request parameter, signs a DPoP proof for each
+// token request, and verifies that the returned ID Token is actually bound to
+// signer (`typ` and `cnf`), so a stripped binding fails closed.
 //
-// signer may be any [crypto.Signer], including a KMS- or HSM-backed one.
-// alg must be an asymmetric JWS algorithm supported by signer's key.
-//
-// Key binding is supported for the authorization code, refresh, and device
-// authorization flows.
+// signer may be any [crypto.Signer], including a KMS- or HSM-backed one. alg must
+// be an asymmetric JWS algorithm supported by signer's key.
 //
 // EXPERIMENTAL: may change until v4
 func WithKeyBinding(signer crypto.Signer, alg jose.SignatureAlgorithm) Option {

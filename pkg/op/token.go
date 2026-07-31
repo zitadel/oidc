@@ -28,6 +28,10 @@ type AccessTokenClient interface {
 }
 
 func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string) (*oidc.AccessTokenResponse, error) {
+	return createTokenResponse(ctx, request, client, creator, createAccessToken, code, refreshToken, nil)
+}
+
+func createTokenResponse(ctx context.Context, request IDTokenRequest, client Client, creator TokenCreator, createAccessToken bool, code, refreshToken string, confirmation *oidc.Confirmation) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CreateTokenResponse")
 	defer span.End()
 
@@ -40,7 +44,7 @@ func CreateTokenResponse(ctx context.Context, request IDTokenRequest, client Cli
 			return nil, err
 		}
 	}
-	idToken, err := CreateIDToken(ctx, IssuerFromContext(ctx), request, client.IDTokenLifetime(), accessToken, code, creator.Storage(), client)
+	idToken, err := createIDToken(ctx, IssuerFromContext(ctx), request, client.IDTokenLifetime(), accessToken, code, creator.Storage(), client, confirmation)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +203,10 @@ type IDTokenRequest interface {
 }
 
 func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, client Client) (string, error) {
+	return createIDToken(ctx, issuer, request, validity, accessToken, code, storage, client, nil)
+}
+
+func createIDToken(ctx context.Context, issuer string, request IDTokenRequest, validity time.Duration, accessToken, code string, storage Storage, client Client, confirmation *oidc.Confirmation) (string, error) {
 	ctx, span := Tracer.Start(ctx, "CreateIDToken")
 	defer span.End()
 
@@ -259,11 +267,43 @@ func CreateIDToken(ctx context.Context, issuer string, request IDTokenRequest, v
 		}
 		claims.CodeHash = codeHash
 	}
-	signer, err := SignerFromKey(signingKey)
+
+	if err := requireBoundKeyConfirmation(request, confirmation); err != nil {
+		return "", err
+	}
+
+	// Registered claims must win over storage-supplied extra claims.
+	delete(claims.Claims, "cnf")
+
+	typ := oidc.IDTokenTypeJWT
+	if confirmation != nil {
+		typ = oidc.IDTokenTypeDPoP
+		claims.Confirmation = confirmation
+	}
+	signer, err := SignerFromKeyAndType(signingKey, typ)
 	if err != nil {
 		return "", err
 	}
 	return crypto.Sign(claims, signer)
+}
+
+// requireBoundKeyConfirmation returns an error if request asked for a key-bound
+// ID Token but no verified DPoP confirmation was produced for it.
+func requireBoundKeyConfirmation(request IDTokenRequest, confirmation *oidc.Confirmation) error {
+	if confirmation != nil {
+		return nil
+	}
+	boundRequest, integrated := keyBindingIntegrated(request)
+	if !integrated {
+		return nil
+	}
+	// Deliberately checks the granted scopes rather than the scopes filtered by
+	// RestrictAdditionalIdTokenScopes, so a client-level scope restriction
+	// cannot strip `bound_key` and disable this check.
+	if slices.Contains(request.GetScopes(), oidc.ScopeBoundKey) || boundRequest.GetDPoPJKT() != "" {
+		return oidc.ErrServerError().WithDescription("bound_key is not supported for this flow")
+	}
+	return nil
 }
 
 func removeUserinfoScopes(scopes []string) []string {

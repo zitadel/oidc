@@ -33,12 +33,20 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 		RequestError(w, r, err, nil)
 		return
 	}
-	validatedRequest, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
+	validatedRequest, client, err := validateRefreshTokenRequest(r.Context(), tokenReq, exchanger, false)
 	if err != nil {
 		RequestError(w, r, err, nil)
 		return
 	}
-	resp, err := CreateTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
+	confirmation, err := verifyProviderBoundKey(r.Context(), r.Header, r.Method, validatedRequest, "", exchanger)
+	if err != nil {
+		RequestError(w, r, err, nil)
+		return
+	}
+	if len(tokenReq.Scopes) > 0 {
+		validatedRequest.SetCurrentScopes(tokenReq.Scopes)
+	}
+	resp, err := createTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken, confirmation)
 	if err != nil {
 		RequestError(w, r, err, nil)
 		return
@@ -59,6 +67,10 @@ func ParseRefreshTokenRequest(r *http.Request, decoder httphelper.Decoder) (*oid
 // ValidateRefreshTokenRequest validates the refresh_token request parameters including authorization check of the client
 // and returns the data representing the original auth request corresponding to the refresh_token
 func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger) (RefreshTokenRequest, Client, error) {
+	return validateRefreshTokenRequest(ctx, tokenReq, exchanger, true)
+}
+
+func validateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshTokenRequest, exchanger Exchanger, setCurrentScopes bool) (RefreshTokenRequest, Client, error) {
 	ctx, span := Tracer.Start(ctx, "ValidateRefreshTokenRequest")
 	defer span.End()
 
@@ -72,8 +84,11 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 	if client.GetID() != request.GetClientID() {
 		return nil, nil, oidc.ErrInvalidGrant()
 	}
-	if err = ValidateRefreshTokenScopes(tokenReq.Scopes, request); err != nil {
+	if err = validateRefreshTokenScopes(tokenReq.Scopes, request); err != nil {
 		return nil, nil, err
+	}
+	if setCurrentScopes && len(tokenReq.Scopes) > 0 {
+		request.SetCurrentScopes(tokenReq.Scopes)
 	}
 	return request, client, nil
 }
@@ -82,15 +97,22 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 // it will set the requested scopes as current scopes onto RefreshTokenRequest
 // if empty the original scopes will be used
 func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTokenRequest) error {
+	if err := validateRefreshTokenScopes(requestedScopes, authRequest); err != nil {
+		return err
+	}
 	if len(requestedScopes) == 0 {
 		return nil
 	}
+	authRequest.SetCurrentScopes(requestedScopes)
+	return nil
+}
+
+func validateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTokenRequest) error {
 	for _, scope := range requestedScopes {
 		if !slices.Contains(authRequest.GetScopes(), scope) {
 			return oidc.ErrInvalidScope()
 		}
 	}
-	authRequest.SetCurrentScopes(requestedScopes)
 	return nil
 }
 
