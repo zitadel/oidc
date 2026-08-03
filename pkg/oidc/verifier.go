@@ -83,11 +83,11 @@ type Verifier struct {
 type ISSVerifier func(string) error
 
 // DefaultISSVerifier implements `ISSVerifier` returning an error
-// if the iss claim is set and doesn't match the issuer.
+// if the iss claim doesn't match the expected issuer.
 func DefaultISSVerifier(expectIssuer string) ISSVerifier {
 	return func(inputIssuer string) error {
 		if inputIssuer != expectIssuer {
-			return fmt.Errorf("%w: expected %q but was %q", ErrIssuerInvalid, expectIssuer, inputIssuer)
+			return fmt.Errorf("%w: expected: %s, got: %s", ErrIssuerInvalid, expectIssuer, inputIssuer)
 		}
 		return nil
 	}
@@ -139,11 +139,11 @@ func CheckIssuer(claims Claims, issuer string) error {
 	return nil
 }
 
-func CheckIssuerWithISSVerifier(claims Claims, issuer string, ISS ISSVerifier) error {
-	if ISS == nil {
+func CheckIssuerWithISSVerifier(claims Claims, issuer string, issVerifier ISSVerifier) error {
+	if issVerifier == nil {
 		return DefaultISSVerifier(issuer)(claims.GetIssuer())
 	}
-	return ISS(claims.GetIssuer())
+	return issVerifier(claims.GetIssuer())
 }
 
 func CheckAudience(claims Claims, clientID string) error {

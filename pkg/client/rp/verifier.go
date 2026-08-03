@@ -132,6 +132,7 @@ func NewIDTokenVerifier(issuer, clientID string, keySet oidc.KeySet, options ...
 // VerifierOption is the type for providing dynamic options to the IDTokenVerifier
 type VerifierOption func(*IDTokenVerifier)
 
+// WithISSVerifier sets a custom verifier for validating the `iss` (issuer) claim.
 func WithISSVerifier(verifier oidc.ISSVerifier) VerifierOption {
 	return func(v *IDTokenVerifier) {
 		v.ISS = verifier
