@@ -400,7 +400,7 @@ func CreateTokenExchangeResponse(
 		// oidc.JWTTokenType and other custom token types are not supported for issuing.
 		// In the future it can be considered to have custom tokens generation logic injected via op configuration
 		// or via expanding Storage interface
-		oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
+		return nil, oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
 	}
 
 	exp := uint64(validity.Seconds())
