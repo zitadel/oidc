@@ -67,6 +67,7 @@ var (
 // which values need to be set.
 type Verifier struct {
 	Issuer            string
+	ISS               ISSVerifier
 	MaxAgeIAT         time.Duration
 	Offset            time.Duration
 	ClientID          string
@@ -76,6 +77,20 @@ type Verifier struct {
 	AZP               AZPVerifier
 	KeySet            KeySet
 	Nonce             func(ctx context.Context) string
+}
+
+// ISSVerifier specifies the function to be used by the `DefaultVerifier` for validating the iss claim
+type ISSVerifier func(string) error
+
+// DefaultISSVerifier implements `ISSVerifier` returning an error
+// if the iss claim doesn't match the expected issuer.
+func DefaultISSVerifier(expectIssuer string) ISSVerifier {
+	return func(inputIssuer string) error {
+		if inputIssuer != expectIssuer {
+			return fmt.Errorf("%w: expected: %s, got: %s", ErrIssuerInvalid, expectIssuer, inputIssuer)
+		}
+		return nil
+	}
 }
 
 // ACRVerifier specifies the function to be used by the `DefaultVerifier` for validating the acr claim
@@ -116,11 +131,19 @@ func CheckSubject(claims Claims) error {
 	return nil
 }
 
+// Deprecated: Use CheckIssuerWithISSVerifier instead
 func CheckIssuer(claims Claims, issuer string) error {
 	if claims.GetIssuer() != issuer {
 		return fmt.Errorf("%w: Expected: %s, got: %s", ErrIssuerInvalid, issuer, claims.GetIssuer())
 	}
 	return nil
+}
+
+func CheckIssuerWithISSVerifier(claims Claims, issuer string, issVerifier ISSVerifier) error {
+	if issVerifier == nil {
+		return DefaultISSVerifier(issuer)(claims.GetIssuer())
+	}
+	return issVerifier(claims.GetIssuer())
 }
 
 func CheckAudience(claims Claims, clientID string) error {
