@@ -237,6 +237,21 @@ func TestRoutes(t *testing.T) {
 			},
 		},
 		{
+			name:      "Token exchange to jwt token type",
+			method:    http.MethodGet,
+			path:      testProvider.TokenEndpoint().Relative(),
+			basicAuth: &basicAuth{"web", "secret"},
+			values: map[string]string{
+				"grant_type":           string(oidc.GrantTypeTokenExchange),
+				"scope":                oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
+				"subject_token":        jwtToken,
+				"subject_token_type":   string(oidc.AccessTokenType),
+				"requested_token_type": string(oidc.JWTTokenType),
+			},
+			wantCode: http.StatusBadRequest,
+			json:     `{"error":"invalid_request","error_description":"requested_token_type is invalid"}`,
+		},
+		{
 			name:      "Client credentials exchange",
 			method:    http.MethodGet,
 			path:      testProvider.TokenEndpoint().Relative(),
