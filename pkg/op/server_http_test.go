@@ -23,6 +23,7 @@ import (
 )
 
 func TestRegisterServer(t *testing.T) {
+	previous := slog.Default()
 	server := UnimplementedServer{}
 	endpoints := Endpoints{
 		Authorization: &Endpoint{
@@ -35,12 +36,13 @@ func TestRegisterServer(t *testing.T) {
 	h := RegisterServer(server, endpoints,
 		WithDecoder(decoder),
 		WithFallbackLogger(logger),
+		WithFallbackLogger(nil),
 	)
 	got := h.(*webServer)
 	assert.Equal(t, got.server, server)
 	assert.Equal(t, got.endpoints, endpoints)
 	assert.Equal(t, got.decoder, decoder)
-	assert.Equal(t, got.logger, logger)
+	assert.Same(t, previous, slog.Default())
 }
 
 type testClient struct {
@@ -254,7 +256,6 @@ func Test_webServer_withClient(t *testing.T) {
 					client: newClient(clientTypeNative),
 				},
 				decoder: testDecoder,
-				logger:  slog.Default(),
 			}
 			handler := func(w http.ResponseWriter, r *http.Request, client Client) {
 				fmt.Fprintf(w, `{"foo":%q}`, r.FormValue("foo"))
@@ -360,7 +361,6 @@ func Test_webServer_verifyRequestClient(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			tt.r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			got, err := s.verifyRequestClient(tt.r)
@@ -411,7 +411,6 @@ func Test_webServer_authorizeHandler(t *testing.T) {
 			s := &webServer{
 				server:  tt.fields.server,
 				decoder: tt.fields.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, s.authorizeHandler, tt.r, tt.want)
 		})
@@ -581,7 +580,6 @@ func Test_webServer_authorize(t *testing.T) {
 			s := &webServer{
 				server:  tt.server,
 				decoder: testDecoder,
-				logger:  slog.Default(),
 			}
 			got, err := s.authorize(tt.args.ctx, tt.args.r)
 			require.ErrorIs(t, err, tt.wantErr)
@@ -633,7 +631,6 @@ func Test_webServer_deviceAuthorizationHandler(t *testing.T) {
 			s := &webServer{
 				server:  tt.fields.server,
 				decoder: tt.fields.decoder,
-				logger:  slog.Default(),
 			}
 			client := newClient(clientTypeUserAgent)
 			runWebServerClientTest(t, s.deviceAuthorizationHandler, tt.r, client, tt.want)
@@ -674,9 +671,7 @@ func Test_webServer_tokensHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &webServer{
-				logger: slog.Default(),
-			}
+			s := &webServer{}
 			runWebServerTest(t, s.tokensHandler, tt.r, tt.want)
 		})
 	}
@@ -722,7 +717,6 @@ func Test_webServer_jwtProfileHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, s.jwtProfileHandler, tt.r, tt.want)
 		})
@@ -787,7 +781,6 @@ func Test_webServer_codeExchangeHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			client := newClient(clientTypeUserAgent)
 			runWebServerClientTest(t, s.codeExchangeHandler, tt.r, client, tt.want)
@@ -835,7 +828,6 @@ func Test_webServer_refreshTokenHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			client := newClient(clientTypeUserAgent)
 			runWebServerClientTest(t, s.refreshTokenHandler, tt.r, client, tt.want)
@@ -919,7 +911,6 @@ func Test_webServer_tokenExchangeHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			client := newClient(clientTypeUserAgent)
 			runWebServerClientTest(t, s.tokenExchangeHandler, tt.r, client, tt.want)
@@ -971,7 +962,6 @@ func Test_webServer_clientCredentialsHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerClientTest(t, s.clientCredentialsHandler, tt.r, tt.client, tt.want)
 		})
@@ -1018,7 +1008,6 @@ func Test_webServer_deviceTokenHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			client := newClient(clientTypeUserAgent)
 			runWebServerClientTest(t, s.deviceTokenHandler, tt.r, client, tt.want)
@@ -1075,7 +1064,6 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, s.introspectionHandler, tt.r, tt.want)
 		})
@@ -1135,7 +1123,6 @@ func Test_webServer_userInfoHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, s.userInfoHandler, tt.r, tt.want)
 		})
@@ -1196,7 +1183,6 @@ func Test_webServer_revocationHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerClientTest(t, s.revocationHandler, tt.r, tt.client, tt.want)
 		})
@@ -1234,7 +1220,6 @@ func Test_webServer_endSessionHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, s.endSessionHandler, tt.r, tt.want)
 		})
@@ -1276,7 +1261,6 @@ func Test_webServer_simpleHandler(t *testing.T) {
 			s := &webServer{
 				server:  UnimplementedServer{},
 				decoder: tt.decoder,
-				logger:  slog.Default(),
 			}
 			runWebServerTest(t, simpleHandler(s, tt.method), tt.r, tt.want)
 		})

@@ -23,6 +23,7 @@ type Exchanger interface {
 	GrantTypeDeviceCodeSupported() bool
 	AccessTokenVerifier(context.Context) *AccessTokenVerifier
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 }
 
@@ -72,10 +73,10 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 			return
 		}
 	case "":
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), exchanger.Logger())
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), nil)
 		return
 	}
-	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), exchanger.Logger())
+	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), nil)
 }
 
 // AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
