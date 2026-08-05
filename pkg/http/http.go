@@ -26,8 +26,10 @@ type Encoder interface {
 	Encode(src any, dst map[string][]string) error
 }
 
-type FormAuthorization func(url.Values)
-type RequestAuthorization func(*http.Request)
+type (
+	FormAuthorization    func(url.Values)
+	RequestAuthorization func(*http.Request)
+)
 
 func AuthorizeBasic(user, password string) RequestAuthorization {
 	return func(req *http.Request) {
@@ -40,7 +42,7 @@ func FormRequest(ctx context.Context, endpoint string, request any, encoder Enco
 	if err := encoder.Encode(request, form); err != nil {
 		return nil, err
 	}
-	if fn, ok := authFn.(FormAuthorization); ok {
+	if fn, ok := authFn.(FormAuthorization); ok && fn != nil {
 		fn(form)
 	}
 	body := strings.NewReader(form.Encode())
@@ -48,7 +50,7 @@ func FormRequest(ctx context.Context, endpoint string, request any, encoder Enco
 	if err != nil {
 		return nil, err
 	}
-	if fn, ok := authFn.(RequestAuthorization); ok {
+	if fn, ok := authFn.(RequestAuthorization); ok && fn != nil {
 		fn(req)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

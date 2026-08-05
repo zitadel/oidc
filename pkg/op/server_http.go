@@ -180,8 +180,20 @@ func (s *webServer) parseClientCredentials(r *http.Request) (_ *ClientCredential
 	if err = s.decoder.Decode(cc, r.Form); err != nil {
 		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
+
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	assertionAuthExists := cc.ClientAssertion != "" && cc.ClientAssertionType != ""
+	secretAuthExists := cc.ClientSecret != "" && cc.ClientID != ""
+	if assertionAuthExists && secretAuthExists {
+		return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+	}
+
 	// Basic auth takes precedence, so if set it overwrites the form data.
 	if clientID, clientSecret, ok := r.BasicAuth(); ok {
+		if assertionAuthExists || secretAuthExists {
+			return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
 		cc.ClientID, err = url.QueryUnescape(clientID)
 		if err != nil {
 			return nil, oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)

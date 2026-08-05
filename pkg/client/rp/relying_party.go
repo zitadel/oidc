@@ -91,12 +91,15 @@ type HasUnauthorizedHandler interface {
 	UnauthorizedHandler() func(w http.ResponseWriter, r *http.Request, desc string, state string)
 }
 
-type ErrorHandler func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
-type UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+type (
+	ErrorHandler        func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
+	UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
+)
 
 var DefaultErrorHandler ErrorHandler = func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
 	http.Error(w, errorType+": "+errorDesc, http.StatusInternalServerError)
 }
+
 var DefaultUnauthorizedHandler UnauthorizedHandler = func(w http.ResponseWriter, r *http.Request, desc string, state string) {
 	http.Error(w, desc, http.StatusUnauthorized)
 }
@@ -816,6 +819,11 @@ type RefreshTokenRequest struct {
 	GrantType           oidc.GrantType           `schema:"grant_type"`
 }
 
+// Deprecated: This function is no longer invoked because it violates
+// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
+//
+// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
+// or use the "authFn" parameter in the related functions for custom needs.
 func (r RefreshTokenRequest) Auth(req *http.Request) {
 	if r.ClientSecret != "" {
 		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
@@ -834,16 +842,34 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 	defer span.End()
 
 	ctx = logCtxWithRPData(ctx, rp, "function", "RefreshTokens")
+
+	var authFn httphelper.RequestAuthorization
 	request := RefreshTokenRequest{
-		RefreshToken:        refreshToken,
-		Scopes:              rp.OAuthConfig().Scopes,
-		ClientID:            rp.OAuthConfig().ClientID,
-		ClientSecret:        rp.OAuthConfig().ClientSecret,
-		ClientAssertion:     clientAssertion,
-		ClientAssertionType: clientAssertionType,
-		GrantType:           oidc.GrantTypeRefreshToken,
+		RefreshToken: refreshToken,
+		Scopes:       rp.OAuthConfig().Scopes,
+		GrantType:    oidc.GrantTypeRefreshToken,
 	}
-	newToken, err := client.CallTokenEndpoint(ctx, request, tokenEndpointCaller{RelyingParty: rp})
+
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	switch rp.OAuthConfig().Endpoint.AuthStyle {
+	case oauth2.AuthStyleInHeader:
+		if clientAssertion != "" {
+			return nil, errors.New("client assertion is not supported with AuthStyleInHeader")
+		}
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	default:
+		// use client id and secret in the request body
+		if clientAssertion != "" && clientAssertionType != "" {
+			request.ClientAssertion = clientAssertion
+			request.ClientAssertionType = clientAssertionType
+		} else {
+			request.ClientID = rp.OAuthConfig().ClientID
+			request.ClientSecret = rp.OAuthConfig().ClientSecret
+		}
+	}
+
+	newToken, err := client.CallTokenEndpointWithAuthFn(ctx, request, authFn, tokenEndpointCaller{RelyingParty: rp})
 	if err != nil {
 		return nil, err
 	}
@@ -879,16 +905,28 @@ func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectU
 // tokenTypeHint should be either "id_token" or "refresh_token".
 func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHint string) error {
 	ctx = logCtxWithRPData(ctx, rp, "function", "RevokeToken")
-	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	ctx, span := client.Tracer.Start(ctx, "RevokeToken")
 	defer span.End()
+
 	request := client.RevokeRequest{
 		Token:         token,
 		TokenTypeHint: tokenTypeHint,
-		ClientID:      rp.OAuthConfig().ClientID,
-		ClientSecret:  rp.OAuthConfig().ClientSecret,
 	}
+	var authFn httphelper.RequestAuthorization
+
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	switch rp.OAuthConfig().Endpoint.AuthStyle {
+	case oauth2.AuthStyleInHeader:
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	default:
+		// use client id and secret in the request body
+		request.ClientID = rp.OAuthConfig().ClientID
+		request.ClientSecret = rp.OAuthConfig().ClientSecret
+	}
+
 	if rc, ok := rp.(client.RevokeCaller); ok && rc.GetRevokeEndpoint() != "" {
-		return client.CallRevokeEndpoint(ctx, request, nil, rc)
+		return client.CallRevokeEndpoint(ctx, request, authFn, rc)
 	}
 	return ErrRelyingPartyNotSupportRevokeCaller
 }
