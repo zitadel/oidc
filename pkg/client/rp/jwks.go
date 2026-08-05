@@ -6,17 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
-	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/zitadel/oidc/v4/pkg/client"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
-
-const joseUnknownKeyTypeErrMsg = "go-jose/go-jose: unknown json web key type '"
 
 func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKeySet)) oidc.KeySet {
 	keyset := &remoteKeySet{httpClient: client, jwksURL: jwksURL}
