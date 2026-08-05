@@ -52,6 +52,7 @@ type Authorizer interface {
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 }
 

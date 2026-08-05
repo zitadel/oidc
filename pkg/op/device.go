@@ -58,7 +58,7 @@ var (
 func DeviceAuthorizationHandler(o OpenIDProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := DeviceAuthorization(w, r, o); err != nil {
-			RequestError(w, r, err, o.Logger())
+			RequestError(w, r, err, nil)
 		}
 	}
 }
@@ -203,7 +203,7 @@ func DeviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	r = r.WithContext(ctx)
 
 	if err := deviceAccessToken(w, r, exchanger); err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 	}
 }
 

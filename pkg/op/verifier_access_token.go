@@ -44,7 +44,7 @@ func VerifyAccessToken[C oidc.Claims](ctx context.Context, token string, v *Acce
 		return nilClaims, err
 	}
 
-	if err := oidc.CheckIssuer(claims, v.Issuer); err != nil {
+	if err := oidc.CheckIssuerWithISSVerifier(claims, v.Issuer, v.ISS); err != nil {
 		return nilClaims, err
 	}
 

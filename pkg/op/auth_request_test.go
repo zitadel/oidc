@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -41,7 +40,6 @@ func TestAuthorize(t *testing.T) {
 
 			expect := authorizer.EXPECT()
 			expect.Decoder().Return(schema.NewDecoder())
-			expect.Logger().Return(slog.Default())
 
 			if tt.expect != nil {
 				tt.expect(expect)
@@ -127,7 +125,6 @@ func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
 	expect.Decoder().Return(schema.NewDecoder())
 	expect.Storage().Return(storage).AnyTimes()
 	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
-	expect.Logger().Return(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(nil, errors.New("client not found"))
 
@@ -1158,7 +1155,6 @@ func TestAuthResponseCode(t *testing.T) {
 					authorizer.EXPECT().Crypto().Return(&mockCrypto{
 						returnErr: io.ErrClosedPipe,
 					})
-					authorizer.EXPECT().Logger().Return(slog.Default())
 					return authorizer
 				},
 			},

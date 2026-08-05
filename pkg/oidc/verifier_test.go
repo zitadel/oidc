@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -102,8 +103,23 @@ func TestCheckIssuer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := CheckIssuer(tt.claims, issuer)
 			assert.ErrorIs(t, err, tt.wantErr)
+			err = CheckIssuerWithISSVerifier(tt.claims, issuer, nil)
+			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestCheckIssuerOverrideByISSVerifier(t *testing.T) {
+	alwaysFail := func(issuer string) error {
+		return fmt.Errorf("%w: always fail", ErrIssuerInvalid)
+	}
+	err := CheckIssuerWithISSVerifier(&TokenClaims{Issuer: "foo.bar"}, "foo.bar", alwaysFail)
+	assert.ErrorIs(t, err, ErrIssuerInvalid)
+	alwaysSuccess := func(issuer string) error {
+		return nil
+	}
+	err = CheckIssuerWithISSVerifier(&TokenClaims{Issuer: "foo.bar"}, "differentIssuer", alwaysSuccess)
+	assert.NoError(t, err)
 }
 
 func TestCheckAudience(t *testing.T) {
