@@ -1,6 +1,5 @@
 name: 🛠️ Improvement
 description: "Create a new issue for an improvement in ZITADEL"
-labels: ["enhancement"]
 type: enhancement
 body:
   - type: markdown
