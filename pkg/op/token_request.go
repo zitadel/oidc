@@ -86,9 +86,14 @@ type AuthenticatedTokenRequest interface {
 	SetClientSecret(string)
 }
 
-// AuthenticatedTokenRequestAuthMethodChecker is a helper interface for IsSetClientAssertion and IsSetClientIDAndClientSecret
-// it is implemented by oidc.AccessTokenRequest and oidc.RefreshTokenRequest
-// implements it can prevent the client from using more than one authentication method in each request
+// AuthenticatedTokenRequestAuthMethodChecker reports which client authentication methods
+// are present on a token request. It is implemented by oidc.AccessTokenRequest and
+// oidc.RefreshTokenRequest.
+//
+// ParseAuthenticatedTokenRequest uses it to reject requests that combine multiple client
+// authentication methods, as required by https://datatracker.ietf.org/doc/html/rfc6749#section-2.3:
+// "The client MUST NOT use more than one authentication method in each request."
+// Requests that do not implement this interface are not checked.
 type AuthenticatedTokenRequestAuthMethodChecker interface {
 	IsSetClientAssertion() bool
 	IsSetClientIDAndClientSecret() bool

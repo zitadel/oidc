@@ -878,7 +878,7 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 }
 
 func EndSession(ctx context.Context, rp RelyingParty, idToken, optionalRedirectURI, optionalState, optionalLogoutHint string, optionalLocales oidc.Locales) (*url.URL, error) {
-	ctx, span := client.Tracer.Start(ctx, "RefreshTokens")
+	ctx, span := client.Tracer.Start(ctx, "EndSession")
 	defer span.End()
 
 	request := oidc.EndSessionRequest{
