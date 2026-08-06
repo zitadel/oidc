@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/golang/mock/gomock"
@@ -669,31 +668,12 @@ func Test_CodeChallengeMethods(t *testing.T) {
 	}
 }
 
-// nonDeviceStorage is an op.Storage that does not support the device_code grant,
-// so WithKeyBinding has no device storage requirement to enforce.
+// nonDeviceStorage is a minimal op.Storage used to construct a provider in the
+// WithKeyBinding tests.
 type nonDeviceStorage struct{ op.Storage }
 
-// deviceStorageWithoutBoundKey supports device_code but has not implemented the
-// key-binding extension, which WithKeyBinding must reject at construction.
-type deviceStorageWithoutBoundKey struct{ op.Storage }
-
-func (deviceStorageWithoutBoundKey) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
-	return nil
-}
-
-func (deviceStorageWithoutBoundKey) GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*op.DeviceAuthorizationState, error) {
-	return nil, nil
-}
-
-type deviceStorageWithBoundKey struct{ deviceStorageWithoutBoundKey }
-
-func (deviceStorageWithBoundKey) StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
-	return nil
-}
-
 // TestWithKeyBinding covers the provider option: it must make discovery
-// advertise the feature, must not mutate the caller's Config, and must reject a
-// device-capable storage that cannot persist dpop_jkt.
+// advertise the feature and must not mutate the caller's Config.
 func TestWithKeyBinding(t *testing.T) {
 	newProvider := func(t *testing.T, config *op.Config, storage op.Storage, opts ...op.Option) (*op.Provider, error) {
 		t.Helper()
@@ -744,24 +724,5 @@ func TestWithKeyBinding(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, first.ScopesSupported(), second.ScopesSupported())
 		assert.Contains(t, first.ScopesSupported(), oidc.ScopeBoundKey)
-	})
-
-	t.Run("device storage without bound key support is rejected at construction", func(t *testing.T) {
-		_, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey},
-			deviceStorageWithoutBoundKey{}, op.WithKeyBinding())
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "BoundKeyDeviceAuthorizationStorage")
-	})
-
-	t.Run("device storage with bound key support is accepted", func(t *testing.T) {
-		provider, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey},
-			deviceStorageWithBoundKey{}, op.WithKeyBinding())
-		require.NoError(t, err)
-		assert.Contains(t, provider.ScopesSupported(), oidc.ScopeBoundKey)
-	})
-
-	t.Run("device storage without bound key support is fine when not enabled", func(t *testing.T) {
-		_, err := newProvider(t, &op.Config{CryptoKey: testConfig.CryptoKey}, deviceStorageWithoutBoundKey{})
-		require.NoError(t, err)
 	})
 }

@@ -11,13 +11,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 
 	"github.com/zitadel/oidc/v3/example/server/exampleop"
 	"github.com/zitadel/oidc/v3/example/server/storage"
@@ -158,131 +156,4 @@ func assertIDTokenType(t *testing.T, token string, want jose.ContentType) {
 	require.NoError(t, err)
 	require.Len(t, jws.Signatures, 1)
 	assert.Equal(t, string(want), jws.Signatures[0].Header.ExtraHeaders[jose.HeaderType])
-}
-
-// devicePollInterval must be long enough for a local HTTP round trip, because
-// PollDeviceAccessTokenEndpoint uses it as the per-request timeout too.
-const devicePollInterval = 200 * time.Millisecond
-
-// TestNativeKeyBindingDeviceFlow exercises OpenID Connect Key Binding 1.0
-// Section 3 end-to-end over the real HTTP stack, for both router modes (which
-// covers the classic op.DeviceAccessToken handler and LegacyServer.DeviceToken).
-func TestNativeKeyBindingDeviceFlow(t *testing.T) {
-	for _, wrapServer := range []bool{false, true} {
-		t.Run(fmt.Sprintf("legacy_server=%t", wrapServer), func(t *testing.T) {
-			testNativeKeyBindingDeviceFlow(t, wrapServer)
-		})
-	}
-}
-
-func testNativeKeyBindingDeviceFlow(t *testing.T, wrapServer bool) {
-	ctx := context.Background()
-	exampleStorage := storage.NewStorage(storage.NewUserStore("http://local-site"))
-	var deferred deferredHandler
-	opServer := httptest.NewServer(&deferred)
-	defer opServer.Close()
-	deferred.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, wrapServer)
-
-	clientID := "key-binding-device-" + uuid.NewString()
-	const clientSecret = "secret"
-	storage.RegisterClients(storage.DeviceClient(clientID, clientSecret))
-
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	jkt, err := oidc.JWKThumbprint(&jose.JSONWebKey{Key: &key.PublicKey})
-	require.NoError(t, err)
-
-	// DeviceClient authenticates with Basic, so the RP must use AuthStyleInHeader.
-	newProvider := func(opts ...rp.Option) rp.RelyingParty {
-		provider, err := rp.NewRelyingPartyOIDC(ctx, opServer.URL, clientID, clientSecret, "",
-			[]string{oidc.ScopeOpenID}, append([]rp.Option{
-				rp.WithAuthStyle(oauth2.AuthStyleInHeader),
-			}, opts...)...)
-		require.NoError(t, err)
-		return provider
-	}
-	provider := newProvider(rp.WithKeyBinding(key, jose.ES256))
-
-	// Section 3.1: the device authorization request carries bound_key + dpop_jkt.
-	deviceAuth, err := rp.DeviceAuthorization(ctx, []string{oidc.ScopeOpenID}, provider, nil)
-	require.NoError(t, err)
-	require.NotEmpty(t, deviceAuth.DeviceCode)
-	require.NotEmpty(t, deviceAuth.UserCode)
-
-	issuerCtx := op.ContextWithIssuer(ctx, opServer.URL)
-	state, err := exampleStorage.GetDeviceAuthorizatonState(issuerCtx, clientID, deviceAuth.DeviceCode)
-	require.NoError(t, err)
-	assert.Equal(t, jkt, state.GetDPoPJKT(), "the OP must persist the committed thumbprint")
-	assert.Contains(t, state.GetScopes(), oidc.ScopeBoundKey)
-
-	require.NoError(t, exampleStorage.CompleteDeviceAuthorization(issuerCtx, deviceAuth.UserCode, "id1"))
-
-	// An RP without the binding key cannot redeem the bound device code.
-	_, err = rp.DeviceAccessToken(ctx, deviceAuth.DeviceCode, devicePollInterval, newProvider())
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid_dpop_proof")
-
-	wrongKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	_, err = rp.DeviceAccessToken(ctx, deviceAuth.DeviceCode, devicePollInterval,
-		newProvider(rp.WithKeyBinding(wrongKey, jose.ES256)))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid_dpop_proof")
-
-	// Section 3.3: the correct key yields a key-bound ID Token.
-	tokens, err := rp.DeviceAccessToken(ctx, deviceAuth.DeviceCode, devicePollInterval, provider)
-	require.NoError(t, err)
-	require.NotEmpty(t, tokens.IDToken)
-	assertIDTokenType(t, tokens.IDToken, oidc.IDTokenTypeDPoP)
-
-	var claims oidc.IDTokenClaims
-	require.NoError(t, json.Unmarshal(unsafeIDTokenPayload(t, tokens.IDToken), &claims))
-	require.NotNil(t, claims.Confirmation)
-	assertConfirmationThumbprint(t, claims.Confirmation, jkt)
-}
-
-// TestNativeKeyBindingDeviceFlowUnbound ensures the device flow is unchanged
-// when key binding is not configured.
-func TestNativeKeyBindingDeviceFlowUnbound(t *testing.T) {
-	ctx := context.Background()
-	exampleStorage := storage.NewStorage(storage.NewUserStore("http://local-site"))
-	var deferred deferredHandler
-	opServer := httptest.NewServer(&deferred)
-	defer opServer.Close()
-	deferred.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, false)
-
-	clientID := "device-unbound-" + uuid.NewString()
-	const clientSecret = "secret"
-	storage.RegisterClients(storage.DeviceClient(clientID, clientSecret))
-
-	provider, err := rp.NewRelyingPartyOIDC(ctx, opServer.URL, clientID, clientSecret, "",
-		[]string{oidc.ScopeOpenID}, rp.WithAuthStyle(oauth2.AuthStyleInHeader))
-	require.NoError(t, err)
-
-	deviceAuth, err := rp.DeviceAuthorization(ctx, []string{oidc.ScopeOpenID}, provider, nil)
-	require.NoError(t, err)
-
-	issuerCtx := op.ContextWithIssuer(ctx, opServer.URL)
-	state, err := exampleStorage.GetDeviceAuthorizatonState(issuerCtx, clientID, deviceAuth.DeviceCode)
-	require.NoError(t, err)
-	assert.Empty(t, state.GetDPoPJKT())
-	assert.NotContains(t, state.GetScopes(), oidc.ScopeBoundKey)
-
-	require.NoError(t, exampleStorage.CompleteDeviceAuthorization(issuerCtx, deviceAuth.UserCode, "id1"))
-
-	tokens, err := rp.DeviceAccessToken(ctx, deviceAuth.DeviceCode, devicePollInterval, provider)
-	require.NoError(t, err)
-	require.NotEmpty(t, tokens.IDToken)
-	assertIDTokenType(t, tokens.IDToken, oidc.IDTokenTypeJWT)
-
-	var claims oidc.IDTokenClaims
-	require.NoError(t, json.Unmarshal(unsafeIDTokenPayload(t, tokens.IDToken), &claims))
-	assert.Nil(t, claims.Confirmation)
-}
-
-func unsafeIDTokenPayload(t *testing.T, token string) []byte {
-	t.Helper()
-	jws, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{jose.RS256})
-	require.NoError(t, err)
-	return jws.UnsafePayloadWithoutVerification()
 }

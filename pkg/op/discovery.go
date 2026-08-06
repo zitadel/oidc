@@ -118,8 +118,6 @@ func Scopes(c Configuration) []string {
 // DPoPSigningAlgorithms returns the dpop_signing_alg_values_supported
 // discovery metadata. It is empty unless the OP advertises the `bound_key`
 // scope, since key binding is the only DPoP feature implemented.
-//
-// EXPERIMENTAL: may change until v4
 func DPoPSigningAlgorithms(c Configuration) []string {
 	if !slices.Contains(Scopes(c), oidc.ScopeBoundKey) {
 		return nil

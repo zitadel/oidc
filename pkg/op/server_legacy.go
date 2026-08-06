@@ -360,13 +360,7 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	if err != nil {
 		return nil, err
 	}
-	// OpenID Connect Key Binding 1.0, Section 3.3: the proof is bound to the
-	// device code rather than an authorization code.
-	confirmation, err := verifyBoundKey(r.Header, r.Method, s.endpoints.Token.Absolute(IssuerFromContext(ctx)), tokenRequest, r.Data.DeviceCode)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := createDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client, confirmation)
+	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)
 	if err != nil {
 		return nil, err
 	}

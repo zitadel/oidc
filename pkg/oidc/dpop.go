@@ -18,12 +18,11 @@ import (
 // Parameters, claims and helpers for OpenID Connect Key Binding 1.0, which
 // binds an ID Token to a proof-of-possession key using DPoP proofs.
 //
-// Key Binding is still an IETF draft, so everything in this file is
-// EXPERIMENTAL: may change until v4
+// OpenID Connect Key Binding is a draft, but it is already deployed by
+// production IdPs, so the wire format here is stable in practice. Any
+// adjustments to track the final specification will follow the normal
+// deprecation process rather than changing without notice.
 const (
-	// ScopeBoundKey requests an ID Token bound to a proof-of-possession key.
-	ScopeBoundKey = "bound_key"
-
 	// DPoPJKTParam is the authorization request parameter carrying the
 	// base64url-encoded SHA-256 JWK thumbprint of the binding key.
 	DPoPJKTParam = "dpop_jkt"
@@ -43,16 +42,12 @@ const (
 const IDTokenTypeJWT jose.ContentType = "JWT"
 
 // Confirmation is the cnf claim of a key-bound ID Token.
-//
-// EXPERIMENTAL: may change until v4
 type Confirmation struct {
 	JWK json.RawMessage `json:"jwk"`
 }
 
 // DPoPProofClaims contains the claims used by a DPoP proof for OpenID
 // Connect Key Binding.
-//
-// EXPERIMENTAL: may change until v4
 type DPoPProofClaims struct {
 	JWTID      string `json:"jti"`
 	HTTPMethod string `json:"htm"`
@@ -87,8 +82,6 @@ func (c *DPoPProofClaims) UnmarshalJSON(data []byte) error {
 
 // ValidDPoPJKT reports whether value is an unpadded base64url-encoded
 // SHA-256 JWK thumbprint.
-//
-// EXPERIMENTAL: may change until v4
 func ValidDPoPJKT(value string) bool {
 	decoded, err := base64.RawURLEncoding.Strict().DecodeString(value)
 	return err == nil && len(decoded) == sha256.Size && base64.RawURLEncoding.EncodeToString(decoded) == value
@@ -96,8 +89,6 @@ func ValidDPoPJKT(value string) bool {
 
 // JWKThumbprint returns the RFC 7638 SHA-256 thumbprint of jwk, encoded
 // with unpadded base64url.
-//
-// EXPERIMENTAL: may change until v4
 func JWKThumbprint(jwk *jose.JSONWebKey) (string, error) {
 	thumbprint, err := jwk.Thumbprint(crypto.SHA256)
 	if err != nil {
@@ -108,8 +99,6 @@ func JWKThumbprint(jwk *jose.JSONWebKey) (string, error) {
 
 // CanonicalJWK returns the public key members of jwk without optional or
 // caller-controlled JWK metadata such as kid, use, alg, or x5c.
-//
-// EXPERIMENTAL: may change until v4
 func CanonicalJWK(jwk *jose.JSONWebKey) (json.RawMessage, error) {
 	canonical, err := json.Marshal(jose.JSONWebKey{Key: jwk.Key})
 	if err != nil {
@@ -123,8 +112,6 @@ func CanonicalJWK(jwk *jose.JSONWebKey) (json.RawMessage, error) {
 // and Ed25519 (fixed strength). Other key types pass; callers are expected to
 // have already restricted the key to a public asymmetric type. Shared by the OP
 // and RP so the two cannot drift apart.
-//
-// EXPERIMENTAL: may change until v4
 func ValidateDPoPKeyStrength(key any) error {
 	switch k := key.(type) {
 	case *rsa.PublicKey:
@@ -143,8 +130,6 @@ func ValidateDPoPKeyStrength(key any) error {
 }
 
 // CodeHash returns the c_s256 value for an authorization or device code.
-//
-// EXPERIMENTAL: may change until v4
 func CodeHash(code string) string {
 	hash := sha256.Sum256([]byte(code))
 	return base64.RawURLEncoding.EncodeToString(hash[:])

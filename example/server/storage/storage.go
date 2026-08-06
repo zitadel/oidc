@@ -796,10 +796,6 @@ func getInfoFromRequest(req op.TokenRequest) (clientID string, authTime time.Tim
 	if ok {
 		return refreshReq.ApplicationID, refreshReq.AuthTime, refreshReq.AMR, refreshReq.DPoPJKT
 	}
-	deviceReq, ok := req.(*op.DeviceAuthorizationState) // Device Authorization Flow
-	if ok {
-		return deviceReq.ClientID, deviceReq.AuthTime, deviceReq.AMR, deviceReq.DPoPJKT
-	}
 	return "", time.Time{}, nil, ""
 }
 
@@ -826,17 +822,6 @@ type deviceAuthorizationEntry struct {
 }
 
 func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
-	return s.storeDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, scopes, "")
-}
-
-// StoreBoundKeyDeviceAuthorization implements op.BoundKeyDeviceAuthorizationStorage,
-// persisting the dpop_jkt so the DPoP proof can be verified at the token
-// endpoint. It must be returned from the DeviceAuthorizationState.
-func (s *Storage) StoreBoundKeyDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
-	return s.storeDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, scopes, dpopJKT)
-}
-
-func (s *Storage) storeDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string, dpopJKT string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -855,7 +840,6 @@ func (s *Storage) storeDeviceAuthorization(ctx context.Context, clientID, device
 			ClientID: clientID,
 			Scopes:   scopes,
 			Expires:  expires,
-			DPoPJKT:  dpopJKT,
 		},
 	}
 

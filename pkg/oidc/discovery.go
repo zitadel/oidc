@@ -127,8 +127,6 @@ type DiscoveryConfiguration struct {
 	CodeChallengeMethodsSupported []CodeChallengeMethod `json:"code_challenge_methods_supported,omitempty"`
 
 	// DPoPSigningAlgValuesSupported contains the JWS algorithms accepted for DPoP proof JWTs.
-	//
-	// EXPERIMENTAL: may change until v4
 	DPoPSigningAlgValuesSupported []string `json:"dpop_signing_alg_values_supported,omitempty"`
 
 	// ServiceDocumentation is a URL where developers can get information about the OP and its usage.

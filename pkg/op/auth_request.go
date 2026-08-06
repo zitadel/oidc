@@ -47,8 +47,6 @@ type AuthRequestSessionState interface {
 
 // BoundKeyRequest should be implemented by persisted authorization and
 // refresh-token requests that support OpenID Connect Key Binding.
-//
-// EXPERIMENTAL: may change until v4
 type BoundKeyRequest interface {
 	// GetDPoPJKT returns the dpop_jkt value committed to by the
 	// Authentication Request, or an empty string if the request did not
@@ -358,8 +356,6 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 // Call only after [ValidateAuthReqScopes] has filtered the scopes and after
 // redirect_uri validation, since it returns an [oidc.Error] that redirects to
 // authReq.RedirectURI.
-//
-// EXPERIMENTAL: may change until v4
 func ValidateAuthReqBoundKey(authReq *oidc.AuthRequest) error {
 	if !slices.Contains(authReq.Scopes, oidc.ScopeBoundKey) {
 		authReq.DPoPJKT = ""

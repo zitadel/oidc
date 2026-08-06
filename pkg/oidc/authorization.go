@@ -32,6 +32,11 @@ const (
 	// that grants access to the End-User's UserInfo Endpoint even when the End-User is not present (not logged in).
 	ScopeOfflineAccess = "offline_access"
 
+	// ScopeBoundKey defines the scope `bound_key`
+	// This (optional) scope value requests an ID Token bound to a proof-of-possession key,
+	// as defined by OpenID Connect Key Binding 1.0.
+	ScopeBoundKey = "bound_key"
+
 	// ResponseTypeCode for the Authorization Code Flow returning a code from the Authorization Server
 	ResponseTypeCode ResponseType = "code"
 
@@ -93,8 +98,6 @@ type AuthRequest struct {
 	// together with the `bound_key` scope, requests a key-bound ID Token.
 	//
 	// [RFC 9449, Section 10]: https://www.rfc-editor.org/rfc/rfc9449#section-10
-	//
-	// EXPERIMENTAL: may change until v4
 	DPoPJKT string `json:"dpop_jkt,omitempty" schema:"dpop_jkt"`
 
 	// RequestParam enables OIDC requests to be passed in a single, self-contained parameter (as JWT, called Request Object)

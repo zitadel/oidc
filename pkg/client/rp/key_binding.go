@@ -19,8 +19,13 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
+// This file implements the RP side of OpenID Connect Key Binding 1.0. The
+// specification is still a draft, but it is already deployed by production
+// IdPs, so the wire format is stable in practice; any adjustments to track the
+// final specification will follow the normal deprecation process rather than
+// changing without notice.
+
 var (
-	// EXPERIMENTAL: may change until v4
 	ErrInvalidKeyBinding      = errors.New("invalid key binding configuration")
 	ErrKeyBindingIDToken      = errors.New("invalid key-bound ID token")
 	ErrKeyBindingConfirmation = errors.New("ID token confirmation does not match the binding key")
@@ -34,8 +39,6 @@ type keyBinding struct {
 // KeyBindingRelyingParty is implemented by RPs configured with
 // [WithKeyBinding]. Wrappers around a RelyingParty can preserve native key
 // binding by forwarding these methods.
-//
-// EXPERIMENTAL: may change until v4
 type KeyBindingRelyingParty interface {
 	RelyingParty
 	KeyBindingThumbprint() string
@@ -50,8 +53,6 @@ type KeyBindingRelyingParty interface {
 //
 // signer may be any [crypto.Signer], including a KMS- or HSM-backed one. alg must
 // be an asymmetric JWS algorithm supported by signer's key.
-//
-// EXPERIMENTAL: may change until v4
 func WithKeyBinding(signer crypto.Signer, alg jose.SignatureAlgorithm) Option {
 	return func(rp *relyingParty) error {
 		if rp.oauth2Only {

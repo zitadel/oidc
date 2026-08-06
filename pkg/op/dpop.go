@@ -17,13 +17,17 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
+// This file implements the OP side of OpenID Connect Key Binding 1.0. The
+// specification is still a draft, but it is already deployed by production
+// IdPs, so the wire format is stable in practice; any adjustments to track the
+// final specification will follow the normal deprecation process rather than
+// changing without notice.
+
 // DefaultDPoPSigningAlgs is the default, and recommended, allow-list of JWS
 // algorithms accepted for DPoP proof JWTs. It excludes "none" and symmetric
 // (HMAC) algorithms, which [RFC 9449, Section 4.2] forbids. It also derives the
 // dpop_signing_alg_values_supported metadata (see [DPoPSigAlgorithms]), so
 // discovery and the token endpoint cannot drift apart.
-//
-// EXPERIMENTAL: may change until v4
 //
 // [RFC 9449, Section 4.2]: https://www.rfc-editor.org/rfc/rfc9449#section-4.2
 var DefaultDPoPSigningAlgs = []jose.SignatureAlgorithm{
@@ -38,8 +42,6 @@ var DefaultDPoPSigningAlgs = []jose.SignatureAlgorithm{
 // does not maintain a `jti` replay cache (see [RFC 9449, Section 11.1]), a
 // short window is used to bound how long a captured proof remains usable.
 //
-// EXPERIMENTAL: may change until v4
-//
 // [RFC 9449, Section 11.1]: https://www.rfc-editor.org/rfc/rfc9449#section-11.1
 const DefaultDPoPProofMaxAge = time.Minute
 
@@ -53,8 +55,6 @@ const DefaultDPoPProofMaxAge = time.Minute
 // NOTE: the fields below apply only when you call Verify yourself. An OP built
 // with [NewOpenIDProvider] always uses [DefaultDPoPSigningAlgs] and
 // [DefaultDPoPProofMaxAge], which is what discovery advertises.
-//
-// EXPERIMENTAL: may change until v4
 type DPoPProofVerifier struct {
 	// SupportedSignAlgs is the allow-list of JWS algorithms accepted for
 	// DPoP proof JWTs. Defaults to [DefaultDPoPSigningAlgs]. It MUST NOT
@@ -72,8 +72,6 @@ type DPoPProofVerifier struct {
 
 // NewDPoPProofVerifier returns a DPoPProofVerifier configured with
 // [DefaultDPoPSigningAlgs] and [DefaultDPoPProofMaxAge].
-//
-// EXPERIMENTAL: may change until v4
 func NewDPoPProofVerifier() *DPoPProofVerifier {
 	return &DPoPProofVerifier{
 		SupportedSignAlgs: DefaultDPoPSigningAlgs,
@@ -127,8 +125,6 @@ func (v *DPoPProofVerifier) maxAge() time.Duration {
 // c_s256 claim to match its SHA-256 hash, per Key Binding 1.0 Sections 2.3 and
 // 3.3; an empty boundCode is the Refresh Request case (Section 5), where no
 // c_s256 is required.
-//
-// EXPERIMENTAL: may change until v4
 func (v *DPoPProofVerifier) Verify(header http.Header, method, htu, expectedJKT, boundCode string) (*oidc.Confirmation, error) {
 	proof, err := singleHeaderValue(header, oidc.DPoPHeader)
 	if err != nil {
