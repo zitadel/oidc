@@ -41,6 +41,52 @@ When in doubt, omit the scope — `<type>: <short summary>` is always valid.
 
 Provide a brief description of the change.
 
+## Dependency updates
+
+Most dependency bumps (Dependabot or manual) can be merged once CI is green.
+There is one exception that CI here cannot catch: **OpenTelemetry**.
+
+### OpenTelemetry must not get ahead of k6
+
+[`zitadel/xk6-modules`](https://github.com/zitadel/xk6-modules) — the k6 extension used for
+ZITADEL's load tests — imports both this library and [k6](https://github.com/grafana/k6).
+k6 pins the whole OpenTelemetry family (API, SDK and exporters) to a single version.
+Go's minimal version selection means an `otel` requirement in *our* `go.mod` that is higher
+than k6's raises only the API modules, while k6 keeps the SDK and exporters at its own
+version. That mixed set has broken the xk6 build in the past.
+
+So the rule is: **never require a `go.opentelemetry.io/otel*` version higher than the one in
+the latest tagged k6 release.** Being on the same version, or lower, is fine.
+
+### How to verify
+
+Check k6's `go.mod` at a **tagged release** (not `master`, which is usually ahead):
+
+```bash
+# resolve the latest k6 release, then read its otel pins
+tag=$(gh release view --repo grafana/k6 --json tagName -q .tagName)
+curl -sL "https://raw.githubusercontent.com/grafana/k6/${tag}/go.mod" | grep opentelemetry
+```
+
+Compare that with the versions in our [`go.mod`](go.mod). If the PR would push us above k6,
+hold the PR until k6 catches up.
+
+Mind the major version: `xk6-modules` currently builds against `go.k6.io/k6/v2`, so use the
+matching k6 release line.
+
+Alternatively, from a checkout of `xk6-modules`, Grafana's
+[`xk6 sync`](https://github.com/grafana/xk6#xk6-sync) command aligns an extension's
+dependencies with the k6 version in its `go.mod` and shows the mismatches. A quick manual
+check is to bump the otel modules in `xk6-modules` to the proposed version *without*
+touching the k6 requirement, and confirm `go build ./...` still passes.
+
+### The `2.12.x` branch
+
+`2.12.x` is the maintenance branch for v2 and still targets an old Go version. Dependabot
+regularly proposes bumps there (OpenTelemetry included) that rewrite the `go` directive and
+break the build. Those PRs should be closed rather than merged unless the bump is a security
+fix that genuinely applies to v2.
+
 ## Want to use the library?
 
 Checkout the [examples folder](example) for different client and server implementations.
