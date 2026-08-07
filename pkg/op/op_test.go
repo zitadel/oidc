@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,6 +20,17 @@ import (
 	"github.com/zitadel/oidc/v4/pkg/op"
 	"golang.org/x/text/language"
 )
+
+func TestDeprecatedWithLogger(t *testing.T) {
+	previous := slog.Default()
+	configured := slog.New(slog.NewTextHandler(new(strings.Builder), nil))
+
+	require.NoError(t, op.WithLogger(configured)(&op.Provider{}))
+	assert.Same(t, previous, slog.Default())
+	assert.NotPanics(t, func() {
+		require.NoError(t, op.WithLogger(nil)(&op.Provider{}))
+	})
+}
 
 var (
 	testProvider op.OpenIDProvider
@@ -223,6 +235,21 @@ func TestRoutes(t *testing.T) {
 				`{"access_token":"`,
 				`","issued_token_type":"urn:ietf:params:oauth:token-type:refresh_token","token_type":"Bearer","expires_in":299,"scope":"openid offline_access","refresh_token":"`,
 			},
+		},
+		{
+			name:      "Token exchange to jwt token type",
+			method:    http.MethodGet,
+			path:      testProvider.TokenEndpoint().Relative(),
+			basicAuth: &basicAuth{"web", "secret"},
+			values: map[string]string{
+				"grant_type":           string(oidc.GrantTypeTokenExchange),
+				"scope":                oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
+				"subject_token":        jwtToken,
+				"subject_token_type":   string(oidc.AccessTokenType),
+				"requested_token_type": string(oidc.JWTTokenType),
+			},
+			wantCode: http.StatusBadRequest,
+			json:     `{"error":"invalid_request","error_description":"requested_token_type is invalid"}`,
 		},
 		{
 			name:      "Client credentials exchange",

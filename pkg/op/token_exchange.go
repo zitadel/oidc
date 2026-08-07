@@ -140,17 +140,18 @@ func TokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) 
 
 	tokenExchangeReq, clientID, clientSecret, err := ParseTokenExchangeRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
+		return
 	}
 
 	tokenExchangeRequest, client, err := ValidateTokenExchangeRequest(r.Context(), tokenExchangeReq, clientID, clientSecret, exchanger)
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 		return
 	}
 	resp, err := CreateTokenExchangeResponse(r.Context(), tokenExchangeRequest, client, exchanger)
 	if err != nil {
-		RequestError(w, r, err, exchanger.Logger())
+		RequestError(w, r, err, nil)
 		return
 	}
 	httphelper.MarshalJSON(w, resp)
@@ -399,7 +400,7 @@ func CreateTokenExchangeResponse(
 		// oidc.JWTTokenType and other custom token types are not supported for issuing.
 		// In the future it can be considered to have custom tokens generation logic injected via op configuration
 		// or via expanding Storage interface
-		oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
+		return nil, oidc.ErrInvalidRequest().WithDescription("requested_token_type is invalid")
 	}
 
 	return &oidc.TokenExchangeResponse{

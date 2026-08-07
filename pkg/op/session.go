@@ -17,6 +17,7 @@ type SessionEnder interface {
 	Storage() Storage
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
+	// Deprecated: configure logging with slog.SetDefault.
 	Logger() *slog.Logger
 }
 
@@ -38,7 +39,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	}
 	session, err := ValidateEndSessionRequest(r.Context(), req, ender)
 	if err != nil {
-		RequestError(w, r, err, ender.Logger())
+		RequestError(w, r, err, nil)
 		return
 	}
 	redirect := session.RedirectURI
@@ -48,7 +49,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 		err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.ClientID)
 	}
 	if err != nil {
-		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"), ender.Logger())
+		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"), nil)
 		return
 	}
 	http.Redirect(w, r, redirect, http.StatusFound)

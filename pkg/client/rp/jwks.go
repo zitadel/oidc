@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync"
 
-	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/zitadel/oidc/v4/pkg/client"
 	httphelper "github.com/zitadel/oidc/v4/pkg/http"
