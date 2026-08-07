@@ -36,7 +36,7 @@ ours=$(otel_versions < go.mod | tail -1)
 [ -n "$ours" ] || { echo "go.mod requires no stable go.opentelemetry.io/otel module, nothing to check"; exit 0; }
 
 # The k6 major line the load tests build against, e.g. "go.k6.io/k6/v2" -> "v2".
-k6_major=$(curl -sSfL "$XK6_GOMOD_URL" | grep -oE 'go\.k6\.io/k6(/v[0-9]+)?' | head -1 | grep -oE 'v[0-9]+$' || true)
+k6_major=$(curl --retry 3 --retry-delay 2 --retry-connrefused --connect-timeout 10 --max-time 30 -sSfL "$XK6_GOMOD_URL" | grep -oE 'go\.k6\.io/k6(/v[0-9]+)?' | head -1 | grep -oE 'v[0-9]+$' || true)
 k6_major=${k6_major:-v1}
 
 if [ -n "${K6_VERSION:-}" ]; then
@@ -61,7 +61,7 @@ echo "k6 ${k6_tag} pins otel     ${theirs}"
 
 if [ "$(printf '%s\n%s\n' "$ours" "$theirs" | sort -V | tail -1)" != "$theirs" ]; then
   cat <<EOF
-::error::otel ${ours} is newer than the ${theirs} pinned by k6 ${k6_tag}
+::error::otel ${ours} is newer than the ${theirs} version pinned by k6 ${k6_tag}
 This would break the zitadel/xk6-modules build used for the ZITADEL load tests.
 Hold this bump until k6 ships a release on otel ${ours} or newer.
 See the "Dependency updates" section in CONTRIBUTING.md.
