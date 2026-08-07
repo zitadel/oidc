@@ -60,19 +60,28 @@ the latest tagged k6 release.** Being on the same version, or lower, is fine.
 
 ### How to verify
 
-Check k6's `go.mod` at a **tagged release** (not `master`, which is usually ahead):
+CI does this for you: the **otel not ahead of k6** check
+([`otel-k6-compat.yml`](.github/workflows/otel-k6-compat.yml)) runs on every PR and fails
+if this module requires a newer otel than the latest k6 release. To run the same check
+locally:
 
 ```bash
-# resolve the latest k6 release, then read its otel pins
+.github/scripts/check-otel-k6-compat.sh
+```
+
+It resolves the latest tagged k6 release on the major line `xk6-modules` builds against,
+reads the otel versions from that tag's `go.mod`, and compares them with ours. Set
+`K6_VERSION=v2.1.0` to check against a specific k6 tag instead.
+
+By hand, the same thing is: read k6's `go.mod` at a **tagged release** (not `master`, which
+is usually ahead) and compare with our [`go.mod`](go.mod):
+
+```bash
 tag=$(gh release view --repo grafana/k6 --json tagName -q .tagName)
 curl -sL "https://raw.githubusercontent.com/grafana/k6/${tag}/go.mod" | grep opentelemetry
 ```
 
-Compare that with the versions in our [`go.mod`](go.mod). If the PR would push us above k6,
-hold the PR until k6 catches up.
-
-Mind the major version: `xk6-modules` currently builds against `go.k6.io/k6/v2`, so use the
-matching k6 release line.
+If the PR would push us above k6, hold it until k6 catches up.
 
 Alternatively, from a checkout of `xk6-modules`, Grafana's
 [`xk6 sync`](https://github.com/grafana/xk6#xk6-sync) command aligns an extension's

@@ -1,0 +1,23 @@
+name: OpenTelemetry k6 compatibility
+
+# zitadel/xk6-modules imports both this library and k6, and k6 pins the whole
+# OpenTelemetry family to a single version. Requiring a newer otel here silently
+# breaks that build, which our own test matrix cannot detect.
+# See the "Dependency updates" section in CONTRIBUTING.md.
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  otel-k6-compat:
+    name: otel not ahead of k6
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: .github/scripts/check-otel-k6-compat.sh
