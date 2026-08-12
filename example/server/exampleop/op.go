@@ -35,7 +35,11 @@ func SetupServer(issuer string, storage Storage, logger *slog.Logger, wrapServer
 	// be sure to create a proper crypto random key and manage it securely!
 	key := sha256.Sum256([]byte("test"))
 	keyId := "key1"
-	slog.SetDefault(logger)
+	if logger != nil {
+		// note that this replaces the logger for the whole process, which is
+		// acceptable for this example, but usually not what a library should do.
+		slog.SetDefault(logger)
+	}
 
 	router := chi.NewRouter()
 	router.Use(requestLoggingMiddleware)
