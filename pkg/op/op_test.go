@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -483,4 +484,73 @@ func TestWithCustomEndpoints(t *testing.T) {
 			assert.Equal(t, tt.args.keys, provider.KeysEndpoint())
 		})
 	}
+}
+
+// A customisation must not reach the global or a sibling provider that never asked for it.
+func TestNewProviderDoesNotMutateDefaultEndpoints(t *testing.T) {
+	defaultsBefore := *op.DefaultEndpoints
+
+	customAuth := op.NewEndpoint("/custom/authorize")
+	_, err := op.NewOpenIDProvider(testIssuer, testConfig,
+		storage.NewStorage(storage.NewUserStore(testIssuer)),
+		op.WithCustomAuthEndpoint(customAuth),
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, defaultsBefore, *op.DefaultEndpoints,
+		"DefaultEndpoints was mutated by WithCustomAuthEndpoint")
+
+	sibling, err := op.NewOpenIDProvider(testIssuer, testConfig,
+		storage.NewStorage(storage.NewUserStore(testIssuer)),
+	)
+	require.NoError(t, err)
+	assert.NotEqual(t, customAuth, sibling.AuthorizationEndpoint(),
+		"sibling provider inherited a customisation it did not request")
+}
+
+// WithCustom*Endpoint writes inside NewProvider raced with reads on an already-serving provider.
+func TestNewProviderEndpointsConcurrentRace(t *testing.T) {
+	reader, err := op.NewOpenIDProvider(testIssuer, testConfig,
+		storage.NewStorage(storage.NewUserStore(testIssuer)),
+	)
+	require.NoError(t, err)
+
+	stop := make(chan struct{})
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				_ = reader.AuthorizationEndpoint().Relative()
+			}
+		}
+	}()
+
+	const builders = 8
+	var builderWg sync.WaitGroup
+	builderWg.Add(builders)
+	for range builders {
+		go func() {
+			defer builderWg.Done()
+			_, err := op.NewOpenIDProvider(testIssuer, testConfig,
+				storage.NewStorage(storage.NewUserStore(testIssuer)),
+				op.WithCustomEndpoints(
+					op.NewEndpoint("/authorize"),
+					op.NewEndpoint("/oauth/token"),
+					op.NewEndpoint("/userinfo"),
+					op.NewEndpoint("/revoke"),
+					op.NewEndpoint("/end_session"),
+					op.NewEndpoint("/keys"),
+				),
+			)
+			assert.NoError(t, err)
+		}()
+	}
+
+	builderWg.Wait()
+	close(stop)
+	<-readerDone
 }
