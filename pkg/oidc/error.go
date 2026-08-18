@@ -222,6 +222,7 @@ func DefaultToServerError(err error, description string) *Error {
 		oidcErr = ErrInvalidRequest().WithParent(err).WithDescription("%s", description)
 	case errors.Is(err, ErrIssuerInvalid),
 		errors.Is(err, ErrSubjectMissing),
+		errors.Is(err, ErrSubjectInvalid),
 		errors.Is(err, ErrAudience),
 		errors.Is(err, ErrAzpMissing),
 		errors.Is(err, ErrAzpInvalid),
