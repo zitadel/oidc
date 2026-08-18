@@ -99,6 +99,16 @@ func TestDefaultToServerError(t *testing.T) {
 	}
 }
 
+// TestDefaultToServerError_SubjectInvalid guards against a regression where
+// ErrSubjectInvalid (returned by the JWT profile grant when iss != sub) was not
+// listed in the invalid_grant case and fell through to server_error (HTTP 500).
+// A rejected client assertion must map to invalid_grant per RFC 7523, matching
+// the sibling ErrSubjectMissing.
+func TestDefaultToServerError_SubjectInvalid(t *testing.T) {
+	got := DefaultToServerError(ErrSubjectInvalid, ErrSubjectInvalid.Error())
+	assert.Equal(t, InvalidGrant, got.ErrorType)
+}
+
 func TestError_LogLevel(t *testing.T) {
 	tests := []struct {
 		name string
