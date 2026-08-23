@@ -60,6 +60,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
 		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		ResourceIndicatorsSupported:                        ResourceIndicatorsSupported(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
@@ -93,11 +94,23 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		RevocationEndpointAuthMethodsSupported:             AuthMethodsRevocationEndpoint(config),
 		ClaimsSupported:                                    SupportedClaims(config),
 		CodeChallengeMethodsSupported:                      CodeChallengeMethods(config),
+		ResourceIndicatorsSupported:                        ResourceIndicatorsSupported(config),
 		UILocalesSupported:                                 config.SupportedUILocales(),
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
 		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
 	}
+}
+
+// ResourceIndicatorsSupported reports whether the OP advertises support for the
+// `resource` parameter defined by [RFC 8707]. Enable it with
+// [Config.ResourceIndicatorsSupported] once the [Storage] implementation honours the
+// requested resources when it determines the audience of the issued tokens.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func ResourceIndicatorsSupported(c Configuration) bool {
+	provider, ok := c.(*Provider)
+	return ok && provider.config.ResourceIndicatorsSupported
 }
 
 func Scopes(c Configuration) []string {
