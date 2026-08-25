@@ -311,7 +311,11 @@ func GetTokenIDAndSubjectFromToken(
 		if !ok {
 			break
 		}
-		claims = accessTokenClaims.Claims
+		// opaque access tokens carry no JWT claims, so accessTokenClaims can be
+		// nil even when ok is true. Leave claims empty instead of dereferencing.
+		if accessTokenClaims != nil {
+			claims = accessTokenClaims.Claims
+		}
 	case oidc.RefreshTokenType:
 		refreshTokenRequest, err := exchanger.Storage().TokenRequestByRefreshToken(ctx, token)
 		if err != nil {
