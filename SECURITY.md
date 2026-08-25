@@ -6,15 +6,11 @@ Please refer to the security policy [on zitadel/zitadel](https://github.com/zita
 
 We currently support the following version of the OIDC framework:
 
-| Version  | Supported          | Branch      | Details                              |
-| -------- | ------------------ | ----------- | ------------------------------------ |
-| 0.x.x    | :x:                |             | not maintained                       |
-| <2.11    | :x:                |             | not maintained                       |
-| 2.11.x   | :lock: :warning:   | [2.11.x][1] | security only, [community effort][2] |
-| 3.x.x    | :heavy_check_mark: | [main][3]   | supported                            |
-| 4.0.0-xx | :white_check_mark: | [next][4]   | [development branch]                 |
+| Version  | Supported          | Branch    | Details              |
+| -------- | ------------------ | --------- | -------------------- |
+| <3       | :x:                |           | not maintained       |
+| 3.x.x    | :heavy_check_mark: | [main][1] | supported            |
+| 4.0.0-xx | :white_check_mark: | [next][2] | [development branch] |
 
-[1]: https://github.com/zitadel/oidc/tree/2.11.x
-[2]: https://github.com/zitadel/oidc/discussions/458
-[3]: https://github.com/zitadel/oidc/tree/main
-[4]: https://github.com/zitadel/oidc/tree/next
+[1]: https://github.com/zitadel/oidc/tree/main
+[2]: https://github.com/zitadel/oidc/tree/next
