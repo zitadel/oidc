@@ -31,5 +31,5 @@ func TestGetTokenIDAndSubjectFromToken_OpaqueAccessToken(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "tokenID", tokenIDOrToken)
 	assert.Equal(t, "subject", subject)
-	assert.Nil(t, claims)
+	assert.Empty(t, claims)
 }
