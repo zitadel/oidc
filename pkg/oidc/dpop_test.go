@@ -80,31 +80,6 @@ func TestJWKThumbprint(t *testing.T) {
 	assert.NotEqual(t, got, otherTP)
 }
 
-func TestCanonicalJWK(t *testing.T) {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	jwk := &jose.JSONWebKey{Key: key.Public(), KeyID: "kid", Use: "sig", Algorithm: "ES256"}
-
-	canonical, err := CanonicalJWK(jwk)
-	require.NoError(t, err)
-
-	var fields map[string]any
-	require.NoError(t, json.Unmarshal(canonical, &fields))
-	assert.Contains(t, fields, "kty")
-	assert.NotContains(t, fields, "kid")
-	assert.NotContains(t, fields, "use")
-	assert.NotContains(t, fields, "alg")
-
-	// The stripped key still identifies the same key.
-	full, err := JWKThumbprint(jwk)
-	require.NoError(t, err)
-	var parsed jose.JSONWebKey
-	require.NoError(t, parsed.UnmarshalJSON(canonical))
-	stripped, err := JWKThumbprint(&parsed)
-	require.NoError(t, err)
-	assert.Equal(t, full, stripped)
-}
-
 func TestValidateDPoPKeyStrength(t *testing.T) {
 	ecKey := func(c elliptic.Curve) *ecdsa.PublicKey {
 		k, err := ecdsa.GenerateKey(c, rand.Reader)

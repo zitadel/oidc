@@ -83,16 +83,6 @@ func JWKThumbprint(jwk *jose.JSONWebKey) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(thumbprint), nil
 }
 
-// CanonicalJWK returns the public key members of jwk without optional or
-// caller-controlled JWK metadata such as kid, use, alg, or x5c.
-func CanonicalJWK(jwk *jose.JSONWebKey) (json.RawMessage, error) {
-	canonical, err := json.Marshal(jose.JSONWebKey{Key: jwk.Key})
-	if err != nil {
-		return nil, err
-	}
-	return json.RawMessage(canonical), nil
-}
-
 // ValidateDPoPKeyStrength enforces minimum key strength for a DPoP
 // proof-of-possession key: RSA 2048-8192 bits, EC curve P-256, P-384 or P-521,
 // and Ed25519 (fixed strength). Other key types pass; callers are expected to
