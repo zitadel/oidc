@@ -116,10 +116,11 @@ func CallEndSessionEndpoint(ctx context.Context, request any, authFn any, caller
 		return nil, err
 	}
 	client := caller.HttpClient()
-	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+	cl := *client
+	cl.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
-	resp, err := client.Do(req)
+	resp, err := cl.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -179,10 +180,11 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	}
 
 	client := caller.HttpClient()
-	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+	cl := *client
+	cl.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
-	resp, err := client.Do(req)
+	resp, err := cl.Do(req)
 	if err != nil {
 		return err
 	}
