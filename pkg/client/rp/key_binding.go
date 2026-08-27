@@ -45,10 +45,10 @@ type KeyBindingRelyingParty interface {
 // refresh and device authorization flows. The RP appends the `bound_key` scope,
 // adds the `dpop_jkt` authorization request parameter, signs a DPoP proof for each
 // token request, and verifies that the returned ID Token is actually bound to
-// signer
+// the provided signer.
 //
-	// Signer may be any [crypto.Signer], including an HSM-backed signer. alg must
-	// be an asymmetric JWS algorithm supported by the signer's key.
+// Signer may be any [crypto.Signer], including an HSM-backed signer. alg must
+// be an asymmetric JWS algorithm supported by the signer's key.
 func WithKeyBinding(signer crypto.Signer, alg jose.SignatureAlgorithm) Option {
 	return func(rp *relyingParty) error {
 		if rp.oauth2Only {
