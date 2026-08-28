@@ -8,6 +8,16 @@ import "encoding/json"
 type DeviceAuthorizationRequest struct {
 	Scopes   SpaceDelimitedArray `schema:"scope"`
 	ClientID string              `schema:"client_id"`
+
+	// Resource indicates the target service(s) or resource(s) at which the requested
+	// token is intended to be used, as defined by [RFC 8707]. The parameter may be
+	// repeated to request a token that is valid at multiple resources.
+	//
+	// Each value must be an absolute URI without a fragment component; the op package
+	// validates the syntax and rejects invalid values with `invalid_target`.
+	//
+	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+	Resource []string `schema:"resource,omitempty"`
 }
 
 // DeviceAuthorizationResponse implements
@@ -48,4 +58,13 @@ func (resp *DeviceAuthorizationResponse) UnmarshalJSON(data []byte) error {
 type DeviceAccessTokenRequest struct {
 	GrantType  GrantType `json:"grant_type" schema:"grant_type"`
 	DeviceCode string    `json:"device_code" schema:"device_code"`
+
+	// Resource narrows the target service(s) or resource(s) of the issued token,
+	// as defined by [RFC 8707, section 2.2]. Every value must be an absolute URI
+	// without a fragment component and must have been requested at the device
+	// authorization endpoint. If omitted, the resources of the device authorization
+	// request are used.
+	//
+	// [RFC 8707, section 2.2]: https://www.rfc-editor.org/rfc/rfc8707#section-2.2
+	Resource []string `json:"resource,omitempty" schema:"resource,omitempty"`
 }

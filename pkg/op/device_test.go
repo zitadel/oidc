@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	mr "math/rand"
 	"net/http"
@@ -109,6 +110,14 @@ func TestParseDeviceCodeRequest(t *testing.T) {
 			req: &oidc.DeviceAuthorizationRequest{
 				Scopes:   oidc.SpaceDelimitedArray{"foo", "bar"},
 				ClientID: "device",
+			},
+		},
+		{
+			name: "resource indicators",
+			req: &oidc.DeviceAuthorizationRequest{
+				Scopes:   oidc.SpaceDelimitedArray{"foo", "bar"},
+				ClientID: "device",
+				Resource: []string{"https://mcp.example.com/mcp", "https://api.example.com"},
 			},
 		},
 	}
@@ -535,4 +544,63 @@ func TestCreateDeviceTokenResponse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeviceAuthorizationResources(t *testing.T) {
+	newRequest := func(resource ...string) *http.Request {
+		req := &oidc.DeviceAuthorizationRequest{
+			Scopes:   []string{"foo", "bar"},
+			ClientID: "device",
+			Resource: resource,
+		}
+		values := make(url.Values)
+		testProvider.Encoder().Encode(req, values)
+
+		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(values.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return r.WithContext(op.ContextWithIssuer(r.Context(), testIssuer))
+	}
+
+	t.Run("invalid resource is rejected", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		op.DeviceAuthorizationHandler(testProvider)(w, newRequest("/mcp"))
+
+		result := w.Result()
+		assert.Equal(t, http.StatusBadRequest, result.StatusCode)
+		body, _ := io.ReadAll(result.Body)
+		assert.Contains(t, string(body), string(oidc.InvalidTarget))
+	})
+
+	t.Run("resources are stored and narrowed on the token request", func(t *testing.T) {
+		const (
+			granted = "https://mcp.example.com/mcp"
+			other   = "https://api.example.com"
+		)
+
+		w := httptest.NewRecorder()
+		op.DeviceAuthorizationHandler(testProvider)(w, newRequest(granted, other))
+
+		result := w.Result()
+		require.Less(t, result.StatusCode, 300)
+
+		response := new(oidc.DeviceAuthorizationResponse)
+		require.NoError(t, json.NewDecoder(result.Body).Decode(response))
+
+		state, err := testProvider.Storage().(op.DeviceAuthorizationStorage).
+			GetDeviceAuthorizatonState(context.Background(), "device", response.DeviceCode)
+		require.NoError(t, err)
+		assert.Equal(t, []string{granted, other}, state.GetResource())
+		assert.Equal(t, []string{granted, other, "device"}, state.GetAudience())
+
+		// a device access token request may narrow the granted resources down
+		require.NoError(t, op.ValidateTokenRequestResources([]string{granted}, state))
+		assert.Equal(t, []string{granted}, state.GetResource())
+
+		// but may not ask for a resource that was never granted
+		err = op.ValidateTokenRequestResources([]string{"https://other.example.com"}, state)
+		require.Error(t, err)
+		var oidcErr *oidc.Error
+		require.ErrorAs(t, err, &oidcErr)
+		assert.Equal(t, oidc.InvalidTarget, oidcErr.ErrorType)
+	})
 }
