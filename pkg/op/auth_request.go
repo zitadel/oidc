@@ -278,7 +278,7 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
-	if err := ValidateAuthReqResources(authReq.Resource); err != nil {
+	if err := ValidateResourceIndicators(authReq.Resource); err != nil {
 		return "", err
 	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
@@ -315,35 +315,6 @@ func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
 			!client.IsScopeAllowed(scope)
 	})
 	return scopes, nil
-}
-
-// ValidateAuthReqResources validates the values of the `resource` parameter against
-// [RFC 8707, section 2]: every value must be an absolute URI and must not include a
-// fragment component. Invalid values are rejected with the `invalid_target` error code.
-//
-// Only the syntax is validated here. Whether a resource is acceptable for the client,
-// and how it translates into the audience of the issued tokens, is up to the [Storage]
-// implementation, which receives the values on the [oidc.AuthRequest] passed to
-// [Storage.CreateAuthRequest].
-//
-// [RFC 8707, section 2]: https://www.rfc-editor.org/rfc/rfc8707#section-2
-func ValidateAuthReqResources(resources []string) error {
-	for _, resource := range resources {
-		if strings.Contains(resource, "#") {
-			return oidc.ErrInvalidTarget().
-				WithDescription("The resource parameter %q must not include a fragment component.", resource)
-		}
-		uri, err := url.Parse(resource)
-		if err != nil {
-			return oidc.ErrInvalidTarget().WithParent(err).
-				WithDescription("The resource parameter %q is not a valid URI.", resource)
-		}
-		if !uri.IsAbs() {
-			return oidc.ErrInvalidTarget().
-				WithDescription("The resource parameter %q must be an absolute URI.", resource)
-		}
-	}
-	return nil
 }
 
 // checkURIAgainstRedirects just checks against the valid redirect URIs and ignores
