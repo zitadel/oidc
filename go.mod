@@ -3,33 +3,33 @@ module github.com/zitadel/oidc/v3
 go 1.25.0
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.10.0
-	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/golang/mock v1.6.0
-	github.com/google/go-github/v31 v31.0.0
-	github.com/google/uuid v1.6.0
-	github.com/gorilla/securecookie v1.1.2
-	github.com/jeremija/gosubmit v0.2.8
-	github.com/muhlemmer/gu v0.3.1
-	github.com/muhlemmer/httpforwarded v0.1.0
-	github.com/rs/cors v1.11.1
-	github.com/stretchr/testify v1.12.1
-	github.com/zitadel/schema v1.3.2
-	go.opentelemetry.io/otel v1.45.0
-	go.opentelemetry.io/otel/trace v1.45.0
-	golang.org/x/oauth2 v0.36.0
-	golang.org/x/text v0.41.0
+    github.com/bmatcuk/doublestar/v4 v4.10.0
+    github.com/go-chi/chi/v5 v5.3.2
+    github.com/go-jose/go-jose/v4 v4.1.4
+    github.com/golang/mock v1.6.0
+    github.com/google/go-github/v31 v31.0.0
+    github.com/google/uuid v1.6.0
+    github.com/gorilla/securecookie v1.1.2
+    github.com/jeremija/gosubmit v0.2.8
+    github.com/muhlemmer/gu v0.3.1
+    github.com/muhlemmer/httpforwarded v0.1.0
+    github.com/rs/cors v1.11.1
+    github.com/stretchr/testify v1.12.1
+    github.com/zitadel/schema v1.3.2
+    go.opentelemetry.io/otel v1.45.0
+    go.opentelemetry.io/otel/trace v1.45.0
+    golang.org/x/oauth2 v0.36.0
+    golang.org/x/text v0.41.0
 )
 
 require (
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/go-logr/logr v1.4.4 // indirect
-	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/google/go-querystring v1.2.0 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.45.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
+    github.com/cespare/xxhash/v2 v2.3.0 // indirect
+    github.com/go-logr/logr v1.4.4 // indirect
+    github.com/go-logr/stdr v1.2.2 // indirect
+    github.com/google/go-querystring v1.2.0 // indirect
+    go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+    go.opentelemetry.io/otel/metric v1.45.0 // indirect
+    go.yaml.in/yaml/v3 v3.0.5 // indirect
+    golang.org/x/crypto v0.53.0 // indirect
+    golang.org/x/net v0.56.0 // indirect
 )
