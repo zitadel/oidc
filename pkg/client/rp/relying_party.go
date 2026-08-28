@@ -765,6 +765,20 @@ func WithResponseModeURLParam(mode oidc.ResponseMode) URLParamOpt {
 	return withURLParam("response_mode", string(mode))
 }
 
+// WithResourceURLParam sets the `resource` parameter of [RFC 8707] in a URL, to
+// indicate the resource server at which the requested token is intended to be used.
+// It can be passed to both the authorization request and the token request, so that
+// the issued token is bound to the resource as its audience.
+//
+// The value must be an absolute URI without a fragment component. [RFC 8707] allows
+// the parameter to be repeated to request a token for multiple resources, which the
+// underlying oauth2 package cannot express: only a single value can be set here.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func WithResourceURLParam(resource string) URLParamOpt {
+	return withURLParam("resource", resource)
+}
+
 type AuthURLOpt func() []oauth2.AuthCodeOption
 
 // WithCodeChallenge sets the `code_challenge` params in the auth request
