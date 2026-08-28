@@ -85,6 +85,10 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	ctx, span := Tracer.Start(ctx, "createDeviceAuthorization")
 	defer span.End()
 
+	if err := ValidateResourceIndicators(req.Resource); err != nil {
+		return nil, err
+	}
+
 	storage, err := assertDeviceStorage(o.Storage())
 	if err != nil {
 		return nil, err
@@ -98,7 +102,11 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	}
 
 	expires := time.Now().Add(config.Lifetime)
-	err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
+	if resourceStorage, ok := storage.(CanStoreDeviceAuthorizationWithResources); ok {
+		err = resourceStorage.StoreDeviceAuthorizationWithResources(ctx, clientID, deviceCode, userCode, expires, req.Scopes, req.Resource)
+	} else {
+		err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
+	}
 	if err != nil {
 		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
@@ -227,6 +235,9 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
+	if err = ValidateTokenRequestResources(req.Resource, tokenRequest); err != nil {
+		return err
+	}
 
 	client, err := exchanger.Storage().GetClientByClientID(ctx, clientID)
 	if err != nil {
@@ -265,6 +276,16 @@ type DeviceAuthorizationState struct {
 	Done     bool      // The user authenticated and approved the authorization request
 	Denied   bool      // The user authenticated and denied the authorization request
 
+	// Resource holds the resource indicators of [RFC 8707] that were requested with
+	// the device authorization request, as far as the [DeviceAuthorizationStorage]
+	// implementation stores and returns them. When the device access token request
+	// narrows them with its own `resource` parameter, this field is reduced to the
+	// requested subset before the tokens are created, so that the [Storage]
+	// implementation can bind the audience of the issued tokens to it.
+	//
+	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+	Resource []string
+
 	// The following fields are populated after Done == true
 	Subject  string
 	AMR      []string
@@ -292,6 +313,16 @@ func (r *DeviceAuthorizationState) GetClientID() string {
 
 func (r *DeviceAuthorizationState) GetScopes() []string {
 	return r.Scopes
+}
+
+// GetResource implements the [ResourceRequest] interface.
+func (r *DeviceAuthorizationState) GetResource() []string {
+	return r.Resource
+}
+
+// SetCurrentResources implements the [CurrentResourceSetter] interface.
+func (r *DeviceAuthorizationState) SetCurrentResources(resources []string) {
+	r.Resource = resources
 }
 
 func (r *DeviceAuthorizationState) GetSubject() string {

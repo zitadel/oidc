@@ -821,6 +821,14 @@ type deviceAuthorizationEntry struct {
 }
 
 func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	return s.StoreDeviceAuthorizationWithResources(ctx, clientID, deviceCode, userCode, expires, scopes, nil)
+}
+
+// StoreDeviceAuthorizationWithResources implements the optional
+// op.CanStoreDeviceAuthorizationWithResources interface, so that the resource
+// indicators (RFC 8707) of the device authorization request are kept and can be used
+// to determine the audience of the issued tokens.
+func (s *Storage) StoreDeviceAuthorizationWithResources(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes, resources []string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -837,7 +845,11 @@ func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, device
 		userCode:   userCode,
 		state: &op.DeviceAuthorizationState{
 			ClientID: clientID,
+			// op.DeviceAuthorizationState.GetAudience always adds the client_id,
+			// so the requested resources alone are enough to bind the audience.
+			Audience: resources,
 			Scopes:   scopes,
+			Resource: resources,
 			Expires:  expires,
 		},
 	}
