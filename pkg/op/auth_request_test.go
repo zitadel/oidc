@@ -731,19 +731,23 @@ func TestValidateAuthReqRedirectURI(t *testing.T) {
 			true,
 		},
 		{
-			"code flow encoded redirect_uri should pass after unescaping",
+			// A redirect_uri reaches this validator already decoded by
+			// r.ParseForm, so a percent-encoded literal denotes a
+			// different URI than the one registered and must not match.
+			// Guards against re-introducing a second decode here; see #968.
+			"code flow percent-encoded redirect_uri does not match",
 			args{
 				"https%3A%2F%2Fregistered.com%2Fcallback",
 				mock.NewClientWithConfig(t, []string{"https://registered.com/callback"}, op.ApplicationTypeWeb, nil, false),
 				oidc.ResponseTypeCode,
 			},
-			false,
+			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op.ValidateAuthReqRedirectURI(tt.args.client, tt.args.uri, tt.args.responseType); (err != nil) != tt.wantErr {
-				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err.Error(), tt.wantErr)
+				t.Errorf("ValidateRedirectURI() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
