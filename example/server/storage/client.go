@@ -34,6 +34,7 @@ type Client struct {
 	clockSkew                      time.Duration
 	postLogoutRedirectURIGlobs     []string
 	redirectURIGlobs               []string
+	registrationAccessToken        string
 }
 
 // GetID must return the client_id
