@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	jose "github.com/go-jose/go-jose/v4"
 
@@ -105,7 +106,7 @@ func Scopes(c Configuration) []string {
 	if ok && provider.config.SupportedScopes != nil {
 		return provider.config.SupportedScopes
 	}
-	return DefaultSupportedScopes
+	return slices.Clone(DefaultSupportedScopes)
 }
 
 func ResponseTypes(c Configuration) []string {
@@ -230,7 +231,7 @@ func SupportedClaims(c Configuration) []string {
 		return provider.config.SupportedClaims
 	}
 
-	return DefaultSupportedClaims
+	return slices.Clone(DefaultSupportedClaims)
 }
 
 func CodeChallengeMethods(c Configuration) []oidc.CodeChallengeMethod {

@@ -269,15 +269,17 @@ func NewProvider(
 			NewAESCrypto(config.CryptoKey),
 		},
 	)
+	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.
+	corsOpts := defaultCORSOptions
 	o := &Provider{
 		config:            config,
 		storage:           storage,
 		accessTokenKeySet: keySet,
 		idTokenHinKeySet:  keySet,
 		crypto:            crypto,
-		endpoints:         DefaultEndpoints,
+		endpoints:         *DefaultEndpoints,
 		timer:             make(<-chan time.Time),
-		corsOpts:          &defaultCORSOptions,
+		corsOpts:          &corsOpts,
 	}
 
 	for _, optFunc := range opOpts {
@@ -302,7 +304,7 @@ type Provider struct {
 	config                  *Config
 	issuer                  IssuerFromRequest
 	insecure                bool
-	endpoints               *Endpoints
+	endpoints               Endpoints
 	storage                 Storage
 	accessTokenKeySet       oidc.KeySet
 	idTokenHinKeySet        oidc.KeySet
