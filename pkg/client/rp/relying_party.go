@@ -122,6 +122,7 @@ type relyingParty struct {
 	idTokenVerifier     *IDTokenVerifier
 	verifierOpts        []VerifierOption
 	signer              jose.Signer
+	keyBinding          *keyBinding
 	logger              *slog.Logger
 }
 
@@ -450,6 +451,9 @@ func AuthURL(state string, rp RelyingParty, opts ...AuthURLOpt) string {
 	for _, opt := range opts {
 		authOpts = append(authOpts, opt()...)
 	}
+	if configured, ok := keyBindingRP(rp); ok {
+		authOpts = append(authOpts, oauth2.SetAuthURLParam(oidc.DPoPJKTParam, configured.KeyBindingThumbprint()))
+	}
 	return rp.OAuthConfig().AuthCodeURL(state, authOpts...)
 }
 
@@ -525,6 +529,11 @@ func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Tok
 	if err != nil {
 		return nil, err
 	}
+	if configured, ok := keyBindingRP(rp); ok {
+		if err := verifyKeyBindingIDToken(idTokenString, idToken.GetSignatureAlgorithm(), configured.KeyBindingThumbprint()); err != nil {
+			return nil, err
+		}
+	}
 	return &oidc.Tokens[C]{Token: token, IDTokenClaims: idToken, IDToken: idTokenString}, nil
 }
 
@@ -534,7 +543,11 @@ func CodeExchange[C oidc.IDClaims](ctx context.Context, code string, rp RelyingP
 	ctx, codeExchangeSpan := client.Tracer.Start(ctx, "CodeExchange")
 	defer codeExchangeSpan.End()
 
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, rp.HttpClient())
+	httpClient := rp.HttpClient()
+	if configured, ok := keyBindingRP(rp); ok {
+		httpClient = keyBindingHTTPClient(httpClient, configured, code, rp.OAuthConfig().Endpoint.TokenURL)
+	}
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	codeOpts := make([]oauth2.AuthCodeOption, 0)
 	for _, opt := range opts {
 		codeOpts = append(codeOpts, opt()...)
@@ -800,10 +813,18 @@ func WithClientAssertionJWT(clientAssertion string) CodeExchangeOpt {
 
 type tokenEndpointCaller struct {
 	RelyingParty
+	httpClient *http.Client
 }
 
 func (t tokenEndpointCaller) TokenEndpoint() string {
 	return t.OAuthConfig().Endpoint.TokenURL
+}
+
+func (t tokenEndpointCaller) HttpClient() *http.Client {
+	if t.httpClient != nil {
+		return t.httpClient
+	}
+	return t.RelyingParty.HttpClient()
 }
 
 type RefreshTokenRequest struct {
@@ -864,7 +885,12 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 		}
 	}
 
-	newToken, err := client.CallTokenEndpointWithAuthFn(ctx, request, authFn, tokenEndpointCaller{RelyingParty: rp})
+	httpClient := rp.HttpClient()
+	if configured, ok := keyBindingRP(rp); ok {
+		httpClient = keyBindingHTTPClient(httpClient, configured, "", rp.OAuthConfig().Endpoint.TokenURL)
+	}
+	caller := tokenEndpointCaller{RelyingParty: rp, httpClient: httpClient}
+	newToken, err := client.CallTokenEndpointWithAuthFn(ctx, request, authFn, caller)
 	if err != nil {
 		return nil, err
 	}
