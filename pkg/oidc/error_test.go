@@ -68,6 +68,30 @@ func TestDefaultToServerError(t *testing.T) {
 			},
 		},
 		{
+			name: "verifier error subject missing",
+			args: args{
+				err:         ErrSubjectMissing,
+				description: "subject missing",
+			},
+			want: &Error{
+				ErrorType:   InvalidGrant,
+				Description: "subject missing",
+			},
+		},
+		{
+			// ErrSubjectInvalid used to fall through to server_error, so a rejected
+			// assertion answered HTTP 500 where its sibling above answered 400.
+			name: "verifier error subject invalid",
+			args: args{
+				err:         ErrSubjectInvalid,
+				description: "delegation not allowed",
+			},
+			want: &Error{
+				ErrorType:   InvalidGrant,
+				Description: "delegation not allowed",
+			},
+		},
+		{
 			name: "verifier error server error",
 			args: args{
 				err:         ErrDiscoveryFailed,
