@@ -68,6 +68,30 @@ func TestDefaultToServerError(t *testing.T) {
 			},
 		},
 		{
+			name: "verifier error subject missing",
+			args: args{
+				err:         ErrSubjectMissing,
+				description: "subject missing",
+			},
+			want: &Error{
+				ErrorType:   InvalidGrant,
+				Description: "subject missing",
+			},
+		},
+		{
+			// ErrSubjectInvalid used to fall through to server_error, so a rejected
+			// assertion answered HTTP 500 where its sibling above answered 400.
+			name: "verifier error subject invalid",
+			args: args{
+				err:         ErrSubjectInvalid,
+				description: "delegation not allowed",
+			},
+			want: &Error{
+				ErrorType:   InvalidGrant,
+				Description: "delegation not allowed",
+			},
+		},
+		{
 			name: "verifier error server error",
 			args: args{
 				err:         ErrDiscoveryFailed,
@@ -97,16 +121,6 @@ func TestDefaultToServerError(t *testing.T) {
 			assert.ErrorIs(t, got, tt.want)
 		})
 	}
-}
-
-// TestDefaultToServerError_SubjectInvalid guards against a regression where
-// ErrSubjectInvalid (returned by the JWT profile grant when iss != sub) was not
-// listed in the invalid_grant case and fell through to server_error (HTTP 500).
-// A rejected client assertion must map to invalid_grant per RFC 7523, matching
-// the sibling ErrSubjectMissing.
-func TestDefaultToServerError_SubjectInvalid(t *testing.T) {
-	got := DefaultToServerError(ErrSubjectInvalid, ErrSubjectInvalid.Error())
-	assert.Equal(t, InvalidGrant, got.ErrorType)
 }
 
 func TestError_LogLevel(t *testing.T) {
