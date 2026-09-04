@@ -2,6 +2,7 @@ package storage
 
 import (
 	"log/slog"
+	"slices"
 	"time"
 
 	"golang.org/x/text/language"
@@ -39,6 +40,10 @@ type AuthRequest struct {
 	Nonce         string
 	CodeChallenge *OIDCCodeChallenge
 
+	// Resource holds the resource indicators (RFC 8707) requested by the client.
+	// A token request may narrow them down again, see SetCurrentResources.
+	Resource []string
+
 	done     bool
 	authTime time.Time
 }
@@ -73,7 +78,22 @@ func (a *AuthRequest) GetAMR() []string {
 }
 
 func (a *AuthRequest) GetAudience() []string {
-	return []string{a.ApplicationID} // this example will always just use the client_id as audience
+	return audienceFromResources(a.ApplicationID, a.Resource)
+}
+
+// GetResource implements the optional op.ResourceRequest interface, which lets the
+// op package check a `resource` parameter of a token request against the resources
+// that were requested at the authorization endpoint.
+func (a *AuthRequest) GetResource() []string {
+	return a.Resource
+}
+
+// SetCurrentResources implements the optional op.CurrentResourceSetter interface.
+// It is called with the `resource` values of a token request, after they have been
+// checked against the resources of the authorization request, so that the audience
+// of the issued tokens can be narrowed down to them.
+func (a *AuthRequest) SetCurrentResources(resources []string) {
+	a.Resource = resources
 }
 
 func (a *AuthRequest) GetAuthTime() time.Time {
@@ -166,6 +186,7 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 		ResponseMode:  authReq.ResponseMode,
 		Nonce:         authReq.Nonce,
 		CodeChallenge: codeChallenge,
+		Resource:      authReq.Resource,
 	}
 }
 
@@ -211,7 +232,20 @@ func (r *RefreshTokenRequest) GetAMR() []string {
 }
 
 func (r *RefreshTokenRequest) GetAudience() []string {
+	if len(r.Resource) > 0 {
+		return audienceFromResources(r.ApplicationID, r.Resource)
+	}
 	return r.Audience
+}
+
+// GetResource implements the optional op.ResourceRequest interface.
+func (r *RefreshTokenRequest) GetResource() []string {
+	return r.Resource
+}
+
+// SetCurrentResources implements the optional op.CurrentResourceSetter interface.
+func (r *RefreshTokenRequest) SetCurrentResources(resources []string) {
+	r.Resource = resources
 }
 
 func (r *RefreshTokenRequest) GetAuthTime() time.Time {
@@ -232,4 +266,35 @@ func (r *RefreshTokenRequest) GetSubject() string {
 
 func (r *RefreshTokenRequest) SetCurrentScopes(scopes []string) {
 	r.Scopes = scopes
+}
+
+// audienceFromResources shows how a Storage implementation can bind the audience of
+// the issued tokens to the resource indicators of [RFC 8707] the client asked for.
+//
+// The client_id is always kept, because an ID token must be addressed to the client
+// it was issued for. A real implementation would first check the requested resources
+// against a policy of the client, and would likely restrict the audience of the access
+// token to the resources alone.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func audienceFromResources(clientID string, resources []string) []string {
+	audience := make([]string, 0, len(resources)+1)
+	audience = append(audience, clientID)
+	for _, resource := range resources {
+		if !slices.Contains(audience, resource) {
+			audience = append(audience, resource)
+		}
+	}
+	return audience
+}
+
+// resourcesFromRequest returns the resource indicators of [RFC 8707] a token request
+// was made for, if the request reports any.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func resourcesFromRequest(request op.TokenRequest) []string {
+	if resourceRequest, ok := request.(op.ResourceRequest); ok {
+		return resourceRequest.GetResource()
+	}
+	return nil
 }

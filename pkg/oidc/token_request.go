@@ -78,6 +78,15 @@ type AccessTokenRequest struct {
 	CodeVerifier        string `schema:"code_verifier,omitempty"`
 	ClientAssertion     string `schema:"client_assertion,omitempty"`
 	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
+
+	// Resource narrows the target service(s) or resource(s) of the issued token,
+	// as defined by [RFC 8707, section 2.2]. Every value must be an absolute URI
+	// without a fragment component and must have been requested at the
+	// authorization endpoint. If omitted, the resources of the authorization
+	// request are used.
+	//
+	// [RFC 8707, section 2.2]: https://www.rfc-editor.org/rfc/rfc8707#section-2.2
+	Resource []string `schema:"resource,omitempty"`
 }
 
 func (a *AccessTokenRequest) GrantType() GrantType {
@@ -113,6 +122,14 @@ type RefreshTokenRequest struct {
 	ClientSecret        string              `schema:"client_secret"`
 	ClientAssertion     string              `schema:"client_assertion"`
 	ClientAssertionType string              `schema:"client_assertion_type"`
+
+	// Resource narrows the target service(s) or resource(s) of the issued token,
+	// as defined by [RFC 8707, section 2.2]. Every value must be an absolute URI
+	// without a fragment component and must have been granted to the refresh token.
+	// If omitted, the resources of the original authorization request are used.
+	//
+	// [RFC 8707, section 2.2]: https://www.rfc-editor.org/rfc/rfc8707#section-2.2
+	Resource []string `schema:"resource,omitempty"`
 }
 
 func (a *RefreshTokenRequest) GrantType() GrantType {
@@ -264,6 +281,13 @@ type ClientCredentialsRequest struct {
 	ClientSecret        string              `schema:"client_secret"`
 	ClientAssertion     string              `schema:"client_assertion,omitempty"`
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
+
+	// Resource indicates the target service(s) or resource(s) at which the issued
+	// token is intended to be used, as defined by [RFC 8707]. Every value must be an
+	// absolute URI without a fragment component.
+	//
+	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+	Resource []string `schema:"resource,omitempty"`
 }
 
 // Deprecated: This function is no longer invoked because it violates

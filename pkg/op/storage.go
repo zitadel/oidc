@@ -202,6 +202,20 @@ type DeviceAuthorizationStorage interface {
 	GetDeviceAuthorizatonState(ctx context.Context, clientID, deviceCode string) (*DeviceAuthorizationState, error)
 }
 
+// CanStoreDeviceAuthorizationWithResources is an optional interface that may be
+// implemented in addition to [DeviceAuthorizationStorage]. When it is, it is used
+// instead of StoreDeviceAuthorization, so that the resource indicators of [RFC 8707]
+// requested with the device authorization request are stored along with it.
+//
+// The stored resources should be returned on the [DeviceAuthorizationState] of
+// GetDeviceAuthorizatonState, which allows the device access token request to narrow
+// them and the audience of the issued tokens to be bound to them.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+type CanStoreDeviceAuthorizationWithResources interface {
+	StoreDeviceAuthorizationWithResources(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes, resources []string) error
+}
+
 func assertDeviceStorage(s Storage) (DeviceAuthorizationStorage, error) {
 	storage, ok := s.(DeviceAuthorizationStorage)
 	if !ok {

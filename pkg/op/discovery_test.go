@@ -45,6 +45,17 @@ func TestDiscover(t *testing.T) {
 			},
 			`{"issuer":"https://issuer.com","client_id_metadata_document_supported":true,"request_uri_parameter_supported":false}`,
 		},
+		{
+			"resource_indicators_supported",
+			args{
+				httptest.NewRecorder(),
+				&oidc.DiscoveryConfiguration{
+					Issuer:                      "https://issuer.com",
+					ResourceIndicatorsSupported: true,
+				},
+			},
+			`{"issuer":"https://issuer.com","resource_indicators_supported":true,"request_uri_parameter_supported":false}`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,6 +111,39 @@ func Test_scopes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := op.Scopes(tt.args.c)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_ResourceIndicatorsSupported(t *testing.T) {
+	type args struct {
+		c op.Configuration
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			"not a provider",
+			args{},
+			false,
+		},
+		{
+			"disabled by default",
+			args{newTestProvider(&op.Config{})},
+			false,
+		},
+		{
+			"enabled",
+			args{newTestProvider(&op.Config{ResourceIndicatorsSupported: true})},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := op.ResourceIndicatorsSupported(tt.args.c)
 			assert.Equal(t, tt.want, got)
 		})
 	}

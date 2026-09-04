@@ -126,6 +126,16 @@ type DiscoveryConfiguration struct {
 	// CodeChallengeMethodsSupported contains a list of Proof Key for Code Exchange (PKCE) code challenge methods supported by the OP.
 	CodeChallengeMethodsSupported []CodeChallengeMethod `json:"code_challenge_methods_supported,omitempty"`
 
+	// ResourceIndicatorsSupported specifies whether the OP supports the `resource` parameter
+	// defined by [RFC 8707]. If omitted, the default value is false.
+	//
+	// [RFC 8707] does not register a metadata parameter of its own;
+	// `resource_indicators_supported` is the name authorization servers use by convention
+	// to advertise the capability.
+	//
+	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+	ResourceIndicatorsSupported bool `json:"resource_indicators_supported,omitempty"`
+
 	// ServiceDocumentation is a URL where developers can get information about the OP and its usage.
 	ServiceDocumentation string `json:"service_documentation,omitempty"`
 

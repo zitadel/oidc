@@ -237,6 +237,9 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	if err := ValidateAuthReqResponseType(cr.Client, authReq.ResponseType); err != nil {
 		return nil, err
 	}
+	if err := ValidateResourceIndicators(authReq.Resource); err != nil {
+		return nil, err
+	}
 	return s.server.Authorize(ctx, cr)
 }
 

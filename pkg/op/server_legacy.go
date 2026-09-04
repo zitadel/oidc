@@ -241,6 +241,9 @@ func (s *LegacyServer) CodeExchange(ctx context.Context, r *ClientRequest[oidc.A
 	if r.Data.RedirectURI != authReq.GetRedirectURI() {
 		return nil, oidc.ErrInvalidGrant().WithDescription("redirect_uri does not correspond")
 	}
+	if err = ValidateTokenRequestResources(r.Data.Resource, authReq); err != nil {
+		return nil, err
+	}
 	resp, err := CreateTokenResponse(ctx, authReq, r.Client, s.provider, true, r.Data.Code, "")
 	if err != nil {
 		return nil, err
@@ -263,6 +266,9 @@ func (s *LegacyServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.R
 		return nil, oidc.ErrInvalidGrant()
 	}
 	if err = ValidateRefreshTokenScopes(r.Data.Scopes, request); err != nil {
+		return nil, err
+	}
+	if err = ValidateTokenRequestResources(r.Data.Resource, request); err != nil {
 		return nil, err
 	}
 	resp, err := CreateTokenResponse(ctx, request, r.Client, s.provider, true, "", r.Data.RefreshToken)
@@ -326,6 +332,9 @@ func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientR
 	if err != nil {
 		return nil, err
 	}
+	if err = ValidateTokenRequestResources(r.Data.Resource, tokenRequest); err != nil {
+		return nil, err
+	}
 	resp, err := CreateClientCredentialsTokenResponse(ctx, tokenRequest, s.provider, r.Client)
 	if err != nil {
 		return nil, err
@@ -347,6 +356,9 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 
 	tokenRequest, err := CheckDeviceAuthorizationState(ctx, r.Client.GetID(), r.Data.DeviceCode, s.provider)
 	if err != nil {
+		return nil, err
+	}
+	if err = ValidateTokenRequestResources(r.Data.Resource, tokenRequest); err != nil {
 		return nil, err
 	}
 	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)
