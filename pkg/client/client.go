@@ -126,7 +126,7 @@ func CallEndSessionEndpoint(ctx context.Context, request any, authFn any, caller
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, httphelper.MaxResponseBodySize))
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +193,7 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	// "The content of the response body is ignored by the client as all
 	// necessary information is conveyed in the response code."
 	if resp.StatusCode != 200 {
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, httphelper.MaxResponseBodySize))
 		if err == nil {
 			return fmt.Errorf("revoke returned status %d and text: %s", resp.StatusCode, string(body))
 		} else {

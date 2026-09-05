@@ -64,7 +64,7 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodySize+1))
 	if err != nil {
 		return fmt.Errorf("unable to read response body: %v", err)
 	}
@@ -76,6 +76,10 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 			return fmt.Errorf("http status not ok: %s %s", resp.Status, body)
 		}
 		return &oidcErr
+	}
+
+	if len(body) > MaxResponseBodySize {
+		return fmt.Errorf("http response too large")
 	}
 
 	err = json.Unmarshal(body, response)
