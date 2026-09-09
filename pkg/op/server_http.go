@@ -214,7 +214,7 @@ func (s *webServer) authorizeHandler(w http.ResponseWriter, r *http.Request) {
 	redirect.writeOut(w, r)
 }
 
-func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (_ *Redirect, err error) {
+func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
 	cr, err := s.server.VerifyAuthRequest(ctx, r)
 	if err != nil {
 		return nil, err
@@ -223,15 +223,26 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	if authReq.RedirectURI == "" {
 		return nil, ErrAuthReqMissingRedirectURI
 	}
+	// The redirect_uri is validated before any policy check, the order
+	// ValidateAuthRequestClient uses. Every check after this one therefore runs
+	// against a redirect_uri the client has registered, which is the condition
+	// for handing it a failure instead of rendering one here.
+	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
+		return nil, err
+	}
+	return s.authorizeValidated(ctx, cr)
+}
+
+// authorizeValidated holds the steps that run once the redirect_uri has been
+// validated against the client.
+func (s *webServer) authorizeValidated(ctx context.Context, cr *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
+	authReq := cr.Data
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return nil, err
 	}
 	authReq.Scopes, err = ValidateAuthReqScopes(cr.Client, authReq.Scopes)
 	if err != nil {
-		return nil, err
-	}
-	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return nil, err
 	}
 	if err := ValidateAuthReqResponseType(cr.Client, authReq.ResponseType); err != nil {

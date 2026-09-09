@@ -583,6 +583,33 @@ func Test_webServer_authorize(t *testing.T) {
 					"If you have any questions, you may contact the administrator of the application."),
 		},
 		{
+			// Both the redirect_uri and the prompt are invalid. The redirect_uri
+			// is validated first, so its refusal is the one returned, and it is
+			// the refusal that must never be reflected: no target is trusted at
+			// this point. Validating the prompt first would answer with an error
+			// that is reflectable, against a target that is not.
+			name: "invalid redirect before invalid prompt",
+			server: &requestVerifier{
+				client: newClient(clientTypeWeb),
+			},
+			args: args{
+				ctx: context.Background(),
+				r: &Request[oidc.AuthRequest]{
+					Data: &oidc.AuthRequest{
+						Scopes:       oidc.SpaceDelimitedArray{"openid"},
+						ResponseType: oidc.ResponseTypeCode,
+						ClientID:     "web",
+						RedirectURI:  "https://example.com/callback",
+						MaxAge:       gu.Ptr[uint](300),
+						Prompt:       []string{oidc.PromptNone, oidc.PromptLogin},
+					},
+				},
+			},
+			wantErr: oidc.ErrInvalidRequestRedirectURI().
+				WithDescription("The requested redirect_uri is missing in the client configuration. " +
+					"If you have any questions, you may contact the administrator of the application."),
+		},
+		{
 			name: "invalid response type",
 			server: &requestVerifier{
 				client: newClient(clientTypeWeb),
