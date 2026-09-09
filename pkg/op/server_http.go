@@ -234,7 +234,11 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	}
 	authReq := cr.Data
 	if authReq.RedirectURI == "" {
-		return nil, ErrAuthReqMissingRedirectURI
+		// Redirect-disabled, so that this refusal stays un-reflected by
+		// construction and not merely by where it is raised.
+		return nil, oidc.ErrInvalidRequestRedirectURI().
+			WithParent(ErrAuthReqMissingRedirectURI).
+			WithDescription(authReqMissingRedirectURI)
 	}
 	// The redirect_uri is validated before any policy check, the order
 	// ValidateAuthRequestClient uses. Every check after this one therefore runs

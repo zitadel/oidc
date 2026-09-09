@@ -458,6 +458,21 @@ func Test_webServer_authorizeHandler(t *testing.T) {
 				wantBody:   `{"error":"server_error"}`,
 			},
 		},
+		{
+			// A request with no redirect_uri is a bad request, not a server
+			// error: the refusal used to be an errors.New, which classified as
+			// server_error and answered 500.
+			name: "missing redirect_uri",
+			fields: fields{
+				server:  &requestVerifier{client: newClient(clientTypeWeb)},
+				decoder: testDecoder,
+			},
+			r: httptest.NewRequest(http.MethodPost, "/authorize", strings.NewReader("client_id=web&response_type=code&scope=openid")),
+			want: webServerResult{
+				wantStatus: http.StatusBadRequest,
+				wantBody:   `{"error":"invalid_request", "error_description":"auth request is missing redirect_uri"}`,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

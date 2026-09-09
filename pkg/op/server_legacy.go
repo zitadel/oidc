@@ -119,11 +119,14 @@ func (s *LegacyServer) Keys(ctx context.Context, r *Request[struct{}]) (*Respons
 	return NewResponse(jsonWebKeySet(keys)), nil
 }
 
-const authReqMissingClientID = "auth request is missing client_id"
+const (
+	authReqMissingClientID    = "auth request is missing client_id"
+	authReqMissingRedirectURI = "auth request is missing redirect_uri"
+)
 
 var (
 	ErrAuthReqMissingClientID    = errors.New(authReqMissingClientID)
-	ErrAuthReqMissingRedirectURI = errors.New("auth request is missing redirect_uri")
+	ErrAuthReqMissingRedirectURI = errors.New(authReqMissingRedirectURI)
 )
 
 func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
