@@ -59,11 +59,26 @@ type Server interface {
 	// If the implementation does not support "Request Object",
 	// it MUST return an [oidc.ErrRequestNotSupported].
 	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
+	//
+	// This method runs before the redirect_uri has been validated
+	// against the Client, so an error returned here is written to the
+	// response and cannot be delivered to the client. See
+	// [Server.Authorize] for where a check whose failure should reach
+	// the client belongs.
 	VerifyAuthRequest(context.Context, *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error)
 
 	// Authorize initiates the authorization flow and redirects to a login page.
 	// See the various https://openid.net/specs/openid-connect-core-1_0.html
 	// authorize endpoint sections (one for each type of flow).
+	//
+	// This method runs after the redirect_uri has been validated against
+	// the Client, so an error returned here is delivered to the client's
+	// redirect_uri as `error`, `error_description` and `state`, per RFC
+	// 6749 section 4.1.2.1. A check whose failure should reach the client
+	// therefore belongs here rather than in [Server.VerifyAuthRequest].
+	// To have an error written to the response instead, wrap it in a
+	// [StatusError] or return a redirect-disabled [oidc.Error] such as
+	// [oidc.ErrInvalidRequestRedirectURI].
 	Authorize(context.Context, *ClientRequest[oidc.AuthRequest]) (*Redirect, error)
 
 	// DeviceAuthorization initiates the device authorization flow.
