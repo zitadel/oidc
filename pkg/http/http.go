@@ -78,8 +78,8 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 		return &oidcErr
 	}
 
-	if len(body) > MaxResponseBodySize {
-		return fmt.Errorf("http response too large")
+	if int64(len(body)) > MaxResponseBodySize {
+		return ErrResponseBodyTooLarge
 	}
 
 	err = json.Unmarshal(body, response)

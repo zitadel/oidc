@@ -1,6 +1,5 @@
 package http
 
-const (
-	// MaxResponseBodySize HTTP responses are limited to 1 MiB.
-	MaxResponseBodySize = 1 << 20
-)
+// MaxResponseBodySize limits the number of bytes read from HTTP response bodies.
+// It defaults to 1 MiB.
+var MaxResponseBodySize int64 = 1 << 20
