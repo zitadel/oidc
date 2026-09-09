@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -28,6 +29,7 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
+		encoder:   oidc.NewEncoder(),
 		corsOpts:  &defaultCORSOptions,
 	}
 
@@ -68,6 +70,16 @@ func WithDecoder(decoder httphelper.Decoder) ServerOption {
 	}
 }
 
+// WithEncoder overrides the default encoder,
+// which is an [oidc.NewEncoder].
+// It is used to build the error redirect an authorization request
+// is answered with when it fails after its redirect_uri was validated.
+func WithEncoder(encoder httphelper.Encoder) ServerOption {
+	return func(s *webServer) {
+		s.encoder = encoder
+	}
+}
+
 // WithServerCORSOptions sets the CORS policy for the Server's router.
 func WithServerCORSOptions(opts *cors.Options) ServerOption {
 	return func(s *webServer) {
@@ -88,6 +100,7 @@ type webServer struct {
 	handler   http.Handler
 	endpoints Endpoints
 	decoder   httphelper.Decoder
+	encoder   httphelper.Encoder
 	corsOpts  *cors.Options
 }
 
@@ -230,11 +243,23 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return nil, err
 	}
-	return s.authorizeValidated(ctx, cr)
+	redirect, err := s.authorizeValidated(ctx, cr)
+	if err != nil {
+		// A StatusError names the status its author wants answered, which only
+		// rendering here can honour. See [NewStatusError].
+		var statusError StatusError
+		if errors.As(err, &statusError) {
+			return nil, err
+		}
+		// TryErrorRedirect returns the error unredirected if it is marked
+		// redirect-disabled, which renders it here.
+		return TryErrorRedirect(ctx, authReq, err, s.encoder, nil)
+	}
+	return redirect, nil
 }
 
 // authorizeValidated holds the steps that run once the redirect_uri has been
-// validated against the client.
+// validated against the client, so that their failures can be delivered to it.
 func (s *webServer) authorizeValidated(ctx context.Context, cr *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
 	authReq := cr.Data
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)

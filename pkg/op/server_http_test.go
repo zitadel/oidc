@@ -31,10 +31,12 @@ func TestRegisterServer(t *testing.T) {
 		},
 	}
 	decoder := schema.NewDecoder()
+	encoder := schema.NewEncoder()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	h := RegisterServer(server, endpoints,
 		WithDecoder(decoder),
+		WithEncoder(encoder),
 		WithFallbackLogger(logger),
 		WithFallbackLogger(nil),
 	)
@@ -42,7 +44,11 @@ func TestRegisterServer(t *testing.T) {
 	assert.Equal(t, got.server, server)
 	assert.Equal(t, got.endpoints, endpoints)
 	assert.Equal(t, got.decoder, decoder)
+	assert.Equal(t, got.encoder, encoder)
 	assert.Same(t, previous, slog.Default())
+
+	// The error redirect needs an encoder whether or not one was passed.
+	assert.NotNil(t, RegisterServer(server, endpoints).(*webServer).encoder)
 }
 
 type testClient struct {
@@ -207,11 +213,44 @@ func (s *redirectingAuthorizer) Authorize(ctx context.Context, r *ClientRequest[
 	return NewRedirect(r.Client.LoginURL("authReqID")), nil
 }
 
+// refusingAuthorizer verifies like requestVerifier and then refuses the
+// request with a fixed error, standing in for the checks a Server
+// implementation runs in Authorize.
+type refusingAuthorizer struct {
+	requestVerifier
+	err error
+}
+
+func (s *refusingAuthorizer) Authorize(ctx context.Context, r *ClientRequest[oidc.AuthRequest]) (*Redirect, error) {
+	return nil, s.err
+}
+
 var testDecoder = func() *schema.Decoder {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	return decoder
 }()
+
+// testEncoder stands in for the encoder RegisterServer installs, which the
+// tests below bypass by constructing a webServer directly.
+var testEncoder = oidc.NewEncoder()
+
+// errorRedirect builds the response an authorization request that fails after
+// its redirect_uri was validated is expected to be answered with: the refusal's
+// own parameters at that redirect_uri, state echoed, in the response mode the
+// request selects. It lets a test say which error a request is refused with
+// rather than restate a pre-encoded URL; the encoding itself is covered by
+// TestTryErrorRedirect.
+func errorRedirect(t *testing.T, authReq *oidc.AuthRequest, refusal error) *Redirect {
+	t.Helper()
+	var oidcErr *oidc.Error
+	require.ErrorAs(t, refusal, &oidcErr)
+	response := *oidcErr
+	response.State = authReq.State
+	url, err := AuthResponseURL(authReq.RedirectURI, authReq.ResponseType, authReq.ResponseMode, &response, testEncoder)
+	require.NoError(t, err)
+	return NewRedirect(url)
+}
 
 type webServerResult struct {
 	wantStatus int
@@ -425,6 +464,7 @@ func Test_webServer_authorizeHandler(t *testing.T) {
 			s := &webServer{
 				server:  tt.fields.server,
 				decoder: tt.fields.decoder,
+				encoder: testEncoder,
 			}
 			runWebServerTest(t, s.authorizeHandler, tt.r, tt.want)
 		})
@@ -457,6 +497,7 @@ func Test_webServer_authorizeHandler_encodedRedirectURI(t *testing.T) {
 			s := &webServer{
 				server:  &redirectingAuthorizer{requestVerifier{client: client}},
 				decoder: testDecoder,
+				encoder: testEncoder,
 			}
 			w := httptest.NewRecorder()
 			s.authorizeHandler(w, httptest.NewRequest(http.MethodGet, "/authorize?"+query, nil))
@@ -472,17 +513,113 @@ func Test_webServer_authorizeHandler_encodedRedirectURI(t *testing.T) {
 	}
 }
 
+// Test_webServer_authorizeHandler_errorRedirect drives refusals over HTTP.
+// A request that fails after its redirect_uri was validated is answered with a
+// 302 to that redirect_uri carrying the error and the state; one that fails
+// before, or fails on the redirect_uri itself, is still rendered here. The
+// op.Server path used to render all of them, see issue #973.
+func Test_webServer_authorizeHandler_errorRedirect(t *testing.T) {
+	client := newClient(clientTypeWeb)
+	const state = "state-973"
+	tests := []struct {
+		name         string
+		query        url.Values
+		wantStatus   int
+		wantError    string
+		wantFragment bool
+	}{
+		{
+			// This client registers response_type=code only. The redirect_uri
+			// it asks for is registered, and has been matched by this point.
+			name: "unregistered response_type",
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeIDToken)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.UnauthorizedClient),
+			// An implicit response_type selects the fragment response mode.
+			wantFragment: true,
+		},
+		{
+			name: "missing scope",
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.InvalidRequest),
+		},
+		{
+			// Not reflectable: nothing says this redirect_uri belongs to the
+			// client, so the refusal has to be rendered here.
+			name: "unregistered redirect_uri",
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{"https://example.com/callback"},
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.query.Set("client_id", client.GetID())
+			tt.query.Set("state", state)
+
+			s := &webServer{
+				server:  &redirectingAuthorizer{requestVerifier{client: client}},
+				decoder: testDecoder,
+				encoder: testEncoder,
+			}
+			w := httptest.NewRecorder()
+			s.authorizeHandler(w, httptest.NewRequest(http.MethodGet, "/authorize?"+tt.query.Encode(), nil))
+
+			res := w.Result()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantStatus, res.StatusCode, "body: %s", body)
+
+			location := res.Header.Get("Location")
+			if tt.wantError == "" {
+				assert.Empty(t, location)
+				return
+			}
+			target, err := url.Parse(location)
+			require.NoError(t, err)
+			assert.Equal(t, "https://registered.com/callback", target.Scheme+"://"+target.Host+target.Path)
+
+			params := target.Query()
+			if tt.wantFragment {
+				assert.Empty(t, target.RawQuery, "response is in the fragment")
+				params, err = url.ParseQuery(target.Fragment)
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantError, params.Get("error"))
+			assert.NotEmpty(t, params.Get("error_description"))
+			assert.Equal(t, state, params.Get("state"))
+		})
+	}
+}
+
 func Test_webServer_authorize(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		r   *Request[oidc.AuthRequest]
 	}
 	tests := []struct {
-		name    string
-		server  Server
-		args    args
-		want    *Redirect
+		name   string
+		server Server
+		args   args
+		want   *Redirect
+		// wantErr is the refusal the request is answered with. Whether it
+		// reaches the client or is rendered at the authorization endpoint is
+		// what delivered selects.
 		wantErr error
+		// delivered expects wantErr at the client's registered redirect_uri
+		// rather than returned for the endpoint to render.
+		delivered bool
 	}{
 		{
 			name:   "verify error",
@@ -520,6 +657,9 @@ func Test_webServer_authorize(t *testing.T) {
 			wantErr: ErrAuthReqMissingRedirectURI,
 		},
 		{
+			// The redirect_uri has been validated by the time the prompt is,
+			// so the refusal is delivered to it with state echoed, rather than
+			// rendered at the authorization endpoint. RFC 6749 4.1.2.1.
 			name: "invalid prompt",
 			server: &requestVerifier{
 				client: newClient(clientTypeWeb),
@@ -534,10 +674,12 @@ func Test_webServer_authorize(t *testing.T) {
 						RedirectURI:  "https://registered.com/callback",
 						MaxAge:       gu.Ptr[uint](300),
 						Prompt:       []string{oidc.PromptNone, oidc.PromptLogin},
+						State:        "state-1",
 					},
 				},
 			},
-			wantErr: oidc.ErrInvalidRequest().WithDescription("The prompt parameter `none` must only be used as a single value"),
+			wantErr:   oidc.ErrInvalidRequest().WithDescription("The prompt parameter `none` must only be used as a single value"),
+			delivered: true,
 		},
 		{
 			name: "missing scopes",
@@ -553,12 +695,14 @@ func Test_webServer_authorize(t *testing.T) {
 						RedirectURI:  "https://registered.com/callback",
 						MaxAge:       gu.Ptr[uint](300),
 						Prompt:       []string{oidc.PromptNone},
+						State:        "state-2",
 					},
 				},
 			},
 			wantErr: oidc.ErrInvalidRequest().
 				WithDescription("The scope of your request is missing. Please ensure some scopes are requested. " +
 					"If you have any questions, you may contact the administrator of the application."),
+			delivered: true,
 		},
 		{
 			name: "invalid redirect",
@@ -624,11 +768,61 @@ func Test_webServer_authorize(t *testing.T) {
 						RedirectURI:  "https://registered.com/callback",
 						MaxAge:       gu.Ptr[uint](300),
 						Prompt:       []string{oidc.PromptNone},
+						State:        "state-3",
 					},
 				},
 			},
+			// This one is delivered in the fragment rather than the query,
+			// because response_type=id_token selects that response mode.
 			wantErr: oidc.ErrUnauthorizedClient().WithDescription("The requested response type is missing in the client configuration. " +
 				"If you have any questions, you may contact the administrator of the application."),
+			delivered: true,
+		},
+		{
+			// A Server implementation gets the delivery without asking: its
+			// own refusals run after the redirect_uri was validated, so they
+			// reach the client like the library's do.
+			name: "Authorize refuses",
+			server: &refusingAuthorizer{
+				requestVerifier: requestVerifier{client: newClient(clientTypeWeb)},
+				err:             oidc.ErrInvalidRequest().WithDescription("resource is not a registered audience"),
+			},
+			args: args{
+				ctx: context.Background(),
+				r: &Request[oidc.AuthRequest]{
+					Data: &oidc.AuthRequest{
+						Scopes:       oidc.SpaceDelimitedArray{"openid"},
+						ResponseType: oidc.ResponseTypeCode,
+						ClientID:     "web",
+						RedirectURI:  "https://registered.com/callback",
+						State:        "state-4",
+					},
+				},
+			},
+			wantErr:   oidc.ErrInvalidRequest().WithDescription("resource is not a registered audience"),
+			delivered: true,
+		},
+		{
+			// An implementation that must not have its refusal reflected says
+			// so with a redirect-disabled error, which is rendered here.
+			name: "Authorize refuses without reflecting",
+			server: &refusingAuthorizer{
+				requestVerifier: requestVerifier{client: newClient(clientTypeWeb)},
+				err:             oidc.ErrInvalidRequestRedirectURI().WithDescription("not for the client"),
+			},
+			args: args{
+				ctx: context.Background(),
+				r: &Request[oidc.AuthRequest]{
+					Data: &oidc.AuthRequest{
+						Scopes:       oidc.SpaceDelimitedArray{"openid"},
+						ResponseType: oidc.ResponseTypeCode,
+						ClientID:     "web",
+						RedirectURI:  "https://registered.com/callback",
+						State:        "state-5",
+					},
+				},
+			},
+			wantErr: oidc.ErrInvalidRequestRedirectURI().WithDescription("not for the client"),
 		},
 		{
 			name: "unimplemented Authorize called",
@@ -662,10 +856,15 @@ func Test_webServer_authorize(t *testing.T) {
 			s := &webServer{
 				server:  tt.server,
 				decoder: testDecoder,
+				encoder: testEncoder,
+			}
+			want, wantErr := tt.want, tt.wantErr
+			if tt.delivered {
+				want, wantErr = errorRedirect(t, tt.args.r.Data, tt.wantErr), nil
 			}
 			got, err := s.authorize(tt.args.ctx, tt.args.r)
-			require.ErrorIs(t, err, tt.wantErr)
-			assert.Equal(t, tt.want, got)
+			require.ErrorIs(t, err, wantErr)
+			assert.Equal(t, want, got)
 		})
 	}
 }
