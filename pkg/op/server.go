@@ -57,14 +57,19 @@ type Server interface {
 	// "Request Object" JWT, it needs to be Validated
 	// and its claims overwrite any fields in the AuthRequest.
 	// If the implementation does not support "Request Object",
-	// it MUST return an [oidc.ErrRequestNotSupported].
+	// it MUST NOT update the AuthRequest, and MUST return an
+	// [oidc.ErrRequestNotSupported] either from this method or once
+	// [Server.Authorize] is reached.
 	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
 	//
 	// This method runs before the redirect_uri has been validated
 	// against the Client, so an error returned here is written to the
 	// response and cannot be delivered to the client. See
 	// [Server.Authorize] for where a check whose failure should reach
-	// the client belongs.
+	// the client belongs. Deferring the [oidc.ErrRequestNotSupported] to
+	// Authorize is therefore preferred, and is what [LegacyServer] does:
+	// OpenID Connect Core section 3.1.2.6 defines it as an authorization
+	// error response code, so the client is meant to receive it.
 	VerifyAuthRequest(context.Context, *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error)
 
 	// Authorize initiates the authorization flow and redirects to a login page.
