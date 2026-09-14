@@ -8,6 +8,15 @@ import "encoding/json"
 type DeviceAuthorizationRequest struct {
 	Scopes   SpaceDelimitedArray `schema:"scope"`
 	ClientID string              `schema:"client_id"`
+
+	// DPoPJKT is the `dpop_jkt` parameter defined by OpenID Connect Key
+	// Binding 1.0, Section 3.1. It carries the RFC 7638 JWK SHA-256
+	// Thumbprint of the client's proof-of-possession public key and,
+	// together with the `bound_key` scope, requests a key-bound ID Token.
+	//
+	// Experimental: OpenID Connect Key Binding 1.0 is a draft standard.
+	// This API may change or be removed without a major version bump.
+	DPoPJKT string `schema:"dpop_jkt,omitempty"`
 }
 
 // DeviceAuthorizationResponse implements
