@@ -12,12 +12,12 @@
 
             <div>
                 <label for="username">Username:</label>
-                <input id="username" name="username" style="width: 100%">
+                <input id="username" name="username" autocomplete="username" style="width: 100%">
             </div>
 
             <div>
                 <label for="password">Password:</label>
-                <input id="password" name="password" style="width: 100%">
+                <input id="password" name="password" type="password" autocomplete="current-password" style="width: 100%">
             </div>
 
             <p style="color:red; min-height: 1rem;">{{.Error}}</p>
