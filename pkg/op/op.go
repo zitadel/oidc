@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -150,7 +151,7 @@ func CreateRouter(o OpenIDProvider, interceptors ...HttpInterceptor) chi.Router 
 // AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
 func AuthCallbackURL(o OpenIDProvider) func(context.Context, string) string {
 	return func(ctx context.Context, requestID string) string {
-		return o.AuthorizationEndpoint().Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + requestID
+		return o.AuthorizationEndpoint().Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + url.QueryEscape(requestID)
 	}
 }
 
