@@ -32,6 +32,14 @@ const (
 	// that grants access to the End-User's UserInfo Endpoint even when the End-User is not present (not logged in).
 	ScopeOfflineAccess = "offline_access"
 
+	// ScopeBoundKey defines the scope `bound_key`
+	// This (optional) scope value requests an ID Token bound to a proof-of-possession key,
+	// as defined by OpenID Connect Key Binding 1.0.
+	//
+	// Experimental: OpenID Connect Key Binding 1.0 is a draft standard.
+	// This API may change or be removed without a major version bump.
+	ScopeBoundKey = "bound_key"
+
 	// ResponseTypeCode for the Authorization Code Flow returning a code from the Authorization Server
 	ResponseTypeCode ResponseType = "code"
 
