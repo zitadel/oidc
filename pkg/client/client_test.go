@@ -139,6 +139,58 @@ func TestCallDeviceAuthorizationEndpointOptions(t *testing.T) {
 	}
 }
 
+func TestCallTokenEndpoint_PreservesExtraFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"access_token": "new-access-token",
+			"token_type": "Bearer",
+			"refresh_token": "new-refresh-token",
+			"expires_in": 3600,
+			"id_token": "new-id-token",
+			"refresh_expires_in": 7200,
+			"session_state": "session-1"
+		}`))
+	}))
+	defer server.Close()
+
+	caller := &mockTokenCaller{endpoint: server.URL, httpClient: server.Client()}
+	token, err := CallTokenEndpoint(context.Background(), &oidc.RefreshTokenRequest{RefreshToken: "old-refresh-token"}, caller)
+	require.NoError(t, err)
+
+	assert.Equal(t, "new-access-token", token.AccessToken)
+	assert.Equal(t, "Bearer", token.TokenType)
+	assert.Equal(t, "new-refresh-token", token.RefreshToken)
+	assert.Equal(t, "new-id-token", token.Extra("id_token"))
+	assert.Equal(t, float64(7200), token.Extra("refresh_expires_in"))
+	assert.Equal(t, "session-1", token.Extra("session_state"))
+}
+
+func TestCallTokenEndpoint_InvalidResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`["not", "an", "object"]`))
+	}))
+	defer server.Close()
+
+	caller := &mockTokenCaller{endpoint: server.URL, httpClient: server.Client()}
+	_, err := CallTokenEndpoint(context.Background(), &oidc.RefreshTokenRequest{RefreshToken: "old-refresh-token"}, caller)
+	require.Error(t, err)
+}
+
+type mockTokenCaller struct {
+	endpoint   string
+	httpClient *http.Client
+}
+
+func (m *mockTokenCaller) TokenEndpoint() string {
+	return m.endpoint
+}
+
+func (m *mockTokenCaller) HttpClient() *http.Client {
+	return m.httpClient
+}
+
 func TestCallRevokeEndpoint_CheckRedirectUnchanged(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
