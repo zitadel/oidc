@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -81,7 +82,7 @@ func (s *LegacyServer) AuthCallbackURL() func(context.Context, string) string {
 		ctx, span := Tracer.Start(ctx, "LegacyServer.AuthCallbackURL")
 		defer span.End()
 
-		return s.endpoints.Authorization.Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + requestID
+		return s.endpoints.Authorization.Absolute(IssuerFromContext(ctx)) + authCallbackPathSuffix + "?id=" + url.QueryEscape(requestID)
 	}
 }
 

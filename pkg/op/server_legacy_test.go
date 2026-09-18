@@ -136,3 +136,23 @@ func TestLegacyServer_Authorize_RequestObjectNotSupported(t *testing.T) {
 		})
 	}
 }
+
+// The callback reads the request id back with Form.Get, which decodes it, so an
+// id containing reserved characters must survive the round trip unchanged.
+func TestAuthCallbackURL_EscapesRequestID(t *testing.T) {
+	ctx := op.ContextWithIssuer(context.Background(), testIssuer)
+	const requestID = "a+b/c=d&e#f %"
+
+	builders := map[string]func(context.Context, string) string{
+		"provider":      op.AuthCallbackURL(testProvider),
+		"legacy server": op.NewLegacyServer(testProvider, *op.DefaultEndpoints).AuthCallbackURL(),
+	}
+	for name, build := range builders {
+		t.Run(name, func(t *testing.T) {
+			callback, err := url.Parse(build(ctx, requestID))
+			require.NoError(t, err)
+			require.Equal(t, requestID, callback.Query().Get("id"))
+			require.Empty(t, callback.Fragment)
+		})
+	}
+}

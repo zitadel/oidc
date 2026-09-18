@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -85,6 +86,57 @@ func (m *mockEndSessionCaller) GetEndSessionEndpoint() string {
 
 func (m *mockEndSessionCaller) HttpClient() *http.Client {
 	return m.httpClient
+}
+
+type mockDeviceAuthorizationCaller struct {
+	endpoint   string
+	httpClient *http.Client
+}
+
+func (m *mockDeviceAuthorizationCaller) GetDeviceAuthorizationEndpoint() string {
+	return m.endpoint
+}
+
+func (m *mockDeviceAuthorizationCaller) HttpClient() *http.Client {
+	return m.httpClient
+}
+
+func TestCallDeviceAuthorizationEndpointOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		opts    []DeviceAuthorizationOption
+		wantJKT string
+	}{
+		{name: "without options"},
+		{name: "with dpop_jkt", opts: []DeviceAuthorizationOption{WithDPoPJKT("thumbprint")}, wantJKT: "thumbprint"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var (
+				form     url.Values
+				parseErr error
+			)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				parseErr = r.ParseForm()
+				if parseErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				form = r.PostForm
+				_, _ = w.Write([]byte("{}"))
+			}))
+			defer server.Close()
+
+			caller := &mockDeviceAuthorizationCaller{endpoint: server.URL, httpClient: server.Client()}
+			request := &oidc.ClientCredentialsRequest{ClientID: "client", Scope: []string{"openid"}}
+			_, err := CallDeviceAuthorizationEndpoint(context.Background(), request, caller, nil, tt.opts...)
+			require.NoError(t, err)
+			require.NoError(t, parseErr)
+			assert.Equal(t, "client", form.Get("client_id"))
+			assert.Equal(t, "openid", form.Get("scope"))
+			assert.Equal(t, tt.wantJKT, form.Get("dpop_jkt"))
+		})
+	}
 }
 
 func TestCallRevokeEndpoint_CheckRedirectUnchanged(t *testing.T) {
@@ -188,5 +240,3 @@ func TestCallEndSessionEndpoint_CheckRedirectUnchanged(t *testing.T) {
 		})
 	}
 }
-
-
