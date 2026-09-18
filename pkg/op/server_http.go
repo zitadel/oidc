@@ -247,7 +247,7 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return nil, err
 	}
-	redirect, err := s.authorizeValidated(ctx, cr)
+	redirect, err := s.authorizeWithValidRedirectURI(ctx, cr)
 	if err != nil {
 		// A StatusError names the status its author wants answered, which only
 		// rendering here can honour. See [NewStatusError].
@@ -262,9 +262,9 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 	return redirect, nil
 }
 
-// authorizeValidated holds the steps that run once the redirect_uri has been
-// validated against the client, so that their failures can be delivered to it.
-func (s *webServer) authorizeValidated(ctx context.Context, cr *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
+// authorizeWithValidRedirectURI validates the rest of the request and
+// authorizes it, split out so its failures share one error path.
+func (s *webServer) authorizeWithValidRedirectURI(ctx context.Context, cr *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
 	authReq := cr.Data
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
