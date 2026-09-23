@@ -96,6 +96,9 @@ func (c *testClient) RedirectURIs() []string {
 		"http://registered.com/callback",
 		"http://localhost:9999/callback",
 		"custom://callback",
+		// Survive one percent-decode unchanged, but not two.
+		"https://registered.com/callback?p=a%2Fb",
+		"https://registered.com/callback?a=b+c",
 	}
 }
 
@@ -191,6 +194,17 @@ func (s *requestVerifier) VerifyClient(ctx context.Context, r *Request[ClientCre
 		return nil, oidc.ErrServerError()
 	}
 	return s.client, nil
+}
+
+// redirectingAuthorizer verifies like requestVerifier and then completes the
+// authorization request the way a real Server implementation would, so that a
+// test can tell successful validation apart from any error response.
+type redirectingAuthorizer struct {
+	requestVerifier
+}
+
+func (s *redirectingAuthorizer) Authorize(ctx context.Context, r *ClientRequest[oidc.AuthRequest]) (*Redirect, error) {
+	return NewRedirect(r.Client.LoginURL("authReqID")), nil
 }
 
 var testDecoder = func() *schema.Decoder {
@@ -413,6 +427,47 @@ func Test_webServer_authorizeHandler(t *testing.T) {
 				decoder: tt.fields.decoder,
 			}
 			runWebServerTest(t, s.authorizeHandler, tt.r, tt.want)
+		})
+	}
+}
+
+// Test_webServer_authorizeHandler_encodedRedirectURI drives the authorization
+// endpoint over HTTP so that r.ParseForm takes part in the decode. That is the
+// only way to observe a redirect_uri being decoded a second time inside
+// ValidateAuthReqRedirectURI: a registered URI containing "+" or a percent
+// escape comes out of ParseForm exactly as registered, but a further decode
+// alters it and it no longer matches the client configuration.
+// Used to answer 400 invalid_request, see issue #968.
+func Test_webServer_authorizeHandler_encodedRedirectURI(t *testing.T) {
+	client := newClient(clientTypeWeb)
+	for _, redirectURI := range []string{
+		"https://registered.com/callback?p=a%2Fb",
+		"https://registered.com/callback?a=b+c",
+	} {
+		t.Run(redirectURI, func(t *testing.T) {
+			// url.Values.Encode is the encoding every OAuth client applies,
+			// golang.org/x/oauth2 included: once, over the raw redirect_uri.
+			query := url.Values{
+				"client_id":     []string{client.GetID()},
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{redirectURI},
+			}.Encode()
+
+			s := &webServer{
+				server:  &redirectingAuthorizer{requestVerifier{client: client}},
+				decoder: testDecoder,
+			}
+			w := httptest.NewRecorder()
+			s.authorizeHandler(w, httptest.NewRequest(http.MethodGet, "/authorize?"+query, nil))
+
+			res := w.Result()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusFound, res.StatusCode, "body: %s", body)
+			// http.Redirect resolves the client's relative login URL
+			// against the request path, "/authorize".
+			assert.Equal(t, "/"+client.LoginURL("authReqID"), res.Header.Get("Location"))
 		})
 	}
 }

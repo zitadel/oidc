@@ -335,8 +335,7 @@ func checkURIAgainstRedirects(client Client, uri string) error {
 
 // ValidateAuthReqRedirectURI validates the passed redirect_uri and response_type to the registered uris and client type
 func ValidateAuthReqRedirectURI(client Client, uri string, responseType oidc.ResponseType) error {
-	uri, err := url.QueryUnescape(uri)
-	if uri == "" || err != nil {
+	if uri == "" {
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The redirect_uri is missing in the request. " +
 			"Please ensure it is added to the request. If you have any questions, you may contact the administrator of the application.")
 	}
@@ -679,7 +678,10 @@ func AuthResponseFormPost(res http.ResponseWriter, redirectURI string, response 
 }
 
 func setFragment(uri *url.URL, params url.Values) string {
-	uri.Fragment = params.Encode()
+	// params.Encode() is already escaped. Assigning it to Fragment alone would make
+	// String() escape it a second time, turning %3D into %253D.
+	uri.RawFragment = params.Encode()
+	uri.Fragment, _ = url.PathUnescape(uri.RawFragment)
 	return uri.String()
 }
 

@@ -126,7 +126,7 @@ func CallEndSessionEndpoint(ctx context.Context, request any, authFn any, caller
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, httphelper.MaxResponseBodySize))
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +193,7 @@ func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller Rev
 	// "The content of the response body is ignored by the client as all
 	// necessary information is conveyed in the response code."
 	if resp.StatusCode != 200 {
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, httphelper.MaxResponseBodySize))
 		if err == nil {
 			return fmt.Errorf("revoke returned status %d and text: %s", resp.StatusCode, string(body))
 		} else {
@@ -247,16 +247,58 @@ type DeviceAuthorizationCaller interface {
 	HttpClient() *http.Client
 }
 
-func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCredentialsRequest, caller DeviceAuthorizationCaller, authFn any) (*oidc.DeviceAuthorizationResponse, error) {
+type deviceAuthorizationOptions struct {
+	dpopJKT string
+}
+
+type deviceAuthorizationOption func(*deviceAuthorizationOptions)
+
+func (o deviceAuthorizationOption) apply(options *deviceAuthorizationOptions) {
+	o(options)
+}
+
+// DeviceAuthorizationOption configures a device authorization request.
+//
+// Experimental: OpenID Connect Key Binding 1.0 is a draft standard.
+// This API may change or be removed without a major version bump.
+type DeviceAuthorizationOption interface {
+	apply(*deviceAuthorizationOptions)
+}
+
+// WithDPoPJKT adds the `dpop_jkt` parameter from OpenID Connect Key Binding
+// 1.0, Section 3.1 to a device authorization request.
+//
+// Experimental: OpenID Connect Key Binding 1.0 is a draft standard.
+// This API may change or be removed without a major version bump.
+func WithDPoPJKT(thumbprint string) DeviceAuthorizationOption {
+	return deviceAuthorizationOption(func(options *deviceAuthorizationOptions) {
+		options.dpopJKT = thumbprint
+	})
+}
+
+type deviceAuthorizationRequest struct {
+	*oidc.ClientCredentialsRequest
+	DPoPJKT string `schema:"dpop_jkt,omitempty"`
+}
+
+// CallDeviceAuthorizationEndpoint calls the device authorization endpoint.
+func CallDeviceAuthorizationEndpoint(ctx context.Context, request *oidc.ClientCredentialsRequest, caller DeviceAuthorizationCaller, authFn any, opts ...DeviceAuthorizationOption) (*oidc.DeviceAuthorizationResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAuthorizationEndpoint")
 	defer span.End()
+	options := new(deviceAuthorizationOptions)
+	for _, opt := range opts {
+		opt.apply(options)
+	}
 
 	endpoint := caller.GetDeviceAuthorizationEndpoint()
 	if endpoint == "" {
 		return nil, fmt.Errorf("device authorization %w", ErrEndpointNotSet)
 	}
 
-	req, err := httphelper.FormRequest(ctx, endpoint, request, Encoder, authFn)
+	req, err := httphelper.FormRequest(ctx, endpoint, &deviceAuthorizationRequest{
+		ClientCredentialsRequest: request,
+		DPoPJKT:                  options.dpopJKT,
+	}, Encoder, authFn)
 	if err != nil {
 		return nil, err
 	}
