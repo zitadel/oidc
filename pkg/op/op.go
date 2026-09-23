@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -96,6 +97,15 @@ var (
 		},
 	}
 )
+
+// cloneCORSOptions copies o so that in-place edits to its slices do not reach the original.
+func cloneCORSOptions(o cors.Options) cors.Options {
+	o.AllowedOrigins = slices.Clone(o.AllowedOrigins)
+	o.AllowedMethods = slices.Clone(o.AllowedMethods)
+	o.AllowedHeaders = slices.Clone(o.AllowedHeaders)
+	o.ExposedHeaders = slices.Clone(o.ExposedHeaders)
+	return o
+}
 
 var Tracer = otel.Tracer("github.com/zitadel/oidc/pkg/op")
 
@@ -272,7 +282,7 @@ func NewProvider(
 	)
 	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.
 	endpoints := *DefaultEndpoints
-	corsOpts := defaultCORSOptions
+	corsOpts := cloneCORSOptions(defaultCORSOptions)
 	o := &Provider{
 		config:            config,
 		storage:           storage,
