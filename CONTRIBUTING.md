@@ -89,13 +89,6 @@ dependencies with the k6 version in its `go.mod` and shows the mismatches. A qui
 check is to bump the otel modules in `xk6-modules` to the proposed version *without*
 touching the k6 requirement, and confirm `go build ./...` still passes.
 
-### The `2.12.x` branch
-
-`2.12.x` is the maintenance branch for v2 and still targets an old Go version. Dependabot
-regularly proposes bumps there (OpenTelemetry included) that rewrite the `go` directive and
-break the build. Those PRs should be closed rather than merged unless the bump is a security
-fix that genuinely applies to v2.
-
 ## Want to use the library?
 
 Checkout the [examples folder](example) for different client and server implementations.
