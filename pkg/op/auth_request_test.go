@@ -964,6 +964,34 @@ func TestAuthResponseURL(t *testing.T) {
 			},
 		},
 		{
+			"response mode fragment with values that need escaping",
+			args{
+				"uri",
+				oidc.ResponseTypeCode,
+				oidc.ResponseModeFragment,
+				map[string][]string{"state": {"PADTEST=="}, "test": {"a b/c&d"}},
+				&mockEncoder{},
+			},
+			res{
+				"uri#state=PADTEST%3D%3D&test=a+b%2Fc%26d",
+				nil,
+			},
+		},
+		{
+			"response type id token with values that need escaping",
+			args{
+				"uri?param=value",
+				oidc.ResponseTypeIDToken,
+				"",
+				map[string][]string{"state": {"eyJ0IjoxfQ=="}},
+				&mockEncoder{},
+			},
+			res{
+				"uri?param=value#state=eyJ0IjoxfQ%3D%3D",
+				nil,
+			},
+		},
+		{
 			"response type code",
 			args{
 				"uri",
