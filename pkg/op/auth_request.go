@@ -678,7 +678,10 @@ func AuthResponseFormPost(res http.ResponseWriter, redirectURI string, response 
 }
 
 func setFragment(uri *url.URL, params url.Values) string {
-	uri.Fragment = params.Encode()
+	// params.Encode() is already escaped. Assigning it to Fragment alone would make
+	// String() escape it a second time, turning %3D into %253D.
+	uri.RawFragment = params.Encode()
+	uri.Fragment, _ = url.PathUnescape(uri.RawFragment)
 	return uri.String()
 }
 
