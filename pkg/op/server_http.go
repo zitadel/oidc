@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -28,6 +29,7 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
+		encoder:   oidc.NewEncoder(),
 		corsOpts:  &defaultCORSOptions,
 	}
 
@@ -68,6 +70,16 @@ func WithDecoder(decoder httphelper.Decoder) ServerOption {
 	}
 }
 
+// WithEncoder overrides the default encoder,
+// which is an [oidc.NewEncoder].
+// It is used to build the error redirect an authorization request
+// is answered with when it fails after its redirect_uri was validated.
+func WithEncoder(encoder httphelper.Encoder) ServerOption {
+	return func(s *webServer) {
+		s.encoder = encoder
+	}
+}
+
 // WithServerCORSOptions sets the CORS policy for the Server's router.
 func WithServerCORSOptions(opts *cors.Options) ServerOption {
 	return func(s *webServer) {
@@ -88,6 +100,7 @@ type webServer struct {
 	handler   http.Handler
 	endpoints Endpoints
 	decoder   httphelper.Decoder
+	encoder   httphelper.Encoder
 	corsOpts  *cors.Options
 }
 
@@ -214,24 +227,51 @@ func (s *webServer) authorizeHandler(w http.ResponseWriter, r *http.Request) {
 	redirect.writeOut(w, r)
 }
 
-func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (_ *Redirect, err error) {
+func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest]) (*Redirect, error) {
 	cr, err := s.server.VerifyAuthRequest(ctx, r)
 	if err != nil {
 		return nil, err
 	}
 	authReq := cr.Data
 	if authReq.RedirectURI == "" {
-		return nil, ErrAuthReqMissingRedirectURI
+		// Redirect-disabled, so that this refusal stays un-reflected by
+		// construction and not merely by where it is raised.
+		return nil, oidc.ErrInvalidRequestRedirectURI().
+			WithParent(ErrAuthReqMissingRedirectURI).
+			WithDescription(authReqMissingRedirectURI)
 	}
+	// The redirect_uri is validated before any policy check, the order
+	// ValidateAuthRequestClient uses. Every check after this one therefore runs
+	// against a redirect_uri the client has registered, which is the condition
+	// for handing it a failure instead of rendering one here.
+	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
+		return nil, err
+	}
+	redirect, err := s.authorizeWithValidRedirectURI(ctx, cr)
+	if err != nil {
+		// A StatusError names the status its author wants answered, which only
+		// rendering here can honour. See [NewStatusError].
+		var statusError StatusError
+		if errors.As(err, &statusError) {
+			return nil, err
+		}
+		// TryErrorRedirect returns the error unredirected if it is marked
+		// redirect-disabled, which renders it here.
+		return TryErrorRedirect(ctx, authReq, err, s.encoder, nil)
+	}
+	return redirect, nil
+}
+
+// authorizeWithValidRedirectURI validates the rest of the request and
+// authorizes it, split out so its failures share one error path.
+func (s *webServer) authorizeWithValidRedirectURI(ctx context.Context, cr *ClientRequest[oidc.AuthRequest]) (_ *Redirect, err error) {
+	authReq := cr.Data
 	authReq.MaxAge, err = ValidateAuthReqPrompt(authReq.Prompt, authReq.MaxAge)
 	if err != nil {
 		return nil, err
 	}
 	authReq.Scopes, err = ValidateAuthReqScopes(cr.Client, authReq.Scopes)
 	if err != nil {
-		return nil, err
-	}
-	if err := ValidateAuthReqRedirectURI(cr.Client, authReq.RedirectURI, authReq.ResponseType); err != nil {
 		return nil, err
 	}
 	if err := ValidateAuthReqResponseType(cr.Client, authReq.ResponseType); err != nil {
