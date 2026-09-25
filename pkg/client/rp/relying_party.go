@@ -878,6 +878,16 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 		}
 		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
 	default:
+		// Without an assertion from the caller, a relying party with a
+		// signer (WithJWTProfile) authenticates with a JWT profile assertion,
+		// as CodeExchangeHandler does; client_secret is empty in that case.
+		if clientAssertion == "" && rp.Signer() != nil {
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			if err != nil {
+				return nil, fmt.Errorf("failed to build client assertion: %w", err)
+			}
+			clientAssertion, clientAssertionType = assertion, oidc.ClientAssertionTypeJWTAssertion
+		}
 		// use client id and secret in the request body
 		if clientAssertion != "" && clientAssertionType != "" {
 			request.ClientAssertion = clientAssertion
@@ -946,9 +956,21 @@ func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHi
 	case oauth2.AuthStyleInHeader:
 		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
 	default:
-		// use client id and secret in the request body
 		request.ClientID = rp.OAuthConfig().ClientID
-		request.ClientSecret = rp.OAuthConfig().ClientSecret
+		// RFC 7009 section 2.1: the client authenticates as at the token
+		// endpoint, so a relying party with a signer sends a JWT profile
+		// assertion instead of its (empty) secret.
+		if rp.Signer() != nil {
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			if err != nil {
+				return fmt.Errorf("failed to build client assertion: %w", err)
+			}
+			request.ClientAssertion = assertion
+			request.ClientAssertionType = oidc.ClientAssertionTypeJWTAssertion
+		} else {
+			// use client id and secret in the request body
+			request.ClientSecret = rp.OAuthConfig().ClientSecret
+		}
 	}
 
 	if rc, ok := rp.(client.RevokeCaller); ok && rc.GetRevokeEndpoint() != "" {
