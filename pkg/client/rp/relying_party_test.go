@@ -228,17 +228,19 @@ func Test_CodeExchangeHandler_JWTProfileAudience(t *testing.T) {
 
 	var assertion string
 	var server *httptest.Server
+	// The handler runs on the server's goroutine: assert, not require
+	// (require calls t.FailNow, which only the test goroutine may call).
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case oidc.DiscoveryEndpoint:
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"issuer":                 server.URL,
 				"authorization_endpoint": server.URL + "/authorize",
 				"token_endpoint":         server.URL + "/token",
 				"jwks_uri":               server.URL + "/keys",
 			}))
 		case "/token":
-			require.NoError(t, r.ParseForm())
+			assert.NoError(t, r.ParseForm())
 			assertion = r.PostForm.Get("client_assertion")
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
