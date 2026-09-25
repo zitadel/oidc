@@ -2,7 +2,12 @@ package rp
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -212,4 +217,55 @@ func Test_Oauth2OnlyRPWithPKCEFromDiscovery(t *testing.T) {
 	if rp != nil {
 		t.Fatal("RP should be nil when calling 'WithPKCEFromDiscovery' on an OAuth2 only relying party")
 	}
+}
+
+func Test_CodeExchangeHandler_JWTProfileAudience(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	der, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
+
+	var assertion string
+	var server *httptest.Server
+	// The handler runs on the server's goroutine: assert, not require
+	// (require calls t.FailNow, which only the test goroutine may call).
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case oidc.DiscoveryEndpoint:
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"issuer":                 server.URL,
+				"authorization_endpoint": server.URL + "/authorize",
+				"token_endpoint":         server.URL + "/token",
+				"jwks_uri":               server.URL + "/keys",
+			}))
+		case "/token":
+			assert.NoError(t, r.ParseForm())
+			assertion = r.PostForm.Get("client_assertion")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	rp, err := NewRelyingPartyOIDC(t.Context(), server.URL, "client", "", "http://local-site/callback", nil,
+		WithJWTProfile(SignerFromKeyAndKeyID(keyPEM, "key-id")))
+	require.NoError(t, err)
+
+	handler := CodeExchangeHandler(func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp RelyingParty) {
+		t.Fatal("callback must not be reached, the token endpoint refuses the code")
+	}, rp)
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/callback?code=abc&state=xyz", nil))
+
+	require.NotEmpty(t, assertion, "code exchange must authenticate with a client assertion")
+	var claims oidc.JWTTokenRequest
+	_, err = oidc.ParseToken(assertion, &claims)
+	require.NoError(t, err)
+	// RFC 7523bis: the issuer identifier is the sole audience value; the
+	// token endpoint must not appear. Keycloak 26 and Microsoft Entra ID
+	// refuse assertions with more than one audience.
+	assert.Equal(t, oidc.Audience{server.URL}, claims.Audience)
 }
