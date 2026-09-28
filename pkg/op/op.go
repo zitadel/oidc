@@ -495,6 +495,11 @@ func (o *Provider) CORSOptions() *cors.Options {
 	return o.corsOpts
 }
 
+// Endpoints returns the provider's endpoints, including any set with the WithCustom*Endpoint options.
+func (o *Provider) Endpoints() Endpoints {
+	return *o.endpoints
+}
+
 // Logger returns the global default logger.
 // Deprecated: configure logging with [slog.SetDefault].
 func (o *Provider) Logger() *slog.Logger {
