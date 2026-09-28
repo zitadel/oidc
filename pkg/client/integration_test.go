@@ -505,6 +505,14 @@ func TestClientCredentials(t *testing.T) {
 }
 
 func TestErrorFromPromptNone(t *testing.T) {
+	for _, wrapServer := range []bool{false, true} {
+		t.Run(fmt.Sprint("wrapServer ", wrapServer), func(t *testing.T) {
+			testErrorFromPromptNone(t, wrapServer)
+		})
+	}
+}
+
+func testErrorFromPromptNone(t *testing.T, wrapServer bool) {
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err, "create cookie jar")
 	httpClient := &http.Client{
@@ -522,7 +530,7 @@ func TestErrorFromPromptNone(t *testing.T) {
 	opServer := httptest.NewServer(&dh)
 	defer opServer.Close()
 	t.Logf("auth server at %s", opServer.URL)
-	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, false, op.WithHttpInterceptors(
+	dh.Handler = exampleop.SetupServer(opServer.URL, exampleStorage, Logger, wrapServer, op.WithHttpInterceptors(
 		func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				t.Logf("request to %s", r.URL)

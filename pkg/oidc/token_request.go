@@ -146,6 +146,7 @@ type JWTTokenRequest struct {
 	Audience  Audience            `json:"aud"`
 	IssuedAt  Time                `json:"iat"`
 	ExpiresAt Time                `json:"exp"`
+	JWTID     string              `json:"jti,omitempty"`
 
 	private map[string]any
 }
