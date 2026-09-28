@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
+	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
@@ -231,6 +232,10 @@ func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) 
 }
 
 func SignedJWTProfileAssertion(clientID string, audience []string, expiration time.Duration, signer jose.Signer) (string, error) {
+	jti, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
 	iat := time.Now()
 	exp := iat.Add(expiration)
 	return crypto.Sign(&oidc.JWTTokenRequest{
@@ -239,6 +244,7 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 		Audience:  audience,
 		ExpiresAt: oidc.FromTime(exp),
 		IssuedAt:  oidc.FromTime(iat),
+		JWTID:     jti.String(),
 	}, signer)
 }
 

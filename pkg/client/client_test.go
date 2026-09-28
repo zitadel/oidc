@@ -2,13 +2,18 @@ package client
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -239,4 +244,25 @@ func TestCallEndSessionEndpoint_CheckRedirectUnchanged(t *testing.T) {
 			tt.checkFn(t, tt.initialClient)
 		})
 	}
+}
+
+func TestSignedJWTProfileAssertion_JWTID(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: key}, nil)
+	require.NoError(t, err)
+
+	jti := func() string {
+		assertion, err := SignedJWTProfileAssertion("client", []string{"https://issuer.example"}, time.Minute, signer)
+		require.NoError(t, err)
+		var claims oidc.JWTTokenRequest
+		_, err = oidc.ParseToken(assertion, &claims)
+		require.NoError(t, err)
+		return claims.JWTID
+	}
+	// OpenID Connect Core 1.0, section 9 (private_key_jwt): jti is required
+	// and must be unique, so the authorization server can refuse a replay.
+	first, second := jti(), jti()
+	assert.NotEmpty(t, first)
+	assert.NotEqual(t, first, second)
 }
