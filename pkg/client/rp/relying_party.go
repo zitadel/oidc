@@ -134,6 +134,16 @@ func (rp *relyingParty) Issuer() string {
 	return rp.issuer
 }
 
+// jwtProfileAudience is the audience of a client assertion signed by rp: its
+// issuer, or the token endpoint for an OAuth-only relying party, which has no
+// issuer (RFC 7523, section 3).
+func jwtProfileAudience(rp RelyingParty) []string {
+	if issuer := rp.Issuer(); issuer != "" {
+		return []string{issuer}
+	}
+	return []string{rp.OAuthConfig().Endpoint.TokenURL}
+}
+
 func (rp *relyingParty) IsPKCE() bool {
 	return rp.pkce == pkceEnabled
 }
@@ -625,7 +635,7 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 			rp.CookieHandler().DeleteCookie(w, pkceCode)
 		}
 		if rp.Signer() != nil {
-			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, jwtProfileAudience(rp), time.Hour, rp.Signer())
 			if err != nil {
 				unauthorizedError(w, r, "failed to build assertion: "+err.Error(), state, rp)
 				return
@@ -882,7 +892,7 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 		// signer (WithJWTProfile) authenticates with a JWT profile assertion,
 		// as CodeExchangeHandler does; client_secret is empty in that case.
 		if clientAssertion == "" && rp.Signer() != nil {
-			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, jwtProfileAudience(rp), time.Hour, rp.Signer())
 			if err != nil {
 				return nil, fmt.Errorf("failed to build client assertion: %w", err)
 			}
@@ -961,7 +971,7 @@ func RevokeToken(ctx context.Context, rp RelyingParty, token string, tokenTypeHi
 		// endpoint, so a relying party with a signer sends a JWT profile
 		// assertion instead of its (empty) secret.
 		if rp.Signer() != nil {
-			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, rp.Signer())
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, jwtProfileAudience(rp), time.Hour, rp.Signer())
 			if err != nil {
 				return fmt.Errorf("failed to build client assertion: %w", err)
 			}

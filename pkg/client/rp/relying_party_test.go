@@ -358,6 +358,23 @@ func Test_RefreshTokens_JWTProfile(t *testing.T) {
 	assert.Len(t, jtis, 2, "every refresh must sign a new assertion")
 }
 
+// An OAuth-only relying party has no issuer: its assertion names the token
+// endpoint as the audience instead of an empty string.
+func Test_RefreshTokens_JWTProfileOAuthOnly(t *testing.T) {
+	server := newJWTProfileServer(t)
+	rp, err := NewRelyingPartyOAuth(&oauth2.Config{
+		ClientID: "client",
+		Endpoint: oauth2.Endpoint{AuthURL: server.URL + "/authorize", TokenURL: server.URL + "/token"},
+	}, testSigner(t))
+	require.NoError(t, err)
+
+	_, err = RefreshTokens[*oidc.IDTokenClaims](t.Context(), rp, "refresh-token", "", "")
+	require.Error(t, err)
+
+	require.Len(t, server.requests, 1)
+	requireJWTProfileAssertion(t, server.requests[0], server.URL+"/token")
+}
+
 func Test_RefreshTokens_CallerAssertionWins(t *testing.T) {
 	server := newJWTProfileServer(t)
 	rp, err := NewRelyingPartyOIDC(t.Context(), server.URL, "client", "", "http://local-site/callback", nil, testSigner(t))
