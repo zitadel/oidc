@@ -120,21 +120,25 @@ func (s *LegacyServer) Keys(ctx context.Context, r *Request[struct{}]) (*Respons
 	return NewResponse(jsonWebKeySet(keys)), nil
 }
 
-const authReqMissingClientID = "auth request is missing client_id"
+const (
+	authReqMissingClientID    = "auth request is missing client_id"
+	authReqMissingRedirectURI = "auth request is missing redirect_uri"
+)
 
 var (
 	ErrAuthReqMissingClientID    = errors.New(authReqMissingClientID)
-	ErrAuthReqMissingRedirectURI = errors.New("auth request is missing redirect_uri")
+	ErrAuthReqMissingRedirectURI = errors.New(authReqMissingRedirectURI)
 )
 
 func (s *LegacyServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
 	ctx, span := Tracer.Start(ctx, "LegacyServer.VerifyAuthRequest")
 	defer span.End()
 
-	if r.Data.RequestParam != "" {
-		if !s.provider.RequestObjectSupported() {
-			return nil, oidc.ErrRequestNotSupported()
-		}
+	// An unsupported request object is left on the request rather than refused
+	// here, so that Authorize can refuse it once the redirect_uri has been
+	// validated and the refusal can be handed to the client. This is the order
+	// the Provider path uses.
+	if r.Data.RequestParam != "" && s.provider.RequestObjectSupported() {
 		err := ParseRequestObject(ctx, r.Data, s.provider.Storage(), IssuerFromContext(ctx))
 		if err != nil {
 			return nil, err
@@ -161,6 +165,16 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 	userID, err := ValidateAuthReqIDTokenHint(ctx, r.Data.IDTokenHint, s.provider.IDTokenHintVerifier(ctx))
 	if err != nil {
 		return nil, err
+	}
+	// A request object still on the request was not applied, because
+	// ParseRequestObject only runs when the provider supports one and
+	// CopyRequestObjectToAuthRequest clears the field once it is applied.
+	// Refusing it here rather than in VerifyAuthRequest, which has to run
+	// before the redirect_uri is validated, is what lets the refusal reach the
+	// client. The position mirrors the Provider path, which refuses after
+	// ValidateAuthRequestClient.
+	if r.Data.RequestParam != "" {
+		return nil, oidc.ErrRequestNotSupported()
 	}
 	req, err := s.provider.Storage().CreateAuthRequest(ctx, r.Data, userID)
 	if err != nil {
