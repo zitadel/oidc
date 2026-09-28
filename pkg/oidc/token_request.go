@@ -164,6 +164,11 @@ func (j *JWTTokenRequest) MarshalJSON() ([]byte, error) {
 		return b, nil
 	}
 
+	// jti is omitted when empty, so merging would keep a parsed value.
+	if j.JWTID == "" {
+		delete(j.private, "jti")
+	}
+
 	err = json.Unmarshal(b, &j.private)
 	if err != nil {
 		return nil, fmt.Errorf("jws: invalid map of custom claims %v", j.private)
