@@ -521,8 +521,13 @@ func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Tok
 	if rp.IsOAuth2Only() {
 		return &oidc.Tokens[C]{Token: token}, nil
 	}
+	// Some providers signal "no id_token" with an empty string rather than by
+	// omitting the field, and the token endpoint now preserves the response as
+	// it was sent. An empty string is never a parseable JWT, so treat it as a
+	// missing id_token instead of handing it to the verifier: RefreshTokens
+	// tolerates ErrMissingIDToken, but a parse error would fail the refresh.
 	idTokenString, ok := token.Extra(idTokenKey).(string)
-	if !ok {
+	if !ok || idTokenString == "" {
 		return &oidc.Tokens[C]{Token: token}, ErrMissingIDToken
 	}
 	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
