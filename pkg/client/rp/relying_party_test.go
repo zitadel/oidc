@@ -93,6 +93,27 @@ func Test_verifyTokenResponse(t *testing.T) {
 			wantErr: ErrMissingIDToken,
 		},
 		{
+			// Some providers signal "no id_token" with an empty string instead
+			// of omitting the field. An empty string is never a parseable JWT,
+			// so it must be treated the same as a missing id_token, not handed
+			// to the verifier. RefreshTokens tolerates ErrMissingIDToken.
+			name:       "id_token empty string",
+			oauth2Only: false,
+			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
+				accessToken, _ := tu.ValidAccessToken()
+				token := &oauth2.Token{
+					AccessToken: accessToken,
+				}
+				token = token.WithExtra(map[string]any{
+					"id_token": "",
+				})
+				return token, &oidc.Tokens[*oidc.IDTokenClaims]{
+					Token: token,
+				}
+			},
+			wantErr: ErrMissingIDToken,
+		},
+		{
 			name:       "verify tokens error",
 			oauth2Only: false,
 			tokens: func() (*oauth2.Token, *oidc.Tokens[*oidc.IDTokenClaims]) {
