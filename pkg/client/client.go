@@ -149,10 +149,12 @@ type RevokeCaller interface {
 }
 
 type RevokeRequest struct {
-	Token         string `schema:"token"`
-	TokenTypeHint string `schema:"token_type_hint"`
-	ClientID      string `schema:"client_id"`
-	ClientSecret  string `schema:"client_secret"`
+	Token               string `schema:"token"`
+	TokenTypeHint       string `schema:"token_type_hint"`
+	ClientID            string `schema:"client_id"`
+	ClientSecret        string `schema:"client_secret,omitempty"`
+	ClientAssertion     string `schema:"client_assertion,omitempty"`
+	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
 }
 
 // Deprecated: This function is no longer invoked because it violates
