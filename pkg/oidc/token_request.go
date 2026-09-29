@@ -146,6 +146,7 @@ type JWTTokenRequest struct {
 	Audience  Audience            `json:"aud"`
 	IssuedAt  Time                `json:"iat"`
 	ExpiresAt Time                `json:"exp"`
+	JWTID     string              `json:"jti,omitempty"`
 
 	private map[string]any
 }
@@ -161,6 +162,11 @@ func (j *JWTTokenRequest) MarshalJSON() ([]byte, error) {
 
 	if len(j.private) == 0 {
 		return b, nil
+	}
+
+	// jti is omitted when empty, so merging would keep a parsed value.
+	if j.JWTID == "" {
+		delete(j.private, "jti")
 	}
 
 	err = json.Unmarshal(b, &j.private)

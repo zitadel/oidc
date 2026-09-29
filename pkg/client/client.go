@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
+	"github.com/google/uuid"
 	"github.com/zitadel/oidc/v3/internal/otel"
 	"golang.org/x/oauth2"
 
@@ -155,10 +156,12 @@ type RevokeCaller interface {
 }
 
 type RevokeRequest struct {
-	Token         string `schema:"token"`
-	TokenTypeHint string `schema:"token_type_hint"`
-	ClientID      string `schema:"client_id"`
-	ClientSecret  string `schema:"client_secret"`
+	Token               string `schema:"token"`
+	TokenTypeHint       string `schema:"token_type_hint"`
+	ClientID            string `schema:"client_id"`
+	ClientSecret        string `schema:"client_secret,omitempty"`
+	ClientAssertion     string `schema:"client_assertion,omitempty"`
+	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
 }
 
 // Deprecated: This function is no longer invoked because it violates
@@ -238,6 +241,10 @@ func NewSignerFromPrivateKeyByte(key []byte, keyID string) (jose.Signer, error) 
 }
 
 func SignedJWTProfileAssertion(clientID string, audience []string, expiration time.Duration, signer jose.Signer) (string, error) {
+	jti, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
 	iat := time.Now()
 	exp := iat.Add(expiration)
 	return crypto.Sign(&oidc.JWTTokenRequest{
@@ -246,6 +253,7 @@ func SignedJWTProfileAssertion(clientID string, audience []string, expiration ti
 		Audience:  audience,
 		ExpiresAt: oidc.FromTime(exp),
 		IssuedAt:  oidc.FromTime(iat),
+		JWTID:     jti.String(),
 	}, signer)
 }
 
