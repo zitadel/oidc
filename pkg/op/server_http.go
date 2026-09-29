@@ -24,13 +24,14 @@ func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption)
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 
+	corsOpts := cloneCORSOptions(defaultCORSOptions)
 	ws := &webServer{
 		router:    chi.NewRouter(),
 		server:    server,
 		endpoints: endpoints,
 		decoder:   decoder,
 		encoder:   oidc.NewEncoder(),
-		corsOpts:  &defaultCORSOptions,
+		corsOpts:  &corsOpts,
 	}
 
 	for _, option := range options {
