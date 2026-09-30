@@ -220,7 +220,18 @@ func (s SpaceDelimitedArray) MarshalJSON() ([]byte, error) {
 	return json.Marshal((s).String())
 }
 
+// UnmarshalJSON accepts a space delimited string and, for interoperability,
+// an array of strings. Some providers encode the scope claim of JWT access
+// tokens as an array, although RFC 9068 defines it as a space delimited string.
 func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
+	if len(data) > 0 && data[0] == '[' {
+		var arr []string
+		if err := json.Unmarshal(data, &arr); err != nil {
+			return err
+		}
+		*s = arr
+		return nil
+	}
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err

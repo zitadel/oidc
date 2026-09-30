@@ -589,6 +589,56 @@ func TestScopes_MarshalText(t *testing.T) {
 	}
 }
 
+func TestSpaceDelimitedArray_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    SpaceDelimitedArray
+		wantErr bool
+	}{
+		{
+			name:  "space delimited string",
+			input: `{"scope":"openid email"}`,
+			want:  SpaceDelimitedArray{"openid", "email"},
+		},
+		{
+			name:  "array",
+			input: `{"scope":["openid","email"]}`,
+			want:  SpaceDelimitedArray{"openid", "email"},
+		},
+		{
+			name:  "empty array",
+			input: `{"scope":[]}`,
+			want:  SpaceDelimitedArray{},
+		},
+		{
+			name:    "array with invalid type",
+			input:   `{"scope":["openid",1]}`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   `{"scope":1}`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got struct {
+				Scopes SpaceDelimitedArray `json:"scope"`
+			}
+			err := json.Unmarshal([]byte(tt.input), &got)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Scopes)
+		})
+	}
+}
+
 func TestSpaceDelimitatedArray_ValuerNotNil(t *testing.T) {
 	inputs := [][]string{
 		{"two", "elements"},
