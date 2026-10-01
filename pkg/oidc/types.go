@@ -220,24 +220,50 @@ func (s SpaceDelimitedArray) MarshalJSON() ([]byte, error) {
 	return json.Marshal((s).String())
 }
 
-// UnmarshalJSON accepts a space delimited string and, for interoperability,
-// an array of strings. Some providers encode the scope claim of JWT access
-// tokens as an array, although RFC 9068 defines it as a space delimited string.
 func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
-	if len(data) > 0 && data[0] == '[' {
-		var arr []string
-		if err := json.Unmarshal(data, &arr); err != nil {
-			return err
-		}
-		*s = arr
-		return nil
-	}
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
+	var dst any
+	if err := json.Unmarshal(data, &dst); err != nil {
 		return err
 	}
-	*s = strings.Split(str, " ")
-	return nil
+
+	switch v := dst.(type) {
+	case string:
+		*s = strings.Split(v, " ")
+		return nil
+	case nil:
+		// Same as an empty string.
+		*s = SpaceDelimitedArray{""}
+		return nil
+	case []any:
+		// Compatibility with Cloudflare Access, which sends the scope claim of
+		// access tokens as an array instead of a space delimited string (RFC 9068):
+		// https://github.com/zitadel/oidc/issues/991
+		// Other arrays are rejected like any other type.
+		if values, ok := spaceDelimitedValues(v); ok {
+			*s = values
+			return nil
+		}
+	}
+	// Return the same error as decoding into a string.
+	var str string
+	return json.Unmarshal(data, &str)
+}
+
+// spaceDelimitedValues returns the values of an array that can be written as a
+// space delimited string: at least one value, each a non-empty string without spaces.
+func spaceDelimitedValues(arr []any) (SpaceDelimitedArray, bool) {
+	if len(arr) == 0 {
+		return nil, false
+	}
+	values := make(SpaceDelimitedArray, len(arr))
+	for i, a := range arr {
+		value, ok := a.(string)
+		if !ok || value == "" || strings.Contains(value, " ") {
+			return nil, false
+		}
+		values[i] = value
+	}
+	return values, true
 }
 
 func (s *SpaceDelimitedArray) Scan(src any) error {

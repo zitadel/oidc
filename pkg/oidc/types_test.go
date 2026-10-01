@@ -607,9 +607,34 @@ func TestSpaceDelimitedArray_UnmarshalJSON(t *testing.T) {
 			want:  SpaceDelimitedArray{"openid", "email"},
 		},
 		{
-			name:  "empty array",
-			input: `{"scope":[]}`,
-			want:  SpaceDelimitedArray{},
+			name:  "null",
+			input: `{"scope":null}`,
+			want:  SpaceDelimitedArray{""},
+		},
+		{
+			name:  "empty string",
+			input: `{"scope":""}`,
+			want:  SpaceDelimitedArray{""},
+		},
+		{
+			name:    "empty array",
+			input:   `{"scope":[]}`,
+			wantErr: true,
+		},
+		{
+			name:    "array element with spaces",
+			input:   `{"scope":["a b"]}`,
+			wantErr: true,
+		},
+		{
+			name:    "array with empty string",
+			input:   `{"scope":["a",""]}`,
+			wantErr: true,
+		},
+		{
+			name:    "array with null",
+			input:   `{"scope":["a",null]}`,
+			wantErr: true,
 		},
 		{
 			name:    "array with invalid type",
@@ -637,6 +662,14 @@ func TestSpaceDelimitedArray_UnmarshalJSON(t *testing.T) {
 			assert.Equal(t, tt.want, got.Scopes)
 		})
 	}
+}
+
+func TestSpaceDelimitedArray_MarshalJSON_FromArray(t *testing.T) {
+	var scopes SpaceDelimitedArray
+	require.NoError(t, json.Unmarshal([]byte(`["openid","email"]`), &scopes))
+	got, err := json.Marshal(scopes)
+	require.NoError(t, err)
+	assert.JSONEq(t, `"openid email"`, string(got))
 }
 
 func TestSpaceDelimitatedArray_ValuerNotNil(t *testing.T) {
