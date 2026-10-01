@@ -221,12 +221,49 @@ func (s SpaceDelimitedArray) MarshalJSON() ([]byte, error) {
 }
 
 func (s *SpaceDelimitedArray) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
+	var dst any
+	if err := json.Unmarshal(data, &dst); err != nil {
 		return err
 	}
-	*s = strings.Split(str, " ")
-	return nil
+
+	switch v := dst.(type) {
+	case string:
+		*s = strings.Split(v, " ")
+		return nil
+	case nil:
+		// Same as an empty string.
+		*s = SpaceDelimitedArray{""}
+		return nil
+	case []any:
+		// Compatibility with Cloudflare Access, which sends the scope claim of
+		// access tokens as an array instead of a space delimited string (RFC 9068):
+		// https://github.com/zitadel/oidc/issues/991
+		// Other arrays are rejected like any other type.
+		if values, ok := spaceDelimitedValues(v); ok {
+			*s = values
+			return nil
+		}
+	}
+	// Return the same error as decoding into a string.
+	var str string
+	return json.Unmarshal(data, &str)
+}
+
+// spaceDelimitedValues returns the values of an array that can be written as a
+// space delimited string: at least one value, each a non-empty string without spaces.
+func spaceDelimitedValues(arr []any) (SpaceDelimitedArray, bool) {
+	if len(arr) == 0 {
+		return nil, false
+	}
+	values := make(SpaceDelimitedArray, len(arr))
+	for i, a := range arr {
+		value, ok := a.(string)
+		if !ok || value == "" || strings.Contains(value, " ") {
+			return nil, false
+		}
+		values[i] = value
+	}
+	return values, true
 }
 
 func (s *SpaceDelimitedArray) Scan(src any) error {
