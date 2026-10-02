@@ -170,7 +170,7 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	CryptoKey                         [32]byte // for encrypting access token via NewAESCrypto; will be overwritten by WithCrypto
+	CryptoKey                         [32]byte // for encrypting access token via NewAES256GCMCrypto; will be overwritten by WithCrypto
 	CryptoKeyId                       string
 	DefaultLogoutRedirectURI          string
 	CodeMethodS256                    bool
@@ -277,7 +277,7 @@ func NewProvider(
 		easgcmCrypto,
 		[]Decrypter{
 			easgcmCrypto,
-			NewAESCrypto(config.CryptoKey),
+			NewAESDecrypter(config.CryptoKey),
 		},
 	)
 	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.

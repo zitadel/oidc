@@ -23,7 +23,7 @@ type UserInfo struct {
 	} `json:"bar,omitempty"`
 
 	// Claims are all the combined claims, including custom.
-	Claims map[string]any `json:"-,omitempty"`
+	Claims map[string]any `json:"-"`
 }
 
 func (u *UserInfo) GetSubject() string {
