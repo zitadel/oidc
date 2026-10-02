@@ -1,0 +1,26 @@
+name: Staticcheck
+on:
+  push:
+    branches:
+      - "2.11.x"
+      - main
+      - next
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  staticcheck:
+    runs-on: ubuntu-24.04
+    name: Staticcheck
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: dominikh/staticcheck-action@v1.4.1
+        with:
+          version: "2026.2.1"
+          install-go: false
