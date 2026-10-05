@@ -15,11 +15,13 @@ import (
 func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
 	config := rp.OAuthConfig()
 	req := &oidc.ClientCredentialsRequest{
-		Scope:        scopes,
-		ClientID:     config.ClientID,
-		ClientSecret: config.ClientSecret,
+		Scope:    scopes,
+		ClientID: config.ClientID,
 	}
 
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request,
+	// so a signed assertion replaces the secret rather than accompanying it.
 	if signer := rp.Signer(); signer != nil {
 		assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, signer)
 		if err != nil {
@@ -27,6 +29,8 @@ func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.
 		}
 		req.ClientAssertion = assertion
 		req.ClientAssertionType = oidc.ClientAssertionTypeJWTAssertion
+	} else {
+		req.ClientSecret = config.ClientSecret
 	}
 
 	return req, nil
@@ -50,11 +54,30 @@ func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, 
 	if err != nil {
 		return nil, err
 	}
+
+	// One authentication method per request, as for DeviceAccessToken: a caller
+	// that authenticates the request itself, or a client configured to use the
+	// Authorization header, must not also send credentials in the form.
+	if _, ok := authFn.(httphelper.RequestAuthorization); ok {
+		withoutFormCredentials(req)
+	} else if authFn == nil && rp.OAuthConfig().Endpoint.AuthStyle == oauth2.AuthStyleInHeader {
+		withoutFormCredentials(req)
+		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
+	}
+
 	if !bound {
 		return client.CallDeviceAuthorizationEndpoint(ctx, req, rp, authFn)
 	}
 	return client.CallDeviceAuthorizationEndpoint(ctx, req, rp, authFn,
 		client.WithDPoPJKT(configured.KeyBindingThumbprint()))
+}
+
+// withoutFormCredentials drops the client credentials from the form, leaving
+// the client_id, for a request that is authenticated some other way.
+func withoutFormCredentials(req *oidc.ClientCredentialsRequest) {
+	req.ClientSecret = ""
+	req.ClientAssertion = ""
+	req.ClientAssertionType = ""
 }
 
 // DeviceAccessToken attempts to obtain tokens from a Device Authorization,
