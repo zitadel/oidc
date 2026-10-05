@@ -3,6 +3,7 @@ package rp
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"time"
 
@@ -12,28 +13,61 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty) (*oidc.ClientCredentialsRequest, error) {
+// newDeviceClientCredentialsRequest builds the device authorization request and
+// picks the one way the client authenticates it, in the same order as
+// DeviceAccessToken: the Authorization header, a signed assertion, or the secret
+// in the form.
+//
+// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+// The client MUST NOT use more than one authentication method in each request.
+//
+// authFn is the caller's, and may only set unrelated headers or form fields. It
+// is returned combined with basic auth when the credentials go in the header.
+// A FormAuthorization cannot be combined with a header, so with one the
+// credentials go in the form instead, as they did before AuthStyle was honoured.
+func newDeviceClientCredentialsRequest(scopes []string, rp RelyingParty, authFn any) (*oidc.ClientCredentialsRequest, any, error) {
 	config := rp.OAuthConfig()
 	req := &oidc.ClientCredentialsRequest{
 		Scope:    scopes,
 		ClientID: config.ClientID,
 	}
 
-	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
-	// The client MUST NOT use more than one authentication method in each request,
-	// so a signed assertion replaces the secret rather than accompanying it.
-	if signer := rp.Signer(); signer != nil {
-		assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, signer)
+	switch {
+	case config.Endpoint.AuthStyle == oauth2.AuthStyleInHeader && !isFormAuthorization(authFn):
+		authFn = withBasicAuth(authFn, config.ClientID, config.ClientSecret)
+	case rp.Signer() != nil:
+		assertion, err := client.SignedJWTProfileAssertion(config.ClientID, jwtProfileAudience(rp), time.Hour, rp.Signer())
 		if err != nil {
-			return nil, fmt.Errorf("failed to build assertion: %w", err)
+			return nil, nil, fmt.Errorf("failed to build assertion: %w", err)
 		}
 		req.ClientAssertion = assertion
 		req.ClientAssertionType = oidc.ClientAssertionTypeJWTAssertion
-	} else {
+	default:
 		req.ClientSecret = config.ClientSecret
 	}
 
-	return req, nil
+	return req, authFn, nil
+}
+
+// isFormAuthorization reports whether authFn changes the form, which FormRequest
+// applies instead of any request authorization.
+func isFormAuthorization(authFn any) bool {
+	fn, ok := authFn.(httphelper.FormAuthorization)
+	return ok && fn != nil
+}
+
+// withBasicAuth adds HTTP basic client authentication to the caller's authFn,
+// keeping whatever else a RequestAuthorization sets, such as a tenant header.
+func withBasicAuth(authFn any, clientID, clientSecret string) httphelper.RequestAuthorization {
+	basic := httphelper.AuthorizeBasic(clientID, clientSecret)
+	fn, _ := authFn.(httphelper.RequestAuthorization)
+	if fn == nil {
+		return basic
+	}
+	return func(req *http.Request) {
+		basic(req)
+		fn(req)
+	}
 }
 
 // DeviceAuthorization starts a new Device Authorization flow as defined
@@ -50,34 +84,15 @@ func DeviceAuthorization(ctx context.Context, scopes []string, rp RelyingParty, 
 		scopes = append(slices.Clone(scopes), oidc.ScopeBoundKey)
 	}
 
-	req, err := newDeviceClientCredentialsRequest(scopes, rp)
+	req, authFn, err := newDeviceClientCredentialsRequest(scopes, rp, authFn)
 	if err != nil {
 		return nil, err
 	}
-
-	// One authentication method per request, as for DeviceAccessToken: a caller
-	// that authenticates the request itself, or a client configured to use the
-	// Authorization header, must not also send credentials in the form.
-	if _, ok := authFn.(httphelper.RequestAuthorization); ok {
-		withoutFormCredentials(req)
-	} else if authFn == nil && rp.OAuthConfig().Endpoint.AuthStyle == oauth2.AuthStyleInHeader {
-		withoutFormCredentials(req)
-		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
-	}
-
 	if !bound {
 		return client.CallDeviceAuthorizationEndpoint(ctx, req, rp, authFn)
 	}
 	return client.CallDeviceAuthorizationEndpoint(ctx, req, rp, authFn,
 		client.WithDPoPJKT(configured.KeyBindingThumbprint()))
-}
-
-// withoutFormCredentials drops the client credentials from the form, leaving
-// the client_id, for a request that is authenticated some other way.
-func withoutFormCredentials(req *oidc.ClientCredentialsRequest) {
-	req.ClientSecret = ""
-	req.ClientAssertion = ""
-	req.ClientAssertionType = ""
 }
 
 // DeviceAccessToken attempts to obtain tokens from a Device Authorization,
@@ -107,7 +122,7 @@ func DeviceAccessToken(ctx context.Context, deviceCode string, interval time.Dur
 		authFn = httphelper.AuthorizeBasic(rp.OAuthConfig().ClientID, rp.OAuthConfig().ClientSecret)
 	default:
 		if signer := rp.Signer(); signer != nil {
-			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, []string{rp.Issuer()}, time.Hour, signer)
+			assertion, err := client.SignedJWTProfileAssertion(rp.OAuthConfig().ClientID, jwtProfileAudience(rp), time.Hour, signer)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build assertion: %w", err)
 			}
