@@ -25,10 +25,11 @@ func (a *Audience) UnmarshalJSON(text []byte) error {
 	}
 	switch aud := i.(type) {
 	case []any:
-		*a = make([]string, len(aud))
-		for i, audience := range aud {
-			(*a)[i] = audience.(string)
+		audiences, err := gu.AssertInterfaces[string](aud)
+		if err != nil {
+			return fmt.Errorf("oidc aud: %w", err)
 		}
+		*a = audiences
 	case string:
 		*a = []string{aud}
 	}
