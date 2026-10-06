@@ -10,10 +10,20 @@ on:
       - '**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   staticcheck:
     runs-on: ubuntu-24.04
-    name: Staticcheck
+    name: Staticcheck (${{ matrix.build-tags || 'default' }})
+    strategy:
+      fail-fast: false
+      matrix:
+        build-tags:
+          - ""
+          - no_otel
+          - create_regression_data
     steps:
       - uses: actions/checkout@v7
       - name: Setup go
@@ -24,3 +34,5 @@ jobs:
         with:
           version: "2026.2.1"
           install-go: false
+          build-tags: ${{ matrix.build-tags }}
+          cache-key: ${{ matrix.build-tags }}
