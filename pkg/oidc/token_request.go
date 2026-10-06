@@ -267,7 +267,7 @@ type ClientCredentialsRequest struct {
 	GrantType           GrantType           `schema:"grant_type,omitempty"`
 	Scope               SpaceDelimitedArray `schema:"scope"`
 	ClientID            string              `schema:"client_id"`
-	ClientSecret        string              `schema:"client_secret"`
+	ClientSecret        string              `schema:"client_secret,omitempty"`
 	ClientAssertion     string              `schema:"client_assertion,omitempty"`
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
 }
