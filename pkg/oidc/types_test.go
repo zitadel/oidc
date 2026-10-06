@@ -56,6 +56,22 @@ func TestAudience_UnmarshalText(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"array with non-string",
+			args{
+				[]byte(`{"aud": ["client", 1]}`),
+			},
+			res{},
+			true,
+		},
+		{
+			"unsupported type ignored",
+			args{
+				[]byte(`{"aud": 1}`),
+			},
+			res{},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
