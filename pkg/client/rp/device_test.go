@@ -253,7 +253,7 @@ func TestDeviceFlowAssertionAudience(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, []string{tt.want(srv)}, assertionAudience(t, authz.form.Get("client_assertion")), "device authorization")
 
-			_, err = DeviceAccessToken(context.Background(), "device-code", time.Millisecond, rp)
+			_, err = DeviceAccessToken(context.Background(), "device-code", 100*time.Millisecond, rp)
 			require.NoError(t, err)
 			assert.Equal(t, []string{tt.want(srv)}, assertionAudience(t, token.form.Get("client_assertion")), "device access token")
 		})
