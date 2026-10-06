@@ -151,7 +151,7 @@ func newOP(
 			UserCode:     op.UserCodeBase20,
 		},
 	}
-	handler, err := op.NewOpenIDProvider(issuer, config, storage,
+	handler, err := op.NewProvider(config, storage, op.StaticIssuer(issuer),
 		append([]op.Option{
 			//we must explicitly allow the use of the http issuer
 			op.WithAllowInsecure(),

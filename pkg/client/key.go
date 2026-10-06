@@ -5,11 +5,6 @@ import (
 	"os"
 )
 
-const (
-	serviceAccountKey = "serviceaccount"
-	applicationKey    = "application"
-)
-
 // Deprecated: use [github.com/zitadel/zitadel-go/v3/pkg/client.KeyFile] instead.
 // The type will be removed in the next major release.
 type KeyFile struct {

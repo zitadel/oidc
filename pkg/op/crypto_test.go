@@ -101,6 +101,26 @@ func TestCompositeCrypto(t *testing.T) {
 	}
 }
 
+func TestAESDecrypter(t *testing.T) {
+	const value = "My secret key"
+	key := NewBsKey("This_Key_Is_32_Bytes_Or_256_Bits")
+	encrypted, err := NewAESCrypto(key).Encrypt(value)
+	require.NoError(t, err)
+
+	t.Run("decrypts data encrypted by NewAESCrypto", func(t *testing.T) {
+		decrypted, err := NewAESDecrypter(key).Decrypt(encrypted)
+		require.NoError(t, err)
+		assert.Equal(t, value, decrypted)
+	})
+	t.Run("fallback in composite crypto", func(t *testing.T) {
+		aesGcmCrypto := NewAES256GCMCrypto(NewBsKey("my-key2-123456789-abcdefghijklmn"), "key1")
+		cr := NewCompositeCrypto(aesGcmCrypto, []Decrypter{aesGcmCrypto, NewAESDecrypter(key)})
+		decrypted, err := cr.Decrypt(encrypted)
+		require.NoError(t, err)
+		assert.Equal(t, value, decrypted)
+	})
+}
+
 func NewBsKey(key string) [32]byte {
 	bs := [32]byte{}
 	copy(bs[:], key)
