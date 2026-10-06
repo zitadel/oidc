@@ -25,6 +25,7 @@ func main() {
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	if keyPath != "" {
+		//lint:ignore SA1019 the replacement lives in zitadel-go, which this module does not depend on
 		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(context.TODO(), issuer, keyPath, scopes)
 		if err != nil {
 			slog.Error("error creating token source", "error", err)
@@ -77,6 +78,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			//lint:ignore SA1019 the replacement lives in zitadel-go, which this module does not depend on
 			ts, err := profile.NewJWTProfileTokenSourceFromKeyFileData(context.TODO(), issuer, key, scopes)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

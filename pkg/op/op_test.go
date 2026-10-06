@@ -554,3 +554,13 @@ func TestNewProviderEndpointsConcurrentRace(t *testing.T) {
 	close(stop)
 	<-readerDone
 }
+
+func TestNewProviderDecryptsAESData(t *testing.T) {
+	const value = "My secret key"
+	encrypted, err := op.NewAESCrypto(testConfig.CryptoKey).Encrypt(value)
+	require.NoError(t, err)
+
+	decrypted, err := testProvider.Crypto().Decrypt(encrypted)
+	require.NoError(t, err)
+	assert.Equal(t, value, decrypted)
+}

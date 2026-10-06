@@ -12,17 +12,12 @@ func TestIssuerInterceptor(t *testing.T) {
 	type fields struct {
 		issuerFromRequest IssuerFromRequest
 	}
-	type args struct {
-		r    *http.Request
-		next http.Handler
-	}
 	type res struct {
 		issuer string
 	}
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
 		res    res
 	}{
 		{
@@ -32,7 +27,6 @@ func TestIssuerInterceptor(t *testing.T) {
 					return ""
 				},
 			},
-			args{},
 			res{
 				issuer: "",
 			},
@@ -44,7 +38,6 @@ func TestIssuerInterceptor(t *testing.T) {
 					return "static"
 				},
 			},
-			args{},
 			res{
 				issuer: "static",
 			},
@@ -56,7 +49,6 @@ func TestIssuerInterceptor(t *testing.T) {
 					return r.Host
 				},
 			},
-			args{},
 			res{
 				issuer: "issuer.com",
 			},

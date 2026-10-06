@@ -45,13 +45,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	//cryptr, err := newMyCrypto(sha256.Sum256([]byte("test")), logger)
+	//if err != nil {
+	//	logger.Error("cannot create cryptr", "error", err)
+	//	os.Exit(1)
+	//}
 	stor := storage.NewStorage(store)
 	router := exampleop.SetupServer(
 		issuer,
 		stor,
 		logger,
 		false,
-		//op.WithCrypto(newMyCrypto(sha256.Sum256([]byte("test")), logger)),
+		//op.WithCrypto(cryptr),
 	)
 
 	server := &http.Server{

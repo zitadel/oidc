@@ -92,6 +92,7 @@ func newResourceServer(ctx context.Context, issuer string, authorizer func() (an
 }
 
 func NewResourceServerFromKeyFile(ctx context.Context, issuer, path string, options ...Option) (ResourceServer, error) {
+	//lint:ignore SA1019 kept until the deprecated key file helpers are removed in the next major release
 	c, err := client.ConfigFromKeyFile(path)
 	if err != nil {
 		return nil, err

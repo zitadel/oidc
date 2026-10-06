@@ -34,7 +34,7 @@ type IntrospectionResponse struct {
 	} `json:"bar,omitempty"`
 
 	// Claims are all the combined claims, including custom.
-	Claims map[string]any `json:"-,omitempty"`
+	Claims map[string]any `json:"-"`
 }
 
 func ExampleIntrospect_custom() {
