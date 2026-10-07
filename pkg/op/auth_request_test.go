@@ -871,6 +871,31 @@ func TestValidateAuthReqResponseType(t *testing.T) {
 	}
 }
 
+func TestValidateAuthReqNonce(t *testing.T) {
+	tests := []struct {
+		name         string
+		responseType oidc.ResponseType
+		nonce        string
+		wantErr      bool
+	}{
+		{"code without nonce", oidc.ResponseTypeCode, "", false},
+		{"id_token without nonce", oidc.ResponseTypeIDTokenOnly, "", true},
+		{"id_token token without nonce", oidc.ResponseTypeIDToken, "", true},
+		{"id_token with nonce", oidc.ResponseTypeIDTokenOnly, "nonce", false},
+		{"id_token token with nonce", oidc.ResponseTypeIDToken, "nonce", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := op.ValidateAuthReqNonce(tt.responseType, tt.nonce)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, oidc.ErrInvalidRequest())
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestRedirectToLogin(t *testing.T) {
 	type args struct {
 		authReqID string

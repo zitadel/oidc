@@ -275,6 +275,9 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
+	if err := ValidateAuthReqNonce(authReq.ResponseType, authReq.Nonce); err != nil {
+		return "", err
+	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
@@ -418,6 +421,17 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 	}
 	if !ContainsResponseType(client.ResponseTypes(), responseType) {
 		return oidc.ErrUnauthorizedClient().WithDescription("The requested response type is missing in the client configuration. " +
+			"If you have any questions, you may contact the administrator of the application.")
+	}
+	return nil
+}
+
+func ValidateAuthReqNonce(responseType oidc.ResponseType, nonce string) error {
+	if nonce != "" {
+		return nil
+	}
+	if responseType == oidc.ResponseTypeIDToken || responseType == oidc.ResponseTypeIDTokenOnly {
+		return oidc.ErrInvalidRequest().WithDescription("The nonce parameter is required for the implicit flow. " +
 			"If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
