@@ -158,7 +158,7 @@ func AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string,
 
 	err := storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
 	if err != nil {
-		return oidc.ErrInvalidClient().WithDescription("invalid client_id / client_secret").WithParent(err)
+		return clientAuthError(oidc.ErrInvalidClient().WithDescription("invalid client_id / client_secret"), err)
 	}
 	return nil
 }
