@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
 
@@ -35,11 +36,26 @@ func SkipRemoteCheck() func(set *remoteKeySet) {
 	}
 }
 
+// CacheTTL sets the maximum duration the fetched remote keys are used for.
+// Once it has passed, the keys are fetched again before the next signature
+// verification, so keys removed by the issuer stop being accepted.
+// If the keys cannot be fetched, verification fails instead of falling
+// back to the expired keys.
+//
+// By default (or with a ttl <= 0) the cached keys don't expire and are only
+// refreshed when no cached key matches the token.
+func CacheTTL(ttl time.Duration) func(set *remoteKeySet) {
+	return func(set *remoteKeySet) {
+		set.cacheTTL = ttl
+	}
+}
+
 type remoteKeySet struct {
 	jwksURL         string
 	httpClient      *http.Client
 	defaultAlg      string
 	skipRemoteCheck bool
+	cacheTTL        time.Duration
 
 	// guard all other fields
 	mu sync.Mutex
@@ -49,7 +65,8 @@ type remoteKeySet struct {
 	inflight *inflight
 
 	// A set of cached keys and their expiry.
-	cachedKeys []jose.JSONWebKey
+	cachedKeys  []jose.JSONWebKey
+	cacheExpiry time.Time
 }
 
 // inflight is used to wait on some in-flight request from multiple goroutines.
@@ -161,6 +178,9 @@ func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSON
 func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.cacheTTL > 0 && !time.Now().Before(r.cacheExpiry) {
+		return nil
+	}
 	return r.cachedKeys
 }
 
@@ -208,6 +228,7 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 
 	if err == nil {
 		r.cachedKeys = keys
+		r.cacheExpiry = time.Now().Add(r.cacheTTL)
 	}
 
 	// Free inflight so a different request can run.
