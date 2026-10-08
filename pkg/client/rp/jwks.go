@@ -220,12 +220,12 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 
 	req, err := http.NewRequestWithContext(ctx, "GET", r.jwksURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("oidc: can't create request: %v", err)
+		return nil, fmt.Errorf("oidc: can't create request: %w", err)
 	}
 
 	keySet := new(jsonWebKeySet)
 	if err = httphelper.HttpRequest(r.httpClient, req, keySet); err != nil {
-		return nil, fmt.Errorf("oidc: failed to get keys: %v", err)
+		return nil, fmt.Errorf("oidc: failed to get keys: %w", err)
 	}
 	return keySet.Keys, nil
 }
