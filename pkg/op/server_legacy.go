@@ -215,7 +215,7 @@ func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCreden
 	}
 	client, err := s.provider.Storage().GetClientByClientID(ctx, r.Data.ClientID)
 	if err != nil {
-		return nil, oidc.ErrInvalidClient().WithParent(err)
+		return nil, clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 
 	switch client.AuthMethod() {
@@ -382,7 +382,7 @@ func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *Clien
 		return "", oidc.ErrInvalidClient().WithDescription("client_assertion not supported")
 	}
 	if err := s.provider.Storage().AuthorizeClientIDSecret(ctx, cc.ClientID, cc.ClientSecret); err != nil {
-		return "", oidc.ErrUnauthorizedClient().WithParent(err)
+		return "", clientAuthError(oidc.ErrUnauthorizedClient(), err)
 	}
 	return cc.ClientID, nil
 }
