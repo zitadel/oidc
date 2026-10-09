@@ -275,6 +275,9 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
+	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallengeMethod); err != nil {
+		return "", err
+	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
@@ -421,6 +424,19 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 			"If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
+}
+
+// ValidateAuthReqCodeChallengeMethod validates the passed code_challenge_method (PKCE).
+// An empty method is allowed, as it defaults to plain (RFC 7636, section 4.3).
+// Any other method than plain or S256 is rejected (RFC 7636, section 4.4.1);
+// otherwise the code_verifier would later be compared as if the method were plain.
+func ValidateAuthReqCodeChallengeMethod(method oidc.CodeChallengeMethod) error {
+	switch method {
+	case "", oidc.CodeChallengeMethodPlain, oidc.CodeChallengeMethodS256:
+		return nil
+	}
+	return oidc.ErrInvalidRequest().WithDescription("The code_challenge_method %q is not supported. "+
+		"If you have any questions, you may contact the administrator of the application.", method)
 }
 
 // ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)

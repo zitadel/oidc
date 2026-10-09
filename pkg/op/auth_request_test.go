@@ -871,6 +871,30 @@ func TestValidateAuthReqResponseType(t *testing.T) {
 	}
 }
 
+func TestValidateAuthReqCodeChallengeMethod(t *testing.T) {
+	tests := []struct {
+		method  oidc.CodeChallengeMethod
+		wantErr bool
+	}{
+		{"", false},
+		{oidc.CodeChallengeMethodPlain, false},
+		{oidc.CodeChallengeMethodS256, false},
+		{"s256", true},
+		{"S512", true},
+		{"unknown", true},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.method), func(t *testing.T) {
+			err := op.ValidateAuthReqCodeChallengeMethod(tt.method)
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, oidc.ErrInvalidRequest())
+		})
+	}
+}
+
 func TestRedirectToLogin(t *testing.T) {
 	type args struct {
 		authReqID string
