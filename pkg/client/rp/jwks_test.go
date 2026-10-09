@@ -14,6 +14,7 @@ import (
 
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
 func TestJsonWebKeySet_UnmarshalJSON(t *testing.T) {
@@ -107,6 +108,17 @@ func TestRemoteKeySet_VerifySignature_WrapsFetchError(t *testing.T) {
 				}, nil
 			},
 			wantErr: httphelper.ErrResponseBodyTooLarge,
+		},
+		{
+			name: "oauth error response",
+			transport: func(r *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Body:       io.NopCloser(strings.NewReader(`{"error":"server_error","error_description":"key store unavailable"}`)),
+					Request:    r,
+				}, nil
+			},
+			wantErr: &oidc.Error{ErrorType: oidc.ServerError, Description: "key store unavailable"},
 		},
 	}
 
