@@ -122,6 +122,16 @@ func TestAuthorizeErrorParity(t *testing.T) {
 			wantError: "invalid_request",
 		},
 		{
+			// RFC 7636, section 4.4.1: an unsupported transformation is an
+			// invalid_request, not a challenge to be compared as plain.
+			name: "unsupported code_challenge_method",
+			break_: func(q url.Values) {
+				q.Set("code_challenge", "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+				q.Set("code_challenge_method", "S512")
+			},
+			wantError: "invalid_request",
+		},
+		{
 			// Nothing has been validated against the client yet, so there is
 			// no redirect_uri to deliver to.
 			name:   "missing redirect_uri",
