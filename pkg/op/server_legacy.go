@@ -76,6 +76,11 @@ func (s *LegacyServer) Endpoints() Endpoints {
 	return s.endpoints
 }
 
+// AuthorizationResponseIssParameterSupported implements [AuthorizationResponseIssuer] for the wrapped provider.
+func (s *LegacyServer) AuthorizationResponseIssParameterSupported() bool {
+	return authorizationResponseIssParameterSupported(s.provider)
+}
+
 // AuthCallbackURL builds the url for the redirect (with the requestID) after a successful login
 func (s *LegacyServer) AuthCallbackURL() func(context.Context, string) string {
 	return func(ctx context.Context, requestID string) string {
@@ -178,7 +183,7 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 	}
 	req, err := s.provider.Storage().CreateAuthRequest(ctx, r.Data, userID)
 	if err != nil {
-		return TryErrorRedirect(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), nil)
+		return TryErrorRedirectWithIssuer(ctx, r.Data, oidc.DefaultToServerError(err, "unable to save auth request"), s.provider.Encoder(), AuthorizationResponseIss(ctx, s.provider))
 	}
 	return NewRedirect(r.Client.LoginURL(req.GetID())), nil
 }
