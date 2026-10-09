@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"golang.org/x/oauth2"
 
 	tu "github.com/zitadel/oidc/v3/internal/testutil"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -464,4 +466,32 @@ func Test_RevokeToken_ClientSecretWithoutSigner(t *testing.T) {
 	require.Len(t, server.requests, 1)
 	assert.Equal(t, "secret", server.requests[0].PostForm.Get("client_secret"))
 	assert.Empty(t, server.requests[0].PostForm.Get("client_assertion"))
+}
+
+// The PKCE code_verifier must be 32 random octets, base64url-encoded
+// (RFC 7636, section 4.1), and the code_challenge its S256 hash.
+func TestGenerateAndStoreCodeChallenge(t *testing.T) {
+	key := []byte("test1234test1234test1234test1234")
+	rp := &relyingParty{cookieHandler: httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())}
+
+	seen := make(map[string]bool)
+	for range 10 {
+		rec := httptest.NewRecorder()
+		challenge, err := GenerateAndStoreCodeChallenge(rec, rp)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/callback", nil)
+		for _, c := range rec.Result().Cookies() {
+			req.AddCookie(c)
+		}
+		verifier, err := rp.CookieHandler().CheckCookie(req, pkceCode)
+		require.NoError(t, err)
+
+		decoded, err := base64.RawURLEncoding.DecodeString(verifier)
+		require.NoError(t, err)
+		assert.Len(t, decoded, 32)
+		assert.Equal(t, oidc.NewSHACodeChallenge(verifier), challenge)
+		assert.False(t, seen[verifier], "code_verifier repeated")
+		seen[verifier] = true
+	}
 }
