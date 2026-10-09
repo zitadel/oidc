@@ -186,6 +186,7 @@ func Test_PKCEFromDiscovery(t *testing.T) {
 						return
 					}
 
+					w.Header().Set("Content-Type", "application/json")
 					if err := json.NewEncoder(w).Encode(map[string]interface{}{
 						"issuer":                           "http://" + r.Host,
 						"code_challenge_methods_supported": tt.methods,
@@ -255,6 +256,7 @@ func Test_CodeExchangeHandler_JWTProfileAudience(t *testing.T) {
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case oidc.DiscoveryEndpoint:
+			w.Header().Set("Content-Type", "application/json")
 			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"issuer":                 server.URL,
 				"authorization_endpoint": server.URL + "/authorize",
@@ -308,6 +310,7 @@ func newJWTProfileServer(t *testing.T) *jwtProfileServer {
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case oidc.DiscoveryEndpoint:
+			w.Header().Set("Content-Type", "application/json")
 			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"issuer":                 s.URL,
 				"authorization_endpoint": s.URL + "/authorize",
