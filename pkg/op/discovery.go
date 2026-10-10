@@ -24,6 +24,23 @@ var DefaultSupportedScopes = []string{
 	oidc.ScopeOfflineAccess,
 }
 
+// DefaultSupportedResponseTypes are the response types a provider advertises
+// and accepts when [Config.SupportedResponseTypes] is not set.
+var DefaultSupportedResponseTypes = []oidc.ResponseType{
+	oidc.ResponseTypeCode,
+	oidc.ResponseTypeIDTokenOnly,
+	oidc.ResponseTypeIDToken,
+}
+
+// DefaultSupportedGrantTypes are the grant types a provider advertises and
+// accepts when [Config.SupportedGrantTypes] is not set, extended by the
+// optional grants enabled through the [Config] switches and storage
+// capabilities. See [GrantTypes].
+var DefaultSupportedGrantTypes = []oidc.GrantType{
+	oidc.GrantTypeCode,
+	oidc.GrantTypeImplicit,
+}
+
 func discoveryHandler(c Configuration, s DiscoverStorage) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		Discover(w, CreateDiscoveryConfig(r.Context(), c, s))
@@ -110,17 +127,59 @@ func Scopes(c Configuration) []string {
 }
 
 func ResponseTypes(c Configuration) []string {
-	return []string{
-		string(oidc.ResponseTypeCode),
-		string(oidc.ResponseTypeIDTokenOnly),
-		string(oidc.ResponseTypeIDToken),
-	} // TODO: ok for now, check later if dynamic needed
+	responseTypes := DefaultSupportedResponseTypes
+	if provider, ok := c.(*Provider); ok {
+		responseTypes = provider.SupportedResponseTypes()
+	}
+	strings := make([]string, len(responseTypes))
+	for i, responseType := range responseTypes {
+		strings[i] = string(responseType)
+	}
+	return strings
+}
+
+// SupportedResponseType reports whether the provider accepts the response type
+// at the authorization endpoint and advertises it in its discovery document.
+// Both read the same [Provider.SupportedResponseTypes], so the two cannot
+// drift. Configurations that do not implement the method, or did not set
+// [Config.SupportedResponseTypes], get the defaults.
+func SupportedResponseType(c Configuration, responseType oidc.ResponseType) bool {
+	provider, ok := c.(*Provider)
+	if !ok {
+		return slices.Contains(DefaultSupportedResponseTypes, responseType)
+	}
+	return slices.Contains(provider.SupportedResponseTypes(), responseType)
 }
 
 func GrantTypes(c Configuration) []oidc.GrantType {
-	grantTypes := []oidc.GrantType{
-		oidc.GrantTypeCode,
-		oidc.GrantTypeImplicit,
+	provider, ok := c.(*Provider)
+	var candidates []oidc.GrantType
+	if ok && provider.config.SupportedGrantTypes != nil {
+		// The explicit list is intersected with the server's actual
+		// capabilities, so the discovery document cannot advertise a grant
+		// the token endpoint would refuse.
+		candidates = provider.config.SupportedGrantTypes
+	} else {
+		candidates = DefaultSupportedGrantTypes
+	}
+	grantTypes := make([]oidc.GrantType, 0, len(candidates)+5)
+	for _, grantType := range candidates {
+		if SupportedGrantType(c, grantType) {
+			grantTypes = append(grantTypes, grantType)
+		}
+	}
+	if ok && provider.config.SupportedGrantTypes != nil {
+		// The authorization code flow is the only flow the provider's
+		// callback and token endpoint are built around, and OpenID Connect
+		// Core section 2 requires an OP to support it, so it cannot be
+		// turned off: it is advertised and served even when the explicit
+		// list omits it.
+		if !slices.ContainsFunc(grantTypes, func(gt oidc.GrantType) bool {
+			return gt == oidc.GrantTypeCode
+		}) {
+			grantTypes = append(grantTypes, oidc.GrantTypeCode)
+		}
+		return grantTypes
 	}
 	if c.GrantTypeRefreshTokenSupported() {
 		grantTypes = append(grantTypes, oidc.GrantTypeRefreshToken)
@@ -138,6 +197,49 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 		grantTypes = append(grantTypes, oidc.GrantTypeDeviceCode)
 	}
 	return grantTypes
+}
+
+// SupportedGrantType reports whether the provider accepts the grant type at
+// the token endpoint. When [Config.SupportedGrantTypes] is set, a grant type
+// must be listed there and still be actually served by the server, so the
+// discovery document and the token endpoint cannot drift.
+func SupportedGrantType(c Configuration, grantType oidc.GrantType) bool {
+	switch grantType {
+	case oidc.GrantTypeCode:
+		// The authorization code flow is the only flow the provider's
+		// callback is built around, so it cannot be turned off.
+		return true
+	case oidc.GrantTypeImplicit:
+		// The implicit grant is served by the authorization endpoint through
+		// the id_token response types, so whether it is available follows
+		// from the supported response types, not from the grant list.
+		return SupportedResponseType(c, oidc.ResponseTypeIDToken) ||
+			SupportedResponseType(c, oidc.ResponseTypeIDTokenOnly)
+	case oidc.GrantTypeRefreshToken:
+		return c.GrantTypeRefreshTokenSupported()
+	case oidc.GrantTypeClientCredentials:
+		return c.GrantTypeClientCredentialsSupported()
+	case oidc.GrantTypeTokenExchange:
+		return c.GrantTypeTokenExchangeSupported()
+	case oidc.GrantTypeBearer:
+		return c.GrantTypeJWTAuthorizationSupported()
+	case oidc.GrantTypeDeviceCode:
+		return c.GrantTypeDeviceCodeSupported()
+	default:
+		return false
+	}
+}
+
+// grantTypeConfigured reports whether the grant type passes the operator's
+// [Config.SupportedGrantTypes] list. A nil list imposes no restriction and
+// leaves the [Config] switches and storage capabilities in charge, which is
+// the behavior of previous versions.
+func grantTypeConfigured(c Configuration, grantType oidc.GrantType) bool {
+	provider, ok := c.(*Provider)
+	if !ok || provider.config.SupportedGrantTypes == nil {
+		return true
+	}
+	return slices.Contains(provider.config.SupportedGrantTypes, grantType)
 }
 
 func SubjectTypes(c Configuration) []string {

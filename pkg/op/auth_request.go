@@ -142,6 +142,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			return
 		}
 	}
+	// The response type is checked against the provider's supported response
+	// types, which the discovery document advertises, after the client-level
+	// check above ran. It is placed here rather than in the validation closure
+	// so that a custom AuthorizeValidator cannot skip the deployment-wide
+	// policy, and after the redirect_uri is known to be registered, so the
+	// refusal can be delivered to the client instead of rendered at the
+	// endpoint.
+	if authorizerConfig, ok := authorizer.(Configuration); ok {
+		if err := ValidateSupportedResponseType(authorizerConfig, authReq.ResponseType); err != nil {
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
+	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
@@ -408,6 +421,23 @@ func HTTPLoopbackOrLocalhost(rawURL string) (*url.URL, bool) {
 		return parsedURL, hostName == "localhost" || net.ParseIP(hostName).IsLoopback()
 	}
 	return nil, false
+}
+
+// ValidateSupportedResponseType validates the passed response type against the
+// provider's supported response types, which are the same the discovery
+// document advertises. A response type the operator turned off is refused with
+// the RFC 6749 / OIDC Core error for exactly this refusal, so a client that
+// sees response_types_supported in the discovery document and sends one of
+// those receives a consistent answer at the authorization endpoint.
+//
+// The client-level check is [ValidateAuthReqResponseType]; this one covers
+// the deployment-wide configuration and runs after it.
+func ValidateSupportedResponseType(c Configuration, responseType oidc.ResponseType) error {
+	if !SupportedResponseType(c, responseType) {
+		return oidc.ErrUnsupportedResponseType().WithDescription("The requested response type is not supported by this provider. " +
+			"If you have any questions, you may contact the administrator of the application.")
+	}
+	return nil
 }
 
 // ValidateAuthReqResponseType validates the passed response_type to the registered response types
