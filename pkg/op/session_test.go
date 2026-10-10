@@ -124,6 +124,68 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 			wantErr:               false,
 		},
 		{
+			// path.Match does not support alternation; doublestar (already used
+			// by checkURIAgainstRedirects for RedirectURIGlobs since #297) does.
+			name:                  "glob alternation match (doublestar semantics)",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://a.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			name:                  "glob alternation other branch match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://b.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			name:                  "glob alternation no match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://c.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               true,
+		},
+		{
+			// ** crosses "/" separators in doublestar; * in path.Match stops at "/",
+			// so a nested path was impossible to register before this change.
+			name:                  "glob multi-segment ** match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://app.example.com/**/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://app.example.com/x/y/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			// Control: * must still NOT cross "/" separators (doublestar keeps
+			// path.Match semantics for single *), preserving security posture.
+			name:                  "glob single * does not cross separator",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://app.example.com/*/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://app.example.com/x/y/logout",
+			useGlobsClient:        true,
+			wantErr:               true,
+		},
+		{
+			// Control: an invalid glob pattern must still surface as server_error
+			// (doublestar returns path.ErrBadPattern like path.Match does).
+			name:                  "glob invalid pattern still errors",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://["},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://a.example.com",
+			useGlobsClient:        true,
+			wantErr:               true,
+		},
+		{
 			name:                  "glob no match (HasRedirectGlobs)",
 			registered:            []string{"https://logged-out"},
 			registeredGlobs:       []string{"https://*.example.com"},
