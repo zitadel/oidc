@@ -10,16 +10,17 @@ import (
 type errorType string
 
 const (
-	InvalidRequest       errorType = "invalid_request"
-	InvalidScope         errorType = "invalid_scope"
-	InvalidClient        errorType = "invalid_client"
-	InvalidGrant         errorType = "invalid_grant"
-	UnauthorizedClient   errorType = "unauthorized_client"
-	UnsupportedGrantType errorType = "unsupported_grant_type"
-	ServerError          errorType = "server_error"
-	InteractionRequired  errorType = "interaction_required"
-	LoginRequired        errorType = "login_required"
-	RequestNotSupported  errorType = "request_not_supported"
+	InvalidRequest          errorType = "invalid_request"
+	InvalidScope            errorType = "invalid_scope"
+	InvalidClient           errorType = "invalid_client"
+	InvalidGrant            errorType = "invalid_grant"
+	UnauthorizedClient      errorType = "unauthorized_client"
+	UnsupportedGrantType    errorType = "unsupported_grant_type"
+	UnsupportedResponseType errorType = "unsupported_response_type"
+	ServerError             errorType = "server_error"
+	InteractionRequired     errorType = "interaction_required"
+	LoginRequired           errorType = "login_required"
+	RequestNotSupported     errorType = "request_not_supported"
 
 	// Additional error codes as defined in
 	// https://www.rfc-editor.org/rfc/rfc8628#section-3.5
@@ -70,6 +71,11 @@ var (
 	ErrUnsupportedGrantType = func() *Error {
 		return &Error{
 			ErrorType: UnsupportedGrantType,
+		}
+	}
+	ErrUnsupportedResponseType = func() *Error {
+		return &Error{
+			ErrorType: UnsupportedResponseType,
 		}
 	}
 	ErrServerError = func() *Error {
