@@ -179,6 +179,39 @@ func TestServerRoutes(t *testing.T) {
 			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
 		},
 		{
+			// Client authentication with private_key_jwt (RFC 7521 6.2) in the
+			// client_credentials grant, issue #890.
+			name:   "Client credentials private_key_jwt",
+			method: http.MethodGet,
+			path:   testProvider.TokenEndpoint().Relative(),
+			values: map[string]string{
+				"grant_type":            string(oidc.GrantTypeClientCredentials),
+				"scope":                 oidc.SpaceDelimitedArray{oidc.ScopeOpenID}.String(),
+				"client_assertion":      jwtProfileToken,
+				"client_assertion_type": string(oidc.ClientAssertionTypeJWTAssertion),
+			},
+			wantCode: http.StatusOK,
+			contains: []string{`{"access_token":"`, `"token_type":"Bearer","expires_in":`, `,"scope":"openid"}`},
+		},
+		{
+			// A client that authenticates with private_key_jwt must not fall
+			// back to client_secret authentication (issue #890).
+			name:   "Client credentials private_key_jwt secret refused",
+			method: http.MethodGet,
+			path:   testProvider.TokenEndpoint().Relative(),
+			values: map[string]string{
+				"grant_type":    string(oidc.GrantTypeClientCredentials),
+				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID}.String(),
+				"client_id":     "service",
+				"client_secret": "",
+			},
+			// The new stack writes most token-endpoint errors as 400 (RFC 6749 5.2
+			// allows 400 unless the client used the Authorization header); the
+			// legacy stack maps invalid_client to 401, see TestRoutes.
+			wantCode: http.StatusBadRequest,
+			json:     `{"error":"invalid_client","error_description":"client does not support client_secret authentication"}`,
+		},
+		{
 			// This call will fail. A successful test is already
 			// part of device_test.go
 			name:      "device token",

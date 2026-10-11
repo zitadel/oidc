@@ -66,6 +66,7 @@ func init() {
 		storage.WebClient("web", "secret", "https://example.com"),
 		storage.DeviceClient("device", "secret"),
 		storage.WebClient("api", "secret"),
+		storage.ServiceUserClient(storage.ServiceUserID),
 	)
 
 	testProvider = newTestProvider(testConfig)
@@ -125,6 +126,8 @@ func TestRoutes(t *testing.T) {
 	idToken, err := op.CreateIDToken(ctx, testIssuer, authReq, time.Hour, accessToken, "123", storage, client)
 	require.NoError(t, err)
 	jwtToken, _, _, err := op.CreateAccessToken(ctx, authReq, op.AccessTokenTypeJWT, testProvider, client, "")
+	require.NoError(t, err)
+	jwtProfileToken, err := jwtProfile()
 	require.NoError(t, err)
 
 	oidcAuthReq.IDTokenHint = idToken
@@ -263,6 +266,38 @@ func TestRoutes(t *testing.T) {
 			},
 			wantCode: http.StatusOK,
 			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
+		},
+		{
+			// Client authentication with private_key_jwt (RFC 7521 6.2)
+			// in the client_credentials grant, issue #890.
+			name:   "Client credentials private_key_jwt",
+			method: http.MethodGet,
+			path:   testProvider.TokenEndpoint().Relative(),
+			values: map[string]string{
+				"grant_type":            string(oidc.GrantTypeClientCredentials),
+				"scope":                 oidc.SpaceDelimitedArray{oidc.ScopeOpenID}.String(),
+				"client_assertion":      jwtProfileToken,
+				"client_assertion_type": string(oidc.ClientAssertionTypeJWTAssertion),
+			},
+			wantCode: http.StatusOK,
+			contains: []string{`{"access_token":"`, `"token_type":"Bearer","expires_in":`, `,"scope":"openid"}`},
+		},
+		{
+			// A client that authenticates with private_key_jwt must not
+			// fall back to client_secret authentication (issue #890).
+			name:   "Client credentials private_key_jwt secret refused",
+			method: http.MethodGet,
+			path:   testProvider.TokenEndpoint().Relative(),
+			values: map[string]string{
+				"grant_type":    string(oidc.GrantTypeClientCredentials),
+				"scope":         oidc.SpaceDelimitedArray{oidc.ScopeOpenID}.String(),
+				"client_id":     "service",
+				"client_secret": "",
+			},
+			wantCode: http.StatusUnauthorized,
+			// The legacy stack maps invalid_client to 401 and does not return the
+			// parent description to the client, like the "code exchange" case above.
+			json: `{"error":"invalid_client"}`,
 		},
 		{
 			// This call will fail. A successful test is already
