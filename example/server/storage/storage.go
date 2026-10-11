@@ -118,13 +118,15 @@ func NewStorageWithClients(userStore UserStore, clients map[string]*Client) *Sto
 		userCodes:   make(map[string]string),
 		serviceUsers: map[string]*Client{
 			"sid1": {
-				id:     "sid1",
-				secret: "verysecret",
+				id:         "sid1",
+				secret:     "verysecret",
+				authMethod: oidc.AuthMethodBasic,
 				grantTypes: []oidc.GrantType{
 					oidc.GrantTypeClientCredentials,
 				},
 				accessTokenType: op.AccessTokenTypeBearer,
 			},
+			ServiceUserID: ServiceUserClient(ServiceUserID),
 		},
 	}
 }
@@ -916,6 +918,12 @@ func (s *Storage) ClientCredentials(ctx context.Context, clientID, clientSecret 
 	client, ok := s.serviceUsers[clientID]
 	if !ok {
 		return nil, errors.New("wrong service user or password")
+	}
+	if client.authMethod != oidc.AuthMethodBasic && client.authMethod != oidc.AuthMethodPost {
+		// the client does not authenticate with a client_secret; e.g. service
+		// users use a JWT assertion (private_key_jwt) instead and must not be
+		// able to bypass it with an empty or guessed secret.
+		return nil, oidc.ErrInvalidClient().WithDescription("client does not support client_secret authentication")
 	}
 	if client.secret != clientSecret {
 		return nil, errors.New("wrong service user or password")
