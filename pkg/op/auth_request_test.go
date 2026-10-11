@@ -142,6 +142,79 @@ func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
 	assert.Contains(t, string(body), "unable to retrieve client by id")
 }
 
+// TestAuthorizeCustomValidatorCodeChallengeMethod covers a custom
+// AuthorizeValidator that accepts an unsupported code_challenge_method.
+// Authorize must still reject it before the auth request is stored, and only
+// redirect the error to a redirect_uri registered for the client.
+func TestAuthorizeCustomValidatorCodeChallengeMethod(t *testing.T) {
+	tests := []struct {
+		name         string
+		redirectURI  string
+		wantStatus   int
+		wantLocation string
+	}{
+		{
+			name:         "registered redirect_uri",
+			redirectURI:  "https://registered.com/callback",
+			wantStatus:   http.StatusFound,
+			wantLocation: "https://registered.com/callback?error=invalid_request",
+		},
+		{
+			name:        "unregistered redirect_uri",
+			redirectURI: "https://evil.com/callback",
+			wantStatus:  http.StatusBadRequest,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			storage := mock.NewMockStorage(ctrl)
+			client := mock.NewMockClient(ctrl)
+
+			authorizer := &customAuthorizeValidator{
+				MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+				validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+					// accepts the request without checking the code_challenge_method
+					return "userID", nil
+				},
+			}
+			expect := authorizer.MockAuthorizer.EXPECT()
+			expect.Decoder().Return(schema.NewDecoder())
+			expect.Encoder().Return(schema.NewEncoder()).AnyTimes()
+			expect.Storage().Return(storage).AnyTimes()
+			expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+
+			// CreateAuthRequest is not expected: the request must not be stored.
+			storage.EXPECT().GetClientByClientID(gomock.Any(), "web").Return(client, nil)
+			client.EXPECT().ApplicationType().Return(op.ApplicationTypeWeb)
+			client.EXPECT().RedirectURIs().Return([]string{"https://registered.com/callback"})
+
+			req := httptest.NewRequest(http.MethodGet, "/authorize?"+url.Values{
+				"client_id":             {"web"},
+				"redirect_uri":          {tt.redirectURI},
+				"scope":                 {"openid"},
+				"response_type":         {"code"},
+				"code_challenge":        {"challenge"},
+				"code_challenge_method": {"S512"},
+			}.Encode(), nil)
+			w := httptest.NewRecorder()
+			op.Authorize(w, req, authorizer)
+
+			resp := w.Result()
+			require.Equal(t, tt.wantStatus, resp.StatusCode)
+			location := resp.Header.Get("Location")
+			if tt.wantLocation == "" {
+				assert.Empty(t, location)
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Contains(t, string(body), `code_challenge_method "S512" is not supported`)
+				return
+			}
+			assert.Contains(t, location, tt.wantLocation)
+		})
+	}
+}
+
 func TestParseAuthorizeRequest(t *testing.T) {
 	type args struct {
 		r       *http.Request

@@ -142,6 +142,20 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			return
 		}
 	}
+	// A custom AuthorizeValidator replaces ValidateAuthRequestClient, so the
+	// code_challenge_method is also checked here, where it cannot be overridden.
+	// Otherwise an unsupported method is stored and its code_verifier is later
+	// compared as if the method were plain.
+	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallengeMethod); err != nil {
+		// The custom validator may not have verified the redirect_uri, so only
+		// redirect the error to one registered for the client.
+		var oidcErr *oidc.Error
+		if ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType) != nil && errors.As(err, &oidcErr) {
+			err = oidc.ErrInvalidRequestRedirectURI().WithDescription("%s", oidcErr.Description)
+		}
+		AuthRequestError(w, r, authReq, err, authorizer)
+		return
+	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
 		AuthRequestError(w, r, authReq, oidc.DefaultToServerError(err, "unable to save auth request"), authorizer)
