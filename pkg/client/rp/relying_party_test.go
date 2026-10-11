@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
@@ -468,30 +469,54 @@ func Test_RevokeToken_ClientSecretWithoutSigner(t *testing.T) {
 	assert.Empty(t, server.requests[0].PostForm.Get("client_assertion"))
 }
 
-// The PKCE code_verifier must be 32 random octets, base64url-encoded
-// (RFC 7636, section 4.1), and the code_challenge its S256 hash.
+// The PKCE code_verifier uses the 32-random-octet construction recommended by
+// RFC 7636, section 4.1, and the code_challenge is its S256 hash.
 func TestGenerateAndStoreCodeChallenge(t *testing.T) {
 	key := []byte("test1234test1234test1234test1234")
-	rp := &relyingParty{cookieHandler: httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())}
+	tests := []struct {
+		name          string
+		cookieHandler *httphelper.CookieHandler
+		generate      func(*http.Request, http.ResponseWriter, RelyingParty) (string, error)
+	}{
+		{
+			name:          "GenerateAndStoreCodeChallenge",
+			cookieHandler: httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure()),
+			generate: func(_ *http.Request, w http.ResponseWriter, rp RelyingParty) (string, error) {
+				return GenerateAndStoreCodeChallenge(w, rp)
+			},
+		},
+		{
+			name: "GenerateAndStoreCodeChallengeWithRequest",
+			cookieHandler: httphelper.NewRequestAwareCookieHandler(func(*http.Request) (*securecookie.SecureCookie, error) {
+				return securecookie.New(key, key), nil
+			}, httphelper.WithUnsecure()),
+			generate: GenerateAndStoreCodeChallengeWithRequest,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rp := &relyingParty{cookieHandler: tt.cookieHandler}
 
-	seen := make(map[string]bool)
-	for range 10 {
-		rec := httptest.NewRecorder()
-		challenge, err := GenerateAndStoreCodeChallenge(rec, rp)
-		require.NoError(t, err)
+			seen := make(map[string]bool)
+			for range 10 {
+				rec := httptest.NewRecorder()
+				challenge, err := tt.generate(httptest.NewRequest(http.MethodGet, "/login", nil), rec, rp)
+				require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/callback", nil)
-		for _, c := range rec.Result().Cookies() {
-			req.AddCookie(c)
-		}
-		verifier, err := rp.CookieHandler().CheckCookie(req, pkceCode)
-		require.NoError(t, err)
+				req := httptest.NewRequest(http.MethodGet, "/callback", nil)
+				for _, c := range rec.Result().Cookies() {
+					req.AddCookie(c)
+				}
+				verifier, err := rp.CookieHandler().CheckCookie(req, pkceCode)
+				require.NoError(t, err)
 
-		decoded, err := base64.RawURLEncoding.DecodeString(verifier)
-		require.NoError(t, err)
-		assert.Len(t, decoded, 32)
-		assert.Equal(t, oidc.NewSHACodeChallenge(verifier), challenge)
-		assert.False(t, seen[verifier], "code_verifier repeated")
-		seen[verifier] = true
+				decoded, err := base64.RawURLEncoding.DecodeString(verifier)
+				require.NoError(t, err)
+				assert.Len(t, decoded, 32)
+				assert.Equal(t, oidc.NewSHACodeChallenge(verifier), challenge)
+				assert.False(t, seen[verifier], "code_verifier repeated")
+				seen[verifier] = true
+			}
+		})
 	}
 }
