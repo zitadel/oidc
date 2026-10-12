@@ -195,6 +195,20 @@ func TestAuthResponseURLWithIssuer(t *testing.T) {
 			want:         "https://example.com/cb?x=1#code=abc&iss=https%3A%2F%2Flocalhost%3A9998%2F&state=state1",
 		},
 		{
+			name:         "fragment, other query components kept as registered",
+			redirectURI:  "https://example.com/cb?b=2&a=hello%20world&iss=old&i%73s=old2",
+			responseType: oidc.ResponseTypeIDToken,
+			issuer:       testIssuer,
+			want:         "https://example.com/cb?b=2&a=hello%20world#code=abc&iss=https%3A%2F%2Flocalhost%3A9998%2F&state=state1",
+		},
+		{
+			name:         "fragment, redirect URI without iss kept as registered",
+			redirectURI:  "https://example.com/cb?b=2&a=hello%20world",
+			responseType: oidc.ResponseTypeIDToken,
+			issuer:       testIssuer,
+			want:         "https://example.com/cb?b=2&a=hello%20world#code=abc&iss=https%3A%2F%2Flocalhost%3A9998%2F&state=state1",
+		},
+		{
 			name:         "no issuer, redirect URI with iss",
 			redirectURI:  "https://example.com/cb?iss=https%3A%2F%2Fother.example%2F",
 			responseType: oidc.ResponseTypeCode,
@@ -218,6 +232,13 @@ func TestAuthResponseFormPostWithIssuer(t *testing.T) {
 		rec := httptest.NewRecorder()
 		require.NoError(t, op.AuthResponseFormPostWithIssuer(rec, redirectURI, response, &mockEncoder{}, testIssuer))
 		assert.Contains(t, rec.Body.String(), `action="https://example.com/cb?x=1"`)
+		assertFormPostIss(t, rec, testIssuer)
+	})
+
+	t.Run("issuer, other query components kept as registered", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		require.NoError(t, op.AuthResponseFormPostWithIssuer(rec, "https://example.com/cb?b=2&a=hello%20world&iss=old", response, &mockEncoder{}, testIssuer))
+		assert.Contains(t, rec.Body.String(), `action="https://example.com/cb?b=2&amp;a=hello%20world"`)
 		assertFormPostIss(t, rec, testIssuer)
 	})
 

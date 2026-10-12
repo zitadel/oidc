@@ -737,11 +737,25 @@ func setIssuerParam(redirectURI *url.URL, params url.Values, issuer string) {
 		return
 	}
 	params.Set("iss", issuer)
-	query := redirectURI.Query()
-	if query.Has("iss") {
-		query.Del("iss")
-		redirectURI.RawQuery = query.Encode()
+	redirectURI.RawQuery = removeQueryParam(redirectURI.RawQuery, "iss")
+}
+
+// removeQueryParam removes every name parameter from rawQuery and keeps all other
+// components exactly as they were, in their original order and encoding.
+func removeQueryParam(rawQuery, name string) string {
+	if rawQuery == "" {
+		return rawQuery
 	}
+	components := strings.Split(rawQuery, "&")
+	kept := components[:0]
+	for _, component := range components {
+		key, _, _ := strings.Cut(component, "=")
+		if decoded, err := url.QueryUnescape(key); err == nil && decoded == name {
+			continue
+		}
+		kept = append(kept, component)
+	}
+	return strings.Join(kept, "&")
 }
 
 func mergeQueryParams(uri *url.URL, params url.Values) string {
