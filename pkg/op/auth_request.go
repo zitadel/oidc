@@ -654,7 +654,7 @@ func AuthResponseURLWithIssuer(redirectURI string, responseType oidc.ResponseTyp
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)
 	}
-	setIssuerParam(params, issuer)
+	setIssuerParam(uri, params, issuer)
 	// return explicitly requested mode
 	if responseMode == oidc.ResponseModeQuery {
 		return mergeQueryParams(uri, params), nil
@@ -688,7 +688,14 @@ func AuthResponseFormPostWithIssuer(res http.ResponseWriter, redirectURI string,
 	if err != nil {
 		return oidc.ErrServerError().WithParent(err)
 	}
-	setIssuerParam(values, issuer)
+	if issuer != "" {
+		uri, err := url.Parse(redirectURI)
+		if err != nil {
+			return oidc.ErrServerError().WithParent(err)
+		}
+		setIssuerParam(uri, values, issuer)
+		redirectURI = uri.String()
+	}
 
 	params := &struct {
 		RedirectURI string
@@ -723,9 +730,17 @@ func setFragment(uri *url.URL, params url.Values) string {
 }
 
 // setIssuerParam sets issuer as the iss parameter, unless it is empty.
-func setIssuerParam(params url.Values, issuer string) {
-	if issuer != "" {
-		params.Set("iss", issuer)
+// An iss already in the query of the redirect URI is removed,
+// so that the response carries exactly one issuer.
+func setIssuerParam(redirectURI *url.URL, params url.Values, issuer string) {
+	if issuer == "" {
+		return
+	}
+	params.Set("iss", issuer)
+	query := redirectURI.Query()
+	if query.Has("iss") {
+		query.Del("iss")
+		redirectURI.RawQuery = query.Encode()
 	}
 }
 
