@@ -50,6 +50,21 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	// Mirrors the check in webServer.parseClientCredentials, which the generic and
+	// legacy Server stacks already perform.
+	if checker, ok := any(request).(AuthenticatedTokenRequestAuthMethodChecker); ok {
+		if checker.IsSetClientAssertion() && checker.IsSetClientIDAndClientSecret() {
+			return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+		if _, _, ok := r.BasicAuth(); ok {
+			if checker.IsSetClientAssertion() || checker.IsSetClientIDAndClientSecret() {
+				return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+			}
+		}
+	}
+
 	if clientID, clientSecret, ok := r.BasicAuth(); ok {
 		clientID, err = url.QueryUnescape(clientID)
 		if err != nil {
@@ -61,6 +76,11 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 			return nil, oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
 		}
 
+		// The Basic Auth credentials become the identity used by the
+		// client_secret branch of ValidateClientCredentialsRequest. The
+		// conflict check above has already refused a Basic header on a
+		// request that also carries form credentials, so at this point the
+		// header is the only authentication method present.
 		request.ClientID = clientID
 		request.ClientSecret = clientSecret
 	}

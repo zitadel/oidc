@@ -269,13 +269,16 @@ func TestRoutes(t *testing.T) {
 		},
 		{
 			// Client authentication with private_key_jwt (RFC 7521 6.2)
-			// in the client_credentials grant, issue #890.
+			// in the client_credentials grant, issue #890. The unregistered
+			// and mismatching client_id must not override the assertion
+			// issuer as the authenticated identity.
 			name:   "Client credentials private_key_jwt",
 			method: http.MethodGet,
 			path:   testProvider.TokenEndpoint().Relative(),
 			values: map[string]string{
 				"grant_type":            string(oidc.GrantTypeClientCredentials),
 				"scope":                 oidc.SpaceDelimitedArray{oidc.ScopeOpenID}.String(),
+				"client_id":             "unregistered-mismatching-id",
 				"client_assertion":      jwtProfileToken,
 				"client_assertion_type": string(oidc.ClientAssertionTypeJWTAssertion),
 			},
