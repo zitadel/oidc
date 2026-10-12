@@ -1,11 +1,13 @@
 package op_test
 
 import (
+	"path"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"github.com/zitadel/oidc/v3/pkg/op/mock"
 )
@@ -19,6 +21,12 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 		postLogoutRedirectURI string
 		useGlobsClient        bool
 		wantErr               bool
+		// wantErrIs, when set, additionally pins the error identity for
+		// the invalid-pattern case: the returned error must wrap both the
+		// OIDC server error and the underlying pattern parse failure, so
+		// a future change that swaps the matcher (or the error plumbing)
+		// cannot silently turn a malformed glob into a plain mismatch.
+		wantErrIs []error
 	}{
 		{
 			name:                  "exact match (web)",
@@ -184,6 +192,7 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 			postLogoutRedirectURI: "https://a.example.com",
 			useGlobsClient:        true,
 			wantErr:               true,
+			wantErrIs:             []error{oidc.ErrServerError(), path.ErrBadPattern},
 		},
 		{
 			name:                  "glob no match (HasRedirectGlobs)",
@@ -301,6 +310,10 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 			err := op.ValidateEndSessionPostLogoutRedirectURI(tt.postLogoutRedirectURI, client)
 			if tt.wantErr {
 				assert.Error(t, err)
+				for _, target := range tt.wantErrIs {
+					assert.ErrorIs(t, err, target,
+						"the invalid-pattern error must wrap both the OIDC server error and the pattern parse failure")
+				}
 			} else {
 				assert.NoError(t, err)
 			}
