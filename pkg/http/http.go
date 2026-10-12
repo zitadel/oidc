@@ -66,7 +66,7 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodySize+1))
 	if err != nil {
-		return fmt.Errorf("unable to read response body: %v", err)
+		return fmt.Errorf("unable to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -84,7 +84,7 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 
 	err = json.Unmarshal(body, response)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal response: %v %s", err, body)
+		return fmt.Errorf("failed to unmarshal response: %w %s", err, body)
 	}
 	return nil
 }
