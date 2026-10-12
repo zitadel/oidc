@@ -46,8 +46,8 @@ func TestDeprecatedLoggerCompatibility(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func Test_verifyTokenResponse(t *testing.T) {
-	verifier := &IDTokenVerifier{
+func testIDTokenVerifier() *IDTokenVerifier {
+	return &IDTokenVerifier{
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		ClientID:          tu.ValidClientID,
@@ -59,6 +59,10 @@ func Test_verifyTokenResponse(t *testing.T) {
 		AZP:               oidc.DefaultAZPVerifier(tu.ValidClientID),
 		Nonce:             func(context.Context) string { return tu.ValidNonce },
 	}
+}
+
+func Test_verifyTokenResponse(t *testing.T) {
+	verifier := testIDTokenVerifier()
 	tests := []struct {
 		name       string
 		oauth2Only bool
@@ -160,6 +164,47 @@ func Test_verifyTokenResponse(t *testing.T) {
 			assert.Equal(t, want, got)
 		})
 	}
+}
+
+// An ID Token from a refresh SHOULD NOT have a nonce, and one that has a nonce
+// must carry the nonce of the original authentication (OIDC Core 1.0 section 12.2).
+func Test_verifyRefreshTokenResponse(t *testing.T) {
+	tests := []struct {
+		name    string
+		nonce   string
+		wantErr error
+	}{
+		{name: "no nonce", nonce: ""},
+		{name: "original nonce", nonce: tu.ValidNonce},
+		{name: "other nonce", nonce: "other", wantErr: oidc.ErrNonceInvalid},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rp := &relyingParty{idTokenVerifier: testIDTokenVerifier()}
+			accessToken, _ := tu.ValidAccessToken()
+			idToken, claims := tu.NewIDToken(tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience, tu.ValidExpiration, tu.ValidAuthTime, tt.nonce, tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "")
+			token := (&oauth2.Token{AccessToken: accessToken}).WithExtra(map[string]any{"id_token": idToken})
+
+			got, err := verifyRefreshTokenResponse[*oidc.IDTokenClaims](context.Background(), token, rp)
+			require.ErrorIs(t, err, tt.wantErr)
+			if tt.wantErr != nil {
+				assert.Nil(t, got)
+				return
+			}
+			assert.Equal(t, claims, got.IDTokenClaims)
+			assert.NotNil(t, rp.idTokenVerifier.Nonce, "the relying party's verifier must keep its nonce check")
+		})
+	}
+
+	t.Run("code exchange still requires the nonce", func(t *testing.T) {
+		rp := &relyingParty{idTokenVerifier: testIDTokenVerifier()}
+		accessToken, _ := tu.ValidAccessToken()
+		idToken, _ := tu.NewIDToken(tu.ValidIssuer, tu.ValidSubject, tu.ValidAudience, tu.ValidExpiration, tu.ValidAuthTime, "", tu.ValidACR, tu.ValidAMR, tu.ValidClientID, tu.ValidSkew, "")
+		token := (&oauth2.Token{AccessToken: accessToken}).WithExtra(map[string]any{"id_token": idToken})
+
+		_, err := verifyTokenResponse[*oidc.IDTokenClaims](context.Background(), token, rp)
+		require.ErrorIs(t, err, oidc.ErrNonceInvalid)
+	})
 }
 
 func Test_PKCEFromDiscovery(t *testing.T) {
