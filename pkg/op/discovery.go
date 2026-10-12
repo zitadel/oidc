@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 
@@ -126,10 +127,19 @@ func Scopes(c Configuration) []string {
 	return slices.Clone(DefaultSupportedScopes)
 }
 
+// supportedResponseTypesConfiguration is implemented by [Provider] and by
+// any wrapper that embeds it, which is what makes the assertion below
+// decorator-safe: a wrapper whose dynamic type is not exactly *Provider
+// still provides the promoted method, so its operator configuration cannot
+// be silently dropped.
+type supportedResponseTypesConfiguration interface {
+	SupportedResponseTypes() []oidc.ResponseType
+}
+
 func ResponseTypes(c Configuration) []string {
 	responseTypes := DefaultSupportedResponseTypes
-	if provider, ok := c.(*Provider); ok {
-		responseTypes = provider.SupportedResponseTypes()
+	if configured, ok := c.(supportedResponseTypesConfiguration); ok {
+		responseTypes = configured.SupportedResponseTypes()
 	}
 	strings := make([]string, len(responseTypes))
 	for i, responseType := range responseTypes {
@@ -144,23 +154,29 @@ func ResponseTypes(c Configuration) []string {
 // drift. Configurations that do not implement the method, or did not set
 // [Config.SupportedResponseTypes], get the defaults.
 func SupportedResponseType(c Configuration, responseType oidc.ResponseType) bool {
-	provider, ok := c.(*Provider)
+	configured, ok := c.(supportedResponseTypesConfiguration)
 	if !ok {
 		return slices.Contains(DefaultSupportedResponseTypes, responseType)
 	}
-	return slices.Contains(provider.SupportedResponseTypes(), responseType)
+	return slices.Contains(configured.SupportedResponseTypes(), responseType)
+}
+
+// supportedGrantTypesConfiguration is the decorator-safe accessor for the
+// operator's [Config.SupportedGrantTypes] list; see
+// supportedResponseTypesConfiguration for why it is an optional interface
+// instead of a concrete type assertion.
+type supportedGrantTypesConfiguration interface {
+	ConfiguredGrantTypes() []oidc.GrantType
 }
 
 func GrantTypes(c Configuration) []oidc.GrantType {
-	provider, ok := c.(*Provider)
-	var candidates []oidc.GrantType
-	if ok && provider.config.SupportedGrantTypes != nil {
+	candidates := DefaultSupportedGrantTypes
+	configured, hasList := c.(supportedGrantTypesConfiguration)
+	if hasList && configured.ConfiguredGrantTypes() != nil {
 		// The explicit list is intersected with the server's actual
 		// capabilities, so the discovery document cannot advertise a grant
 		// the token endpoint would refuse.
-		candidates = provider.config.SupportedGrantTypes
-	} else {
-		candidates = DefaultSupportedGrantTypes
+		candidates = configured.ConfiguredGrantTypes()
 	}
 	grantTypes := make([]oidc.GrantType, 0, len(candidates)+5)
 	for _, grantType := range candidates {
@@ -168,7 +184,7 @@ func GrantTypes(c Configuration) []oidc.GrantType {
 			grantTypes = append(grantTypes, grantType)
 		}
 	}
-	if ok && provider.config.SupportedGrantTypes != nil {
+	if hasList && configured.ConfiguredGrantTypes() != nil {
 		// The authorization code flow is the only flow the provider's
 		// callback and token endpoint are built around, and OpenID Connect
 		// Core section 2 requires an OP to support it, so it cannot be
@@ -230,16 +246,46 @@ func SupportedGrantType(c Configuration, grantType oidc.GrantType) bool {
 	}
 }
 
+// servableResponseTypes are the response types the authorization endpoint can
+// actually serve: the code flow through AuthResponseCode, and the two id_token
+// flavors of the implicit flow through AuthResponseToken. Anything else a
+// client can request would fall through to the token response path and be
+// answered with tokens under the wrong response type, so an operator list
+// containing a value outside this set is a configuration error.
+var servableResponseTypes = map[oidc.ResponseType]struct{}{
+	oidc.ResponseTypeCode:        {},
+	oidc.ResponseTypeIDToken:     {},
+	oidc.ResponseTypeIDTokenOnly: {},
+}
+
+// validateConfiguredResponseTypes rejects an operator [Config.SupportedResponseTypes]
+// list containing a response type the authorization endpoint cannot serve.
+// A typo or an unsupported extension would otherwise be advertised in the
+// discovery document and accepted at the endpoint (if the client allows it),
+// only to produce tokens under the wrong response type.
+func validateConfiguredResponseTypes(config *Config) error {
+	for _, responseType := range config.SupportedResponseTypes {
+		if _, ok := servableResponseTypes[responseType]; !ok {
+			return fmt.Errorf("config: unsupported response type %q in SupportedResponseTypes; supported values are %q, %q and %q",
+				string(responseType),
+				string(oidc.ResponseTypeCode),
+				string(oidc.ResponseTypeIDToken),
+				string(oidc.ResponseTypeIDTokenOnly))
+		}
+	}
+	return nil
+}
+
 // grantTypeConfigured reports whether the grant type passes the operator's
 // [Config.SupportedGrantTypes] list. A nil list imposes no restriction and
 // leaves the [Config] switches and storage capabilities in charge, which is
 // the behavior of previous versions.
 func grantTypeConfigured(c Configuration, grantType oidc.GrantType) bool {
-	provider, ok := c.(*Provider)
-	if !ok || provider.config.SupportedGrantTypes == nil {
+	configured, ok := c.(supportedGrantTypesConfiguration)
+	if !ok || configured.ConfiguredGrantTypes() == nil {
 		return true
 	}
-	return slices.Contains(provider.config.SupportedGrantTypes, grantType)
+	return slices.Contains(configured.ConfiguredGrantTypes(), grantType)
 }
 
 func SubjectTypes(c Configuration) []string {

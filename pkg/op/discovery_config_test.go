@@ -133,8 +133,10 @@ func TestAuthorizeRejectsDisabledResponseType(t *testing.T) {
 
 // TestAuthorizeRejectsResponseTypeCodeToo pins that even the response type code
 // is refused when the operator list omits it, so the list is authoritative for
-// the response types the authorization endpoint accepts. Discovery keeps
-// advertising it, because OIDC Core requires it; the PR body documents this.
+// the response types the authorization endpoint accepts. What the operator
+// list cannot turn off is the authorization_code grant, which OIDC Core
+// requires an OP to serve: discovery keeps advertising it in
+// grant_types_supported even when the list omits it.
 func TestAuthorizeRejectsResponseTypeCodeToo(t *testing.T) {
 	storage.RegisterClients(storage.WebClient(implicitClientID, "secret", implicitRedirectURI))
 
@@ -216,4 +218,46 @@ func TestGrantTypesOverrideRejectsAtTokenEndpoint(t *testing.T) {
 	provider.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "unsupported_grant_type")
+}
+
+// wrappingProvider embeds *op.Provider, exactly the way a decorator that adds
+// behavior (e.g. a custom AuthorizeValidator) does. Before the optional
+// interface assertions, discovery asserted *op.Provider and silently fell
+// back to the defaults for any wrapper, dropping the operator's response and
+// grant type configuration.
+type wrappingProvider struct {
+	*op.Provider
+}
+
+// TestDiscoveryConfiguredThroughDecorator pins that operator configuration
+// reaches discovery through a wrapping provider: the wrapper's dynamic type is
+// not *op.Provider, but the promoted methods still carry the configuration.
+func TestDiscoveryConfiguredThroughDecorator(t *testing.T) {
+	storage.RegisterClients(storage.WebClient(implicitClientID, "secret", implicitRedirectURI))
+
+	config := codeOnlyConfig()
+	inner := newTestProvider(config)
+	provider := &wrappingProvider{inner.(*op.Provider)}
+
+	// Authorization endpoint gate honors the wrapper's configuration.
+	assert.False(t, op.SupportedResponseType(provider, oidc.ResponseTypeIDToken))
+	assert.True(t, op.SupportedResponseType(provider, oidc.ResponseTypeCode))
+
+	// Discovery advertises the wrapper's configuration, not the defaults.
+	discovery := getDiscovery(t, provider)
+	assert.Equal(t, []string{string(oidc.ResponseTypeCode)}, discovery.ResponseTypesSupported)
+	assert.NotContains(t, discovery.GrantTypesSupported, oidc.GrantTypeImplicit)
+}
+
+// TestNewProviderRejectsUnservableResponseTypes pins the fail-fast behavior
+// for an operator list containing a response type the authorization endpoint
+// cannot serve: a typo would otherwise be advertised and accepted (if the
+// client allows it), only to produce tokens under the wrong response type.
+func TestNewProviderRejectsUnservableResponseTypes(t *testing.T) {
+	config := *testConfig
+	config.SupportedResponseTypes = []oidc.ResponseType{oidc.ResponseTypeCode, oidc.ResponseType("code token")}
+
+	_, err := op.NewOpenIDProvider(testIssuer, &config, storage.NewStorage(storage.NewUserStore(testIssuer)))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "code token")
 }

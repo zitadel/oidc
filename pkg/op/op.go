@@ -311,6 +311,10 @@ func NewProvider(
 		}
 	}
 
+	if err := validateConfiguredResponseTypes(config); err != nil {
+		return nil, err
+	}
+
 	o.issuer, err = issuer(o.insecure)
 	if err != nil {
 		return nil, err
@@ -411,6 +415,14 @@ func (o *Provider) SupportedResponseTypes() []oidc.ResponseType {
 		return slices.Clone(DefaultSupportedResponseTypes)
 	}
 	return slices.Clone(o.config.SupportedResponseTypes)
+}
+
+// ConfiguredGrantTypes returns the operator's [Config.SupportedGrantTypes]
+// list verbatim, nil included. It is the decorator-safe accessor the discovery
+// functions use instead of asserting *Provider: a wrapper that embeds
+// *Provider promotes this method, so its operator list is honored.
+func (o *Provider) ConfiguredGrantTypes() []oidc.GrantType {
+	return o.config.SupportedGrantTypes
 }
 
 func (o *Provider) GrantTypeRefreshTokenSupported() bool {
