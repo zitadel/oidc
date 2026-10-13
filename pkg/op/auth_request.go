@@ -141,20 +141,19 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			AuthRequestError(w, r, authReq, oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err), authorizer)
 			return
 		}
-	}
-	// A custom AuthorizeValidator replaces ValidateAuthRequestClient, so the
-	// code_challenge_method is also checked here, where it cannot be overridden.
-	// Otherwise an unsupported method is stored and its code_verifier is later
-	// compared as if the method were plain.
-	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallengeMethod); err != nil {
-		// The custom validator may not have verified the redirect_uri, so only
-		// redirect the error to one registered for the client.
-		var oidcErr *oidc.Error
-		if ValidateAuthReqRedirectURI(client, authReq.RedirectURI, authReq.ResponseType) != nil && errors.As(err, &oidcErr) {
-			err = oidc.ErrInvalidRequestRedirectURI().WithDescription("%s", oidcErr.Description)
+		// The custom validator replaced ValidateAuthRequestClient, so check the
+		// code_challenge_method here, where it cannot be overridden. Otherwise an
+		// unsupported method is stored and its code_verifier is later compared as
+		// if the method were plain.
+		if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
+			// The custom validator may not have verified the redirect_uri, so
+			// only redirect the error to one registered for the client.
+			if checkURIAgainstRedirects(client, authReq.RedirectURI) != nil {
+				err = oidc.ErrInvalidRequestRedirectURI().WithDescription(codeChallengeMethodNotSupported)
+			}
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
 		}
-		AuthRequestError(w, r, authReq, err, authorizer)
-		return
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
@@ -289,7 +288,7 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
-	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallengeMethod); err != nil {
+	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
 		return "", err
 	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
@@ -440,17 +439,22 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 	return nil
 }
 
+// The method is not echoed into the description: RFC 6749, section 4.1.2.1,
+// restricts the characters of error_description, and the value is caller input.
+const codeChallengeMethodNotSupported = "The code_challenge_method is not supported. " +
+	"If you have any questions, you may contact the administrator of the application."
+
 // ValidateAuthReqCodeChallengeMethod validates the passed code_challenge_method (PKCE).
 // An empty method is allowed, as it defaults to plain (RFC 7636, section 4.3).
-// Any other method than plain or S256 is rejected (RFC 7636, section 4.4.1);
-// otherwise the code_verifier would later be compared as if the method were plain.
-func ValidateAuthReqCodeChallengeMethod(method oidc.CodeChallengeMethod) error {
-	switch method {
-	case "", oidc.CodeChallengeMethodPlain, oidc.CodeChallengeMethodS256:
+// When a code_challenge is sent, any method other than the supported ones is
+// rejected (RFC 7636, section 4.4.1); otherwise the code_verifier would later
+// be compared as if the method were plain. Without a code_challenge there is
+// nothing to verify, so the method is not checked.
+func ValidateAuthReqCodeChallengeMethod(codeChallenge string, method oidc.CodeChallengeMethod) error {
+	if codeChallenge == "" || method == "" || method.IsSupported() {
 		return nil
 	}
-	return oidc.ErrInvalidRequest().WithDescription("The code_challenge_method %q is not supported. "+
-		"If you have any questions, you may contact the administrator of the application.", method)
+	return oidc.ErrInvalidRequest().WithDescription(codeChallengeMethodNotSupported)
 }
 
 // ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)

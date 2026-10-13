@@ -286,10 +286,7 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	if rp.pkce == pkceFromDiscovery {
 		if slices.ContainsFunc(
 			discoveryConfiguration.CodeChallengeMethodsSupported,
-			func(method oidc.CodeChallengeMethod) bool {
-				return method == oidc.CodeChallengeMethodPlain ||
-					method == oidc.CodeChallengeMethodS256
-			},
+			oidc.CodeChallengeMethod.IsSupported,
 		) {
 			rp.pkce = pkceEnabled
 		} else {
