@@ -101,7 +101,7 @@ func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier 
 
 	profile, err := VerifyJWTAssertion(ctx, ca.ClientAssertion, verifier.JWTProfileVerifier(ctx))
 	if err != nil {
-		return "", oidc.ErrUnauthorizedClient().WithParent(err).WithDescription("JWT assertion failed")
+		return "", clientAuthError(oidc.ErrUnauthorizedClient().WithDescription("JWT assertion failed"), err)
 	}
 	return profile.Issuer, nil
 }
@@ -129,13 +129,15 @@ func ClientBasicAuth(r *http.Request, storage Storage) (clientID string, err err
 	return clientID, nil
 }
 
-// clientAuthError returns the server_error a Storage reported during client
-// authentication as is, so a server side fault is not answered as a client
-// fault. Any other error is wrapped in base.
+// clientAuthError answers a server_error a Storage reported during client
+// authentication with a new server_error, so a server side fault is not
+// answered as a client fault. The Storage error stays its parent, so a
+// StatusError in the chain keeps its status code. Any other error is wrapped
+// in base.
 func clientAuthError(base *oidc.Error, err error) *oidc.Error {
 	var oidcErr *oidc.Error
-	if errors.As(err, &oidcErr) && oidcErr.ErrorType == oidc.ServerError {
-		return oidcErr
+	if errors.As(err, &oidcErr) && oidcErr != nil && oidcErr.ErrorType == oidc.ServerError {
+		return oidc.ErrServerError().WithParent(err)
 	}
 	return base.WithParent(err)
 }

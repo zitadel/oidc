@@ -10,144 +10,217 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zitadel/oidc/v3/example/server/storage"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
-	"github.com/zitadel/oidc/v3/pkg/op/mock"
 )
 
-var clientAuthStorageErrorTests = []struct {
-	name       string
-	storageErr error
-	wantType   string
-	wantStatus int
-}{
-	{
-		name:       "typed server_error passes through",
-		storageErr: oidc.ErrServerError().WithParent(errors.New("db down")),
-		wantType:   string(oidc.ServerError),
-		wantStatus: http.StatusInternalServerError,
-	},
-	{
-		name:       "plain error stays invalid_client",
-		storageErr: errors.New("client not found"),
-		wantType:   string(oidc.InvalidClient),
-		wantStatus: http.StatusUnauthorized,
-	},
-}
-
-type clientCredentialsErrorStorage struct {
-	err error
-}
-
-func (s clientCredentialsErrorStorage) ClientCredentials(context.Context, string, string) (op.Client, error) {
-	return nil, s.err
-}
-
-func (s clientCredentialsErrorStorage) ClientCredentialsTokenRequest(context.Context, string, []string) (op.TokenRequest, error) {
-	return nil, errors.New("not reached")
-}
-
-func TestAuthorizeClientCredentialsClient_StorageErrors(t *testing.T) {
-	for _, tt := range clientAuthStorageErrorTests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := &oidc.ClientCredentialsRequest{ClientID: "id", ClientSecret: "secret"}
-			_, err := op.AuthorizeClientCredentialsClient(context.Background(), req, clientCredentialsErrorStorage{err: tt.storageErr})
-			var oidcErr *oidc.Error
-			require.ErrorAs(t, err, &oidcErr)
-			assert.Equal(t, tt.wantType, string(oidcErr.ErrorType))
-		})
-	}
-}
-
-func TestAuthorizeClientIDSecret_StorageErrors(t *testing.T) {
-	for _, tt := range clientAuthStorageErrorTests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := mock.NewMockStorage(gomock.NewController(t))
-			s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "id", "secret").Return(tt.storageErr)
-			err := op.AuthorizeClientIDSecret(context.Background(), "id", "secret", s)
-			var oidcErr *oidc.Error
-			require.ErrorAs(t, err, &oidcErr)
-			assert.Equal(t, tt.wantType, string(oidcErr.ErrorType))
-		})
-	}
-}
+const (
+	failAuthorizeClientIDSecret = "AuthorizeClientIDSecret"
+	failClientCredentials       = "ClientCredentials"
+	failGetClientByClientID     = "GetClientByClientID"
+)
 
 // failingClientStorage wraps the example storage and fails the client
-// authentication lookups with a configurable error.
+// authentication lookup named by method with err.
 type failingClientStorage struct {
 	*storage.Storage
-	err error
+	method string
+	err    error
 }
 
-func (s *failingClientStorage) AuthorizeClientIDSecret(context.Context, string, string) error {
-	return s.err
+func (s *failingClientStorage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error {
+	if s.method == failAuthorizeClientIDSecret {
+		return s.err
+	}
+	return s.Storage.AuthorizeClientIDSecret(ctx, clientID, clientSecret)
 }
 
-func (s *failingClientStorage) ClientCredentials(context.Context, string, string) (op.Client, error) {
-	return nil, s.err
+func (s *failingClientStorage) ClientCredentials(ctx context.Context, clientID, clientSecret string) (op.Client, error) {
+	if s.method == failClientCredentials {
+		return nil, s.err
+	}
+	return s.Storage.ClientCredentials(ctx, clientID, clientSecret)
 }
 
-func TestTokenEndpoint_ClientAuthStorageErrors(t *testing.T) {
-	grants := []struct {
+func (s *failingClientStorage) GetClientByClientID(ctx context.Context, clientID string) (op.Client, error) {
+	if s.method == failGetClientByClientID {
+		return nil, s.err
+	}
+	return s.Storage.GetClientByClientID(ctx, clientID)
+}
+
+// clientAuthAnswer is the response a handler gives for a client
+// authentication failure that is not a server_error.
+type clientAuthAnswer struct {
+	errorType string
+	status    int
+}
+
+func TestClientAuthStorageErrors(t *testing.T) {
+	// One storage for all subtests, so that the RSA key is generated once.
+	s := storage.NewStorage(storage.NewUserStore(testIssuer))
+
+	// A valid code, so that the Provider's code flow reaches client authentication.
+	ctx := op.ContextWithIssuer(context.Background(), testIssuer)
+	authReq, err := s.CreateAuthRequest(ctx, &oidc.AuthRequest{
+		ClientID:     "web",
+		RedirectURI:  "https://example.com",
+		Scopes:       oidc.SpaceDelimitedArray{oidc.ScopeOpenID},
+		ResponseType: oidc.ResponseTypeCode,
+	}, "id1")
+	require.NoError(t, err)
+	const code = "client-auth-storage-errors"
+	require.NoError(t, s.SaveAuthCode(ctx, authReq.GetID(), code))
+	require.NoError(t, s.AuthRequestDone(authReq.GetID()))
+
+	codeForm := url.Values{
+		"grant_type":   {string(oidc.GrantTypeCode)},
+		"code":         {code},
+		"redirect_uri": {"https://example.com"},
+	}
+	invalidClient := map[string]clientAuthAnswer{
+		"Provider":  {string(oidc.InvalidClient), http.StatusUnauthorized},
+		"op.Server": {string(oidc.InvalidClient), http.StatusBadRequest},
+	}
+
+	requests := []struct {
 		name     string
-		clientID string
-		secret   string
+		method   string
+		endpoint func(op.OpenIDProvider) *op.Endpoint
 		form     url.Values
+		// basicAuth sends web:secret in the Authorization header,
+		// otherwise the form carries the client credentials.
+		basicAuth bool
+		// want lists the handlers to test, by authorizePath name.
+		want map[string]clientAuthAnswer
 	}{
 		{
-			name:     "client_credentials",
-			clientID: "sid1",
-			secret:   "verysecret",
-			form:     url.Values{"grant_type": {string(oidc.GrantTypeClientCredentials)}, "scope": {"openid"}},
+			name:      "token client_credentials",
+			method:    failClientCredentials,
+			endpoint:  op.OpenIDProvider.TokenEndpoint,
+			form:      url.Values{"grant_type": {string(oidc.GrantTypeClientCredentials)}, "scope": {oidc.ScopeOpenID}},
+			basicAuth: true,
+			// The LegacyServer returns the ClientCredentials error as is.
+			want: map[string]clientAuthAnswer{"Provider": invalidClient["Provider"]},
 		},
 		{
-			name:     "authorization_code",
-			clientID: "web",
-			secret:   "secret",
+			name:      "token authorization_code client lookup",
+			method:    failGetClientByClientID,
+			endpoint:  op.OpenIDProvider.TokenEndpoint,
+			form:      codeForm,
+			basicAuth: true,
+			want:      invalidClient,
+		},
+		{
+			name:      "token authorization_code secret check",
+			method:    failAuthorizeClientIDSecret,
+			endpoint:  op.OpenIDProvider.TokenEndpoint,
+			form:      codeForm,
+			basicAuth: true,
+			want:      invalidClient,
+		},
+		{
+			name:     "token token_exchange client lookup",
+			method:   failGetClientByClientID,
+			endpoint: op.OpenIDProvider.TokenEndpoint,
 			form: url.Values{
-				"grant_type":   {string(oidc.GrantTypeCode)},
-				"code":         {"code"},
-				"redirect_uri": {"https://example.com"},
+				"grant_type":         {string(oidc.GrantTypeTokenExchange)},
+				"subject_token":      {"token"},
+				"subject_token_type": {string(oidc.AccessTokenType)},
 			},
+			basicAuth: true,
+			want:      invalidClient,
+		},
+		{
+			name:     "revocation client lookup",
+			method:   failGetClientByClientID,
+			endpoint: op.OpenIDProvider.RevocationEndpoint,
+			form:     url.Values{"token": {"token"}, "client_id": {"web"}, "client_secret": {"secret"}},
+			want:     invalidClient,
+		},
+		{
+			name:      "introspection secret check",
+			method:    failAuthorizeClientIDSecret,
+			endpoint:  op.OpenIDProvider.IntrospectionEndpoint,
+			form:      url.Values{"token": {"token"}},
+			basicAuth: true,
+			// The Provider introspection handler answers every error with 401.
+			want: map[string]clientAuthAnswer{"op.Server": {string(oidc.UnauthorizedClient), http.StatusBadRequest}},
 		},
 	}
-	for _, g := range grants {
-		for _, tt := range clientAuthStorageErrorTests {
-			t.Run(g.name+"/"+tt.name, func(t *testing.T) {
-				s := &failingClientStorage{Storage: storage.NewStorage(storage.NewUserStore(testIssuer)), err: tt.storageErr}
-				provider, err := op.NewOpenIDProvider(testIssuer, testConfig, s, op.WithAllowInsecure())
-				require.NoError(t, err)
 
-				// A valid code, so that the code flow reaches client authentication.
-				ctx := op.ContextWithIssuer(context.Background(), testIssuer)
-				authReq, err := s.CreateAuthRequest(ctx, &oidc.AuthRequest{
-					ClientID:     "web",
-					RedirectURI:  "https://example.com",
-					Scopes:       oidc.SpaceDelimitedArray{oidc.ScopeOpenID},
-					ResponseType: oidc.ResponseTypeCode,
-				}, "id1")
-				require.NoError(t, err)
-				require.NoError(t, s.SaveAuthCode(ctx, authReq.GetID(), "code"))
-				require.NoError(t, s.AuthRequestDone(authReq.GetID()))
+	dbErr := errors.New("db down")
+	storageErrors := []struct {
+		name string
+		err  error
+		// serverError is true when the answer must be a server_error.
+		serverError bool
+		// legacyStatus overrides the 500 of a server_error on the LegacyServer.
+		legacyStatus int
+	}{
+		{
+			name:        "server_error",
+			err:         oidc.ErrServerError().WithParent(dbErr),
+			serverError: true,
+		},
+		{
+			name:        "server_error returning a nil parent",
+			err:         oidc.ErrServerError().WithReturnParentToClient(true),
+			serverError: true,
+		},
+		{
+			name:         "server_error with status 503",
+			err:          op.NewStatusError(oidc.ErrServerError().WithParent(dbErr), http.StatusServiceUnavailable),
+			serverError:  true,
+			legacyStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name: "plain error",
+			err:  errors.New("client not found"),
+		},
+		{
+			name: "typed client error",
+			err:  oidc.ErrInvalidRequest().WithDescription("rejected by storage"),
+		},
+	}
 
-				req := httptest.NewRequest(http.MethodPost, provider.TokenEndpoint().Relative(), strings.NewReader(g.form.Encode()))
-				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				req.SetBasicAuth(g.clientID, g.secret)
-				rec := httptest.NewRecorder()
-				provider.ServeHTTP(rec, req)
+	for _, req := range requests {
+		for _, se := range storageErrors {
+			fs := &failingClientStorage{Storage: s, method: req.method, err: se.err}
+			provider, err := op.NewOpenIDProvider(testIssuer, testConfig, fs, op.WithAllowInsecure())
+			require.NoError(t, err)
 
-				var body struct {
-					Error string `json:"error"`
+			for _, path := range authorizePaths(provider) {
+				want, ok := req.want[path.name]
+				if !ok {
+					continue
 				}
-				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body), rec.Body.String())
-				assert.Equal(t, tt.wantStatus, rec.Code, rec.Body.String())
-				assert.Equal(t, tt.wantType, body.Error)
-			})
+				if se.serverError {
+					want = clientAuthAnswer{string(oidc.ServerError), http.StatusInternalServerError}
+					if path.name == "op.Server" && se.legacyStatus != 0 {
+						want.status = se.legacyStatus
+					}
+				}
+				t.Run(path.name+"/"+req.name+"/"+se.name, func(t *testing.T) {
+					r := httptest.NewRequest(http.MethodPost, req.endpoint(provider).Relative(), strings.NewReader(req.form.Encode()))
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					if req.basicAuth {
+						r.SetBasicAuth("web", "secret")
+					}
+					rec := httptest.NewRecorder()
+					path.handler.ServeHTTP(rec, r)
+
+					var body map[string]any
+					require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body), rec.Body.String())
+					assert.Equal(t, want.status, rec.Code, rec.Body.String())
+					assert.Equal(t, want.errorType, body["error"], rec.Body.String())
+					assert.NotContains(t, body, "parent", rec.Body.String())
+				})
+			}
 		}
 	}
 }
