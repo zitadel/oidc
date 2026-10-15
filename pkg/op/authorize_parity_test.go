@@ -68,11 +68,18 @@ func parityQuery() url.Values {
 // caller can assert what applies to its own case.
 func assertDelivered(t *testing.T, rec *httptest.ResponseRecorder, wantError string) url.Values {
 	t.Helper()
+	return assertDeliveredTo(t, rec, parityRedirectURI, parityState, wantError)
+}
+
+// assertDeliveredTo asserts that the error was redirected to redirectURI,
+// with state echoed.
+func assertDeliveredTo(t *testing.T, rec *httptest.ResponseRecorder, redirectURI, state, wantError string) url.Values {
+	t.Helper()
 	require.Equal(t, http.StatusFound, rec.Code)
 
 	location, err := url.Parse(rec.Header().Get("Location"))
 	require.NoError(t, err)
-	assert.Equal(t, parityRedirectURI, location.Scheme+"://"+location.Host+location.Path)
+	assert.Equal(t, redirectURI, location.Scheme+"://"+location.Host+location.Path)
 
 	params := location.Query()
 	if fragment := location.EscapedFragment(); fragment != "" {
@@ -82,7 +89,7 @@ func assertDelivered(t *testing.T, rec *httptest.ResponseRecorder, wantError str
 		require.NoError(t, err)
 	}
 	assert.Equal(t, wantError, params.Get("error"))
-	assert.Equal(t, parityState, params.Get("state"),
+	assert.Equal(t, state, params.Get("state"),
 		"state must be echoed, or the client cannot correlate the error")
 	return params
 }
@@ -119,6 +126,16 @@ func TestAuthorizeErrorParity(t *testing.T) {
 		{
 			name:      "missing scope",
 			break_:    func(q url.Values) { q.Del("scope") },
+			wantError: "invalid_request",
+		},
+		{
+			// RFC 7636, section 4.4.1: an unsupported transformation is an
+			// invalid_request, not a challenge to be compared as plain.
+			name: "unsupported code_challenge_method",
+			break_: func(q url.Values) {
+				q.Set("code_challenge", "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+				q.Set("code_challenge_method", "S512")
+			},
 			wantError: "invalid_request",
 		},
 		{
