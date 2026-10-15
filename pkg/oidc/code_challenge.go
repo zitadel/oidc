@@ -2,7 +2,6 @@ package oidc
 
 import (
 	"crypto/sha256"
-	"slices"
 
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 )
@@ -12,18 +11,18 @@ const (
 	CodeChallengeMethodS256  CodeChallengeMethod = "S256"
 )
 
-// AllCodeChallengeMethods lists the PKCE code challenge methods
-// that VerifyCodeChallenge can verify.
-var AllCodeChallengeMethods = []CodeChallengeMethod{
-	CodeChallengeMethodPlain, CodeChallengeMethodS256,
-}
-
 type CodeChallengeMethod string
 
-// IsSupported reports whether m is one of AllCodeChallengeMethods.
+// IsSupported reports whether m is a code challenge method that
+// VerifyCodeChallenge can verify: plain or S256.
 // An empty method is not a method; RFC 7636, section 4.3, defaults it to plain.
 func (m CodeChallengeMethod) IsSupported() bool {
-	return slices.Contains(AllCodeChallengeMethods, m)
+	switch m {
+	case CodeChallengeMethodPlain, CodeChallengeMethodS256:
+		return true
+	default:
+		return false
+	}
 }
 
 type CodeChallenge struct {
@@ -42,11 +41,12 @@ func VerifyCodeChallenge(c *CodeChallenge, codeVerifier string) bool {
 	if c == nil {
 		return false
 	}
-	if c.Method != "" && !c.Method.IsSupported() {
-		return false
-	}
-	if c.Method == CodeChallengeMethodS256 {
+	switch c.Method {
+	case CodeChallengeMethodS256:
 		codeVerifier = NewSHACodeChallenge(codeVerifier)
+	case "", CodeChallengeMethodPlain:
+	default:
+		return false
 	}
 	return codeVerifier == c.Challenge
 }

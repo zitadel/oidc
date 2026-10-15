@@ -68,11 +68,18 @@ func parityQuery() url.Values {
 // caller can assert what applies to its own case.
 func assertDelivered(t *testing.T, rec *httptest.ResponseRecorder, wantError string) url.Values {
 	t.Helper()
+	return assertDeliveredTo(t, rec, parityRedirectURI, parityState, wantError)
+}
+
+// assertDeliveredTo asserts that the error was redirected to redirectURI,
+// with state echoed.
+func assertDeliveredTo(t *testing.T, rec *httptest.ResponseRecorder, redirectURI, state, wantError string) url.Values {
+	t.Helper()
 	require.Equal(t, http.StatusFound, rec.Code)
 
 	location, err := url.Parse(rec.Header().Get("Location"))
 	require.NoError(t, err)
-	assert.Equal(t, parityRedirectURI, location.Scheme+"://"+location.Host+location.Path)
+	assert.Equal(t, redirectURI, location.Scheme+"://"+location.Host+location.Path)
 
 	params := location.Query()
 	if fragment := location.EscapedFragment(); fragment != "" {
@@ -82,7 +89,7 @@ func assertDelivered(t *testing.T, rec *httptest.ResponseRecorder, wantError str
 		require.NoError(t, err)
 	}
 	assert.Equal(t, wantError, params.Get("error"))
-	assert.Equal(t, parityState, params.Get("state"),
+	assert.Equal(t, state, params.Get("state"),
 		"state must be echoed, or the client cannot correlate the error")
 	return params
 }
