@@ -121,7 +121,7 @@ func ParseTokenRevocationRequest(r *http.Request, revoker Revoker) (token, token
 	}
 	client, err := revoker.Storage().GetClientByClientID(r.Context(), req.ClientID)
 	if err != nil {
-		return "", "", "", oidc.ErrInvalidClient().WithParent(err)
+		return "", "", "", clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 	if req.ClientSecret == "" {
 		if client.AuthMethod() != oidc.AuthMethodNone {
