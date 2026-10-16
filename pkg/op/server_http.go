@@ -299,6 +299,7 @@ func (s *webServer) deviceAuthorizationHandler(w http.ResponseWriter, r *http.Re
 }
 
 func (s *webServer) tokensHandler(w http.ResponseWriter, r *http.Request) {
+	setNoCacheHeaders(w)
 	if err := r.ParseForm(); err != nil {
 		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err), nil)
 		return
