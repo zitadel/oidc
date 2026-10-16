@@ -2,11 +2,15 @@ package rp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
@@ -134,6 +138,89 @@ func TestRemoteKeySet_VerifySignature_WrapsFetchError(t *testing.T) {
 			keySet := NewRemoteKeySet(&http.Client{Transport: tt.transport}, "https://example.com/keys")
 			_, err := keySet.VerifySignature(context.Background(), jws)
 			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestRemoteKeySet_CacheTTL(t *testing.T) {
+	oldKey := jose.JSONWebKey{Key: mustRSAKey(t, 2048), KeyID: "old", Algorithm: string(jose.RS256), Use: oidc.KeyUseSignature}
+	newKey := jose.JSONWebKey{Key: mustRSAKey(t, 2048), KeyID: "new", Algorithm: string(jose.RS256), Use: oidc.KeyUseSignature}
+
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: oldKey}, nil)
+	require.NoError(t, err)
+	signed, err := signer.Sign([]byte(`{"sub":"subject"}`))
+	require.NoError(t, err)
+	token, err := signed.CompactSerialize()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		opts        []func(*remoteKeySet)
+		expire      bool
+		wantErr     bool
+		wantFetches int
+	}{
+		{
+			name:        "no ttl keeps using cached keys",
+			expire:      true,
+			wantFetches: 1,
+		},
+		{
+			name:        "ttl not expired",
+			opts:        []func(*remoteKeySet){CacheTTL(time.Hour)},
+			wantFetches: 1,
+		},
+		{
+			name:        "ttl expired",
+			opts:        []func(*remoteKeySet){CacheTTL(time.Hour)},
+			expire:      true,
+			wantErr:     true,
+			wantFetches: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var (
+				mu      sync.Mutex
+				keys    = []jose.JSONWebKey{oldKey.Public()}
+				fetches int
+			)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				mu.Lock()
+				defer mu.Unlock()
+				fetches++
+				_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: keys})
+			}))
+			defer srv.Close()
+
+			keySet := NewRemoteKeySet(srv.Client(), srv.URL, tt.opts...).(*remoteKeySet)
+			verify := func() error {
+				jws, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{jose.RS256})
+				require.NoError(t, err)
+				_, err = keySet.VerifySignature(context.Background(), jws)
+				return err
+			}
+			require.NoError(t, verify())
+
+			// the issuer rotates out the key the token was signed with
+			mu.Lock()
+			keys = []jose.JSONWebKey{newKey.Public()}
+			mu.Unlock()
+			if tt.expire {
+				keySet.mu.Lock()
+				keySet.cacheExpiry = time.Now().Add(-time.Second)
+				keySet.mu.Unlock()
+			}
+
+			err := verify()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			mu.Lock()
+			assert.Equal(t, tt.wantFetches, fetches)
+			mu.Unlock()
 		})
 	}
 }
