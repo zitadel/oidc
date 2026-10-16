@@ -258,7 +258,7 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 		}
 		// TryErrorRedirect returns the error unredirected if it is marked
 		// redirect-disabled, which renders it here.
-		return TryErrorRedirect(ctx, authReq, err, s.encoder, nil)
+		return TryErrorRedirectWithIssuer(ctx, authReq, err, s.encoder, AuthorizationResponseIss(ctx, s.server))
 	}
 	return redirect, nil
 }
