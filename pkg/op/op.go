@@ -170,17 +170,28 @@ func authCallbackPath(o OpenIDProvider) string {
 }
 
 type Config struct {
-	CryptoKey                         [32]byte // for encrypting access token via NewAES256GCMCrypto; will be overwritten by WithCrypto
-	CryptoKeyId                       string
-	DefaultLogoutRedirectURI          string
-	CodeMethodS256                    bool
-	AuthMethodPost                    bool
-	AuthMethodPrivateKeyJWT           bool
-	GrantTypeRefreshToken             bool
-	RequestObjectSupported            bool
-	SupportedUILocales                []language.Tag
-	SupportedClaims                   []string
-	SupportedScopes                   []string
+	CryptoKey                [32]byte // for encrypting access token via NewAES256GCMCrypto; will be overwritten by WithCrypto
+	CryptoKeyId              string
+	DefaultLogoutRedirectURI string
+	CodeMethodS256           bool
+	AuthMethodPost           bool
+	AuthMethodPrivateKeyJWT  bool
+	GrantTypeRefreshToken    bool
+	RequestObjectSupported   bool
+	SupportedUILocales       []language.Tag
+	SupportedClaims          []string
+	SupportedScopes          []string
+	// SupportedResponseTypes optionally overrides the response types the
+	// provider advertises in its discovery document and accepts at the
+	// authorization endpoint. When nil, the defaults below are used, which
+	// match the behavior of previous versions.
+	// See [DefaultSupportedResponseTypes].
+	SupportedResponseTypes []oidc.ResponseType
+	// SupportedGrantTypes optionally overrides the grant types the provider
+	// advertises in its discovery document and accepts at the token endpoint.
+	// When nil, the defaults below are used, which match the behavior of
+	// previous versions. See [DefaultSupportedGrantTypes].
+	SupportedGrantTypes               []oidc.GrantType
 	DeviceAuthorization               DeviceAuthorizationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
@@ -300,6 +311,10 @@ func NewProvider(
 		}
 	}
 
+	if err := validateConfiguredResponseTypes(config); err != nil {
+		return nil, err
+	}
+
 	o.issuer, err = issuer(o.insecure)
 	if err != nil {
 		return nil, err
@@ -390,22 +405,42 @@ func (o *Provider) TokenEndpointSigningAlgorithmsSupported() []string {
 	return []string{"RS256"}
 }
 
+// SupportedResponseTypes returns the response types the provider accepts at
+// the authorization endpoint and advertises in its discovery document. Both
+// read the same [Config.SupportedResponseTypes], so the two cannot drift.
+// Configurations that did not set the field get the defaults, which match the
+// behavior of previous versions.
+func (o *Provider) SupportedResponseTypes() []oidc.ResponseType {
+	if o.config.SupportedResponseTypes == nil {
+		return slices.Clone(DefaultSupportedResponseTypes)
+	}
+	return slices.Clone(o.config.SupportedResponseTypes)
+}
+
+// ConfiguredGrantTypes returns the operator's [Config.SupportedGrantTypes]
+// list verbatim, nil included. It is the decorator-safe accessor the discovery
+// functions use instead of asserting *Provider: a wrapper that embeds
+// *Provider promotes this method, so its operator list is honored.
+func (o *Provider) ConfiguredGrantTypes() []oidc.GrantType {
+	return o.config.SupportedGrantTypes
+}
+
 func (o *Provider) GrantTypeRefreshTokenSupported() bool {
-	return o.config.GrantTypeRefreshToken
+	return o.config.GrantTypeRefreshToken && grantTypeConfigured(o, oidc.GrantTypeRefreshToken)
 }
 
 func (o *Provider) GrantTypeTokenExchangeSupported() bool {
 	_, ok := o.storage.(TokenExchangeStorage)
-	return ok
+	return ok && grantTypeConfigured(o, oidc.GrantTypeTokenExchange)
 }
 
 func (o *Provider) GrantTypeJWTAuthorizationSupported() bool {
-	return true
+	return grantTypeConfigured(o, oidc.GrantTypeBearer)
 }
 
 func (o *Provider) GrantTypeDeviceCodeSupported() bool {
 	_, ok := o.storage.(DeviceAuthorizationStorage)
-	return ok
+	return ok && grantTypeConfigured(o, oidc.GrantTypeDeviceCode)
 }
 
 func (o *Provider) IntrospectionAuthMethodPrivateKeyJWTSupported() bool {
@@ -418,7 +453,7 @@ func (o *Provider) IntrospectionEndpointSigningAlgorithmsSupported() []string {
 
 func (o *Provider) GrantTypeClientCredentialsSupported() bool {
 	_, ok := o.storage.(ClientCredentialsStorage)
-	return ok
+	return ok && grantTypeConfigured(o, oidc.GrantTypeClientCredentials)
 }
 
 func (o *Provider) RevocationAuthMethodPrivateKeyJWTSupported() bool {

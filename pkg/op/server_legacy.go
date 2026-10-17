@@ -166,6 +166,9 @@ func (s *LegacyServer) Authorize(ctx context.Context, r *ClientRequest[oidc.Auth
 	if err != nil {
 		return nil, err
 	}
+	if err := ValidateSupportedResponseType(s.provider, r.Data.ResponseType); err != nil {
+		return nil, err
+	}
 	// A request object still on the request was not applied, because
 	// ParseRequestObject only runs when the provider supports one and
 	// CopyRequestObjectToAuthRequest clears the field once it is applied.
@@ -291,6 +294,9 @@ func (s *LegacyServer) JWTProfile(ctx context.Context, r *Request[oidc.JWTProfil
 	ctx, span := Tracer.Start(ctx, "LegacyServer.JWTProfile")
 	defer span.End()
 
+	if !s.provider.GrantTypeJWTAuthorizationSupported() {
+		return nil, unimplementedGrantError(oidc.GrantTypeBearer)
+	}
 	exchanger, ok := s.provider.(JWTAuthorizationGrantExchanger)
 	if !ok {
 		return nil, unimplementedGrantError(oidc.GrantTypeBearer)
@@ -333,6 +339,9 @@ func (s *LegacyServer) ClientCredentialsExchange(ctx context.Context, r *ClientR
 	ctx, span := Tracer.Start(ctx, "LegacyServer.ClientCredentialsExchange")
 	defer span.End()
 
+	if !s.provider.GrantTypeClientCredentialsSupported() {
+		return nil, unimplementedGrantError(oidc.GrantTypeClientCredentials)
+	}
 	storage, ok := s.provider.Storage().(ClientCredentialsStorage)
 	if !ok {
 		return nil, unimplementedGrantError(oidc.GrantTypeClientCredentials)
