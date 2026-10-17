@@ -50,6 +50,21 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 		return nil, oidc.ErrInvalidRequest().WithDescription("error decoding form").WithParent(err)
 	}
 
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
+	// The client MUST NOT use more than one authentication method in each request.
+	// Mirrors the check in webServer.parseClientCredentials, which the generic and
+	// legacy Server stacks already perform.
+	if checker, ok := any(request).(AuthenticatedTokenRequestAuthMethodChecker); ok {
+		if checker.IsSetClientAssertion() && checker.IsSetClientIDAndClientSecret() {
+			return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+		}
+		if _, _, ok := r.BasicAuth(); ok {
+			if checker.IsSetClientAssertion() || checker.IsSetClientIDAndClientSecret() {
+				return nil, oidc.ErrInvalidRequest().WithDescription("client authentication must not use more than one method")
+			}
+		}
+	}
+
 	if clientID, clientSecret, ok := r.BasicAuth(); ok {
 		clientID, err = url.QueryUnescape(clientID)
 		if err != nil {
@@ -61,6 +76,11 @@ func ParseClientCredentialsRequest(r *http.Request, decoder httphelper.Decoder) 
 			return nil, oidc.ErrInvalidClient().WithDescription("invalid basic auth header").WithParent(err)
 		}
 
+		// The Basic Auth credentials become the identity used by the
+		// client_secret branch of ValidateClientCredentialsRequest. The
+		// conflict check above has already refused a Basic header on a
+		// request that also carries form credentials, so at this point the
+		// header is the only authentication method present.
 		request.ClientID = clientID
 		request.ClientSecret = clientSecret
 	}
@@ -79,9 +99,31 @@ func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientC
 		return nil, nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
 	}
 
-	client, err := AuthorizeClientCredentialsClient(ctx, request, storage)
-	if err != nil {
-		return nil, nil, err
+	var client Client
+	if request.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
+		// Client authentication with a JWT assertion (private_key_jwt) as specified
+		// in RFC 7521 6.2, mirroring the authorization code and refresh token grants.
+		jwtExchanger, ok := exchanger.(JWTAuthorizationGrantExchanger)
+		if !ok || !exchanger.AuthMethodPrivateKeyJWTSupported() {
+			return nil, nil, oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
+		}
+		jwtClient, err := AuthorizePrivateJWTKey(ctx, request.ClientAssertion, jwtExchanger)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !ValidateGrantType(jwtClient, oidc.GrantTypeClientCredentials) {
+			return nil, nil, oidc.ErrUnauthorizedClient()
+		}
+		// The authenticated identity is the assertion issuer. An unauthenticated
+		// client_id parameter (form value or Basic Auth) must not override it.
+		request.ClientID = jwtClient.GetID()
+		client = jwtClient
+	} else {
+		secretClient, err := AuthorizeClientCredentialsClient(ctx, request, storage)
+		if err != nil {
+			return nil, nil, err
+		}
+		client = secretClient
 	}
 
 	tokenRequest, err := storage.ClientCredentialsTokenRequest(ctx, request.ClientID, request.Scope)
@@ -92,6 +134,8 @@ func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientC
 	return tokenRequest, client, nil
 }
 
+// AuthorizeClientCredentialsClient authorizes a client in the client_credentials grant
+// by validating the client_id and client_secret pair in the storage.
 func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientCredentialsRequest, storage ClientCredentialsStorage) (Client, error) {
 	ctx, span := Tracer.Start(ctx, "AuthorizeClientCredentialsClient")
 	defer span.End()
@@ -108,6 +152,7 @@ func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientC
 	return client, nil
 }
 
+// CreateClientCredentialsTokenResponse creates a TokenResponse for the client_credentials grant
 func CreateClientCredentialsTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CreateClientCredentialsTokenResponse")
 	defer span.End()
