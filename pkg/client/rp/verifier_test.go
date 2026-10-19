@@ -2,6 +2,7 @@ package rp
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -89,6 +90,41 @@ func TestVerifyTokens(t *testing.T) {
 			assert.Equal(t, got, want)
 		})
 	}
+}
+
+// An IDTokenVerifier built as a struct literal without AZP, as was common before
+// the field existed, must not panic and must keep the default azp check.
+func TestVerifyIDTokenWithoutAZPVerifier(t *testing.T) {
+	verifier := &IDTokenVerifier{
+		Issuer:            tu.ValidIssuer,
+		MaxAgeIAT:         2 * time.Minute,
+		Offset:            time.Second,
+		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		KeySet:            tu.KeySet{},
+		MaxAge:            2 * time.Minute,
+		ACR:               tu.ACRVerify,
+		Nonce:             func(context.Context) string { return tu.ValidNonce },
+		ClientID:          tu.ValidClientID,
+	}
+
+	t.Run("valid azp", func(t *testing.T) {
+		token, want := tu.ValidIDToken()
+		got, err := VerifyIDToken[*oidc.IDTokenClaims](context.Background(), token, verifier)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("azp of another client", func(t *testing.T) {
+		// The audience still contains our client, so only the azp check can fail.
+		audience := append(slices.Clone(tu.ValidAudience), tu.ValidClientID)
+		token, _ := tu.NewIDToken(
+			tu.ValidIssuer, tu.ValidSubject, audience,
+			tu.ValidExpiration, tu.ValidAuthTime, tu.ValidNonce,
+			tu.ValidACR, tu.ValidAMR, "otherClient", tu.ValidSkew, "",
+		)
+		_, err := VerifyIDToken[*oidc.IDTokenClaims](context.Background(), token, verifier)
+		assert.ErrorIs(t, err, oidc.ErrAzpInvalid)
+	})
 }
 
 func TestVerifyIDToken(t *testing.T) {
