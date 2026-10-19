@@ -16,6 +16,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
@@ -63,6 +64,45 @@ func TestDiscover(t *testing.T) {
 			if tt.wantFields.UILocalesSupported {
 				assert.NotEmpty(t, got.UILocalesSupported)
 			}
+		})
+	}
+}
+
+func TestDiscover_ContentType(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		wantErr     bool
+	}{
+		{name: "application/json", contentType: "application/json"},
+		{name: "application/json with charset", contentType: "application/json; charset=utf-8"},
+		{name: "mixed case", contentType: "Application/JSON"},
+		{name: "missing", contentType: "", wantErr: true},
+		{name: "text/plain", contentType: "text/plain; charset=utf-8", wantErr: true},
+		{name: "text/html", contentType: "text/html", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var issuer string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Setting the header to nil prevents net/http from sniffing a content type.
+				w.Header()["Content-Type"] = nil
+				if tt.contentType != "" {
+					w.Header().Set("Content-Type", tt.contentType)
+				}
+				_, _ = w.Write([]byte(`{"issuer":"` + issuer + `"}`))
+			}))
+			defer server.Close()
+			issuer = server.URL
+
+			got, err := Discover(context.Background(), issuer, server.Client())
+			if tt.wantErr {
+				require.ErrorIs(t, err, oidc.ErrDiscoveryFailed)
+				require.ErrorIs(t, err, httphelper.ErrInvalidContentType)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, issuer, got.Issuer)
 		})
 	}
 }
