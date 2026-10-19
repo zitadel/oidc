@@ -522,12 +522,40 @@ func GenerateAndStoreCodeChallengeWithRequest(r *http.Request, w http.ResponseWr
 var ErrMissingIDToken = errors.New("id_token missing")
 
 func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Token, rp RelyingParty) (*oidc.Tokens[C], error) {
-	ctx, span := client.Tracer.Start(ctx, "verifyTokenResponse")
-	defer span.End()
-
 	if rp.IsOAuth2Only() {
 		return &oidc.Tokens[C]{Token: token}, nil
 	}
+	return verifyTokenResponseWith[C](ctx, token, rp, rp.IDTokenVerifier())
+}
+
+// verifyRefreshTokenResponse verifies the response to a refresh token request.
+// The ID Token in that response SHOULD NOT have a nonce, and if it has one, it
+// must be the nonce of the original authentication (OIDC Core 1.0 section 12.2).
+// So an ID Token without a nonce is accepted even when the verifier expects one,
+// while a nonce that is present is still checked against the verifier.
+func verifyRefreshTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Token, rp RelyingParty) (*oidc.Tokens[C], error) {
+	if rp.IsOAuth2Only() || rp.IDTokenVerifier() == nil || rp.IDTokenVerifier().Nonce == nil {
+		return verifyTokenResponse[C](ctx, token, rp)
+	}
+	verifier := *rp.IDTokenVerifier()
+	nonce := verifier.Nonce
+	verifier.Nonce = nil
+	tokens, err := verifyTokenResponseWith[C](ctx, token, rp, &verifier)
+	if err != nil {
+		return tokens, err
+	}
+	if tokens.IDTokenClaims.GetNonce() != "" {
+		if err := oidc.CheckNonce(tokens.IDTokenClaims, nonce(ctx)); err != nil {
+			return nil, err
+		}
+	}
+	return tokens, nil
+}
+
+func verifyTokenResponseWith[C oidc.IDClaims](ctx context.Context, token *oauth2.Token, rp RelyingParty, verifier *IDTokenVerifier) (*oidc.Tokens[C], error) {
+	ctx, span := client.Tracer.Start(ctx, "verifyTokenResponse")
+	defer span.End()
+
 	// Some providers signal "no id_token" with an empty string rather than by
 	// omitting the field, and the token endpoint now preserves the response as
 	// it was sent. An empty string is never a parseable JWT, so treat it as a
@@ -537,7 +565,7 @@ func verifyTokenResponse[C oidc.IDClaims](ctx context.Context, token *oauth2.Tok
 	if !ok || idTokenString == "" {
 		return &oidc.Tokens[C]{Token: token}, ErrMissingIDToken
 	}
-	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, rp.IDTokenVerifier())
+	idToken, err := VerifyTokens[C](ctx, token.AccessToken, idTokenString, verifier)
 	if err != nil {
 		return nil, err
 	}
@@ -923,7 +951,7 @@ func RefreshTokens[C oidc.IDClaims](ctx context.Context, rp RelyingParty, refres
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := verifyTokenResponse[C](ctx, newToken, rp)
+	tokens, err := verifyRefreshTokenResponse[C](ctx, newToken, rp)
 	if err == nil || errors.Is(err, ErrMissingIDToken) {
 		// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 		// ...except that it might not contain an id_token.
