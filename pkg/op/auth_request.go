@@ -141,6 +141,18 @@ func Authorize(w http.ResponseWriter, r *http.Request, authorizer Authorizer) {
 			AuthRequestError(w, r, authReq, oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err), authorizer)
 			return
 		}
+		// The custom validator replaced ValidateAuthRequestClient, so check the
+		// code_challenge_method here, where it cannot be overridden, and refuse
+		// an unsupported method before the auth request is stored.
+		if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
+			// The custom validator may not have verified the redirect_uri, so
+			// only redirect the error to one registered for the client.
+			if !redirectURIRegistered(client, authReq.RedirectURI) {
+				err = oidc.ErrInvalidRequestRedirectURI().WithDescription(codeChallengeMethodNotSupported)
+			}
+			AuthRequestError(w, r, authReq, err, authorizer)
+			return
+		}
 	}
 	req, err := authorizer.Storage().CreateAuthRequest(ctx, authReq, userID)
 	if err != nil {
@@ -275,6 +287,9 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 	if err := ValidateAuthReqResponseType(client, authReq.ResponseType); err != nil {
 		return "", err
 	}
+	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
+		return "", err
+	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)
 }
 
@@ -384,14 +399,39 @@ func validateAuthReqRedirectURINative(client Client, uri string) error {
 		return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration. " +
 			"If you have any questions, you may contact the administrator of the application.")
 	}
-	for _, uri := range client.RedirectURIs() {
-		redirectURI, ok := HTTPLoopbackOrLocalhost(uri)
-		if ok && equalURI(parsedURL, redirectURI) {
-			return nil
-		}
+	if matchesLoopbackRedirect(client, parsedURL) {
+		return nil
 	}
 	return oidc.ErrInvalidRequestRedirectURI().WithDescription("The requested redirect_uri is missing in the client configuration." +
 		" If you have any questions, you may contact the administrator of the application.")
+}
+
+// matchesLoopbackRedirect reports whether the loopback uri matches a loopback
+// redirect_uri registered for the client, ignoring the port: a native app
+// picks a free port at runtime (RFC 8252, section 7.3).
+func matchesLoopbackRedirect(client Client, uri *url.URL) bool {
+	for _, registered := range client.RedirectURIs() {
+		redirectURI, ok := HTTPLoopbackOrLocalhost(registered)
+		if ok && equalURI(uri, redirectURI) {
+			return true
+		}
+	}
+	return false
+}
+
+// redirectURIRegistered reports whether uri is registered for the client:
+// an exact match, a matching glob, or, for a native client, a loopback
+// redirect that differs only in its port. Unlike ValidateAuthReqRedirectURI
+// it does not apply the scheme and application type policy.
+func redirectURIRegistered(client Client, uri string) bool {
+	if checkURIAgainstRedirects(client, uri) == nil {
+		return true
+	}
+	if client.ApplicationType() != ApplicationTypeNative {
+		return false
+	}
+	parsedURL, isLoopback := HTTPLoopbackOrLocalhost(uri)
+	return isLoopback && matchesLoopbackRedirect(client, parsedURL)
 }
 
 func equalURI(url1, url2 *url.URL) bool {
@@ -421,6 +461,24 @@ func ValidateAuthReqResponseType(client Client, responseType oidc.ResponseType) 
 			"If you have any questions, you may contact the administrator of the application.")
 	}
 	return nil
+}
+
+// The method is not echoed into the description: RFC 6749, section 4.1.2.1,
+// restricts the characters of error_description, and the value is caller input.
+const codeChallengeMethodNotSupported = "The code_challenge_method is not supported. " +
+	"If you have any questions, you may contact the administrator of the application."
+
+// ValidateAuthReqCodeChallengeMethod validates the passed code_challenge_method (PKCE).
+// An empty method is allowed, as it defaults to plain (RFC 7636, section 4.3).
+// When a code_challenge is sent, any method other than the supported ones is
+// rejected, as required by RFC 7636, section 4.4.1, before the auth request
+// is stored. Without a code_challenge there is nothing to verify, so the
+// method is not checked.
+func ValidateAuthReqCodeChallengeMethod(codeChallenge string, method oidc.CodeChallengeMethod) error {
+	if codeChallenge == "" || method == "" || method.IsSupported() {
+		return nil
+	}
+	return oidc.ErrInvalidRequest().WithDescription(codeChallengeMethodNotSupported)
 }
 
 // ValidateAuthReqIDTokenHint validates the id_token_hint (if passed as parameter in the request)
