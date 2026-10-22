@@ -456,6 +456,28 @@ func TestValidateAuthReqScopes(t *testing.T) {
 			},
 		},
 		{
+			// scope= decodes to a single empty value
+			"empty scope fails",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{""},
+			},
+			res{
+				err: true,
+			},
+		},
+		{
+			// scope=%20 decodes to two empty values
+			"scope of only spaces fails",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{"", ""},
+			},
+			res{
+				err: true,
+			},
+		},
+		{
 			"scope ok",
 			args{
 				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
@@ -463,6 +485,17 @@ func TestValidateAuthReqScopes(t *testing.T) {
 			},
 			res{
 				scopes: []string{"openid"},
+			},
+		},
+		{
+			// scope=openid%20%20email
+			"repeated spaces are dropped",
+			args{
+				mock.NewClientExpectAny(t, op.ApplicationTypeWeb),
+				[]string{"openid", "", "email"},
+			},
+			res{
+				scopes: []string{"openid", "email"},
 			},
 		},
 		{
