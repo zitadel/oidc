@@ -129,6 +129,17 @@ func TestAuthorizeErrorParity(t *testing.T) {
 			wantError: "invalid_request",
 		},
 		{
+			// An empty scope names no scope, so it is refused like a missing one.
+			name:      "empty scope",
+			break_:    func(q url.Values) { q.Set("scope", "") },
+			wantError: "invalid_request",
+		},
+		{
+			name:      "scope of only spaces",
+			break_:    func(q url.Values) { q.Set("scope", "  ") },
+			wantError: "invalid_request",
+		},
+		{
 			// RFC 7636, section 4.4.1: an unsupported transformation is an
 			// invalid_request, not a challenge to be compared as plain.
 			name: "unsupported code_challenge_method",
