@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/muhlemmer/gu"
 	"github.com/rs/cors"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -299,6 +300,7 @@ func (s *webServer) deviceAuthorizationHandler(w http.ResponseWriter, r *http.Re
 }
 
 func (s *webServer) tokensHandler(w http.ResponseWriter, r *http.Request) {
+	setNoCacheHeaders(w)
 	if err := r.ParseForm(); err != nil {
 		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err), nil)
 		return
@@ -324,6 +326,15 @@ func (s *webServer) tokensHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// writeTokenResponse writes resp like [Response.writeOut], but sets the
+// cache headers required on token responses after merging resp.Header,
+// so a custom header can't make the tokens cacheable.
+func writeTokenResponse(w http.ResponseWriter, resp *Response) {
+	gu.MapMerge(resp.Header, w.Header())
+	setNoCacheHeaders(w)
+	httphelper.MarshalJSON(w, resp.Data)
+}
+
 func (s *webServer) jwtProfileHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeRequest[oidc.JWTProfileGrantRequest](s.decoder, r, false)
 	if err != nil {
@@ -339,7 +350,7 @@ func (s *webServer) jwtProfileHandler(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) codeExchangeHandler(w http.ResponseWriter, r *http.Request, client Client) {
@@ -361,7 +372,7 @@ func (s *webServer) codeExchangeHandler(w http.ResponseWriter, r *http.Request, 
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) refreshTokenHandler(w http.ResponseWriter, r *http.Request, client Client) {
@@ -379,7 +390,7 @@ func (s *webServer) refreshTokenHandler(w http.ResponseWriter, r *http.Request, 
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request, client Client) {
@@ -413,7 +424,7 @@ func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request,
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Request, client Client) {
@@ -432,7 +443,7 @@ func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Requ
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, client Client) {
@@ -450,7 +461,7 @@ func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, c
 		WriteError(w, r, err, nil)
 		return
 	}
-	resp.writeOut(w)
+	writeTokenResponse(w, resp)
 }
 
 func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request) {
