@@ -98,7 +98,7 @@ func AuthorizeClientCredentialsClient(ctx context.Context, request *oidc.ClientC
 
 	client, err := storage.ClientCredentials(ctx, request.ClientID, request.ClientSecret)
 	if err != nil {
-		return nil, oidc.ErrInvalidClient().WithParent(err)
+		return nil, clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 
 	if !ValidateGrantType(client, oidc.GrantTypeClientCredentials) {

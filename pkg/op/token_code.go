@@ -100,7 +100,7 @@ func AuthorizeCodeClient(ctx context.Context, tokenReq *oidc.AccessTokenRequest,
 
 	client, err = exchanger.Storage().GetClientByClientID(ctx, tokenReq.ClientID)
 	if err != nil {
-		return nil, nil, oidc.ErrInvalidClient().WithParent(err)
+		return nil, nil, clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 	if client.AuthMethod() == oidc.AuthMethodPrivateKeyJWT {
 		return nil, nil, oidc.ErrInvalidClient().WithDescription("private_key_jwt not allowed for this client")

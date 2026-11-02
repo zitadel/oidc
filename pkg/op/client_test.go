@@ -3,16 +3,20 @@ package op_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	tu "github.com/zitadel/oidc/v3/internal/testutil"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
@@ -24,7 +28,37 @@ type testClientJWTProfile struct{}
 
 func (testClientJWTProfile) JWTProfileVerifier(context.Context) *op.JWTProfileVerifier { return nil }
 
+// keyErrJWTProfile verifies JWT assertions with a key storage that fails with err.
+type keyErrJWTProfile struct {
+	err error
+}
+
+func (p keyErrJWTProfile) JWTProfileVerifier(context.Context) *op.JWTProfileVerifier {
+	return op.NewJWTProfileVerifier(p, tu.ValidIssuer, time.Minute, 0)
+}
+
+func (p keyErrJWTProfile) GetKeyByIDAndClientID(context.Context, string, string) (*jose.JSONWebKey, error) {
+	return nil, p.err
+}
+
+// assertErrorType asserts that err is an *oidc.Error of type wantType.
+// require.ErrorIs alone cannot tell the error type, as it also matches a
+// Storage error that is the parent of another type.
+func assertErrorType(t *testing.T, err error, wantType string) {
+	t.Helper()
+	if wantType == "" {
+		return
+	}
+	var oidcErr *oidc.Error
+	require.ErrorAs(t, err, &oidcErr)
+	assert.Equal(t, wantType, string(oidcErr.ErrorType))
+}
+
 func TestClientJWTAuth(t *testing.T) {
+	errKey := errors.New("key not found")
+	errDB := errors.New("db down")
+	assertion, _ := tu.ValidJWTProfileAssertion()
+
 	type args struct {
 		ctx      context.Context
 		ca       oidc.ClientAssertionParams
@@ -35,6 +69,7 @@ func TestClientJWTAuth(t *testing.T) {
 		args         args
 		wantClientID string
 		wantErr      error
+		wantType     string
 	}{
 		{
 			name: "empty assertion",
@@ -56,11 +91,32 @@ func TestClientJWTAuth(t *testing.T) {
 			},
 			wantErr: oidc.ErrParse,
 		},
+		{
+			name: "key storage error",
+			args: args{
+				context.Background(),
+				oidc.ClientAssertionParams{ClientAssertion: assertion},
+				keyErrJWTProfile{err: errKey},
+			},
+			wantErr:  errKey,
+			wantType: string(oidc.UnauthorizedClient),
+		},
+		{
+			name: "key storage server_error",
+			args: args{
+				context.Background(),
+				oidc.ClientAssertionParams{ClientAssertion: assertion},
+				keyErrJWTProfile{err: oidc.ErrServerError().WithParent(errDB)},
+			},
+			wantErr:  errDB,
+			wantType: string(oidc.ServerError),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotClientID, err := op.ClientJWTAuth(tt.args.ctx, tt.args.ca, tt.args.verifier)
 			require.ErrorIs(t, err, tt.wantErr)
+			assertErrorType(t, err, tt.wantType)
 			assert.Equal(t, tt.wantClientID, gotClientID)
 		})
 	}
@@ -68,6 +124,15 @@ func TestClientJWTAuth(t *testing.T) {
 
 func TestClientBasicAuth(t *testing.T) {
 	errWrong := errors.New("wrong secret")
+	errDB := errors.New("db down")
+	errTypedNil := fmt.Errorf("authorize: %w", (*oidc.Error)(nil))
+	errClient := oidc.ErrInvalidClient()
+	errTimeout := fmt.Errorf("authorize: %w", errors.Join(oidc.ErrServerError(), context.DeadlineExceeded))
+	failingStorage := func(err error) op.Storage {
+		s := mock.NewMockStorage(gomock.NewController(t))
+		s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "foo", "bar").Return(err)
+		return s
+	}
 
 	type args struct {
 		username string
@@ -79,6 +144,7 @@ func TestClientBasicAuth(t *testing.T) {
 		storage      op.Storage
 		wantClientID string
 		wantErr      error
+		wantType     string
 	}{
 		{
 			name:    "no args",
@@ -111,7 +177,36 @@ func TestClientBasicAuth(t *testing.T) {
 				s.EXPECT().AuthorizeClientIDSecret(gomock.Any(), "foo", "wrong").Return(errWrong)
 				return s
 			}(),
-			wantErr: errWrong,
+			wantErr:  errWrong,
+			wantType: string(oidc.UnauthorizedClient),
+		},
+		{
+			name:     "storage server_error",
+			args:     &args{username: "foo", password: "bar"},
+			storage:  failingStorage(oidc.ErrServerError().WithParent(errDB)),
+			wantErr:  errDB,
+			wantType: string(oidc.ServerError),
+		},
+		{
+			name:     "storage server_error keeps the error chain",
+			args:     &args{username: "foo", password: "bar"},
+			storage:  failingStorage(errTimeout),
+			wantErr:  context.DeadlineExceeded,
+			wantType: string(oidc.ServerError),
+		},
+		{
+			name:     "storage client error stays wrapped",
+			args:     &args{username: "foo", password: "bar"},
+			storage:  failingStorage(errClient),
+			wantErr:  errClient,
+			wantType: string(oidc.UnauthorizedClient),
+		},
+		{
+			name:     "storage typed nil oidc error",
+			args:     &args{username: "foo", password: "bar"},
+			storage:  failingStorage(errTypedNil),
+			wantErr:  errTypedNil,
+			wantType: string(oidc.UnauthorizedClient),
 		},
 		{
 			name: "auth error",
@@ -136,6 +231,7 @@ func TestClientBasicAuth(t *testing.T) {
 
 			gotClientID, err := op.ClientBasicAuth(r, tt.storage)
 			require.ErrorIs(t, err, tt.wantErr)
+			assertErrorType(t, err, tt.wantType)
 			assert.Equal(t, tt.wantClientID, gotClientID)
 		})
 	}
