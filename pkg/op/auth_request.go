@@ -307,8 +307,15 @@ func ValidateAuthReqPrompt(prompts []string, maxAge *uint) (_ *uint, err error) 
 }
 
 // ValidateAuthReqScopes validates the passed scopes and deletes any unsupported scopes.
-// An error is returned if scopes is empty.
+// An error is returned if scopes is empty, which includes a scope parameter
+// that is empty or made only of spaces.
 func ValidateAuthReqScopes(client Client, scopes []string) ([]string, error) {
+	// A space-delimited scope parameter that is empty, or has repeated spaces,
+	// decodes to empty values, which name no scope (RFC 6749, section 3.3).
+	// Drop them, so that an empty scope is refused like a missing one.
+	scopes = slices.DeleteFunc(scopes, func(scope string) bool {
+		return scope == ""
+	})
 	if len(scopes) == 0 {
 		return nil, oidc.ErrInvalidRequest().
 			WithDescription("The scope of your request is missing. Please ensure some scopes are requested. " +
