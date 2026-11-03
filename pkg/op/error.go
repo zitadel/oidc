@@ -56,7 +56,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
 		responseMode = rm.GetResponseMode()
 	}
-	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, authorizer.Encoder())
+	url, err := AuthResponseURLWithIssuer(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, authorizer.Encoder(), AuthorizationResponseIss(r.Context(), authorizer))
 	if err != nil {
 		args = append(args, slog.Any("error", err))
 		slog.ErrorContext(r.Context(), "auth response URL", args...)
@@ -84,6 +84,12 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Log
 // If this attempt fails, an error is returned that must be returned
 // to the client instead.
 func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder, _ *slog.Logger) (*Redirect, error) {
+	return TryErrorRedirectWithIssuer(ctx, authReq, parent, encoder, "")
+}
+
+// TryErrorRedirectWithIssuer is [TryErrorRedirect] that also sets issuer as the iss parameter (RFC 9207)
+// on the redirect when it is not empty. See [AuthorizationResponseIss].
+func TryErrorRedirectWithIssuer(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder, issuer string) (*Redirect, error) {
 	e := oidc.DefaultToServerError(parent, parent.Error())
 	args := []any{slog.Any("oidc_error", e)}
 
@@ -112,7 +118,7 @@ func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error,
 	if rm, ok := authReq.(interface{ GetResponseMode() oidc.ResponseMode }); ok {
 		responseMode = rm.GetResponseMode()
 	}
-	url, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder)
+	url, err := AuthResponseURLWithIssuer(authReq.GetRedirectURI(), authReq.GetResponseType(), responseMode, e, encoder, issuer)
 	if err != nil {
 		args = append(args, slog.Any("error", err))
 		slog.ErrorContext(ctx, "auth response URL", args...)

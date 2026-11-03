@@ -51,6 +51,10 @@ type DiscoveryConfiguration struct {
 	// ResponseModesSupported contains a list of the OAuth 2.0 response_mode values that the OP supports. If omitted, the default value is ["query", "fragment"].
 	ResponseModesSupported []string `json:"response_modes_supported,omitempty"`
 
+	// AuthorizationResponseIssParameterSupported indicates whether the OP provides the iss parameter in the authorization response,
+	// as defined in RFC 9207. If omitted, the default value is false.
+	AuthorizationResponseIssParameterSupported bool `json:"authorization_response_iss_parameter_supported,omitempty"`
+
 	// GrantTypesSupported contains a list of the OAuth 2.0 grant_type values that the OP supports. If omitted, the default value is ["authorization_code", "implicit"].
 	GrantTypesSupported []GrantType `json:"grant_types_supported,omitempty"`
 
