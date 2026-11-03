@@ -199,9 +199,28 @@ func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCreden
 	defer span.End()
 
 	if oidc.GrantType(r.Form.Get("grant_type")) == oidc.GrantTypeClientCredentials {
+		// Check grant support before verifying the assertion, mirroring
+		// ValidateClientCredentialsRequest: a provider that supports JWT
+		// verification but not the client_credentials grant must reject
+		// the request with unsupported_grant_type instead of performing
+		// key lookup and signature verification first.
 		storage, ok := s.provider.Storage().(ClientCredentialsStorage)
 		if !ok {
 			return nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
+		}
+		if r.Data.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
+			jwtExchanger, ok := s.provider.(JWTAuthorizationGrantExchanger)
+			if !ok || !s.provider.AuthMethodPrivateKeyJWTSupported() {
+				return nil, oidc.ErrInvalidClient().WithDescription("auth_method private_key_jwt not supported")
+			}
+			client, err := AuthorizePrivateJWTKey(ctx, r.Data.ClientAssertion, jwtExchanger)
+			if err != nil {
+				return nil, err
+			}
+			if !ValidateGrantType(client, oidc.GrantTypeClientCredentials) {
+				return nil, oidc.ErrUnauthorizedClient()
+			}
+			return client, nil
 		}
 		return storage.ClientCredentials(ctx, r.Data.ClientID, r.Data.ClientSecret)
 	}

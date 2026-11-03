@@ -272,6 +272,16 @@ type ClientCredentialsRequest struct {
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
 }
 
+// IsSetClientAssertion implements op.AuthenticatedTokenRequestAuthMethodChecker
+func (r *ClientCredentialsRequest) IsSetClientAssertion() bool {
+	return r.ClientAssertion != "" && r.ClientAssertionType != ""
+}
+
+// IsSetClientIDAndClientSecret implements op.AuthenticatedTokenRequestAuthMethodChecker
+func (r *ClientCredentialsRequest) IsSetClientIDAndClientSecret() bool {
+	return r.ClientID != "" && r.ClientSecret != ""
+}
+
 // Deprecated: This function is no longer invoked because it violates
 // RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
 //
