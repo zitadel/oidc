@@ -255,12 +255,12 @@ type TokenExchangeRequest struct {
 	GrantType          GrantType           `schema:"grant_type"`
 	SubjectToken       string              `schema:"subject_token"`
 	SubjectTokenType   TokenType           `schema:"subject_token_type"`
-	ActorToken         string              `schema:"actor_token"`
-	ActorTokenType     TokenType           `schema:"actor_token_type"`
-	Resource           []string            `schema:"resource"`
-	Audience           Audience            `schema:"audience"`
-	Scopes             SpaceDelimitedArray `schema:"scope"`
-	RequestedTokenType TokenType           `schema:"requested_token_type"`
+	ActorToken         string              `schema:"actor_token,omitempty"`
+	ActorTokenType     TokenType           `schema:"actor_token_type,omitempty"`
+	Resource           []string            `schema:"resource,omitempty"`
+	Audience           Audience            `schema:"audience,omitempty"`
+	Scopes             SpaceDelimitedArray `schema:"scope,omitempty"`
+	RequestedTokenType TokenType           `schema:"requested_token_type,omitempty"`
 }
 
 type ClientCredentialsRequest struct {
