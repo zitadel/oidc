@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	jose "github.com/go-jose/go-jose/v4"
@@ -230,11 +231,14 @@ func (r *remoteKeySet) fetchRemoteKeys(ctx context.Context) ([]jose.JSONWebKey, 
 	return keySet.Keys, nil
 }
 
-// jsonWebKeySet is an alias for jose.JSONWebKeySet which ignores unknown key types (kty)
+// go-jose v4.1.4 does not wrap ErrUnsupportedEllipticCurve when parsing a JWK.
+const joseUnsupportedEllipticCurveErrPrefix = "go-jose/go-jose: unsupported elliptic curve '"
+
+// jsonWebKeySet is an alias for jose.JSONWebKeySet which ignores unsupported key types and curves.
 type jsonWebKeySet jose.JSONWebKeySet
 
 // UnmarshalJSON overrides the default jose.JSONWebKeySet method to ignore any error
-// which might occur because of unknown key types (kty)
+// which might occur because of unsupported key types (kty) or elliptic curves (crv).
 func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	var raw rawJSONWebKeySet
 	err = json.Unmarshal(data, &raw)
@@ -244,7 +248,9 @@ func (k *jsonWebKeySet) UnmarshalJSON(data []byte) (err error) {
 	for i, key := range raw.Keys {
 		webKey := new(jose.JSONWebKey)
 		if err = webKey.UnmarshalJSON(key); err != nil {
-			if errors.Is(err, jose.ErrUnsupportedKeyType) {
+			if errors.Is(err, jose.ErrUnsupportedKeyType) ||
+				errors.Is(err, jose.ErrUnsupportedEllipticCurve) ||
+				strings.HasPrefix(err.Error(), joseUnsupportedEllipticCurveErrPrefix) {
 				continue
 			}
 
