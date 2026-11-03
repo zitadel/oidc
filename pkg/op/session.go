@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"path"
 
+	"github.com/bmatcuk/doublestar/v4"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
@@ -133,7 +133,7 @@ func ValidateEndSessionPostLogoutRedirectURI(postLogoutRedirectURI string, clien
 	}
 	if globClient, ok := client.(HasRedirectGlobs); ok {
 		for _, uriGlob := range globClient.PostLogoutRedirectURIGlobs() {
-			isMatch, err := path.Match(uriGlob, postLogoutRedirectURI)
+			isMatch, err := doublestar.Match(uriGlob, postLogoutRedirectURI)
 			if err != nil {
 				return oidc.ErrServerError().WithParent(err)
 			}
