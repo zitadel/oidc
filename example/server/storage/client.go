@@ -175,6 +175,7 @@ func WebClient(id, secret string, redirectURIs ...string) *Client {
 	if len(redirectURIs) == 0 {
 		redirectURIs = []string{
 			"http://localhost:9999/auth/callback",
+			"http://localhost:3000/__nextgen/idp/local-sso/callback", // nextgen
 		}
 	}
 	return &Client{
