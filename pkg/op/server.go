@@ -43,6 +43,20 @@ type Server interface {
 	// Discovery returns the OpenID Provider Configuration Information for this server.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
 	// The recommended Response Data type is [oidc.DiscoveryConfiguration].
+	//
+	// The same method also serves the OAuth 2.0 Authorization Server Metadata
+	// endpoint of RFC 8414 ([oidc.AuthorizationServerMetadataEndpoint]), because
+	// an OpenID Provider Configuration document is a valid RFC 8414 document.
+	// https://www.rfc-editor.org/rfc/rfc8414.html
+	// It is served at the base path and, for issuers with a path, at
+	// /.well-known/oauth-authorization-server/<issuer path>, which only
+	// answers when the suffix matches the path of the issuer in the context.
+	// Implementations that want different output for the two endpoints can
+	// tell them apart via r.URL.Path, or register their own handler for the
+	// same pattern through [WithSetRouter], which takes precedence over the
+	// built-in route. Only a user route with the identical pattern does; a
+	// broader one such as /.well-known/{doc} is shadowed by the built-in
+	// static route.
 	Discovery(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Keys serves the JWK set which the client can use verify signatures from the op.

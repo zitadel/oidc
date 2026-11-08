@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/cors"
@@ -18,6 +20,24 @@ import (
 // The resulting handler takes care of routing and request parsing,
 // with some basic validation of required fields.
 // The routes can be customized with [WithEndpoints].
+//
+// RFC 8414 Authorization Server Metadata is served at
+// [oidc.AuthorizationServerMetadataEndpoint]. For an issuer with a path, such
+// as https://h/oidc, RFC 8414 places the metadata at
+// https://h/.well-known/oauth-authorization-server/oidc, outside the issuer
+// prefix. Route that URL to the same handler, without stripping the prefix:
+//
+//	issuerFn, _ := op.IssuerFromHost("/oidc")(false)
+//	h := op.RegisterServer(srv, endpoints, op.WithHTTPMiddleware(op.NewIssuerInterceptor(issuerFn).Handler))
+//	mux.Handle("/oidc/", http.StripPrefix("/oidc", h))
+//	mux.Handle(oidc.AuthorizationServerMetadataEndpoint+"/oidc", h)
+//
+// chi users must register that root route with r.Handle at the top level of
+// their root router, not via Mount or inside r.Route: the inherited route
+// path would make the handler's router return 404. The route answers only
+// when the suffix matches the path of the issuer in the request context, so
+// an [IssuerInterceptor] must be installed through [WithHTTPMiddleware]
+// ([RegisterLegacyServer] already does this).
 //
 // EXPERIMENTAL: may change until v4
 func RegisterServer(server Server, endpoints Endpoints, options ...ServerOption) http.Handler {
@@ -113,6 +133,8 @@ func (s *webServer) createRouter() {
 	s.router.HandleFunc(healthEndpoint, simpleHandler(s, s.server.Health))
 	s.router.HandleFunc(readinessEndpoint, simpleHandler(s, s.server.Ready))
 	s.router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
+	s.handleUnlessRegistered(oidc.AuthorizationServerMetadataEndpoint, simpleHandler(s, s.server.Discovery))
+	s.handleUnlessRegistered(oidc.AuthorizationServerMetadataEndpoint+"/*", s.authorizationServerMetadataHandler)
 
 	s.endpointRoute(s.endpoints.Authorization, s.authorizeHandler)
 	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
@@ -122,6 +144,67 @@ func (s *webServer) createRouter() {
 	s.endpointRoute(s.endpoints.Revocation, s.withClient(s.revocationHandler))
 	s.endpointRoute(s.endpoints.EndSession, s.endSessionHandler)
 	s.endpointRoute(s.endpoints.JwksURI, simpleHandler(s, s.server.Keys))
+}
+
+// routeMethods are the HTTP methods chi can route.
+var routeMethods = []string{
+	http.MethodGet,
+	http.MethodHead,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodDelete,
+	http.MethodOptions,
+	http.MethodConnect,
+	http.MethodTrace,
+}
+
+// handleUnlessRegistered registers h for pattern unless the router already
+// has a route with exactly that pattern for any method. Options such as
+// [WithSetRouter] run before createRouter, so a route the user registered
+// must not be overwritten; HandleFunc registers all methods, so a user route
+// on POST alone would otherwise be replaced too. A less specific user route,
+// such as a "/*" catch-all, does not count: [chi.Mux.Find] returns the
+// matched pattern, not just a match.
+func (s *webServer) handleUnlessRegistered(pattern string, h http.HandlerFunc) {
+	registered := slices.ContainsFunc(routeMethods, func(method string) bool {
+		return s.router.Find(chi.NewRouteContext(), method, pattern) == pattern
+	})
+	if registered {
+		return
+	}
+	s.router.HandleFunc(pattern, h)
+}
+
+// authorizationServerMetadataHandler serves the RFC 8414 document for an
+// issuer with a path component, at
+// /.well-known/oauth-authorization-server/<issuer path>, when the wildcard
+// matches the path of the issuer in the request context.
+// https://www.rfc-editor.org/rfc/rfc8414.html#section-3
+func (s *webServer) authorizationServerMetadataHandler(w http.ResponseWriter, r *http.Request) {
+	// chi takes the wildcard from RawPath when that is set and from the
+	// already decoded Path otherwise (chi.Mux.routeHTTP). Mirror that choice
+	// so the suffix is decoded exactly once; Mount and StripPrefix keep
+	// RawPath empty or non-empty as it was.
+	suffix := "/" + chi.URLParam(r, "*")
+	if r.URL.RawPath != "" {
+		var err error
+		if suffix, err = url.PathUnescape(suffix); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	issuer, err := url.Parse(IssuerFromContext(r.Context()))
+	if err != nil || issuer.String() == "" {
+		http.NotFound(w, r)
+		return
+	}
+	issuerPath := strings.TrimSuffix(issuer.Path, "/")
+	if issuerPath == "" || suffix != issuerPath {
+		http.NotFound(w, r)
+		return
+	}
+	simpleHandler(s, s.server.Discovery)(w, r)
 }
 
 func (s *webServer) endpointRoute(e *Endpoint, hf http.HandlerFunc) {

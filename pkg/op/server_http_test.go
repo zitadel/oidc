@@ -3,9 +3,11 @@ package op
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/muhlemmer/gu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,6 +52,394 @@ func TestRegisterServer(t *testing.T) {
 
 	// The error redirect needs an encoder whether or not one was passed.
 	assert.NotNil(t, RegisterServer(server, endpoints).(*webServer).encoder)
+}
+
+// The RFC 8414 endpoint serves the same document as OIDC discovery.
+func TestRegisterServer_authorizationServerMetadata(t *testing.T) {
+	const issuer = "https://issuer.example"
+	issuerFn, err := StaticIssuer(issuer)(false)
+	require.NoError(t, err)
+
+	h := RegisterServer(metadataServer{}, Endpoints{},
+		WithHTTPMiddleware(NewIssuerInterceptor(issuerFn).Handler),
+	)
+
+	get := func(t *testing.T, path string) string {
+		t.Helper()
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		res := w.Result()
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		return string(body)
+	}
+
+	discovery := get(t, oidc.DiscoveryEndpoint)
+	metadata := get(t, oidc.AuthorizationServerMetadataEndpoint)
+
+	assert.JSONEq(t, discovery, metadata)
+	var got oidc.DiscoveryConfiguration
+	require.NoError(t, json.Unmarshal([]byte(metadata), &got))
+	assert.Equal(t, issuer, got.Issuer)
+}
+
+// A route the user registers through WithSetRouter on the RFC 8414 path
+// takes precedence over the built-in one.
+func TestRegisterServer_authorizationServerMetadata_customRoute(t *testing.T) {
+	const custom = `{"issuer":"custom"}`
+	h := RegisterServer(metadataServer{}, Endpoints{},
+		WithSetRouter(func(r chi.Router) {
+			r.Get(oidc.AuthorizationServerMetadataEndpoint, func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = io.WriteString(w, custom)
+			})
+		}),
+	)
+
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, oidc.AuthorizationServerMetadataEndpoint, nil))
+	res := w.Result()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.JSONEq(t, custom, string(body))
+}
+
+// Routes registered through WithSetRouter: an exact pattern replaces the
+// built-in route, a "/*" catch-all does not.
+func TestRegisterServer_authorizationServerMetadata_precedence(t *testing.T) {
+	// The issuer field tells the two handlers apart.
+	const custom = "custom"
+	const issuer = "https://issuer.example/oidc"
+	issuerFn, err := StaticIssuer(issuer)(false)
+	require.NoError(t, err)
+	customHandler := func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"issuer":"`+custom+`"}`)
+	}
+	const wildcard = oidc.AuthorizationServerMetadataEndpoint + "/oidc"
+
+	tests := []struct {
+		name         string
+		pattern      string
+		wantBase     string
+		wantWildcard string
+	}{
+		{
+			name:         "exact base pattern",
+			pattern:      oidc.AuthorizationServerMetadataEndpoint,
+			wantBase:     custom,
+			wantWildcard: issuer,
+		},
+		{
+			name:         "exact wildcard pattern",
+			pattern:      oidc.AuthorizationServerMetadataEndpoint + "/*",
+			wantBase:     issuer,
+			wantWildcard: custom,
+		},
+		{
+			name:         "catch-all does not suppress",
+			pattern:      "/*",
+			wantBase:     issuer,
+			wantWildcard: issuer,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := RegisterServer(metadataServer{}, Endpoints{},
+				WithHTTPMiddleware(NewIssuerInterceptor(issuerFn).Handler),
+				WithSetRouter(func(r chi.Router) {
+					r.Get(tt.pattern, customHandler)
+				}),
+			)
+			for path, want := range map[string]string{
+				oidc.AuthorizationServerMetadataEndpoint: tt.wantBase,
+				wildcard:                                 tt.wantWildcard,
+			} {
+				w := httptest.NewRecorder()
+				h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+				res := w.Result()
+				assert.Equal(t, http.StatusOK, res.StatusCode, path)
+				var got oidc.DiscoveryConfiguration
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&got), path)
+				assert.Equal(t, want, got.Issuer, path)
+			}
+		})
+	}
+}
+
+// A user route on the same pattern for another method must not be replaced
+// by the built-in all-methods route.
+func TestRegisterServer_authorizationServerMetadata_precedenceOtherMethod(t *testing.T) {
+	const custom = "custom"
+	issuerFn, err := StaticIssuer("https://issuer.example/oidc")(false)
+	require.NoError(t, err)
+
+	for _, pattern := range []string{
+		oidc.AuthorizationServerMetadataEndpoint,
+		oidc.AuthorizationServerMetadataEndpoint + "/*",
+	} {
+		t.Run(pattern, func(t *testing.T) {
+			h := RegisterServer(metadataServer{}, Endpoints{},
+				WithHTTPMiddleware(NewIssuerInterceptor(issuerFn).Handler),
+				WithSetRouter(func(r chi.Router) {
+					r.Post(pattern, func(w http.ResponseWriter, _ *http.Request) {
+						_, _ = io.WriteString(w, `{"issuer":"`+custom+`"}`)
+					})
+				}),
+			)
+			path := strings.TrimSuffix(pattern, "*") + "oidc"
+			if pattern == oidc.AuthorizationServerMetadataEndpoint {
+				path = pattern
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, path, nil))
+			res := w.Result()
+
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+			var got oidc.DiscoveryConfiguration
+			require.NoError(t, json.NewDecoder(res.Body).Decode(&got))
+			assert.Equal(t, custom, got.Issuer)
+		})
+	}
+}
+
+// Pins the RegisterServer doc: with chi, the root route works at the top
+// level of the root router, and returns 404 inside a Route group because the
+// inherited route path no longer matches the handler's own router.
+func Test_webServer_authorizationServerMetadataHandler_chiRouteGroup(t *testing.T) {
+	const path = oidc.AuthorizationServerMetadataEndpoint + "/oidc"
+	tests := []struct {
+		name       string
+		register   func(r chi.Router, h http.Handler)
+		wantStatus int
+	}{
+		{
+			name: "top-level Handle",
+			register: func(r chi.Router, h http.Handler) {
+				r.Handle(path, h)
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "inside Route group",
+			register: func(r chi.Router, h http.Handler) {
+				r.Route("/.well-known", func(r chi.Router) {
+					r.Handle("/oauth-authorization-server/oidc", h)
+				})
+			},
+			wantStatus: http.StatusNotFound,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newMetadataServer(t, "/oidc")
+			r := chi.NewRouter()
+			r.Mount("/oidc", http.StripPrefix("/oidc", h))
+			tt.register(r, h)
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+			assert.Equal(t, tt.wantStatus, w.Result().StatusCode)
+		})
+	}
+}
+
+// newMetadataServer registers a metadataServer whose issuer is derived from
+// the request host under issuerPath, e.g. http://example.com/oidc for
+// requests made with httptest.NewRequest.
+func newMetadataServer(t *testing.T, issuerPath string) http.Handler {
+	t.Helper()
+	issuerFn, err := IssuerFromHost(issuerPath)(true)
+	require.NoError(t, err)
+	return RegisterServer(metadataServer{}, Endpoints{},
+		WithHTTPMiddleware(NewIssuerInterceptor(issuerFn).Handler),
+	)
+}
+
+// The RFC 8414 URL of a path issuer is served through the embedder's root
+// router, which routes it to the unwrapped RegisterServer handler.
+func Test_webServer_authorizationServerMetadataHandler_routers(t *testing.T) {
+	const wantIssuer = "http://example.com/oidc"
+	routers := map[string]func(h http.Handler) http.Handler{
+		"ServeMux": func(h http.Handler) http.Handler {
+			mux := http.NewServeMux()
+			mux.Handle("/oidc/", http.StripPrefix("/oidc", h))
+			mux.Handle(oidc.AuthorizationServerMetadataEndpoint+"/oidc", h)
+			return mux
+		},
+		"chi": func(h http.Handler) http.Handler {
+			r := chi.NewRouter()
+			r.Mount("/oidc", http.StripPrefix("/oidc", h))
+			r.Handle(oidc.AuthorizationServerMetadataEndpoint+"/oidc", h)
+			return r
+		},
+	}
+	tests := []struct {
+		name       string
+		method     string
+		header     http.Header
+		wantStatus int
+		wantIssuer string
+		wantCORS   bool
+	}{
+		{
+			name:       "GET with Origin",
+			method:     http.MethodGet,
+			header:     http.Header{"Origin": {"https://client.example"}},
+			wantStatus: http.StatusOK,
+			wantIssuer: wantIssuer,
+			wantCORS:   true,
+		},
+		{
+			name:       "HEAD",
+			method:     http.MethodHead,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:   "OPTIONS preflight",
+			method: http.MethodOptions,
+			header: http.Header{
+				"Origin":                        {"https://client.example"},
+				"Access-Control-Request-Method": {http.MethodGet},
+			},
+			wantStatus: http.StatusNoContent,
+			wantCORS:   true,
+		},
+	}
+	for routerName, newRouter := range routers {
+		for _, tt := range tests {
+			t.Run(routerName+"/"+tt.name, func(t *testing.T) {
+				h := newRouter(newMetadataServer(t, "/oidc"))
+				r := httptest.NewRequest(tt.method, oidc.AuthorizationServerMetadataEndpoint+"/oidc", nil)
+				maps.Copy(r.Header, tt.header)
+				w := httptest.NewRecorder()
+				h.ServeHTTP(w, r)
+				res := w.Result()
+
+				assert.Equal(t, tt.wantStatus, res.StatusCode)
+				if tt.wantCORS {
+					assert.Equal(t, "https://client.example", res.Header.Get("Access-Control-Allow-Origin"))
+				}
+				if tt.wantIssuer != "" {
+					var got oidc.DiscoveryConfiguration
+					require.NoError(t, json.NewDecoder(res.Body).Decode(&got))
+					assert.Equal(t, tt.wantIssuer, got.Issuer)
+				}
+			})
+		}
+	}
+}
+
+// The wildcard route answers only when the suffix equals the issuer's path.
+func Test_webServer_authorizationServerMetadataHandler(t *testing.T) {
+	pathless, err := StaticIssuer("https://h")(false)
+	require.NoError(t, err)
+	tests := []struct {
+		name       string
+		h          http.Handler
+		path       string
+		wantStatus int
+		wantIssuer string
+	}{
+		{
+			name:       "wrong suffix",
+			h:          newMetadataServer(t, "/oidc"),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/other",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "multi-segment issuer path",
+			h:          newMetadataServer(t, "/a/b"),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/a/b",
+			wantStatus: http.StatusOK,
+			wantIssuer: "http://example.com/a/b",
+		},
+		{
+			name:       "partial multi-segment issuer path",
+			h:          newMetadataServer(t, "/a/b"),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/a",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "pathless issuer, suffix",
+			h: RegisterServer(metadataServer{}, Endpoints{},
+				WithHTTPMiddleware(NewIssuerInterceptor(pathless).Handler),
+			),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/anything",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "pathless issuer, base",
+			h: RegisterServer(metadataServer{}, Endpoints{},
+				WithHTTPMiddleware(NewIssuerInterceptor(pathless).Handler),
+			),
+			path:       oidc.AuthorizationServerMetadataEndpoint,
+			wantStatus: http.StatusOK,
+			wantIssuer: "https://h",
+		},
+		{
+			name:       "no issuer in context",
+			h:          RegisterServer(metadataServer{}, Endpoints{}),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/oidc",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			// chi routes on the escaped RawPath, so the wildcard arrives
+			// escaped and must be decoded before the comparison.
+			name:       "escaped suffix",
+			h:          newMetadataServer(t, "/oidc"),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/%6fidc",
+			wantStatus: http.StatusOK,
+			wantIssuer: "http://example.com/oidc",
+		},
+		{
+			// %256fidc decodes to the literal %6fidc, which is not "oidc".
+			// url.Parse leaves RawPath empty here, so a second decode
+			// would wrongly turn it into a match.
+			name:       "double-escaped suffix",
+			h:          newMetadataServer(t, "/oidc"),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/%256fidc",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			// An issuer whose path itself holds a percent sign.
+			name: "issuer path with percent",
+			h: RegisterServer(metadataServer{}, Endpoints{},
+				WithHTTPMiddleware(NewIssuerInterceptor(func(*http.Request) string {
+					return "https://h/x%2541"
+				}).Handler),
+			),
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/x%2541",
+			wantStatus: http.StatusOK,
+			wantIssuer: "https://h/x%2541",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			tt.h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, tt.path, nil))
+			res := w.Result()
+
+			assert.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantIssuer != "" {
+				var got oidc.DiscoveryConfiguration
+				require.NoError(t, json.NewDecoder(res.Body).Decode(&got))
+				assert.Equal(t, tt.wantIssuer, got.Issuer)
+			}
+		})
+	}
+}
+
+// metadataServer answers Discovery with the issuer from the request context,
+// so tests can see which issuer the request was resolved against.
+type metadataServer struct {
+	UnimplementedServer
+}
+
+func (metadataServer) Discovery(ctx context.Context, _ *Request[struct{}]) (*Response, error) {
+	return NewResponse(&oidc.DiscoveryConfiguration{
+		Issuer: IssuerFromContext(ctx),
+	}), nil
 }
 
 type testClient struct {

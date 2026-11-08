@@ -2,6 +2,11 @@ package oidc
 
 const (
 	DiscoveryEndpoint = "/.well-known/openid-configuration"
+
+	// AuthorizationServerMetadataEndpoint is the well-known path for
+	// OAuth 2.0 Authorization Server Metadata, defined in RFC 8414.
+	// https://www.rfc-editor.org/rfc/rfc8414.html#section-3
+	AuthorizationServerMetadataEndpoint = "/.well-known/oauth-authorization-server"
 )
 
 type DiscoveryConfiguration struct {
