@@ -144,6 +144,7 @@ Here is json equivalent for one of the default users
 | Client Credentials   | yes           | yes             | OpenID Connect Core 1.0, [Section 9][4]      |
 | Refresh Token        | yes           | yes             | OpenID Connect Core 1.0, [Section 12][5]     |
 | Discovery            | yes           | yes             | OpenID Connect [Discovery][6] 1.0            |
+| OAuth Metadata       | not yet       | yes             | [RFC 8414][13]                               |
 | JWT Profile          | yes           | yes             | [RFC 7523][7]                                |
 | PKCE                 | yes           | yes             | [RFC 7636][8]                                |
 | Token Exchange       | yes           | yes             | [RFC 8693][9]                                |
@@ -163,6 +164,7 @@ Here is json equivalent for one of the default users
 [10]: https://www.rfc-editor.org/rfc/rfc8628.html "OAuth 2.0 Device Authorization Grant"
 [11]: https://www.rfc-editor.org/rfc/rfc8705.html "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"
 [12]: https://openid.net/specs/openid-connect-backchannel-1_0.html "OpenID Connect Back-Channel Logout 1.0 incorporating errata set 1"
+[13]: https://www.rfc-editor.org/rfc/rfc8414.html "OAuth 2.0 Authorization Server Metadata"
 
 ## Contributors
 

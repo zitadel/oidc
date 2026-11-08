@@ -43,6 +43,17 @@ type Server interface {
 	// Discovery returns the OpenID Provider Configuration Information for this server.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
 	// The recommended Response Data type is [oidc.DiscoveryConfiguration].
+	//
+	// Deprecated: implement [MetadataServer] and serve it with
+	// [RegisterMetadataServer], which serves both OpenID Connect Discovery
+	// and RFC 8414 Authorization Server Metadata, including for issuers
+	// with a path. [RegisterServer] still routes
+	// "/.well-known/openid-configuration" to this method for
+	// compatibility. Under [WithTenantPrefix] that route is a known route
+	// of the empty tenant, and every tenant's
+	// "{prefix}/{tenant}/.well-known/openid-configuration" reaches this
+	// method too, unless the metadata handler is routed ahead of the OP
+	// handler; see [WithTenantPrefix] for the wiring.
 	Discovery(context.Context, *Request[struct{}]) (*Response, error)
 
 	// Keys serves the JWK set which the client can use verify signatures from the op.
