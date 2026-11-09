@@ -9,6 +9,8 @@
 {{with .Params.access_token}}<input type="hidden" name="access_token" value="{{ index . 0 }}" />{{end}}
 {{with .Params.token_type}}<input type="hidden" name="token_type" value="{{ index . 0 }}" />{{end}}
 {{with .Params.expires_in}}<input type="hidden" name="expires_in" value="{{ index . 0 }}" />{{end}}
+{{- with .Params.iss}}
+<input type="hidden" name="iss" value="{{ index . 0 }}" />{{end}}
 </form>
 </body>
 </html>

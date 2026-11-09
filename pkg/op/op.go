@@ -184,6 +184,10 @@ type Config struct {
 	DeviceAuthorization               DeviceAuthorizationConfig
 	BackChannelLogoutSupported        bool
 	BackChannelLogoutSessionSupported bool
+	// AuthorizationResponseIssParameterSupported enables RFC 9207: the issuer is returned as the iss parameter
+	// in every authorization response, successful or not, and advertised in discovery.
+	// Clients must reject responses without iss once support is advertised, so both are switched together.
+	AuthorizationResponseIssParameterSupported bool
 }
 
 // Endpoints defines endpoint routes.
@@ -451,6 +455,10 @@ func (o *Provider) BackChannelLogoutSupported() bool {
 
 func (o *Provider) BackChannelLogoutSessionSupported() bool {
 	return o.config.BackChannelLogoutSessionSupported
+}
+
+func (o *Provider) AuthorizationResponseIssParameterSupported() bool {
+	return o.config != nil && o.config.AuthorizationResponseIssParameterSupported
 }
 
 func (o *Provider) Storage() Storage {

@@ -45,6 +45,29 @@ type AuthRequestSessionState interface {
 	GetSessionState() string
 }
 
+// AuthorizationResponseIssuer is an optional interface for an [Authorizer], [Configuration] or [Server].
+// When AuthorizationResponseIssParameterSupported returns true, the issuer is returned as the iss parameter
+// in every authorization response and discovery advertises it, as defined in RFC 9207.
+type AuthorizationResponseIssuer interface {
+	AuthorizationResponseIssParameterSupported() bool
+}
+
+// authorizationResponseIssParameterSupported reports whether v implements [AuthorizationResponseIssuer] and has it enabled.
+func authorizationResponseIssParameterSupported(v any) bool {
+	issuer, ok := v.(AuthorizationResponseIssuer)
+	return ok && issuer.AuthorizationResponseIssParameterSupported()
+}
+
+// AuthorizationResponseIss returns the issuer from the context when v has the RFC 9207 iss parameter enabled,
+// and an empty string otherwise. Pass the result to [AuthResponseURLWithIssuer], [AuthResponseFormPostWithIssuer]
+// or [TryErrorRedirectWithIssuer].
+func AuthorizationResponseIss(ctx context.Context, v any) string {
+	if !authorizationResponseIssParameterSupported(v) {
+		return ""
+	}
+	return IssuerFromContext(ctx)
+}
+
 type Authorizer interface {
 	Storage() Storage
 	Decoder() httphelper.Decoder
@@ -579,7 +602,7 @@ func handleFormPostResponse(w http.ResponseWriter, r *http.Request, authReq Auth
 	if err != nil {
 		return err
 	}
-	return AuthResponseFormPost(w, authReq.GetRedirectURI(), codeResponse, authorizer.Encoder())
+	return AuthResponseFormPostWithIssuer(w, authReq.GetRedirectURI(), codeResponse, authorizer.Encoder(), AuthorizationResponseIss(r.Context(), authorizer))
 }
 
 // handleRedirectResponse processes the authentication response using the redirect method
@@ -618,7 +641,7 @@ func BuildAuthResponseCallbackURL(ctx context.Context, authReq AuthRequest, auth
 		return "", err
 	}
 
-	return AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), codeResponse, authorizer.Encoder())
+	return AuthResponseURLWithIssuer(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), codeResponse, authorizer.Encoder(), AuthorizationResponseIss(ctx, authorizer))
 }
 
 // AuthResponseToken creates the successful token(s) authentication response
@@ -635,7 +658,7 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 	}
 
 	if authReq.GetResponseMode() == oidc.ResponseModeFormPost {
-		err := AuthResponseFormPost(w, authReq.GetRedirectURI(), resp, authorizer.Encoder())
+		err := AuthResponseFormPostWithIssuer(w, authReq.GetRedirectURI(), resp, authorizer.Encoder(), AuthorizationResponseIss(r.Context(), authorizer))
 		if err != nil {
 			AuthRequestError(w, r, authReq, err, authorizer)
 			return
@@ -644,7 +667,7 @@ func AuthResponseToken(w http.ResponseWriter, r *http.Request, authReq AuthReque
 		return
 	}
 
-	callback, err := AuthResponseURL(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), resp, authorizer.Encoder())
+	callback, err := AuthResponseURLWithIssuer(authReq.GetRedirectURI(), authReq.GetResponseType(), authReq.GetResponseMode(), resp, authorizer.Encoder(), AuthorizationResponseIss(r.Context(), authorizer))
 	if err != nil {
 		AuthRequestError(w, r, authReq, err, authorizer)
 		return
@@ -675,6 +698,12 @@ func BuildAuthRequestCode(authReq AuthRequest, encrypter Encrypter) (string, err
 // AuthResponseURL encodes the authorization response (successful and error) and sets it as query or fragment values
 // depending on the response_mode and response_type
 func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response any, encoder httphelper.Encoder) (string, error) {
+	return AuthResponseURLWithIssuer(redirectURI, responseType, responseMode, response, encoder, "")
+}
+
+// AuthResponseURLWithIssuer is [AuthResponseURL] that also sets issuer as the iss parameter (RFC 9207)
+// when it is not empty. See [AuthorizationResponseIss].
+func AuthResponseURLWithIssuer(redirectURI string, responseType oidc.ResponseType, responseMode oidc.ResponseMode, response any, encoder httphelper.Encoder, issuer string) (string, error) {
 	uri, err := url.Parse(redirectURI)
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)
@@ -683,6 +712,7 @@ func AuthResponseURL(redirectURI string, responseType oidc.ResponseType, respons
 	if err != nil {
 		return "", oidc.ErrServerError().WithParent(err)
 	}
+	setIssuerParam(uri, params, issuer)
 	// return explicitly requested mode
 	if responseMode == oidc.ResponseModeQuery {
 		return mergeQueryParams(uri, params), nil
@@ -705,10 +735,24 @@ var formPostTmpl = template.Must(template.New("form_post").Parse(formPostHtmlTem
 
 // AuthResponseFormPost responds a html page that automatically submits the form which contains the auth response parameters
 func AuthResponseFormPost(res http.ResponseWriter, redirectURI string, response any, encoder httphelper.Encoder) error {
+	return AuthResponseFormPostWithIssuer(res, redirectURI, response, encoder, "")
+}
+
+// AuthResponseFormPostWithIssuer is [AuthResponseFormPost] that also sets issuer as the iss parameter (RFC 9207)
+// when it is not empty. See [AuthorizationResponseIss].
+func AuthResponseFormPostWithIssuer(res http.ResponseWriter, redirectURI string, response any, encoder httphelper.Encoder, issuer string) error {
 	values := make(map[string][]string)
 	err := encoder.Encode(response, values)
 	if err != nil {
 		return oidc.ErrServerError().WithParent(err)
+	}
+	if issuer != "" {
+		uri, err := url.Parse(redirectURI)
+		if err != nil {
+			return oidc.ErrServerError().WithParent(err)
+		}
+		setIssuerParam(uri, values, issuer)
+		redirectURI = uri.String()
 	}
 
 	params := &struct {
@@ -741,6 +785,35 @@ func setFragment(uri *url.URL, params url.Values) string {
 	uri.RawFragment = params.Encode()
 	uri.Fragment, _ = url.PathUnescape(uri.RawFragment)
 	return uri.String()
+}
+
+// setIssuerParam sets issuer as the iss parameter, unless it is empty.
+// An iss already in the query of the redirect URI is removed,
+// so that the response carries exactly one issuer.
+func setIssuerParam(redirectURI *url.URL, params url.Values, issuer string) {
+	if issuer == "" {
+		return
+	}
+	params.Set("iss", issuer)
+	redirectURI.RawQuery = removeQueryParam(redirectURI.RawQuery, "iss")
+}
+
+// removeQueryParam removes every name parameter from rawQuery and keeps all other
+// components exactly as they were, in their original order and encoding.
+func removeQueryParam(rawQuery, name string) string {
+	if rawQuery == "" {
+		return rawQuery
+	}
+	components := strings.Split(rawQuery, "&")
+	kept := components[:0]
+	for _, component := range components {
+		key, _, _ := strings.Cut(component, "=")
+		if decoded, err := url.QueryUnescape(key); err == nil && decoded == name {
+			continue
+		}
+		kept = append(kept, component)
+	}
+	return strings.Join(kept, "&")
 }
 
 func mergeQueryParams(uri *url.URL, params url.Values) string {

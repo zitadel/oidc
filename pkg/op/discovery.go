@@ -65,6 +65,7 @@ func CreateDiscoveryConfig(ctx context.Context, config Configuration, storage Di
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
 		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
+		AuthorizationResponseIssParameterSupported:         authorizationResponseIssParameterSupported(config),
 	}
 }
 
@@ -98,6 +99,7 @@ func createDiscoveryConfigV2(ctx context.Context, config Configuration, storage 
 		RequestParameterSupported:                          config.RequestObjectSupported(),
 		BackChannelLogoutSupported:                         config.BackChannelLogoutSupported(),
 		BackChannelLogoutSessionSupported:                  config.BackChannelLogoutSessionSupported(),
+		AuthorizationResponseIssParameterSupported:         authorizationResponseIssParameterSupported(config),
 	}
 }
 
