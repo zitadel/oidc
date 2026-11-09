@@ -568,6 +568,42 @@ func TestMetadataHandler_Intercept(t *testing.T) {
 	assert.Equal(t, http.StatusTeapot, rec.Code)
 	assert.Equal(t, []string{"/p1/authorize"}, nextPaths)
 	assert.Len(t, server.calls, 1)
+
+	// Tenants directly under the host: the ServeMux cannot register
+	// "/.well-known/" next to "/{tenant}/.well-known/", so the metadata
+	// handler intercepts in front of the mux. Both handlers take
+	// WithTenantPrefix("") and see the same tenant and issuer.
+	t.Run("tenants without a static prefix", func(t *testing.T) {
+		issuerMW := issuerFromTenant("").Handler
+		metaServer := new(recordingMetadataServer)
+		opServer := new(recordingServer)
+		meta := op.RegisterMetadataServer(metaServer, op.WithTenantPrefix(""), op.WithHTTPMiddleware(issuerMW))
+		opHandler := op.RegisterServer(opServer, *op.DefaultEndpoints, op.WithTenantPrefix(""), op.WithHTTPMiddleware(issuerMW))
+		mux := http.NewServeMux()
+		mux.Handle("/{tenant}/", opHandler)
+		root := meta.Intercept(mux)
+
+		const issuer = "https://op.example.com/p1"
+		for path, method := range map[string]string{
+			"/p1/.well-known/openid-configuration":       methodOpenID,
+			"/.well-known/oauth-authorization-server/p1": methodAS,
+		} {
+			rec := serveMetadata(t, root, http.MethodGet, path)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			assert.Equal(t, metadataCall{Method: method, IssuerPath: "/p1", Tenant: "p1", Issuer: issuer}, decodeMetadataCall(t, rec), path)
+		}
+
+		rec := serveMetadata(t, root, http.MethodGet, "/p1/healthz")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.JSONEq(t, `{"status":"ok p1"}`, rec.Body.String())
+		assert.Equal(t, []string{issuer}, opServer.issuers)
+
+		// Not a metadata match, so Intercept passes it on to the mux, where
+		// the OP router has no such route for tenant "a".
+		rec = serveMetadata(t, root, http.MethodGet, "/a/b/.well-known/openid-configuration")
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Len(t, metaServer.calls, 2, "a multi-segment issuer path is not served")
+	})
 }
 
 func TestMetadataHandler_methods(t *testing.T) {
