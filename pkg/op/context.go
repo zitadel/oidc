@@ -124,18 +124,3 @@ func decodeRouteSource(src string, escaped bool) (string, error) {
 	}
 	return url.PathUnescape(src)
 }
-
-// rawOffset returns the offset into the percent-encoded raw at which
-// n decoded bytes have been consumed. raw must be a valid encoding,
-// which [url.PathUnescape] has already verified for the callers.
-func rawOffset(raw string, n int) int {
-	i := 0
-	for ; n > 0 && i < len(raw); n-- {
-		if raw[i] == '%' {
-			i += 3
-		} else {
-			i++
-		}
-	}
-	return min(i, len(raw))
-}

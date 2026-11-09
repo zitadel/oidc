@@ -679,7 +679,7 @@ func TestMetadataHandler_methods(t *testing.T) {
 }
 
 // routeRecorder is a middleware that records the tenant and the paths
-// the OP router sees, after the tenant was stripped.
+// the OP router sees.
 type routeRecorder struct {
 	called                           bool
 	tenant, path, rawPath, routePath string
@@ -698,6 +698,15 @@ func (rec *routeRecorder) middleware(next http.Handler) http.Handler {
 	})
 }
 
+// assertURLKept checks that the router saw the request URL of target
+// unchanged.
+func (rec *routeRecorder) assertURLKept(t *testing.T, target string) {
+	t.Helper()
+	u := httptest.NewRequest(http.MethodGet, target, nil).URL
+	assert.Equal(t, u.Path, rec.path, "URL path is left as is")
+	assert.Equal(t, u.RawPath, rec.rawPath, "URL raw path is left as is")
+}
+
 // tenantServer returns an OP handler with the tenant prefix,
 // whose router middleware records into rec.
 func tenantServer(prefix string, rec *routeRecorder) http.Handler {
@@ -707,55 +716,54 @@ func tenantServer(prefix string, rec *routeRecorder) http.Handler {
 	)
 }
 
-// tenantCase is a request path with the tenant and paths the OP router
-// must see, or a tenant 404 when notFound is set.
+// tenantCase is a request path with the tenant and chi route path the
+// OP router must see, or a JSON 404 that does not reach the router when
+// notFound is set.
 type tenantCase struct {
 	name          string
 	prefix        string
 	path          string
 	notFound      bool
 	wantTenant    string
-	wantPath      string
-	wantRaw       string
 	wantRoutePath string
 }
 
 func TestRegisterServer_tenantPrefix(t *testing.T) {
 	t.Run("handler", func(t *testing.T) {
 		tests := []tenantCase{
-			{name: "prefix and tenant", prefix: "/oauth", path: "/oauth/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "prefix with trailing slash", prefix: "/oauth/", path: "/oauth/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "prefix without leading slash", prefix: "oauth", path: "/oauth/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "prefix without any slash", prefix: "oauth/", path: "/oauth/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "tenant only", prefix: "/oauth", path: "/oauth/p1", wantTenant: "p1", wantPath: "/"},
-			{name: "tenant with trailing slash", prefix: "/oauth", path: "/oauth/p1/", wantTenant: "p1", wantPath: "/"},
-			{name: "no prefix", prefix: "", path: "/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "root prefix is no prefix", prefix: "/", path: "/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "query is kept", prefix: "/oauth", path: "/oauth/p1/authorize?client_id=x", wantTenant: "p1", wantPath: "/authorize"},
-			// the empty tenant
-			{name: "prefix alone is the empty tenant", prefix: "/oauth", path: "/oauth", wantPath: "/"},
-			{name: "prefix with slash is the empty tenant", prefix: "/oauth", path: "/oauth/", wantPath: "/"},
-			{name: "root without prefix is the empty tenant", prefix: "", path: "/", wantPath: "/"},
-			// a known route wins
-			{name: "authorize is a known route", prefix: "/oauth", path: "/oauth/authorize", wantPath: "/authorize"},
-			{name: "keys is a known route", prefix: "/oauth", path: "/oauth/keys", wantPath: "/keys"},
-			{name: "token under the prefix name is a known route", prefix: "/oauth", path: "/oauth/oauth/token", wantPath: "/oauth/token"},
-			{name: "healthz is a known route", prefix: "/oauth", path: "/oauth/healthz", wantPath: "/healthz"},
-			{name: "known route without prefix", prefix: "", path: "/authorize", wantPath: "/authorize"},
-			{name: "tenant before a known route", prefix: "/oauth", path: "/oauth/p1/authorize", wantTenant: "p1", wantPath: "/authorize"},
-			{name: "tenant before a two segment route", prefix: "/oauth", path: "/oauth/p1/oauth/token", wantTenant: "p1", wantPath: "/oauth/token"},
-			{name: "tenant before keys", prefix: "/oauth", path: "/oauth/p1/keys", wantTenant: "p1", wantPath: "/keys"},
+			{name: "prefix and tenant", prefix: "/oauth", path: "/oauth/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "prefix with trailing slash", prefix: "/oauth/", path: "/oauth/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "prefix without leading slash", prefix: "oauth", path: "/oauth/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "prefix without any slash", prefix: "oauth/", path: "/oauth/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "no prefix", prefix: "", path: "/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "root prefix is no prefix", prefix: "/", path: "/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "query is kept", prefix: "/oauth", path: "/oauth/p1/authorize?client_id=x", wantTenant: "p1", wantRoutePath: "/authorize"},
+			{name: "tenant before a two segment route", prefix: "/oauth", path: "/oauth/p1/oauth/token", wantTenant: "p1", wantRoutePath: "/oauth/token"},
+			{name: "tenant before keys", prefix: "/oauth", path: "/oauth/p1/keys", wantTenant: "p1", wantRoutePath: "/keys"},
+			// the empty tenant: a known route wins
+			{name: "authorize is a known route", prefix: "/oauth", path: "/oauth/authorize", wantRoutePath: "/authorize"},
+			{name: "keys is a known route", prefix: "/oauth", path: "/oauth/keys", wantRoutePath: "/keys"},
+			{name: "token under the prefix name is a known route", prefix: "/oauth", path: "/oauth/oauth/token", wantRoutePath: "/oauth/token"},
+			{name: "healthz is a known route", prefix: "/oauth", path: "/oauth/healthz", wantRoutePath: "/healthz"},
+			{name: "known route without prefix", prefix: "", path: "/authorize", wantRoutePath: "/authorize"},
+			// tenants named like routes keep their routes
+			{name: "tenant named like a route", prefix: "/oauth", path: "/oauth/authorize/keys", wantTenant: "authorize", wantRoutePath: "/keys"},
+			{name: "tenant named like the first segment of a route", prefix: "/oauth", path: "/oauth/oauth/healthz", wantTenant: "oauth", wantRoutePath: "/healthz"},
 			// percent-encoding
-			{name: "encoded space decoded once", prefix: "/oauth", path: "/oauth/p%201/auth%20orize", wantTenant: "p 1", wantPath: "/auth orize"},
-			{name: "raw path is kept", prefix: "/oauth", path: "/oauth/p%2B1/auth%2Borize", wantTenant: "p+1", wantPath: "/auth+orize", wantRaw: "/auth%2Borize"},
-			{name: "escaped tenant before a known route", prefix: "/oauth", path: "/oauth/p%2B1/authorize", wantTenant: "p+1", wantPath: "/authorize", wantRaw: "/authorize"},
-			{name: "escaped route name is a tenant", prefix: "/oauth", path: "/oauth/auth%2Borize", wantTenant: "auth+orize", wantPath: "/", wantRaw: "/"},
-			{name: "route in raw form is matched as chi would", prefix: "/oauth", path: "/oauth/%61uthorize", wantTenant: "authorize", wantPath: "/", wantRaw: "/"},
-			{name: "double-encoded slash decoded once", prefix: "/oauth", path: "/oauth/p%252F1/authorize", wantTenant: "p%2F1", wantPath: "/authorize"},
+			{name: "encoded space decoded once", prefix: "/oauth", path: "/oauth/p%201/authorize", wantTenant: "p 1", wantRoutePath: "/authorize"},
+			{name: "escaped tenant", prefix: "/oauth", path: "/oauth/p%2B1/authorize", wantTenant: "p+1", wantRoutePath: "/authorize"},
+			{name: "double-encoded slash decoded once", prefix: "/oauth", path: "/oauth/p%252F1/authorize", wantTenant: "p%2F1", wantRoutePath: "/authorize"},
+			{name: "route in raw form is not a route", prefix: "/oauth", path: "/oauth/%61uthorize", notFound: true},
+			{name: "escaped route under a tenant is not a route", prefix: "/oauth", path: "/oauth/p1/auth%2Borize", notFound: true},
 			{name: "encoded slash inside the tenant", prefix: "/oauth", path: "/oauth/p%2F1/authorize", notFound: true},
 			{name: "encoded slash as the tenant's end", prefix: "/oauth", path: "/oauth/p1%2Fauthorize", notFound: true},
 			{name: "encoded slash as the prefix's end", prefix: "/oauth", path: "/oauth%2Fp1/authorize", notFound: true},
-			// no tenant
+			// no route
+			{name: "tenant only", prefix: "/oauth", path: "/oauth/p1", notFound: true},
+			{name: "tenant with trailing slash", prefix: "/oauth", path: "/oauth/p1/", notFound: true},
+			{name: "unknown route under a tenant", prefix: "/oauth", path: "/oauth/p1/unknown", notFound: true},
+			{name: "prefix alone", prefix: "/oauth", path: "/oauth", notFound: true},
+			{name: "prefix with slash", prefix: "/oauth", path: "/oauth/", notFound: true},
 			{name: "empty segment before more path", prefix: "/oauth", path: "/oauth//authorize", notFound: true},
 			{name: "dot as tenant", prefix: "/oauth", path: "/oauth/./authorize", notFound: true},
 			{name: "dot-dot as tenant", prefix: "/oauth", path: "/oauth/../authorize", notFound: true},
@@ -778,21 +786,10 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 				}
 				assert.True(t, inner.called, "router must be reached")
 				assert.Equal(t, tt.wantTenant, inner.tenant)
-				assert.Equal(t, tt.wantPath, inner.path)
-				assert.Equal(t, tt.wantRaw, inner.rawPath)
-				assert.Empty(t, inner.routePath)
+				assert.Equal(t, tt.wantRoutePath, inner.routePath)
+				inner.assertURLKept(t, tt.path)
 			})
 		}
-	})
-
-	t.Run("wrong method on a known route is a 405, not a tenant", func(t *testing.T) {
-		inner := new(routeRecorder)
-		h := tenantServer("/oauth", inner)
-		rec := serveMetadata(t, h, "FOO", "/oauth/authorize")
-		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
-		assert.True(t, inner.called)
-		assert.Empty(t, inner.tenant)
-		assert.Equal(t, "/authorize", inner.path)
 	})
 
 	t.Run("WithSetRouter route is known", func(t *testing.T) {
@@ -809,35 +806,28 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 		rec := serveMetadata(t, h, http.MethodGet, "/oauth/custom")
 		assert.Equal(t, http.StatusTeapot, rec.Code)
 		assert.Empty(t, inner.tenant)
-		assert.Equal(t, "/custom", inner.path)
+		assert.Equal(t, "/custom", inner.routePath)
 
 		rec = serveMetadata(t, h, http.MethodPost, "/oauth/custom")
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code, "a known route with the wrong method")
+		assert.True(t, inner.called, "the router's 405")
 		assert.Empty(t, inner.tenant)
+
+		rec = serveMetadata(t, h, http.MethodPost, "/oauth/p1/custom")
+		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code, "a tenant route with the wrong method")
+		assert.Equal(t, "p1", inner.tenant)
 
 		rec = serveMetadata(t, h, http.MethodGet, "/oauth/p1/custom")
 		assert.Equal(t, http.StatusTeapot, rec.Code)
 		assert.Equal(t, "p1", inner.tenant)
-		assert.Equal(t, "/custom", inner.path)
+		assert.Equal(t, "/custom", inner.routePath)
 	})
 
 	t.Run("shadowing", func(t *testing.T) {
-		// Tenant T loses route R when "/T"+R is a route, and its root
-		// when "/T" is a route. Default endpoints: "authorize" loses
-		// only its root.
-		inner := new(routeRecorder)
-		h := tenantServer("/oauth", inner)
-		rec := serveMetadata(t, h, http.MethodGet, "/oauth/authorize/keys")
-		assert.Equal(t, http.StatusNotFound, rec.Code, "UnimplementedServer.Keys")
-		assert.Equal(t, "authorize", inner.tenant, "tenant named after a route keeps its other routes")
-		assert.Equal(t, "/keys", inner.path)
-		serveMetadata(t, h, http.MethodGet, "/oauth/authorize")
-		assert.Empty(t, inner.tenant, "but loses its root to the empty tenant's route")
-		assert.Equal(t, "/authorize", inner.path)
-
+		// Tenant T loses route R when "/T"+R is a route.
 		// Endpoints "/a" and "/b/a": tenant "b" has no "/a".
-		inner = new(routeRecorder)
-		h = op.RegisterServer(new(recordingServer), *op.DefaultEndpoints,
+		inner := new(routeRecorder)
+		h := op.RegisterServer(new(recordingServer), *op.DefaultEndpoints,
 			op.WithTenantPrefix("/oauth"),
 			op.WithHTTPMiddleware(inner.middleware),
 			op.WithSetRouter(func(r chi.Router) {
@@ -847,13 +837,13 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 		)
 		serveMetadata(t, h, http.MethodGet, "/oauth/b/a")
 		assert.Empty(t, inner.tenant, "/b/a is the empty tenant's route")
-		assert.Equal(t, "/b/a", inner.path)
-		serveMetadata(t, h, http.MethodGet, "/oauth/b/x")
-		assert.Equal(t, "b", inner.tenant, "other paths of tenant b work")
-		assert.Equal(t, "/x", inner.path)
+		assert.Equal(t, "/b/a", inner.routePath)
+		serveMetadata(t, h, http.MethodGet, "/oauth/b/healthz")
+		assert.Equal(t, "b", inner.tenant, "other routes of tenant b work")
+		assert.Equal(t, "/healthz", inner.routePath)
 		serveMetadata(t, h, http.MethodGet, "/oauth/c/a")
 		assert.Equal(t, "c", inner.tenant, "tenant c keeps /a")
-		assert.Equal(t, "/a", inner.path)
+		assert.Equal(t, "/a", inner.routePath)
 	})
 
 	t.Run("path-rewriting middleware", func(t *testing.T) {
@@ -864,63 +854,75 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 				op.WithHTTPMiddleware(middleware.StripSlashes, inner.middleware),
 			)
 			rec := serveMetadata(t, h, http.MethodGet, "/oauth/healthz/")
-			assert.Equal(t, "healthz", inner.tenant, "the trailing slash hides the known route")
-			assert.Equal(t, "/", inner.path)
-			assert.Equal(t, http.StatusNotFound, rec.Code)
+			assertJSONError(t, rec, http.StatusNotFound)
+			assert.False(t, inner.called, "the trailing slash is not a route")
 		})
 		t.Run("wrapping from outside", func(t *testing.T) {
 			inner := new(routeRecorder)
 			h := middleware.StripSlashes(tenantServer("/oauth", inner))
 			rec := serveMetadata(t, h, http.MethodGet, "/oauth/healthz/")
-			assert.Empty(t, inner.tenant)
-			assert.Equal(t, "/healthz", inner.path)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.JSONEq(t, `{"status":"ok "}`, rec.Body.String())
+			assert.Empty(t, inner.tenant)
+			assert.Equal(t, "/healthz", inner.routePath)
 
 			rec = serveMetadata(t, h, http.MethodGet, "/oauth/p1/healthz/")
-			assert.Equal(t, "p1", inner.tenant)
-			assert.Equal(t, "/healthz", inner.path)
 			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, "p1", inner.tenant)
+			assert.Equal(t, "/healthz", inner.routePath)
 		})
 	})
 
-	t.Run("catch-all route shadows every tenant", func(t *testing.T) {
+	t.Run("catch-all route keeps the tenants", func(t *testing.T) {
 		inner := new(routeRecorder)
 		h := op.RegisterServer(new(recordingServer), *op.DefaultEndpoints,
 			op.WithTenantPrefix("/oauth"),
 			op.WithHTTPMiddleware(inner.middleware),
 			op.WithSetRouter(func(r chi.Router) {
-				r.Handle("/*", http.NotFoundHandler())
+				r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusTeapot)
+				}))
 			}),
 		)
-		serveMetadata(t, h, http.MethodGet, "/oauth/p1/authorize")
-		assert.True(t, inner.called)
-		assert.Empty(t, inner.tenant, "every path is a known route")
-		assert.Equal(t, "/p1/authorize", inner.path)
+		for _, tc := range []struct{ path, tenant, routePath string }{
+			{"/oauth/p1/authorize", "p1", "/authorize"},
+			{"/oauth/p1/anything", "p1", "/anything"},
+			{"/oauth/anything", "", "/anything"},
+		} {
+			rec := serveMetadata(t, h, http.MethodGet, tc.path)
+			assert.True(t, inner.called, tc.path)
+			assert.Equal(t, tc.tenant, inner.tenant, tc.path)
+			assert.Equal(t, tc.routePath, inner.routePath, tc.path)
+			if tc.routePath == "/anything" {
+				assert.Equal(t, http.StatusTeapot, rec.Code, tc.path)
+			}
+		}
 	})
 
-	t.Run("does not modify the original URL", func(t *testing.T) {
+	t.Run("does not modify the original request", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/oauth/p1/authorize", nil)
 		tenantServer("/oauth", new(routeRecorder)).ServeHTTP(httptest.NewRecorder(), req)
 		assert.Equal(t, "/oauth/p1/authorize", req.URL.Path)
 		assert.Empty(t, op.TenantFromContext(req.Context()))
 	})
 
-	t.Run("404 outside the prefix carries CORS headers", func(t *testing.T) {
+	t.Run("404 carries CORS headers", func(t *testing.T) {
 		h := tenantServer("/oauth", new(routeRecorder))
-		req := httptest.NewRequest(http.MethodGet, "/other/", nil)
-		req.Header.Set("Origin", "https://rp.example.com")
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
-		assertJSONError(t, rec, http.StatusNotFound)
-		assert.Equal(t, "https://rp.example.com", rec.Header().Get("Access-Control-Allow-Origin"))
+		for _, p := range []string{"/other/", "/oauth/p1/unknown"} {
+			req := httptest.NewRequest(http.MethodGet, p, nil)
+			req.Header.Set("Origin", "https://rp.example.com")
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			assertJSONError(t, rec, http.StatusNotFound)
+			assert.Equal(t, "https://rp.example.com", rec.Header().Get("Access-Control-Allow-Origin"), p)
+		}
 
-		req = httptest.NewRequest(http.MethodOptions, "/other/", nil)
+		req := httptest.NewRequest(http.MethodOptions, "/other/", nil)
 		req.Header.Set("Origin", "https://rp.example.com")
 		req.Header.Set("Access-Control-Request-Method", http.MethodGet)
-		rec = httptest.NewRecorder()
+		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusNoContent, rec.Code, "preflight is answered before the tenant check")
+		assert.Equal(t, http.StatusNoContent, rec.Code, "preflight is answered before the routes")
 		assert.Equal(t, "https://rp.example.com", rec.Header().Get("Access-Control-Allow-Origin"))
 	})
 
@@ -945,20 +947,18 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 		mux.Handle("/oauth/", tenantServer("/oauth", inner))
 
 		rec := serveMetadata(t, mux, http.MethodGet, "/oauth/p1/authorize")
-		assert.True(t, inner.called)
-		assert.Equal(t, "p1", inner.tenant)
-		assert.Equal(t, "/authorize", inner.path)
 		assert.Equal(t, http.StatusTeapot, rec.Code)
+		assert.Equal(t, "p1", inner.tenant)
+		assert.Equal(t, "/authorize", inner.routePath)
+		inner.assertURLKept(t, "/oauth/p1/authorize")
 
 		rec = serveMetadata(t, mux, http.MethodGet, "/oauth/authorize")
-		assert.Empty(t, inner.tenant)
-		assert.Equal(t, "/authorize", inner.path)
 		assert.Equal(t, http.StatusTeapot, rec.Code)
+		assert.Empty(t, inner.tenant)
+		assert.Equal(t, "/authorize", inner.routePath)
 
 		rec = serveMetadata(t, mux, http.MethodGet, "/oauth/")
-		assert.Empty(t, inner.tenant)
-		assert.Equal(t, "/", inner.path)
-		assert.Equal(t, http.StatusNotFound, rec.Code, "the router's 404")
+		assertJSONError(t, rec, http.StatusNotFound)
 	})
 
 	t.Run("chi Handle", func(t *testing.T) {
@@ -967,15 +967,14 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 		r.Handle("/oauth/*", tenantServer("/oauth", inner))
 
 		rec := serveMetadata(t, r, http.MethodGet, "/oauth/p%2B1/authorize")
-		assert.True(t, inner.called)
-		assert.Equal(t, "p+1", inner.tenant)
-		assert.Equal(t, "/authorize", inner.path)
-		assert.Empty(t, inner.routePath, "Handle sets no route path")
 		assert.Equal(t, http.StatusTeapot, rec.Code)
+		assert.Equal(t, "p+1", inner.tenant)
+		assert.Equal(t, "/authorize", inner.routePath)
+		inner.assertURLKept(t, "/oauth/p%2B1/authorize")
 
 		rec = serveMetadata(t, r, http.MethodGet, "/oauth/authorize")
-		assert.Empty(t, inner.tenant)
 		assert.Equal(t, http.StatusTeapot, rec.Code)
+		assert.Empty(t, inner.tenant)
 
 		rec = serveMetadata(t, r, http.MethodGet, "/oauth//authorize")
 		assertJSONError(t, rec, http.StatusNotFound)
@@ -1001,7 +1000,7 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 				assert.True(t, inner.called, "router must be reached")
 				assert.Equal(t, tt.wantTenant, inner.tenant)
 				assert.Equal(t, tt.wantRoutePath, inner.routePath)
-				assert.Equal(t, httptest.NewRequest(http.MethodGet, tt.path, nil).URL.Path, inner.path, "URL is left as is")
+				inner.assertURLKept(t, tt.path)
 			})
 		}
 	}
@@ -1009,15 +1008,15 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 	t.Run("chi Mount", func(t *testing.T) {
 		runMountCases(t, nil, []tenantCase{
 			{name: "tenant and path", path: "/oauth/p1/authorize", wantTenant: "p1", wantRoutePath: "/authorize"},
-			{name: "tenant only", path: "/oauth/p1", wantTenant: "p1", wantRoutePath: "/"},
 			{name: "known route is the empty tenant", path: "/oauth/authorize", wantRoutePath: "/authorize"},
 			{name: "two segment known route", path: "/oauth/oauth/token", wantRoutePath: "/oauth/token"},
-			{name: "mount path alone is the empty tenant", path: "/oauth", wantRoutePath: "/"},
-			{name: "mount path with slash is the empty tenant", path: "/oauth/", wantRoutePath: "/"},
-			{name: "encoded space decoded once", path: "/oauth/p%201/auth%20orize", wantTenant: "p 1", wantRoutePath: "/auth orize"},
-			{name: "route path keeps the raw encoding", path: "/oauth/p%2B1/auth%2Borize", wantTenant: "p+1", wantRoutePath: "/auth%2Borize"},
-			{name: "escaped tenant before a known route", path: "/oauth/p%2B1/authorize", wantTenant: "p+1", wantRoutePath: "/authorize"},
+			{name: "encoded space decoded once", path: "/oauth/p%201/authorize", wantTenant: "p 1", wantRoutePath: "/authorize"},
+			{name: "escaped tenant", path: "/oauth/p%2B1/authorize", wantTenant: "p+1", wantRoutePath: "/authorize"},
 			{name: "double-encoded slash decoded once", path: "/oauth/p%252F1/authorize", wantTenant: "p%2F1", wantRoutePath: "/authorize"},
+			{name: "tenant only", path: "/oauth/p1", notFound: true},
+			{name: "mount path alone", path: "/oauth", notFound: true},
+			{name: "mount path with slash", path: "/oauth/", notFound: true},
+			{name: "escaped route under a tenant is not a route", path: "/oauth/p1/auth%2Borize", notFound: true},
 			{name: "encoded slash inside the tenant", path: "/oauth/p%2F1/authorize", notFound: true},
 			{name: "empty segment before more path", path: "/oauth//authorize", notFound: true},
 			{name: "dot as tenant", path: "/oauth/./authorize", notFound: true},
@@ -1031,11 +1030,10 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 	t.Run("chi Mount with StripSlashes", func(t *testing.T) {
 		runMountCases(t, func(r chi.Router) { r.Use(middleware.StripSlashes) }, []tenantCase{
 			{name: "stripped slash, decoded once", path: "/oauth/p%2541%2B/authorize/", wantTenant: "p%41+", wantRoutePath: "/authorize"},
-			{name: "stripped slash, tenant only", path: "/oauth/p%2541%2B/", wantTenant: "p%41+", wantRoutePath: "/"},
 			{name: "stripped slash, known route is the empty tenant", path: "/oauth/authorize/", wantRoutePath: "/authorize"},
-			{name: "stripped slash, mount path is the empty tenant", path: "/oauth/", wantRoutePath: "/"},
 			{name: "stripped slash, encoded slash decoded once", path: "/oauth/a%252Fb%2B/authorize/", wantTenant: "a%2Fb+", wantRoutePath: "/authorize"},
-			{name: "no slash to strip keeps the raw route path", path: "/oauth/p%2B1/auth%2Borize", wantTenant: "p+1", wantRoutePath: "/auth%2Borize"},
+			{name: "no slash to strip, raw tenant decoded", path: "/oauth/p%2B1/authorize", wantTenant: "p+1", wantRoutePath: "/authorize"},
+			{name: "stripped slash, tenant only", path: "/oauth/p%2541%2B/", notFound: true},
 			{name: "stripped slash, dot-dot as tenant", path: "/oauth/../authorize/", notFound: true},
 		})
 	})
@@ -1091,16 +1089,19 @@ func TestRegisterServer_tenantPrefix(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.JSONEq(t, `{"status":"ok"}`, rec.Body.String())
 		assert.Equal(t, "p1", inner.tenant)
-		assert.Equal(t, "/healthz", inner.path)
+		assert.Equal(t, "/healthz", inner.routePath)
 
 		rec = serveMetadata(t, h, http.MethodGet, "/oauth/healthz")
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Empty(t, inner.tenant)
 
-		// The callback route added by RegisterLegacyServer is a known route.
+		// The callback route added by RegisterLegacyServer is a route too.
 		serveMetadata(t, h, http.MethodGet, "/oauth/authorize/callback")
 		assert.Empty(t, inner.tenant)
-		assert.Equal(t, "/authorize/callback", inner.path)
+		assert.Equal(t, "/authorize/callback", inner.routePath)
+		serveMetadata(t, h, http.MethodGet, "/oauth/p1/authorize/callback")
+		assert.Equal(t, "p1", inner.tenant)
+		assert.Equal(t, "/authorize/callback", inner.routePath)
 
 		rec = serveMetadata(t, h, http.MethodGet, "/healthz")
 		assertJSONError(t, rec, http.StatusNotFound)
