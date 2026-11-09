@@ -676,7 +676,6 @@ func tenantServer(prefix string, rec *routeRecorder) http.Handler {
 type tenantCase struct {
 	name          string
 	prefix        string
-	method        string
 	path          string
 	notFound      bool
 	wantTenant    string
