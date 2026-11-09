@@ -126,7 +126,7 @@ func TestRemoteKeySet_VerifySignature_WrapsFetchError(t *testing.T) {
 	require.NoError(t, err)
 	token, err := payload.CompactSerialize()
 	require.NoError(t, err)
-	jws, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{tu.SignatureAlgorithm})
+	jws, err := jose.ParseSignedCompact(token, []jose.SignatureAlgorithm{tu.SignatureAlgorithm})
 	require.NoError(t, err)
 
 	for _, tt := range tests {
