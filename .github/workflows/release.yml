@@ -44,6 +44,4 @@ jobs:
       uses: cycjimmy/semantic-release-action@v8
       with:
         dry_run: false
-        semantic_version: 18.0.1
-        extra_plugins: |
-          @semantic-release/exec@6.0.3
+        semantic_version: 25.0.9
