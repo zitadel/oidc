@@ -127,10 +127,9 @@ type MetadataHandler struct {
 // The options are shared with [RegisterServer]: [WithServerCORSOptions],
 // [WithHTTPMiddleware], [WithSetRouter] and [WithTenantPrefix] apply.
 // [WithDecoder] and [WithEncoder] have no effect, as no request body or
-// error redirect is handled. The router's MethodNotAllowed handler and
-// its single "/*" route are set after the options are applied, so
-// [WithSetRouter] cannot replace them; a "/*" route or a MethodNotAllowed
-// handler set there is overwritten.
+// error redirect is handled. The handler has no routes of its own: of
+// [WithSetRouter], only the middleware it adds with Use applies, and
+// routes or NotFound and MethodNotAllowed handlers set there are ignored.
 //
 // EXPERIMENTAL: may change until v4
 func RegisterMetadataServer(server MetadataServer, options ...ServerOption) *MetadataHandler {
@@ -148,10 +147,9 @@ func RegisterMetadataServer(server MetadataServer, options ...ServerOption) *Met
 		tenantPrefix: ws.tenantPrefix,
 		tenantSet:    ws.tenantSet,
 	}
-	// chi answers a method it does not know itself, before the route runs.
-	ws.router.MethodNotAllowed(h.methodNotAllowed)
-	ws.router.HandleFunc("/*", h.handle)
-	ws.wrapCORS(ws.router)
+	// The router only collects the middleware of the options; the path is
+	// matched before the middleware runs, and serve passes the match on.
+	ws.wrapCORS(chi.Chain(ws.router.Middlewares()...).Handler(http.HandlerFunc(h.handle)))
 	h.handler = ws.handler
 	return h
 }
@@ -208,22 +206,31 @@ func (h *MetadataHandler) match(r *http.Request) (*metadataMatch, bool) {
 	}, true
 }
 
-// serve runs the inner handler (CORS, middleware, router) for the
-// request. m is nil when the path did not match; the route then
-// answers with a 404.
+// serve runs the inner handler (CORS, middleware, handle) for the
+// request. m is nil when the path did not match; handle then answers
+// with a 404.
 func (h *MetadataHandler) serve(w http.ResponseWriter, r *http.Request, m *metadataMatch) {
 	ctx := r.Context()
 	if m != nil {
 		ctx = ContextWithTenant(ctx, m.tenant)
-		ctx = context.WithValue(ctx, metadataMatchKey, m)
+	}
+	ctx = context.WithValue(ctx, metadataMatchKey{}, m)
+	if chi.RouteContext(ctx) == nil {
+		// Give the middleware a chi route context, as a chi.Mux would.
+		ctx = context.WithValue(ctx, chi.RouteCtxKey, chi.NewRouteContext())
 	}
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// metadataMatchKey is the context key under which serve passes the
+// match through the middleware to handle. The middleware chain is built
+// once, so the match cannot be a plain argument.
+type metadataMatchKey struct{}
+
 // matchFromContext returns the match serve put on the context,
 // or nil when the path did not match.
 func matchFromContext(ctx context.Context) *metadataMatch {
-	m, _ := ctx.Value(metadataMatchKey).(*metadataMatch)
+	m, _ := ctx.Value(metadataMatchKey{}).(*metadataMatch)
 	return m
 }
 
@@ -231,21 +238,16 @@ func writeMetadataNotFound(w http.ResponseWriter, r *http.Request) {
 	writeNotFound(w, r, "no metadata at this path")
 }
 
-// methodNotAllowed answers every method but GET and HEAD. It is the
-// router's MethodNotAllowed handler, for methods chi does not know, and
-// is called by handle for the ones chi knows.
+// methodNotAllowed answers every method but GET and HEAD
+// on a matched path.
 func (h *MetadataHandler) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
-	if matchFromContext(r.Context()) == nil {
-		writeMetadataNotFound(w, r)
-		return
-	}
 	w.Header().Set("Allow", "GET, HEAD")
 	err := oidc.ErrInvalidRequest().WithDescription("method not allowed")
 	WriteError(w, r, NewStatusError(err, http.StatusMethodNotAllowed), nil)
 }
 
-// handle is the single route of the handler's router. It runs after
-// CORS and the user middleware, with the match on the context.
+// handle runs after CORS and the user middleware,
+// with the match on the context.
 func (h *MetadataHandler) handle(w http.ResponseWriter, r *http.Request) {
 	m := matchFromContext(r.Context())
 	if m == nil {

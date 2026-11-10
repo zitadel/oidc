@@ -14,7 +14,6 @@ type key int
 const (
 	issuerKey key = iota
 	tenantKey
-	metadataMatchKey
 )
 
 type IssuerInterceptor struct {
@@ -94,25 +93,24 @@ func ContextWithTenant(ctx context.Context, tenant string) context.Context {
 // as chi's StripSlashes or URLFormat built from the decoded URL path is
 // not, even when the URL has a raw path. The route path is taken as
 // encoded only when it is a suffix of the raw path, allowing for a
-// stripped trailing slash. rctx is the chi route context when the route
-// path was used.
-func routeSource(r *http.Request) (src string, escaped bool, rctx *chi.Context) {
+// stripped trailing slash.
+func routeSource(r *http.Request) (src string, escaped bool) {
 	raw := r.URL.RawPath
-	if rctx = chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePath != "" {
+	if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePath != "" {
 		routePath := rctx.RoutePath
 		escaped = raw != "" && (strings.HasSuffix(raw, routePath) || strings.HasSuffix(raw, routePath+"/"))
-		return routePath, escaped, rctx
+		return routePath, escaped
 	}
 	if raw != "" {
-		return raw, true, nil
+		return raw, true
 	}
-	return r.URL.Path, false, nil
+	return r.URL.Path, false
 }
 
 // routedPath returns the path chi would route the request on,
 // percent-decoded exactly once. See [routeSource].
 func routedPath(r *http.Request) (string, error) {
-	src, escaped, _ := routeSource(r)
+	src, escaped := routeSource(r)
 	return decodeRouteSource(src, escaped)
 }
 

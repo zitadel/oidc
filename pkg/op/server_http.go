@@ -1,8 +1,10 @@
 package op
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -113,7 +115,9 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 // With the prefix "/oauth", the issuer path "/oauth/p1" has the tenant
 // "p1", which is set on the request context, see [TenantFromContext].
 // A missing leading slash or a trailing slash on prefix is tolerated,
-// and "/" is the same as "".
+// and "/" is the same as "". The prefix is a static path: it must not
+// contain the chi pattern characters '{', '}' or '*', and the option
+// panics if it does.
 //
 // A [RegisterServer] handler with this option serves each route of its
 // router twice: as "{prefix}/{tenant}{route}" and, for the empty tenant,
@@ -122,11 +126,15 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 // that of the empty tenant. The routes include those added with
 // [WithSetRouter]; the chi URL parameter name "tenant" is taken. The
 // empty tenant is for the implementation to interpret: as an issuer of
-// its own at https://op.example.com/oauth, or refused. Every other path,
-// such as one outside the prefix, an unknown route under a tenant, or a
-// tenant of "." or "..", gets a 404 that carries the CORS headers.
-// Without this option, RegisterServer does no tenant handling and serves
-// its routes at its root, as before.
+// its own at https://op.example.com/oauth, or refused. Any other path
+// under the prefix reaches the router as it would under a chi Mount at
+// "{prefix}/{tenant}": its first segment is the tenant, and the router's
+// NotFound handler, mounted routers and middleware handle the rest.
+// "{prefix}" and "{prefix}/" are the root of the empty tenant. A path
+// outside the prefix, an empty tenant segment, or a tenant of "." or
+// ".." gets a JSON 404 that carries the CORS headers. Without this
+// option, RegisterServer does no tenant handling and serves its routes
+// at its root, as before.
 //
 // chi tries a static segment before the tenant parameter, so a known
 // route wins: tenant T loses its route R only when "/T"+R is itself a
@@ -137,12 +145,13 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 //
 // The tenant is set on the context before the router's middleware runs,
 // so an [IssuerInterceptor] added with [WithHTTPMiddleware] sees it. That
-// middleware runs only for requests that match a route, and after the
-// routing above. Middleware that rewrites the path, such as chi's
+// middleware runs after the routing above. Middleware that rewrites the
+// path, such as chi's
 // middleware.StripSlashes, must therefore wrap the handler from outside
 // or run on the parent router. The request URL is left as is: the router
-// receives the rest of the path as the chi route path, as under a chi
-// Mount.
+// receives the rest of the path as the chi route path, and the chi
+// route pattern reads as under a chi Mount, such as
+// "/oauth/{tenant}/authorize".
 //
 // For a [RegisterMetadataServer] handler with this option, with any
 // prefix including "", the issuer path must be exactly "{prefix}", for
@@ -152,8 +161,8 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 // [MetadataRequest.IssuerPath] and no tenant is set.
 //
 // Both handlers take the same prefix when the OP handler receives the
-// full request path: on a [http.ServeMux] with mux.Handle("/oauth/", h)
-// and no [http.StripPrefix], or on chi with r.Handle("/oauth/*", h):
+// full request path, as on a [http.ServeMux] with mux.Handle("/oauth/", h)
+// and no [http.StripPrefix]:
 //
 //	meta := op.RegisterMetadataServer(ms, op.WithTenantPrefix("/oauth"), op.WithHTTPMiddleware(issuerMW))
 //	srv := op.RegisterServer(s, ep, op.WithTenantPrefix("/oauth"), op.WithHTTPMiddleware(issuerMW))
@@ -167,8 +176,11 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 // reaches the OP handler, where "/.well-known/openid-configuration" is
 // the known [Server.Discovery] route of the empty tenant.
 //
-// Under chi's r.Mount("/oauth", h), chi strips the mount prefix before
+// On chi, use r.Mount("/oauth", h). chi strips the mount prefix before
 // the handler runs, so the OP handler takes [WithTenantPrefix] with "".
+// r.Handle("/oauth/*", h) with the prefix "/oauth" routes too, but as
+// for any router nested with Handle, chi's route pattern then repeats
+// the prefix, as in "/oauth/oauth/{tenant}/authorize".
 //
 // chi routes on the raw path when the URL has one. The tenant is
 // percent-decoded once from the segment it matched, and a tenant with an
@@ -176,6 +188,9 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 //
 // EXPERIMENTAL: may change until v4
 func WithTenantPrefix(prefix string) ServerOption {
+	if strings.ContainsAny(prefix, "{}*") {
+		panic(fmt.Sprintf("op: tenant prefix %q must not contain '{', '}' or '*'", prefix))
+	}
 	return func(s *webServer) {
 		s.tenantPrefix = normalizeTenantPrefix(prefix)
 		s.tenantSet = true
@@ -204,29 +219,44 @@ func isDotSegment(segment string) bool {
 const tenantParam = "tenant"
 
 // tenantRouter implements [WithTenantPrefix] for a [RegisterServer]
-// handler. It returns a router that registers every route of the
-// handler's own router twice, as "{prefix}/{tenant}{route}" and as
+// handler. It returns a router that registers every top-level route
+// pattern of the handler's own router twice, as "{prefix}/{tenant}{route}" and as
 // "{prefix}{route}" for the empty tenant. chi tries a static segment
 // before a parameter and falls back to the parameter when the static
-// branch has no match, which makes a known route win. Both route kinds
-// accept every method, so the handler's router answers a wrong method
-// on a known route with its 405. Every other request is a 404.
+// branch has no match, which makes a known route win. Any other path
+// under the prefix is forwarded as a chi Mount at "{prefix}/{tenant}"
+// would forward it, and "{prefix}" itself as the root of the empty
+// tenant, so the router's NotFound handler, mounted routers and
+// middleware see it. All routes accept every method, so the handler's
+// router answers a wrong method with its 405. A path outside the prefix
+// is a 404.
 func (s *webServer) tenantRouter() http.Handler {
 	outer := chi.NewRouter()
 	outer.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		writeNotFound(w, r, "no route for this path under the tenant prefix")
+		writeNotFound(w, r, "path is not under the tenant prefix")
 	})
-	seen := make(map[string]bool)
-	// Walk reports a route once per method, and fails only when the
-	// callback does.
-	_ = chi.Walk(s.router, func(_, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		if !seen[route] {
-			seen[route] = true
-			outer.Handle(s.tenantPrefix+"/{"+tenantParam+"}"+route, s.forwardTenant(true))
-			outer.Handle(s.tenantPrefix+route, s.forwardTenant(false))
+	withTenant, emptyTenant := s.forwardTenant(true), s.forwardTenant(false)
+	tenantPath := s.tenantPrefix + "/{" + tenantParam + "}"
+	outer.Handle(tenantPath, withTenant)
+	outer.Handle(tenantPath+"/*", withTenant)
+	if s.tenantPrefix != "" {
+		outer.Handle(s.tenantPrefix, emptyTenant)
+	}
+	outer.Handle(s.tenantPrefix+"/", emptyTenant)
+
+	// The top-level patterns, not chi.Walk: a mounted router stays one
+	// "/ui/*" route, so its own NotFound handler answers its unknown paths.
+	// Routes does not list the "/ui" stub of a Mount, so it is added here.
+	for _, route := range s.router.Routes() {
+		patterns := []string{route.Pattern}
+		if mount, ok := strings.CutSuffix(route.Pattern, "/*"); ok && mount != "" {
+			patterns = append(patterns, mount)
 		}
-		return nil
-	})
+		for _, pattern := range patterns {
+			outer.Handle(tenantPath+pattern, withTenant)
+			outer.Handle(s.tenantPrefix+pattern, emptyTenant)
+		}
+	}
 	return outer
 }
 
@@ -234,12 +264,19 @@ func (s *webServer) tenantRouter() http.Handler {
 // which carries the tenant parameter when withTenant is set. It sets the
 // tenant on the context and passes the request to the handler's router
 // with the chi route path set to the rest of the path after the prefix
-// and the tenant, as a chi Mount does.
+// and the tenant, as a chi Mount does. It also replaces the route's
+// pattern with the pattern of such a Mount, so that the route pattern
+// the handler's router builds, such as "/oauth/{tenant}/authorize", does
+// not repeat the route.
 func (s *webServer) forwardTenant(withTenant bool) http.HandlerFunc {
+	mountPattern := s.tenantPrefix + "/*"
+	if withTenant {
+		mountPattern = s.tenantPrefix + "/{" + tenantParam + "}/*"
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		// The path the tenant router matched; the prefix and the raw
 		// tenant are at its start, in the same encoding.
-		src, escaped, _ := routeSource(r)
+		src, escaped := routeSource(r)
 		rctx := chi.RouteContext(r.Context())
 		n := len(s.tenantPrefix)
 		tenant := ""
@@ -253,7 +290,8 @@ func (s *webServer) forwardTenant(withTenant bool) http.HandlerFunc {
 				return
 			}
 		}
-		rctx.RoutePath = src[n:]
+		rctx.RoutePath = cmp.Or(src[n:], "/")
+		rctx.RoutePatterns[len(rctx.RoutePatterns)-1] = mountPattern
 		s.router.ServeHTTP(w, r.WithContext(ContextWithTenant(r.Context(), tenant)))
 	}
 }
@@ -275,8 +313,8 @@ type webServer struct {
 	corsOpts  *cors.Options
 
 	// tenantPrefix is the normalized prefix of WithTenantPrefix and
-	// tenantSet whether the option was given. RegisterServer routes
-	// tenants only when it was; a MetadataHandler uses the prefix either way.
+	// tenantSet whether the option was given. RegisterServer and a
+	// MetadataHandler handle tenants only when it was.
 	tenantPrefix string
 	tenantSet    bool
 }
