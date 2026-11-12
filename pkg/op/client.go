@@ -52,8 +52,11 @@ type Client interface {
 }
 
 // HasRedirectGlobs is an optional interface that can be implemented by implementors of
-// Client. See https://pkg.go.dev/path#Match for glob
-// interpretation. Redirect URIs that match either the non-glob version or the
+// Client. Glob patterns follow the syntax of
+// https://pkg.go.dev/github.com/bmatcuk/doublestar/v4#Match, which extends
+// https://pkg.go.dev/path#Match with brace alternation (`{a,b}`), multi
+// segment wildcards (`**`), and character classes (`[a-z]`). Redirect URIs
+// that match either the non-glob version or the
 // glob version will be accepted. Glob URIs are only partially supported for native
 // clients: "http://" is not allowed except for loopback or in dev mode.
 //
