@@ -42,6 +42,7 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 	r = r.WithContext(ctx)
 	defer span.End()
 
+	setNoCacheHeaders(w)
 	grantType := r.FormValue("grant_type")
 	switch grantType {
 	case string(oidc.GrantTypeCode):
@@ -77,6 +78,13 @@ func Exchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 		return
 	}
 	RequestError(w, r, oidc.ErrUnsupportedGrantType().WithDescription("%s not supported", grantType), nil)
+}
+
+// setNoCacheHeaders sets the headers required on token endpoint responses,
+// see https://www.rfc-editor.org/rfc/rfc6749#section-5.1
+func setNoCacheHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
 }
 
 // AuthenticatedTokenRequest is a helper interface for ParseAuthenticatedTokenRequest
