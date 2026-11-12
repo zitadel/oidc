@@ -57,7 +57,14 @@ func VerifyIDToken[C oidc.Claims](ctx context.Context, token string, v *IDTokenV
 		return nilClaims, err
 	}
 
-	if err = oidc.CheckAZPVerifier(claims, v.AZP); err != nil {
+	azp := v.AZP
+	if azp == nil {
+		// An IDTokenVerifier built as a struct literal, as was common before the
+		// AZP field existed, leaves it nil. Keep the default check it had then
+		// instead of calling a nil function.
+		azp = oidc.DefaultAZPVerifier(v.ClientID)
+	}
+	if err = oidc.CheckAZPVerifier(claims, azp); err != nil {
 		return nilClaims, err
 	}
 
