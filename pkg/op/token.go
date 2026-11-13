@@ -146,7 +146,7 @@ func CreateJWT(ctx context.Context, issuer string, tokenRequest TokenRequest, ex
 	ctx, span := Tracer.Start(ctx, "CreateJWT")
 	defer span.End()
 
-	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), tokenRequest.GetAudience(), exp, id, client.GetID(), client.ClockSkew())
+	claims := oidc.NewAccessTokenClaims(issuer, tokenRequest.GetSubject(), AccessTokenAudience(tokenRequest), exp, id, client.GetID(), client.ClockSkew())
 	if client != nil {
 		restrictedScopes := client.RestrictAdditionalAccessTokenScopes()(tokenRequest.GetScopes())
 

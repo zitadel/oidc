@@ -244,6 +244,9 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 	if len(requestObject.ACRValues) > 0 {
 		authReq.ACRValues = requestObject.ACRValues
 	}
+	if len(requestObject.Resource) > 0 {
+		authReq.Resource = requestObject.Resource
+	}
 	if requestObject.CodeChallenge != "" {
 		authReq.CodeChallenge = requestObject.CodeChallenge
 	}
@@ -288,6 +291,9 @@ func ValidateAuthRequestClient(ctx context.Context, authReq *oidc.AuthRequest, c
 		return "", err
 	}
 	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
+		return "", err
+	}
+	if err := ValidateResourceIndicators(authReq.Resource); err != nil {
 		return "", err
 	}
 	return ValidateAuthReqIDTokenHint(ctx, authReq.IDTokenHint, verifier)

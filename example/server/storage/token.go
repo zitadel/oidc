@@ -23,4 +23,9 @@ type RefreshToken struct {
 	Expiration    time.Time
 	Scopes        []string
 	AccessToken   string // Token.ID
+
+	// Resource holds the resource indicators (RFC 8707) of the original grant, which
+	// the refresh token stays bound to. A refresh token request may narrow them down
+	// for the access token it receives, without changing them here.
+	Resource []string
 }

@@ -92,6 +92,22 @@ type AuthRequest struct {
 	LoginHint    string              `json:"login_hint" schema:"login_hint"`
 	ACRValues    SpaceDelimitedArray `json:"acr_values" schema:"acr_values"`
 
+	// Resource indicates the target service(s) or resource(s) at which the requested
+	// token is intended to be used, as defined by [RFC 8707]. The parameter may be
+	// repeated to request a token that is valid at multiple resources.
+	//
+	// Each value must be an absolute URI without a fragment component; the op package
+	// validates the syntax and rejects invalid values with `invalid_target`. Whether a
+	// resource is acceptable, and how it translates into the audience of the issued
+	// tokens, is up to the Storage implementation, which receives these values as part
+	// of the auth request.
+	//
+	// In a Request Object a single value is a JSON string and multiple values are an
+	// array of strings, see [Resources].
+	//
+	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+	Resource Resources `json:"resource,omitempty" schema:"resource"`
+
 	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
 

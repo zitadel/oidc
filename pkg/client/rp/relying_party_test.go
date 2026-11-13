@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -519,4 +520,23 @@ func TestGenerateAndStoreCodeChallenge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithResourceURLParam(t *testing.T) {
+	party, err := NewRelyingPartyOAuth(&oauth2.Config{
+		ClientID:    "clientID",
+		RedirectURL: "https://client.example.com/callback",
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://op.example.com/authorize",
+			TokenURL: "https://op.example.com/token",
+		},
+	})
+	require.NoError(t, err)
+
+	const resource = "https://mcp.example.com/mcp"
+	authURL := AuthURL("state", party, AuthURLOpt(WithResourceURLParam(resource)))
+
+	parsed, err := url.Parse(authURL)
+	require.NoError(t, err)
+	assert.Equal(t, resource, parsed.Query().Get("resource"))
 }

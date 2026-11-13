@@ -846,3 +846,72 @@ func TestTime_UnmarshalJSON(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestResources_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources Resources
+		want      string
+	}{
+		{name: "nil", resources: nil, want: `{}`},
+		{name: "empty", resources: Resources{}, want: `{}`},
+		{name: "single resource is a string", resources: Resources{"https://mcp.example.com/mcp"}, want: `{"resource":"https://mcp.example.com/mcp"}`},
+		{name: "multiple resources are an array", resources: Resources{"https://mcp.example.com/mcp", "urn:example:api"}, want: `{"resource":["https://mcp.example.com/mcp","urn:example:api"]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(struct {
+				Resource Resources `json:"resource,omitempty"`
+			}{tt.resources})
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.want, string(got))
+		})
+	}
+}
+
+func TestResources_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		want    Resources
+		wantErr bool
+	}{
+		{name: "absent", data: `{}`, want: nil},
+		{name: "null", data: `{"resource":null}`, want: nil},
+		{name: "single string", data: `{"resource":"https://mcp.example.com/mcp"}`, want: Resources{"https://mcp.example.com/mcp"}},
+		{name: "array", data: `{"resource":["https://mcp.example.com/mcp","urn:example:api"]}`, want: Resources{"https://mcp.example.com/mcp", "urn:example:api"}},
+		{name: "array with non-string", data: `{"resource":["https://mcp.example.com/mcp",1]}`, wantErr: true},
+		{name: "unsupported type", data: `{"resource":1}`, wantErr: true},
+		{name: "invalid json", data: `{"resource":{"a":}}`, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var dst struct {
+				Resource Resources `json:"resource"`
+			}
+			err := json.Unmarshal([]byte(tt.data), &dst)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, dst.Resource)
+		})
+	}
+}
+
+// TestRequestObjectResource checks the representation of RFC 8707, section 2.1
+// in a JWT secured authorization request.
+func TestRequestObjectResource(t *testing.T) {
+	single, err := json.Marshal(&RequestObject{AuthRequest: AuthRequest{Resource: Resources{"https://mcp.example.com/mcp"}}})
+	require.NoError(t, err)
+	assert.Contains(t, string(single), `"resource":"https://mcp.example.com/mcp"`)
+
+	var parsed RequestObject
+	require.NoError(t, json.Unmarshal(single, &parsed))
+	assert.Equal(t, Resources{"https://mcp.example.com/mcp"}, parsed.Resource)
+
+	none, err := json.Marshal(&RequestObject{})
+	require.NoError(t, err)
+	assert.NotContains(t, string(none), `"resource"`)
+}

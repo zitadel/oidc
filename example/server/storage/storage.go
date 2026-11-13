@@ -264,7 +264,7 @@ func (s *Storage) CreateAccessToken(ctx context.Context, request op.TokenRequest
 		applicationID = req.GetClientID()
 	}
 
-	token, err := s.accessToken(applicationID, "", request.GetSubject(), request.GetAudience(), request.GetScopes())
+	token, err := s.accessToken(applicationID, "", request.GetSubject(), op.AccessTokenAudience(request), request.GetScopes())
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -285,11 +285,11 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 	// if currentRefreshToken is empty (Code Flow) we will have to create a new refresh token
 	if currentRefreshToken == "" {
 		refreshTokenID := uuid.NewString()
-		accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
+		accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), op.AccessTokenAudience(request), request.GetScopes())
 		if err != nil {
 			return "", "", time.Time{}, err
 		}
-		refreshToken, err := s.createRefreshToken(accessToken, amr, authTime)
+		refreshToken, err := s.createRefreshToken(accessToken, request.GetAudience(), grantedResources(request), amr, authTime)
 		if err != nil {
 			return "", "", time.Time{}, err
 		}
@@ -301,7 +301,7 @@ func (s *Storage) CreateAccessAndRefreshTokens(ctx context.Context, request op.T
 
 	newRefreshToken = uuid.NewString()
 
-	accessToken, err := s.accessToken(applicationID, newRefreshToken, request.GetSubject(), request.GetAudience(), request.GetScopes())
+	accessToken, err := s.accessToken(applicationID, newRefreshToken, request.GetSubject(), op.AccessTokenAudience(request), request.GetScopes())
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
@@ -318,12 +318,12 @@ func (s *Storage) exchangeRefreshToken(ctx context.Context, request op.TokenExch
 	authTime := request.GetAuthTime()
 
 	refreshTokenID := uuid.NewString()
-	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), request.GetAudience(), request.GetScopes())
+	accessToken, err := s.accessToken(applicationID, refreshTokenID, request.GetSubject(), op.AccessTokenAudience(request), request.GetScopes())
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
 
-	refreshToken, err := s.createRefreshToken(accessToken, nil, authTime)
+	refreshToken, err := s.createRefreshToken(accessToken, request.GetAudience(), grantedResources(request), nil, authTime)
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
@@ -590,8 +590,10 @@ func (s *Storage) Health(ctx context.Context) error {
 	return nil
 }
 
-// createRefreshToken will store a refresh_token in-memory based on the provided information
-func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime time.Time) (string, error) {
+// createRefreshToken stores a refresh token for the audience of the ID token and the
+// full resource grant (RFC 8707, section 2.2), even if the access token it is issued
+// with was narrowed down to some of the resources.
+func (s *Storage) createRefreshToken(accessToken *Token, audience, resources, amr []string, authTime time.Time) (string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	token := &RefreshToken{
@@ -601,10 +603,11 @@ func (s *Storage) createRefreshToken(accessToken *Token, amr []string, authTime 
 		AMR:           amr,
 		ApplicationID: accessToken.ApplicationID,
 		UserID:        accessToken.Subject,
-		Audience:      accessToken.Audience,
+		Audience:      audience,
 		Expiration:    time.Now().Add(5 * time.Hour),
 		Scopes:        accessToken.Scopes,
 		AccessToken:   accessToken.ID,
+		Resource:      resources,
 	}
 	s.refreshTokens[token.ID] = token
 	return token.Token, nil
@@ -821,6 +824,14 @@ type deviceAuthorizationEntry struct {
 }
 
 func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes []string) error {
+	return s.StoreDeviceAuthorizationWithResources(ctx, clientID, deviceCode, userCode, expires, scopes, nil)
+}
+
+// StoreDeviceAuthorizationWithResources implements the optional
+// op.CanStoreDeviceAuthorizationWithResources interface, so that the resource
+// indicators (RFC 8707) of the device authorization request are kept and can be used
+// to determine the audience of the issued tokens.
+func (s *Storage) StoreDeviceAuthorizationWithResources(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes, resources []string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -838,6 +849,9 @@ func (s *Storage) StoreDeviceAuthorization(ctx context.Context, clientID, device
 		state: &op.DeviceAuthorizationState{
 			ClientID: clientID,
 			Scopes:   scopes,
+			// op.DeviceAuthorizationState adds the resources to the audience of
+			// the access token, but not of the ID token.
+			Resource: resources,
 			Expires:  expires,
 		},
 	}
