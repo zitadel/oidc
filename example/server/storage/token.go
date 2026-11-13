@@ -10,9 +10,6 @@ type Token struct {
 	Audience       []string
 	Expiration     time.Time
 	Scopes         []string
-
-	// Resource holds the resource indicators (RFC 8707) the token was requested for.
-	Resource []string
 }
 
 type RefreshToken struct {
@@ -27,7 +24,8 @@ type RefreshToken struct {
 	Scopes        []string
 	AccessToken   string // Token.ID
 
-	// Resource holds the resource indicators (RFC 8707) the refresh token was
-	// granted for. A refresh token request may narrow them down again.
+	// Resource holds the resource indicators (RFC 8707) of the original grant, which
+	// the refresh token stays bound to. A refresh token request may narrow them down
+	// for the access token it receives, without changing them here.
 	Resource []string
 }
