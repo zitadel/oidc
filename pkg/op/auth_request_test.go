@@ -1936,9 +1936,9 @@ func TestCopyRequestObjectToAuthRequest(t *testing.T) {
 	}
 
 	op.CopyRequestObjectToAuthRequest(authReq, requestObject)
-	assert.Equal(t, []string{"https://mcp.example.com/mcp"}, authReq.Resource)
+	assert.Equal(t, oidc.Resources{"https://mcp.example.com/mcp"}, authReq.Resource)
 
 	// an empty resource in the request object must not clear the request parameter
 	op.CopyRequestObjectToAuthRequest(authReq, &oidc.RequestObject{})
-	assert.Equal(t, []string{"https://mcp.example.com/mcp"}, authReq.Resource)
+	assert.Equal(t, oidc.Resources{"https://mcp.example.com/mcp"}, authReq.Resource)
 }

@@ -102,8 +102,11 @@ type AuthRequest struct {
 	// tokens, is up to the Storage implementation, which receives these values as part
 	// of the auth request.
 	//
+	// In a Request Object a single value is a JSON string and multiple values are an
+	// array of strings, see [Resources].
+	//
 	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
-	Resource []string `json:"resource" schema:"resource"`
+	Resource Resources `json:"resource,omitempty" schema:"resource"`
 
 	CodeChallenge       string              `json:"code_challenge" schema:"code_challenge"`
 	CodeChallengeMethod CodeChallengeMethod `json:"code_challenge_method" schema:"code_challenge_method"`
