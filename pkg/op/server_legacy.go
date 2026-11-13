@@ -373,7 +373,7 @@ func (s *LegacyServer) DeviceToken(ctx context.Context, r *ClientRequest[oidc.De
 	if err != nil {
 		return nil, err
 	}
-	if err = ValidateTokenRequestResources(r.Data.Resource, tokenRequest); err != nil {
+	if err = ValidateDeviceAccessTokenResources(r.Data.Resource, tokenRequest, s.provider.Storage()); err != nil {
 		return nil, err
 	}
 	resp, err := CreateDeviceTokenResponse(ctx, tokenRequest, s.provider, r.Client)

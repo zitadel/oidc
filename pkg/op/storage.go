@@ -217,6 +217,10 @@ type DeviceAuthorizationStorage interface {
 // GetDeviceAuthorizatonState, which allows the device access token request to narrow
 // them and the audience of the issued tokens to be bound to them.
 //
+// To refuse a requested resource, for example because the client may not request
+// it, return an [oidc.Error] with the `invalid_target` error code, which is passed on
+// to the client.
+//
 // [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
 type CanStoreDeviceAuthorizationWithResources interface {
 	StoreDeviceAuthorizationWithResources(ctx context.Context, clientID, deviceCode, userCode string, expires time.Time, scopes, resources []string) error

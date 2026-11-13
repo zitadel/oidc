@@ -86,7 +86,8 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	defer span.End()
 
 	if err := ValidateResourceIndicators(req.Resource); err != nil {
-		return nil, err
+		// A status is needed, as the op.Server path otherwise responds with 500.
+		return nil, NewStatusError(err, http.StatusBadRequest)
 	}
 
 	storage, err := assertDeviceStorage(o.Storage())
@@ -104,6 +105,11 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	expires := time.Now().Add(config.Lifetime)
 	if resourceStorage, ok := storage.(CanStoreDeviceAuthorizationWithResources); ok {
 		err = resourceStorage.StoreDeviceAuthorizationWithResources(ctx, clientID, deviceCode, userCode, expires, req.Scopes, req.Resource)
+		// The storage may refuse the requested resources with invalid_target.
+		var oidcErr *oidc.Error
+		if errors.As(err, &oidcErr) && oidcErr.ErrorType == oidc.InvalidTarget {
+			return nil, NewStatusError(err, http.StatusBadRequest)
+		}
 	} else {
 		err = storage.StoreDeviceAuthorization(ctx, clientID, deviceCode, userCode, expires, req.Scopes)
 	}
@@ -235,7 +241,7 @@ func deviceAccessToken(w http.ResponseWriter, r *http.Request, exchanger Exchang
 	if err != nil {
 		return err
 	}
-	if err = ValidateTokenRequestResources(req.Resource, tokenRequest); err != nil {
+	if err = ValidateDeviceAccessTokenResources(req.Resource, tokenRequest, exchanger.Storage()); err != nil {
 		return err
 	}
 
@@ -276,15 +282,21 @@ type DeviceAuthorizationState struct {
 	Done     bool      // The user authenticated and approved the authorization request
 	Denied   bool      // The user authenticated and denied the authorization request
 
-	// Resource holds the resource indicators of [RFC 8707] that were requested with
-	// the device authorization request, as far as the [DeviceAuthorizationStorage]
-	// implementation stores and returns them. When the device access token request
-	// narrows them with its own `resource` parameter, this field is reduced to the
-	// requested subset before the tokens are created, so that the [Storage]
-	// implementation can bind the audience of the issued tokens to it.
+	// Resource holds the resource indicators of [RFC 8707] that were granted with
+	// the device authorization request, as far as the storage implements
+	// [CanStoreDeviceAuthorizationWithResources] and returns them here.
+	//
+	// The resources are added to the audience of the access token, but not of the ID
+	// token, see GetAccessTokenAudience. The device access token request may narrow
+	// them with its own `resource` parameter, which only affects the access token: a
+	// refresh token stays bound to the full grant reported by GetResource.
 	//
 	// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
 	Resource []string
+
+	// currentResources holds the resources a device access token request narrowed
+	// the grant to, if any.
+	currentResources []string
 
 	// The following fields are populated after Done == true
 	Subject  string
@@ -315,14 +327,35 @@ func (r *DeviceAuthorizationState) GetScopes() []string {
 	return r.Scopes
 }
 
-// GetResource implements the [ResourceRequest] interface.
+// GetResource implements the [ResourceRequest] interface. It reports the full grant,
+// regardless of a narrowing device access token request.
 func (r *DeviceAuthorizationState) GetResource() []string {
 	return r.Resource
 }
 
 // SetCurrentResources implements the [CurrentResourceSetter] interface.
 func (r *DeviceAuthorizationState) SetCurrentResources(resources []string) {
-	r.Resource = resources
+	r.currentResources = resources
+}
+
+// GetAccessTokenAudience implements the [AccessTokenAudienceRequest] interface. The
+// audience of the access token is the audience of the ID token (see GetAudience) plus
+// the granted resources, or the subset a device access token request narrowed them
+// to, used as audience values as [RFC 8707] intends.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func (r *DeviceAuthorizationState) GetAccessTokenAudience() []string {
+	resources := r.Resource
+	if len(r.currentResources) > 0 {
+		resources = r.currentResources
+	}
+	audience := slices.Clone(r.GetAudience())
+	for _, resource := range resources {
+		if !slices.Contains(audience, resource) {
+			audience = append(audience, resource)
+		}
+	}
+	return audience
 }
 
 func (r *DeviceAuthorizationState) GetSubject() string {
@@ -355,6 +388,23 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 		return state, oidc.ErrExpiredDeviceCode()
 	}
 	return state, oidc.ErrAuthorizationPending()
+}
+
+// ValidateDeviceAccessTokenResources validates the `resource` parameter of a device
+// access token request with [ValidateTokenRequestResources].
+//
+// The resources of the device authorization request are only known when storage
+// implements [CanStoreDeviceAuthorizationWithResources]. Otherwise resource
+// indicators are not used: the parameter is only checked for its syntax and is
+// ignored, instead of being refused as not granted.
+func ValidateDeviceAccessTokenResources(requestedResources []string, state *DeviceAuthorizationState, storage Storage) error {
+	// The state may be shared between requests by the storage, so a narrowing
+	// of an earlier request must not carry over.
+	state.currentResources = nil
+	if _, ok := storage.(CanStoreDeviceAuthorizationWithResources); !ok {
+		return ValidateResourceIndicators(requestedResources)
+	}
+	return ValidateTokenRequestResources(requestedResources, state)
 }
 
 func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {

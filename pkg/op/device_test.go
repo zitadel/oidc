@@ -586,21 +586,72 @@ func TestDeviceAuthorizationResources(t *testing.T) {
 		response := new(oidc.DeviceAuthorizationResponse)
 		require.NoError(t, json.NewDecoder(result.Body).Decode(response))
 
-		state, err := testProvider.Storage().(op.DeviceAuthorizationStorage).
+		storage := testProvider.Storage()
+		state, err := storage.(op.DeviceAuthorizationStorage).
 			GetDeviceAuthorizatonState(context.Background(), "device", response.DeviceCode)
 		require.NoError(t, err)
 		assert.Equal(t, []string{granted, other}, state.GetResource())
-		assert.Equal(t, []string{granted, other, "device"}, state.GetAudience())
+		// the resources are part of the access token audience, not of the ID token
+		assert.Equal(t, []string{"device"}, state.GetAudience())
+		assert.Equal(t, []string{"device", granted, other}, op.AccessTokenAudience(state))
 
-		// a device access token request may narrow the granted resources down
-		require.NoError(t, op.ValidateTokenRequestResources([]string{granted}, state))
-		assert.Equal(t, []string{granted}, state.GetResource())
+		// a device access token request may narrow the access token audience down,
+		// while the grant, which a refresh token is bound to, is kept
+		require.NoError(t, op.ValidateDeviceAccessTokenResources([]string{granted}, state, storage))
+		assert.Equal(t, []string{"device", granted}, op.AccessTokenAudience(state))
+		assert.Equal(t, []string{"device"}, state.GetAudience())
+		assert.Equal(t, []string{granted, other}, state.GetResource())
+
+		// a later request without resource parameter gets the full grant again
+		require.NoError(t, op.ValidateDeviceAccessTokenResources(nil, state, storage))
+		assert.Equal(t, []string{"device", granted, other}, op.AccessTokenAudience(state))
 
 		// but may not ask for a resource that was never granted
-		err = op.ValidateTokenRequestResources([]string{"https://other.example.com"}, state)
+		err = op.ValidateDeviceAccessTokenResources([]string{"https://other.example.com"}, state, storage)
 		require.Error(t, err)
 		var oidcErr *oidc.Error
 		require.ErrorAs(t, err, &oidcErr)
 		assert.Equal(t, oidc.InvalidTarget, oidcErr.ErrorType)
 	})
+
+	t.Run("a device authorization without resources grants none", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		op.DeviceAuthorizationHandler(testProvider)(w, newRequest())
+
+		response := new(oidc.DeviceAuthorizationResponse)
+		require.NoError(t, json.NewDecoder(w.Result().Body).Decode(response))
+
+		storage := testProvider.Storage()
+		state, err := storage.(op.DeviceAuthorizationStorage).
+			GetDeviceAuthorizatonState(context.Background(), "device", response.DeviceCode)
+		require.NoError(t, err)
+
+		err = op.ValidateDeviceAccessTokenResources([]string{"https://mcp.example.com/mcp"}, state, storage)
+		var oidcErr *oidc.Error
+		require.ErrorAs(t, err, &oidcErr)
+		assert.Equal(t, oidc.InvalidTarget, oidcErr.ErrorType)
+	})
+
+	t.Run("invalid resource is a bad request on the op.Server path", func(t *testing.T) {
+		server := op.RegisterLegacyServer(op.NewLegacyServer(testProvider, *op.DefaultEndpoints), op.AuthorizeCallbackHandler(testProvider))
+		r := newRequest("/mcp")
+		r.URL.Path = testProvider.DeviceAuthorizationEndpoint().Relative()
+		r.SetBasicAuth("device", "secret")
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, r)
+
+		result := w.Result()
+		assert.Equal(t, http.StatusBadRequest, result.StatusCode)
+		body, _ := io.ReadAll(result.Body)
+		assert.Contains(t, string(body), string(oidc.InvalidTarget))
+	})
+}
+
+func TestValidateDeviceAccessTokenResources_storageWithoutResources(t *testing.T) {
+	// A storage that does not store resources does not use resource indicators,
+	// so the parameter is only checked for its syntax.
+	state := &op.DeviceAuthorizationState{ClientID: "device"}
+	require.NoError(t, op.ValidateDeviceAccessTokenResources([]string{"https://mcp.example.com/mcp"}, state, nil))
+	assert.Equal(t, []string{"device"}, op.AccessTokenAudience(state))
+	require.Error(t, op.ValidateDeviceAccessTokenResources([]string{"/mcp"}, state, nil))
 }

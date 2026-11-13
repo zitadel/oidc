@@ -105,6 +105,25 @@ func (r *plainRequest) GetSubject() string    { return "id1" }
 func (r *plainRequest) GetAudience() []string { return []string{"client1"} }
 func (r *plainRequest) GetScopes() []string   { return []string{"openid"} }
 
+// setterOnlyRequest implements op.CurrentResourceSetter without op.ResourceRequest.
+type setterOnlyRequest struct {
+	plainRequest
+	currentResources []string
+}
+
+func (r *setterOnlyRequest) SetCurrentResources(resources []string) {
+	r.currentResources = resources
+}
+
+// accessAudienceRequest gives the access token a different audience.
+type accessAudienceRequest struct {
+	plainRequest
+}
+
+func (r *accessAudienceRequest) GetAccessTokenAudience() []string {
+	return []string{"client1", "https://mcp.example.com/mcp"}
+}
+
 func TestValidateTokenRequestResources(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -149,10 +168,22 @@ func TestValidateTokenRequestResources(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:        "nothing granted accepts any valid resource",
-			requested:   []string{"https://mcp.example.com/mcp"},
-			granted:     nil,
-			wantCurrent: []string{"https://mcp.example.com/mcp"},
+			// "no resources granted" differs from "resource indicators not used",
+			// see TestValidateTokenRequestResources_withoutResourceInterfaces.
+			name:      "nothing granted rejects any resource",
+			requested: []string{"https://mcp.example.com/mcp"},
+			granted:   nil,
+			wantErr:   true,
+		},
+		{
+			name:      "empty grant rejects any resource",
+			requested: []string{"https://mcp.example.com/mcp"},
+			granted:   []string{},
+			wantErr:   true,
+		},
+		{
+			name:    "nothing granted and nothing requested",
+			granted: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -177,6 +208,29 @@ func TestValidateTokenRequestResources_withoutResourceInterfaces(t *testing.T) {
 	require.NoError(t, op.ValidateTokenRequestResources(nil, &plainRequest{}))
 	require.NoError(t, op.ValidateTokenRequestResources([]string{"https://mcp.example.com/mcp"}, &plainRequest{}))
 	require.Error(t, op.ValidateTokenRequestResources([]string{"/mcp"}, &plainRequest{}))
+
+	// Narrowing without a grant to check against is not possible.
+	setter := &setterOnlyRequest{}
+	require.NoError(t, op.ValidateTokenRequestResources([]string{"https://mcp.example.com/mcp"}, setter))
+	assert.Nil(t, setter.currentResources)
+}
+
+func TestValidateTokenRequestResources_descriptionDoesNotEchoInput(t *testing.T) {
+	for _, requested := range [][]string{
+		{`https://mcp.example.com/"quoted"#fragment`},
+		{`relative/"quoted"`},
+		{`https://other.example.com/"quoted"`},
+	} {
+		err := op.ValidateTokenRequestResources(requested, &resourceRequest{resources: []string{"https://mcp.example.com/mcp"}})
+		var oidcErr *oidc.Error
+		require.ErrorAs(t, err, &oidcErr)
+		assert.NotContains(t, oidcErr.Description, `"`)
+	}
+}
+
+func TestAccessTokenAudience(t *testing.T) {
+	assert.Equal(t, []string{"client1"}, op.AccessTokenAudience(&plainRequest{}))
+	assert.Equal(t, []string{"client1", "https://mcp.example.com/mcp"}, op.AccessTokenAudience(&accessAudienceRequest{}))
 }
 
 func TestParseTokenRequestResource(t *testing.T) {

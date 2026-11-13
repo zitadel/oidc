@@ -352,10 +352,7 @@ func TestValidateAuthRequest(t *testing.T) {
 				RedirectURI:  "https://registered.com/callback",
 				Resource:     []string{"https://mcp.example.com/mcp#fragment"},
 			}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidTarget().WithDescription(
-				"The resource parameter %q must not include a fragment component.",
-				"https://mcp.example.com/mcp#fragment",
-			),
+			oidc.ErrInvalidTarget().WithDescription("resource must not include a fragment component"),
 		},
 	}
 	for _, tt := range tests {
