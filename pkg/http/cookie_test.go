@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -349,5 +350,56 @@ func TestCookieHandler_SetCookie(t *testing.T) {
 		err := c.SetRequestAwareCookie(r, w, testCookieName, testCookieValue)
 		require.EqualError(t, err, "cookie handler is not request aware")
 		assert.Empty(t, w.Result().Cookies())
+	})
+}
+
+// test remaining errors that are possible when invoking `CookieHandler` methods
+func TestCookieHandler_SecureCookies(t *testing.T) {
+	t.Run("secure cookie func error", func(t *testing.T) {
+		errSecureCookie := errors.New("no key for request")
+		c := NewRequestAwareCookieHandler(func(*http.Request) (*securecookie.SecureCookie, error) {
+			return nil, errSecureCookie
+		})
+
+		w := httptest.NewRecorder()
+		err := c.SetRequestAwareCookie(newCookieRequest(), w, testCookieName, testCookieValue)
+		require.ErrorIs(t, err, errSecureCookie)
+		assert.Empty(t, w.Result().Cookies())
+
+		r := newCookieRequest(&http.Cookie{Name: testCookieName, Value: testCookieValue})
+		got, err := c.CheckCookie(r, testCookieName)
+		require.ErrorIs(t, err, errSecureCookie)
+		assert.Empty(t, got)
+	})
+
+	t.Run("key depends on the request", func(t *testing.T) {
+		const tenantHeader = "x-tenant"
+		keys := map[string][]byte{
+			"a": testCookieKey,
+			"b": testOtherCookieKey,
+		}
+		handler := NewRequestAwareCookieHandler(func(r *http.Request) (*securecookie.SecureCookie, error) {
+			key := keys[r.Header.Get(tenantHeader)]
+			return securecookie.New(key, key), nil
+		})
+
+		setRequest := newCookieRequest()
+		setRequest.Header.Set(tenantHeader, "a")
+		w := httptest.NewRecorder()
+		require.NoError(t, handler.SetRequestAwareCookie(setRequest, w, testCookieName, testCookieValue))
+		cookies := w.Result().Cookies()
+		require.Len(t, cookies, 1)
+
+		sameTenant := newCookieRequest(cookies[0])
+		sameTenant.Header.Set(tenantHeader, "a")
+		got, err := handler.CheckCookie(sameTenant, testCookieName)
+		require.NoError(t, err)
+		assert.Equal(t, testCookieValue, got)
+
+		otherTenant := newCookieRequest(cookies[0])
+		otherTenant.Header.Set(tenantHeader, "b")
+		got, err = handler.CheckCookie(otherTenant, testCookieName)
+		require.ErrorIs(t, err, securecookie.ErrMacInvalid)
+		assert.Empty(t, got)
 	})
 }
