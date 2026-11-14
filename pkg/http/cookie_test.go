@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/securecookie"
@@ -51,6 +52,14 @@ var cookieHandlerKinds = []cookieHandlerKind{
 			return c.SetRequestAwareCookie(r, w, name, value)
 		},
 	},
+}
+
+func newCookieRequest(cookies ...*http.Cookie) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, "https://rp.example.com/callback", nil)
+	for _, cookie := range cookies {
+		r.AddCookie(cookie)
+	}
+	return r
 }
 
 func setTestCookie(t *testing.T, kind cookieHandlerKind, c *CookieHandler, name, value string) *http.Cookie {
@@ -402,4 +411,21 @@ func TestCookieHandler_SecureCookies(t *testing.T) {
 		require.ErrorIs(t, err, securecookie.ErrMacInvalid)
 		assert.Empty(t, got)
 	})
+}
+
+func TestCookieHandler_EncodeError(t *testing.T) {
+	// for some reason 2247 bytes is an upper limit for a value allowed due to
+	// `securecookie.SecurCookie.Encode()` (cookie name's length doesn't matter)
+	tooLong := strings.Repeat("a", 2248)
+
+	for _, kind := range cookieHandlerKinds {
+		t.Run(kind.name, func(t *testing.T) {
+			c := kind.newHandler()
+
+			w := httptest.NewRecorder()
+			err := kind.setCookie(c, newCookieRequest(), w, testCookieName, tooLong)
+			require.ErrorContains(t, err, "the value is too long")
+			assert.Empty(t, w.Result().Cookies())
+		})
+	}
 }
