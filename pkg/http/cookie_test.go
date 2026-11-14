@@ -37,7 +37,7 @@ func newRequest() *http.Request {
 	return httptest.NewRequest(http.MethodGet, "https://rp.example.com/callback", nil)
 }
 
-func Test_NewCookieHandler(t *testing.T) {
+func TestCookieHandler_Attributes(t *testing.T) {
 	tests := []struct {
 		name     string
 		opts     []CookieHandlerOpt
@@ -116,18 +116,33 @@ func Test_NewCookieHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("NewCookieHandler: "+test.name, func(t *testing.T) {
-			cookie := NewCookieHandler(testCookieKey, testCookieKey, test.opts...)
+			handler := NewCookieHandler(testCookieKey, testCookieKey, test.opts...)
 
-			setCookie := setTestCookie(t, cookie, testCookieName, testCookieValue)
-			assert.Equal(t, testCookieName, setCookie.Name)
-			assert.NotEmpty(t, setCookie.Value)
-			assert.NotEqual(t, testCookieValue, setCookie.Value, "value must not be stored in plain text")
-			assert.Equal(t, test.expected.Domain, setCookie.Domain)
-			assert.Equal(t, test.expected.Path, setCookie.Path)
-			assert.Equal(t, test.expected.MaxAge, setCookie.MaxAge)
-			assert.Equal(t, test.expected.Secure, setCookie.Secure)
-			assert.Equal(t, test.expected.SameSite, setCookie.SameSite)
-			assert.True(t, setCookie.HttpOnly)
+			cookie := setTestCookie(t, handler, testCookieName, testCookieValue)
+			assert.Equal(t, testCookieName, cookie.Name)
+			assert.NotEmpty(t, cookie.Value)
+			assert.NotEqual(t, testCookieValue, cookie.Value, "value must not be stored in plain text")
+			assert.Equal(t, test.expected.Domain, cookie.Domain)
+			assert.Equal(t, test.expected.Path, cookie.Path)
+			assert.Equal(t, test.expected.MaxAge, cookie.MaxAge)
+			assert.Equal(t, test.expected.Secure, cookie.Secure)
+			assert.Equal(t, test.expected.SameSite, cookie.SameSite)
+			assert.True(t, cookie.HttpOnly)
+
+			// we delete cookie in the same test for convenience and code reuse
+			w := httptest.NewRecorder()
+			handler.DeleteCookie(w, testCookieName)
+			cookies := w.Result().Cookies()
+			require.Len(t, cookies, 1)
+			deleted := cookies[0]
+			assert.Equal(t, testCookieName, deleted.Name)
+			assert.Empty(t, deleted.Value)
+			assert.Equal(t, -1, deleted.MaxAge)
+			assert.Equal(t, test.expected.Domain, deleted.Domain)
+			assert.Equal(t, test.expected.Path, deleted.Path)
+			assert.Equal(t, test.expected.Secure, deleted.Secure)
+			assert.Equal(t, test.expected.SameSite, deleted.SameSite)
+			assert.True(t, deleted.HttpOnly)
 		})
 	}
 }
