@@ -22,11 +22,41 @@ var (
 	testOtherCookieKey = []byte("123testCookieKey")
 )
 
-func setTestCookie(t *testing.T, c *CookieHandler, name, value string) *http.Cookie {
+// `cookieHandlerKind` allows the same tests to run with both normal & request aware cookie handler
+type cookieHandlerKind struct {
+	name       string
+	newHandler func(opts ...CookieHandlerOpt) *CookieHandler
+	setCookie  func(c *CookieHandler, r *http.Request, w http.ResponseWriter, name, value string) error
+}
+
+var cookieHandlerKinds = []cookieHandlerKind{
+	{
+		name: "normal",
+		newHandler: func(opts ...CookieHandlerOpt) *CookieHandler {
+			return NewCookieHandler(testCookieKey, testCookieKey, opts...)
+		},
+		setCookie: func(c *CookieHandler, _ *http.Request, w http.ResponseWriter, name, value string) error {
+			return c.SetCookie(w, name, value)
+		},
+	},
+	{
+		name: "request aware",
+		newHandler: func(opts ...CookieHandlerOpt) *CookieHandler {
+			return NewRequestAwareCookieHandler(func(*http.Request) (*securecookie.SecureCookie, error) {
+				return securecookie.New(testCookieKey, testCookieKey), nil
+			}, opts...)
+		},
+		setCookie: func(c *CookieHandler, r *http.Request, w http.ResponseWriter, name, value string) error {
+			return c.SetRequestAwareCookie(r, w, name, value)
+		},
+	},
+}
+
+func setTestCookie(t *testing.T, kind cookieHandlerKind, c *CookieHandler, name, value string) *http.Cookie {
 	t.Helper()
 
 	w := httptest.NewRecorder()
-	require.NoError(t, c.SetCookie(w, name, value))
+	require.NoError(t, kind.setCookie(c, newRequest(), w, name, value))
 
 	cookies := w.Result().Cookies()
 	require.Len(t, cookies, 1)
@@ -114,50 +144,54 @@ func TestCookieHandler_Attributes(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
-		t.Run("NewCookieHandler: "+test.name, func(t *testing.T) {
-			handler := NewCookieHandler(testCookieKey, testCookieKey, test.opts...)
+	for _, kind := range cookieHandlerKinds {
+		for _, test := range tests {
+			t.Run("NewCookieHandler: "+kind.name+" "+test.name, func(t *testing.T) {
+				handler := kind.newHandler(test.opts...)
 
-			cookie := setTestCookie(t, handler, testCookieName, testCookieValue)
-			assert.Equal(t, testCookieName, cookie.Name)
-			assert.NotEmpty(t, cookie.Value)
-			assert.NotEqual(t, testCookieValue, cookie.Value, "value must not be stored in plain text")
-			assert.Equal(t, test.expected.Domain, cookie.Domain)
-			assert.Equal(t, test.expected.Path, cookie.Path)
-			assert.Equal(t, test.expected.MaxAge, cookie.MaxAge)
-			assert.Equal(t, test.expected.Secure, cookie.Secure)
-			assert.Equal(t, test.expected.SameSite, cookie.SameSite)
-			assert.True(t, cookie.HttpOnly)
+				cookie := setTestCookie(t, kind, handler, testCookieName, testCookieValue)
+				assert.Equal(t, testCookieName, cookie.Name)
+				assert.NotEmpty(t, cookie.Value)
+				assert.NotEqual(t, testCookieValue, cookie.Value, "value must not be stored in plain text")
+				assert.Equal(t, test.expected.Domain, cookie.Domain)
+				assert.Equal(t, test.expected.Path, cookie.Path)
+				assert.Equal(t, test.expected.MaxAge, cookie.MaxAge)
+				assert.Equal(t, test.expected.Secure, cookie.Secure)
+				assert.Equal(t, test.expected.SameSite, cookie.SameSite)
+				assert.True(t, cookie.HttpOnly)
 
-			// we delete cookie in the same test for convenience and code reuse
-			w := httptest.NewRecorder()
-			handler.DeleteCookie(w, testCookieName)
-			cookies := w.Result().Cookies()
-			require.Len(t, cookies, 1)
-			deleted := cookies[0]
-			assert.Equal(t, testCookieName, deleted.Name)
-			assert.Empty(t, deleted.Value)
-			assert.Equal(t, -1, deleted.MaxAge)
-			assert.Equal(t, test.expected.Domain, deleted.Domain)
-			assert.Equal(t, test.expected.Path, deleted.Path)
-			assert.Equal(t, test.expected.Secure, deleted.Secure)
-			assert.Equal(t, test.expected.SameSite, deleted.SameSite)
-			assert.True(t, deleted.HttpOnly)
-		})
+				// we delete cookie in the same test for convenience and code reuse
+				w := httptest.NewRecorder()
+				handler.DeleteCookie(w, testCookieName)
+				cookies := w.Result().Cookies()
+				require.Len(t, cookies, 1)
+				deleted := cookies[0]
+				assert.Equal(t, testCookieName, deleted.Name)
+				assert.Empty(t, deleted.Value)
+				assert.Equal(t, -1, deleted.MaxAge)
+				assert.Equal(t, test.expected.Domain, deleted.Domain)
+				assert.Equal(t, test.expected.Path, deleted.Path)
+				assert.Equal(t, test.expected.Secure, deleted.Secure)
+				assert.Equal(t, test.expected.SameSite, deleted.SameSite)
+				assert.True(t, deleted.HttpOnly)
+			})
+		}
 	}
 }
 
 func TestCookieHandler_CheckCookie(t *testing.T) {
-	t.Run("CheckCookie: valid cookie", func(t *testing.T) {
-		handler := NewCookieHandler(testCookieKey, testCookieKey)
+	for _, kind := range cookieHandlerKinds {
+		t.Run("CheckCookie: valid cookie "+kind.name, func(t *testing.T) {
+			handler := kind.newHandler()
 
-		r := newRequest()
-		r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
+			r := newRequest()
+			r.AddCookie(setTestCookie(t, kind, handler, testCookieName, testCookieValue))
 
-		got, err := handler.CheckCookie(r, testCookieName)
-		require.NoError(t, err)
-		assert.Equal(t, testCookieValue, got)
-	})
+			got, err := handler.CheckCookie(r, testCookieName)
+			require.NoError(t, err)
+			assert.Equal(t, testCookieValue, got)
+		})
+	}
 }
 
 func TestCookieHandler_CheckCookie_Errors(t *testing.T) {
@@ -201,38 +235,42 @@ func TestCookieHandler_CheckCookie_Errors(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
-		t.Run("CheckCookie error reason: "+test.name, func(t *testing.T) {
-			handler := NewCookieHandler(testCookieKey, testCookieKey)
-			validCookie := setTestCookie(t, handler, testCookieName, testCookieValue)
+	for _, kind := range cookieHandlerKinds {
+		for _, test := range tests {
+			t.Run("CheckCookie error reason: "+kind.name+" "+test.name, func(t *testing.T) {
+				handler := kind.newHandler()
+				validCookie := setTestCookie(t, kind, handler, testCookieName, testCookieValue)
 
-			r := newRequest()
-			if cookie := test.cookie(t, validCookie); cookie != nil {
-				r.AddCookie(cookie)
-			}
+				r := newRequest()
+				if cookie := test.cookie(t, validCookie); cookie != nil {
+					r.AddCookie(cookie)
+				}
 
-			got, err := handler.CheckCookie(r, testCookieName)
-			require.Error(t, err)
-			if test.expectedErr != nil {
-				assert.ErrorIs(t, err, test.expectedErr)
-			}
-			assert.Empty(t, got)
-		})
+				got, err := handler.CheckCookie(r, testCookieName)
+				require.Error(t, err)
+				if test.expectedErr != nil {
+					assert.ErrorIs(t, err, test.expectedErr)
+				}
+				assert.Empty(t, got)
+			})
+		}
 	}
 }
 
 func TestCookieHandler_CheckQueryCookie(t *testing.T) {
-	t.Run("CheckQueryCookie: cookie equals query parameter", func(t *testing.T) {
-		handler := NewCookieHandler(testCookieKey, testCookieKey)
+	for _, kind := range cookieHandlerKinds {
+		t.Run("CheckQueryCookie: cookie equals query parameter "+kind.name, func(t *testing.T) {
+			handler := kind.newHandler()
 
-		r := newRequest()
-		r.URL.RawQuery = url.Values{testCookieName: {testCookieValue}}.Encode()
-		r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
+			r := newRequest()
+			r.URL.RawQuery = url.Values{testCookieName: {testCookieValue}}.Encode()
+			r.AddCookie(setTestCookie(t, kind, handler, testCookieName, testCookieValue))
 
-		got, err := handler.CheckQueryCookie(r, testCookieName)
-		require.NoError(t, err)
-		assert.Equal(t, testCookieValue, got)
-	})
+			got, err := handler.CheckQueryCookie(r, testCookieName)
+			require.NoError(t, err)
+			assert.Equal(t, testCookieValue, got)
+		})
+	}
 }
 
 func TestCookieHandler_CheckQueryCookie_Errors(t *testing.T) {
@@ -259,21 +297,23 @@ func TestCookieHandler_CheckQueryCookie_Errors(t *testing.T) {
 			expectedErr: http.ErrNoCookie.Error(),
 		},
 	}
-	for _, test := range tests {
-		t.Run("CheckQueryCookie error reason: "+test.name, func(t *testing.T) {
-			handler := NewCookieHandler(testCookieKey, testCookieKey)
+	for _, kind := range cookieHandlerKinds {
+		for _, test := range tests {
+			t.Run("CheckQueryCookie error reason: "+kind.name+" "+test.name, func(t *testing.T) {
+				handler := kind.newHandler()
 
-			r := newRequest()
-			r.URL.RawQuery = test.query.Encode()
-			if test.withCookie {
-				r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
-			}
+				r := newRequest()
+				r.URL.RawQuery = test.query.Encode()
+				if test.withCookie {
+					r.AddCookie(setTestCookie(t, kind, handler, testCookieName, testCookieValue))
+				}
 
-			got, err := handler.CheckQueryCookie(r, testCookieName)
+				got, err := handler.CheckQueryCookie(r, testCookieName)
 
-			require.EqualError(t, err, test.expectedErr)
-			assert.Empty(t, got)
-		})
+				require.EqualError(t, err, test.expectedErr)
+				assert.Empty(t, got)
+			})
+		}
 	}
 }
 
