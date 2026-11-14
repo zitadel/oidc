@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/gorilla/securecookie"
@@ -27,6 +28,10 @@ func setTestCookie(t *testing.T, c *CookieHandler, name, value string) *http.Coo
 	cookies := w.Result().Cookies()
 	require.Len(t, cookies, 1)
 	return cookies[0]
+}
+
+func newRequest() *http.Request {
+	return httptest.NewRequest(http.MethodGet, "https://rp.example.com/callback", nil)
 }
 
 func Test_NewCookieHandler(t *testing.T) {
@@ -124,6 +129,62 @@ func Test_NewCookieHandler(t *testing.T) {
 	}
 }
 
+func TestCookieHandler_CheckQueryCookie(t *testing.T) {
+	t.Run("CheckQueryCookie: cookie equals query parameter", func(t *testing.T) {
+		handler := NewCookieHandler(testCookieKey, testCookieKey)
+
+		r := newRequest()
+		r.URL.RawQuery = url.Values{testCookieName: {testCookieValue}}.Encode()
+		r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
+
+		got, err := handler.CheckQueryCookie(r, testCookieName)
+		require.NoError(t, err)
+		assert.Equal(t, testCookieValue, got)
+	})
+}
+
+func TestCookieHandler_CheckQueryCookie_Errors(t *testing.T) {
+	tests := []struct {
+		name        string
+		query       url.Values
+		withCookie  bool
+		expectedErr string
+	}{
+		{
+			name:        "cookie differs from query parameter",
+			query:       url.Values{testCookieName: {"other"}},
+			withCookie:  true,
+			expectedErr: testCookieName + " does not compare",
+		},
+		{
+			name:        "no query parameter",
+			withCookie:  true,
+			expectedErr: testCookieName + " does not compare",
+		},
+		{
+			name:        "no cookie",
+			query:       url.Values{testCookieName: {testCookieValue}},
+			expectedErr: http.ErrNoCookie.Error(),
+		},
+	}
+	for _, test := range tests {
+		t.Run("CheckQueryCookie error reason: "+test.name, func(t *testing.T) {
+			handler := NewCookieHandler(testCookieKey, testCookieKey)
+
+			r := newRequest()
+			r.URL.RawQuery = test.query.Encode()
+			if test.withCookie {
+				r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
+			}
+
+			got, err := handler.CheckQueryCookie(r, testCookieName)
+
+			require.EqualError(t, err, test.expectedErr)
+			assert.Empty(t, got)
+		})
+	}
+}
+
 func TestCookieHandler_RequestAware(t *testing.T) {
 	t.Run("IsRequestAware", func(t *testing.T) {
 		normalCookieHandler := NewCookieHandler(testCookieKey, testCookieKey)
@@ -152,7 +213,7 @@ func TestCookieHandler_SetCookie(t *testing.T) {
 		c := NewCookieHandler(testCookieKey, testCookieKey)
 
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+		r := newRequest()
 		err := c.SetRequestAwareCookie(r, w, testCookieName, testCookieValue)
 		require.EqualError(t, err, "cookie handler is not request aware")
 		assert.Empty(t, w.Result().Cookies())
