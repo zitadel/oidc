@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -108,7 +109,6 @@ func Test_NewCookieHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run("NewCookieHandler: "+test.name, func(t *testing.T) {
 			cookie := NewCookieHandler(testCookieKey, testCookieKey, test.opts...)
-			assert.False(t, cookie.IsRequestAware())
 
 			setCookie := setTestCookie(t, cookie, testCookieName, testCookieValue)
 			assert.Equal(t, testCookieName, setCookie.Name)
@@ -122,4 +122,39 @@ func Test_NewCookieHandler(t *testing.T) {
 			assert.True(t, setCookie.HttpOnly)
 		})
 	}
+}
+
+func TestCookieHandler_RequestAware(t *testing.T) {
+	t.Run("IsRequestAware", func(t *testing.T) {
+		normalCookieHandler := NewCookieHandler(testCookieKey, testCookieKey)
+		assert.False(t, normalCookieHandler.IsRequestAware())
+
+		reqAwareCookieHandler := NewRequestAwareCookieHandler(func(*http.Request) (*securecookie.SecureCookie, error) {
+			return securecookie.New(testCookieKey, testCookieKey), nil
+		})
+		assert.True(t, reqAwareCookieHandler.IsRequestAware())
+	})
+}
+
+func TestCookieHandler_SetCookie(t *testing.T) {
+	t.Run("SetCookie on a request aware handler", func(t *testing.T) {
+		c := NewRequestAwareCookieHandler(func(*http.Request) (*securecookie.SecureCookie, error) {
+			return securecookie.New(testCookieKey, testCookieKey), nil
+		})
+
+		w := httptest.NewRecorder()
+		err := c.SetCookie(w, testCookieName, testCookieValue)
+		require.EqualError(t, err, "cookie handler is request aware")
+		assert.Empty(t, w.Result().Cookies())
+	})
+
+	t.Run("SetRequestAwareCookie on a normal cookie handler", func(t *testing.T) {
+		c := NewCookieHandler(testCookieKey, testCookieKey)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+		err := c.SetRequestAwareCookie(r, w, testCookieName, testCookieValue)
+		require.EqualError(t, err, "cookie handler is not request aware")
+		assert.Empty(t, w.Result().Cookies())
+	})
 }
