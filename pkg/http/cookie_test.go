@@ -17,7 +17,10 @@ const (
 	testCookieValue = "testCookieValue123"
 )
 
-var testCookieKey = []byte("testCookieKey123")
+var (
+	testCookieKey      = []byte("testCookieKey123")
+	testOtherCookieKey = []byte("123testCookieKey")
+)
 
 func setTestCookie(t *testing.T, c *CookieHandler, name, value string) *http.Cookie {
 	t.Helper()
@@ -125,6 +128,80 @@ func Test_NewCookieHandler(t *testing.T) {
 			assert.Equal(t, test.expected.Secure, setCookie.Secure)
 			assert.Equal(t, test.expected.SameSite, setCookie.SameSite)
 			assert.True(t, setCookie.HttpOnly)
+		})
+	}
+}
+
+func TestCookieHandler_CheckCookie(t *testing.T) {
+	t.Run("CheckCookie: valid cookie", func(t *testing.T) {
+		handler := NewCookieHandler(testCookieKey, testCookieKey)
+
+		r := newRequest()
+		r.AddCookie(setTestCookie(t, handler, testCookieName, testCookieValue))
+
+		got, err := handler.CheckCookie(r, testCookieName)
+		require.NoError(t, err)
+		assert.Equal(t, testCookieValue, got)
+	})
+}
+
+func TestCookieHandler_CheckCookie_Errors(t *testing.T) {
+	tests := []struct {
+		name        string
+		cookie      func(t *testing.T, valid *http.Cookie) *http.Cookie
+		expectedErr error
+	}{
+		{
+			name: "no cookie",
+			cookie: func(*testing.T, *http.Cookie) *http.Cookie {
+				return nil
+			},
+			expectedErr: http.ErrNoCookie,
+		},
+		{
+			name: "signed with another key",
+			cookie: func(t *testing.T, _ *http.Cookie) *http.Cookie {
+				other := NewCookieHandler(testOtherCookieKey, testOtherCookieKey)
+				cookie, err := other.CreateCookie(testCookieName, testCookieValue)
+				require.NoError(t, err)
+				return cookie
+			},
+			expectedErr: securecookie.ErrMacInvalid,
+		},
+		{
+			name: "value of a cookie with another name",
+			cookie: func(t *testing.T, _ *http.Cookie) *http.Cookie {
+				other := NewCookieHandler(testCookieKey, testCookieKey)
+				cookie, err := other.CreateCookie("other", testCookieValue)
+				require.NoError(t, err)
+				cookie.Name = testCookieName
+				return cookie
+			},
+			expectedErr: securecookie.ErrMacInvalid,
+		},
+		{
+			name: "plain text value",
+			cookie: func(*testing.T, *http.Cookie) *http.Cookie {
+				return &http.Cookie{Name: testCookieName, Value: testCookieValue}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run("CheckCookie error reason: "+test.name, func(t *testing.T) {
+			handler := NewCookieHandler(testCookieKey, testCookieKey)
+			validCookie := setTestCookie(t, handler, testCookieName, testCookieValue)
+
+			r := newRequest()
+			if cookie := test.cookie(t, validCookie); cookie != nil {
+				r.AddCookie(cookie)
+			}
+
+			got, err := handler.CheckCookie(r, testCookieName)
+			require.Error(t, err)
+			if test.expectedErr != nil {
+				assert.ErrorIs(t, err, test.expectedErr)
+			}
+			assert.Empty(t, got)
 		})
 	}
 }
