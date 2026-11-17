@@ -29,26 +29,39 @@ func NewRemoteKeySet(client *http.Client, jwksURL string, opts ...func(*remoteKe
 //
 // This might be handy to save some unnecessary round trips in cases where the JWT does not contain a kid header and
 // there is only a single remote key.
-// Please notice that remote keys will then only be fetched if cached keys are empty.
+// Please notice that remote keys will then only be fetched if cached keys are empty or expired (see CacheTTL).
 func SkipRemoteCheck() func(set *remoteKeySet) {
 	return func(set *remoteKeySet) {
 		set.skipRemoteCheck = true
 	}
 }
 
-// CacheTTL sets the maximum duration the fetched remote keys are used for.
-// Once it has passed, the keys are fetched again before the next signature
-// verification, so keys removed by the issuer stop being accepted.
-// If the keys cannot be fetched, verification fails instead of falling
-// back to the expired keys.
+// CacheTTL sets the duration the fetched remote keys are used for, counted from
+// the start of the fetch. Once it has passed, the next signature verification
+// fetches the keys again and waits for the result, so keys removed by the issuer
+// stop being accepted.
 //
-// By default (or with a ttl <= 0) the cached keys don't expire and are only
-// refreshed when no cached key matches the token.
+// If that fetch fails, the cached keys are kept and used until a later fetch
+// succeeds. The next attempt is made after a back-off of 10 seconds, so an
+// issuer that is down or rate limiting isn't called on every verification.
+//
+// Verifications running at the same time share a single fetch. It isn't
+// canceled together with the request that started it, so the http.Client
+// should have a timeout.
+//
+// By default (or with a ttl <= 0) the cached keys don't expire. Independent of
+// the ttl, the keys are fetched again when the cached ones can't be used for a
+// token, for example when none of them has the token's kid or a token without
+// kid matches several keys.
 func CacheTTL(ttl time.Duration) func(set *remoteKeySet) {
 	return func(set *remoteKeySet) {
 		set.cacheTTL = ttl
 	}
 }
+
+// cacheRefreshBackoff is how long the expired keys are still used after a
+// failed refresh before the next one is attempted (see CacheTTL).
+const cacheRefreshBackoff = 10 * time.Second
 
 type remoteKeySet struct {
 	jwksURL         string
@@ -108,6 +121,9 @@ func (r *remoteKeySet) VerifySignature(ctx context.Context, jws *jose.JSONWebSig
 	keyID, alg := oidc.GetKeyIDAndAlg(jws)
 	if alg == "" {
 		alg = r.defaultAlg
+	}
+	if err := r.refreshExpiredKeys(ctx); err != nil {
+		return nil, err
 	}
 	payload, err := r.verifySignatureCached(jws, keyID, alg)
 	if payload != nil {
@@ -178,10 +194,27 @@ func (r *remoteKeySet) verifySignatureRemote(ctx context.Context, jws *jose.JSON
 func (r *remoteKeySet) keysFromCache() (keys []jose.JSONWebKey) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.cacheTTL > 0 && !time.Now().Before(r.cacheExpiry) {
+	return r.cachedKeys
+}
+
+// refreshExpiredKeys fetches the keys again if the CacheTTL has passed.
+// If that fails, the cached keys are kept and updateKeys delays the next
+// attempt, so it only returns an error if ctx is done.
+func (r *remoteKeySet) refreshExpiredKeys(ctx context.Context) error {
+	r.mu.Lock()
+	expired := r.cacheExpired()
+	r.mu.Unlock()
+	if !expired {
 		return nil
 	}
-	return r.cachedKeys
+	_, _ = r.keysFromRemote(ctx)
+	return ctx.Err()
+}
+
+// cacheExpired reports whether the cached keys are older than the CacheTTL.
+// r.mu must be held.
+func (r *remoteKeySet) cacheExpired() bool {
+	return r.cacheTTL > 0 && len(r.cachedKeys) > 0 && !time.Now().Before(r.cacheExpiry)
 }
 
 // keysFromRemote syncs the key set from the remote set, records the values in the
@@ -198,8 +231,9 @@ func (r *remoteKeySet) keysFromRemote(ctx context.Context) ([]jose.JSONWebKey, e
 
 		// This goroutine has exclusive ownership over the current inflight
 		// request. It releases the resource by nil'ing the inflight field
-		// once the goroutine is done.
-		go r.updateKeys(ctx)
+		// once the goroutine is done. Other goroutines may be waiting for
+		// it, so it must not be canceled together with this request.
+		go r.updateKeys(context.WithoutCancel(ctx))
 	}
 	inflight := r.inflight
 	r.mu.Unlock()
@@ -217,9 +251,8 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 	defer span.End()
 
 	// Sync keys and finish inflight when that's done.
+	start := time.Now()
 	keys, err := r.fetchRemoteKeys(ctx)
-
-	r.inflight.done(keys, err)
 
 	// Lock to update the keys and indicate that there is no longer an
 	// inflight request.
@@ -228,10 +261,18 @@ func (r *remoteKeySet) updateKeys(ctx context.Context) {
 
 	if err == nil {
 		r.cachedKeys = keys
-		r.cacheExpiry = time.Now().Add(r.cacheTTL)
+		// Round(0) drops the monotonic clock reading, so the expiry also
+		// counts the time the machine was suspended.
+		r.cacheExpiry = start.Add(r.cacheTTL).Round(0)
+	} else if r.cacheExpired() {
+		// Keep using the expired keys for now and don't retry right away.
+		r.cacheExpiry = time.Now().Add(cacheRefreshBackoff).Round(0)
 	}
 
-	// Free inflight so a different request can run.
+	// Finish inflight only after the cache is updated, so the waiters and
+	// the next request see the new keys, and free it so a different
+	// request can run.
+	r.inflight.done(keys, err)
 	r.inflight = nil
 }
 

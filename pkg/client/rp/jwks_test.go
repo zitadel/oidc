@@ -1,15 +1,17 @@
 package rp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -142,85 +144,226 @@ func TestRemoteKeySet_VerifySignature_WrapsFetchError(t *testing.T) {
 	}
 }
 
-func TestRemoteKeySet_CacheTTL(t *testing.T) {
-	oldKey := jose.JSONWebKey{Key: mustRSAKey(t, 2048), KeyID: "old", Algorithm: string(jose.RS256), Use: oidc.KeyUseSignature}
-	newKey := jose.JSONWebKey{Key: mustRSAKey(t, 2048), KeyID: "new", Algorithm: string(jose.RS256), Use: oidc.KeyUseSignature}
+// testJWKS serves a key set through an in-memory transport, so the tests can
+// run in a synctest bubble, whose fake clock doesn't advance while a goroutine
+// waits on a real socket.
+type testJWKS struct {
+	keys    []jose.JSONWebKey
+	status  int           // http.StatusOK if not set
+	latency time.Duration // how long a fetch takes
+	release chan struct{} // if set, fetches wait until it's closed
+	fetches atomic.Int32
+}
 
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: oldKey}, nil)
-	require.NoError(t, err)
-	signed, err := signer.Sign([]byte(`{"sub":"subject"}`))
+func (s *testJWKS) client() *http.Client {
+	return &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		s.fetches.Add(1)
+		if s.release != nil {
+			select {
+			case <-s.release:
+			case <-r.Context().Done():
+				return nil, r.Context().Err()
+			}
+		}
+		time.Sleep(s.latency)
+		if s.status != 0 && s.status != http.StatusOK {
+			return &http.Response{
+				StatusCode: s.status,
+				Status:     http.StatusText(s.status),
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    r,
+			}, nil
+		}
+		body, err := json.Marshal(jose.JSONWebKeySet{Keys: s.keys})
+		if err != nil {
+			return nil, err
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(body)),
+			Request:    r,
+		}, nil
+	})}
+}
+
+// testJWS returns a token signed by tu.Signer, with kid "1".
+func testJWS(t *testing.T) *jose.JSONWebSignature {
+	t.Helper()
+	signed, err := tu.Signer.Sign([]byte(`{"sub":"subject"}`))
 	require.NoError(t, err)
 	token, err := signed.CompactSerialize()
 	require.NoError(t, err)
+	jws, err := jose.ParseSignedCompact(token, []jose.SignatureAlgorithm{tu.SignatureAlgorithm})
+	require.NoError(t, err)
+	return jws
+}
+
+// rotatedKey replaces tu.WebKey after a key rotation by the issuer.
+func rotatedKey() jose.JSONWebKey {
+	key := tu.WebKey.Public()
+	key.KeyID = "2"
+	return key
+}
+
+func TestRemoteKeySet_CacheTTL(t *testing.T) {
+	const ttl = time.Hour
+	jws := testJWS(t)
 
 	tests := []struct {
 		name        string
 		opts        []func(*remoteKeySet)
-		expire      bool
-		wantErr     bool
-		wantFetches int
+		rotate      bool          // the issuer rotates out the token's key after the first verification
+		elapsed     time.Duration // since the first verification started
+		wantErr     error
+		wantFetches int32
 	}{
 		{
-			name:        "no ttl keeps using cached keys",
-			expire:      true,
+			name:        "no ttl keeps the cached key",
+			rotate:      true,
+			elapsed:     2 * ttl,
 			wantFetches: 1,
 		},
 		{
-			name:        "ttl not expired",
-			opts:        []func(*remoteKeySet){CacheTTL(time.Hour)},
+			name:        "cached key kept within the ttl",
+			opts:        []func(*remoteKeySet){CacheTTL(ttl)},
+			rotate:      true,
+			elapsed:     ttl - time.Second,
 			wantFetches: 1,
 		},
 		{
-			name:        "ttl expired",
-			opts:        []func(*remoteKeySet){CacheTTL(time.Hour)},
-			expire:      true,
-			wantErr:     true,
+			name:    "rotated key rejected after the ttl",
+			opts:    []func(*remoteKeySet){CacheTTL(ttl)},
+			rotate:  true,
+			elapsed: ttl,
+			wantErr: oidc.ErrKeyNone,
+			// the refresh, then the usual refetch for a kid that isn't cached
+			wantFetches: 3,
+		},
+		{
+			name:        "key still published after the ttl",
+			opts:        []func(*remoteKeySet){CacheTTL(ttl)},
+			elapsed:     ttl,
 			wantFetches: 2,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var (
-				mu      sync.Mutex
-				keys    = []jose.JSONWebKey{oldKey.Public()}
-				fetches int
-			)
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				mu.Lock()
-				defer mu.Unlock()
-				fetches++
-				_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: keys})
-			}))
-			defer srv.Close()
+			synctest.Test(t, func(t *testing.T) {
+				// a fetch takes a second, the ttl counts from its start
+				issuer := &testJWKS{keys: []jose.JSONWebKey{tu.WebKey.Public()}, latency: time.Second}
+				keySet := NewRemoteKeySet(issuer.client(), "https://issuer.example/keys", tt.opts...)
 
-			keySet := NewRemoteKeySet(srv.Client(), srv.URL, tt.opts...).(*remoteKeySet)
-			verify := func() error {
-				jws, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{jose.RS256})
+				start := time.Now()
+				_, err := keySet.VerifySignature(context.Background(), jws)
 				require.NoError(t, err)
+
+				if tt.rotate {
+					issuer.keys = []jose.JSONWebKey{rotatedKey()}
+				}
+				time.Sleep(time.Until(start.Add(tt.elapsed)))
+
 				_, err = keySet.VerifySignature(context.Background(), jws)
-				return err
-			}
-			require.NoError(t, verify())
-
-			// the issuer rotates out the key the token was signed with
-			mu.Lock()
-			keys = []jose.JSONWebKey{newKey.Public()}
-			mu.Unlock()
-			if tt.expire {
-				keySet.mu.Lock()
-				keySet.cacheExpiry = time.Now().Add(-time.Second)
-				keySet.mu.Unlock()
-			}
-
-			err := verify()
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			mu.Lock()
-			assert.Equal(t, tt.wantFetches, fetches)
-			mu.Unlock()
+				if tt.wantErr != nil {
+					assert.ErrorIs(t, err, tt.wantErr)
+				} else {
+					assert.NoError(t, err)
+				}
+				assert.Equal(t, tt.wantFetches, issuer.fetches.Load())
+			})
 		})
 	}
+}
+
+func TestRemoteKeySet_CacheTTL_FailedRefresh(t *testing.T) {
+	const ttl = time.Hour
+	jws := testJWS(t)
+
+	synctest.Test(t, func(t *testing.T) {
+		issuer := &testJWKS{keys: []jose.JSONWebKey{tu.WebKey.Public()}}
+		keySet := NewRemoteKeySet(issuer.client(), "https://issuer.example/keys", CacheTTL(ttl))
+		verify := func() error {
+			_, err := keySet.VerifySignature(context.Background(), jws)
+			return err
+		}
+		require.NoError(t, verify())
+
+		// the refresh fails, the cached key is still used
+		issuer.status = http.StatusServiceUnavailable
+		time.Sleep(ttl)
+		assert.NoError(t, verify())
+		assert.EqualValues(t, 2, issuer.fetches.Load())
+
+		// no new attempt during the back-off
+		time.Sleep(cacheRefreshBackoff - time.Second)
+		assert.NoError(t, verify())
+		assert.EqualValues(t, 2, issuer.fetches.Load())
+
+		// the next attempt fails as well
+		time.Sleep(time.Second)
+		assert.NoError(t, verify())
+		assert.EqualValues(t, 3, issuer.fetches.Load())
+
+		// the issuer is back and has rotated out the token's key
+		issuer.status = http.StatusOK
+		issuer.keys = []jose.JSONWebKey{rotatedKey()}
+		time.Sleep(cacheRefreshBackoff)
+		assert.ErrorIs(t, verify(), oidc.ErrKeyNone)
+		// the refresh, then the usual refetch for a kid that isn't cached
+		assert.EqualValues(t, 5, issuer.fetches.Load())
+	})
+}
+
+func TestRemoteKeySet_SharedFetch(t *testing.T) {
+	jws := testJWS(t)
+
+	t.Run("concurrent verifications after the ttl", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			issuer := &testJWKS{keys: []jose.JSONWebKey{tu.WebKey.Public()}}
+			keySet := NewRemoteKeySet(issuer.client(), "https://issuer.example/keys", CacheTTL(time.Hour))
+			_, err := keySet.VerifySignature(context.Background(), jws)
+			require.NoError(t, err)
+
+			time.Sleep(time.Hour)
+			issuer.release = make(chan struct{})
+			var wg sync.WaitGroup
+			for range 10 {
+				wg.Go(func() {
+					_, err := keySet.VerifySignature(context.Background(), jws)
+					assert.NoError(t, err)
+				})
+			}
+			// all of them wait for the same fetch
+			synctest.Wait()
+			close(issuer.release)
+			wg.Wait()
+			assert.EqualValues(t, 2, issuer.fetches.Load())
+		})
+	})
+
+	t.Run("request that started the fetch is canceled", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			issuer := &testJWKS{keys: []jose.JSONWebKey{tu.WebKey.Public()}, release: make(chan struct{})}
+			keySet := NewRemoteKeySet(issuer.client(), "https://issuer.example/keys")
+
+			ctx, cancel := context.WithCancel(context.Background())
+			first := make(chan error)
+			go func() {
+				_, err := keySet.VerifySignature(ctx, jws)
+				first <- err
+			}()
+			synctest.Wait()
+			second := make(chan error)
+			go func() {
+				_, err := keySet.VerifySignature(context.Background(), jws)
+				second <- err
+			}()
+			synctest.Wait()
+
+			cancel()
+			assert.ErrorIs(t, <-first, context.Canceled)
+			close(issuer.release)
+			assert.NoError(t, <-second)
+			assert.EqualValues(t, 1, issuer.fetches.Load())
+		})
+	})
 }
