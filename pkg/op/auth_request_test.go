@@ -68,6 +68,23 @@ type stubAuthRequest struct {
 
 func (s *stubAuthRequest) GetID() string { return s.id }
 
+// newAcceptingValidator returns a custom AuthorizeValidator that accepts every
+// request without assigning Authorize's local client variable.
+func newAcceptingValidator(ctrl *gomock.Controller, storage op.Storage) *customAuthorizeValidator {
+	authorizer := &customAuthorizeValidator{
+		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
+		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
+			return "userID", nil
+		},
+	}
+	expect := authorizer.MockAuthorizer.EXPECT()
+	expect.Decoder().Return(schema.NewDecoder())
+	expect.Encoder().Return(schema.NewEncoder()).AnyTimes()
+	expect.Storage().Return(storage).AnyTimes()
+	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+	return authorizer
+}
+
 // TestAuthorizeCustomValidator authorizes with an Authorizer that implements
 // AuthorizeValidator. The custom validator replaces the default validation
 // closure, which is what assigns Authorize's local client, so Authorize must
@@ -78,17 +95,7 @@ func TestAuthorizeCustomValidator(t *testing.T) {
 	storage := mock.NewMockStorage(ctrl)
 	client := mock.NewMockClient(ctrl)
 
-	authorizer := &customAuthorizeValidator{
-		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
-		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
-			// succeeds without assigning Authorize's local client variable
-			return "userID", nil
-		},
-	}
-	expect := authorizer.MockAuthorizer.EXPECT()
-	expect.Decoder().Return(schema.NewDecoder())
-	expect.Storage().Return(storage).AnyTimes()
-	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+	authorizer := newAcceptingValidator(ctrl, storage)
 
 	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(client, nil)
 	storage.EXPECT().CreateAuthRequest(gomock.Any(), gomock.Any(), "userID").Return(&stubAuthRequest{id: "authReqID"}, nil)
@@ -114,17 +121,7 @@ func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	storage := mock.NewMockStorage(ctrl)
 
-	authorizer := &customAuthorizeValidator{
-		MockAuthorizer: mock.NewMockAuthorizer(ctrl),
-		validate: func(context.Context, *oidc.AuthRequest, op.Storage, *op.IDTokenHintVerifier) (string, error) {
-			// succeeds without assigning Authorize's local client variable
-			return "userID", nil
-		},
-	}
-	expect := authorizer.MockAuthorizer.EXPECT()
-	expect.Decoder().Return(schema.NewDecoder())
-	expect.Storage().Return(storage).AnyTimes()
-	expect.IDTokenHintVerifier(gomock.Any()).Return(nil)
+	authorizer := newAcceptingValidator(ctrl, storage)
 
 	storage.EXPECT().GetClientByClientID(gomock.Any(), "native").Return(nil, errors.New("client not found"))
 
@@ -140,6 +137,92 @@ func TestAuthorizeCustomValidatorClientLookupError(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Contains(t, string(body), "unable to retrieve client by id")
+}
+
+// TestAuthorizeCustomValidatorCodeChallengeMethod covers a custom
+// AuthorizeValidator that accepts an unsupported code_challenge_method.
+// Authorize must still reject it before the auth request is stored, and only
+// redirect the error to a redirect_uri registered for the client.
+func TestAuthorizeCustomValidatorCodeChallengeMethod(t *testing.T) {
+	const state = "custom-state"
+	tests := []struct {
+		name        string
+		appType     op.ApplicationType
+		registered  string
+		redirectURI string
+		// wantDelivered is false when the error must be rendered at the
+		// endpoint instead of being redirected.
+		wantDelivered bool
+	}{
+		{
+			name:          "registered redirect_uri",
+			appType:       op.ApplicationTypeWeb,
+			registered:    "https://registered.com/callback",
+			redirectURI:   "https://registered.com/callback",
+			wantDelivered: true,
+		},
+		{
+			name:        "unregistered redirect_uri",
+			appType:     op.ApplicationTypeWeb,
+			registered:  "https://registered.com/callback",
+			redirectURI: "https://evil.com/callback",
+		},
+		{
+			// A native app picks a free port at runtime (RFC 8252, section
+			// 7.3), so a loopback redirect on another port is registered.
+			name:          "native loopback redirect_uri on another port",
+			appType:       op.ApplicationTypeNative,
+			registered:    "http://127.0.0.1/callback",
+			redirectURI:   "http://127.0.0.1:51004/callback",
+			wantDelivered: true,
+		},
+		{
+			// Registered, though ValidateAuthReqRedirectURI's policy would
+			// refuse an http redirect_uri for a native client: only whether it
+			// is registered decides where the error goes.
+			name:          "registered native http redirect_uri",
+			appType:       op.ApplicationTypeNative,
+			registered:    "http://app.example.com/callback",
+			redirectURI:   "http://app.example.com/callback",
+			wantDelivered: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			storage := mock.NewMockStorage(ctrl)
+			client := mock.NewClientWithConfig(t, []string{tt.registered},
+				tt.appType, []oidc.ResponseType{oidc.ResponseTypeCode}, false)
+			// accepts the request without checking the code_challenge_method
+			authorizer := newAcceptingValidator(ctrl, storage)
+
+			// CreateAuthRequest is not expected: the request must not be stored.
+			storage.EXPECT().GetClientByClientID(gomock.Any(), "client").Return(client, nil)
+
+			req := httptest.NewRequest(http.MethodGet, "/authorize?"+url.Values{
+				"client_id":             {"client"},
+				"redirect_uri":          {tt.redirectURI},
+				"scope":                 {"openid"},
+				"response_type":         {"code"},
+				"state":                 {state},
+				"code_challenge":        {"challenge"},
+				"code_challenge_method": {"S512"},
+			}.Encode(), nil)
+			w := httptest.NewRecorder()
+			op.Authorize(w, req, authorizer)
+
+			if tt.wantDelivered {
+				assertDeliveredTo(t, w, tt.redirectURI, state, "invalid_request")
+				return
+			}
+			resp := w.Result()
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Empty(t, resp.Header.Get("Location"))
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(body), "code_challenge_method is not supported")
+		})
+	}
 }
 
 func TestParseAuthorizeRequest(t *testing.T) {
@@ -867,6 +950,72 @@ func TestValidateAuthReqResponseType(t *testing.T) {
 			if err := op.ValidateAuthReqResponseType(tt.args.client, tt.args.responseType); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAuthReqScopes() error = %v, wantErr %v", err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestValidateAuthReqCodeChallengeMethod(t *testing.T) {
+	tests := []struct {
+		name      string
+		challenge string
+		method    oidc.CodeChallengeMethod
+		wantErr   bool
+	}{
+		{name: "no method defaults to plain", challenge: "challenge", method: "", wantErr: false},
+		{name: "plain", challenge: "challenge", method: oidc.CodeChallengeMethodPlain, wantErr: false},
+		{name: "S256", challenge: "challenge", method: oidc.CodeChallengeMethodS256, wantErr: false},
+		{name: "lower-case s256", challenge: "challenge", method: "s256", wantErr: true},
+		{name: "S512", challenge: "challenge", method: "S512", wantErr: true},
+		{name: "unknown", challenge: "challenge", method: "unknown", wantErr: true},
+		// Without a code_challenge there is nothing to downgrade.
+		{name: "unsupported method without challenge", challenge: "", method: "S512", wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := op.ValidateAuthReqCodeChallengeMethod(tt.challenge, tt.method)
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, oidc.ErrInvalidRequest())
+			// The method is caller input and must not be echoed (RFC 6749,
+			// section 4.1.2.1, restricts the characters of error_description).
+			var oidcErr *oidc.Error
+			require.ErrorAs(t, err, &oidcErr)
+			assert.NotContains(t, oidcErr.Description, string(tt.method))
+		})
+	}
+}
+
+// TestValidateAuthRequestClientCodeChallengeMethod covers the check in
+// ValidateAuthRequestClient itself, without the backstop in Authorize.
+func TestValidateAuthRequestClientCodeChallengeMethod(t *testing.T) {
+	tests := []struct {
+		name    string
+		method  oidc.CodeChallengeMethod
+		wantErr bool
+	}{
+		{name: "S256", method: oidc.CodeChallengeMethodS256, wantErr: false},
+		{name: "S512", method: "S512", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := mock.NewClientWithConfig(t, []string{"https://registered.com/callback"},
+				op.ApplicationTypeWeb, []oidc.ResponseType{oidc.ResponseTypeCode}, false)
+			authReq := &oidc.AuthRequest{
+				Scopes:              oidc.SpaceDelimitedArray{oidc.ScopeOpenID},
+				ResponseType:        oidc.ResponseTypeCode,
+				ClientID:            "web",
+				RedirectURI:         "https://registered.com/callback",
+				CodeChallenge:       "challenge",
+				CodeChallengeMethod: tt.method,
+			}
+			_, err := op.ValidateAuthRequestClient(context.Background(), authReq, client, nil)
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, oidc.ErrInvalidRequest())
 		})
 	}
 }

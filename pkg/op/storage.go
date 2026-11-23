@@ -78,6 +78,8 @@ type CanTerminateSessionFromRequest interface {
 }
 
 type ClientCredentialsStorage interface {
+	// ClientCredentials returns oidc.ErrServerError() only for a genuine server fault; an unknown
+	// client or a wrong secret is a plain error, and a server_error answers 500.
 	ClientCredentials(ctx context.Context, clientID, clientSecret string) (Client, error)
 	ClientCredentialsTokenRequest(ctx context.Context, clientID string, scopes []string) (TokenRequest, error)
 }
@@ -126,7 +128,11 @@ var ErrInvalidRefreshToken = errors.New("invalid_refresh_token")
 type OPStorage interface {
 	// GetClientByClientID loads a Client. The returned Client is never cached and is only used to
 	// handle the current request.
+	// It returns oidc.ErrServerError() only for a genuine server fault; an unknown client is a
+	// plain error, and a server_error answers 500.
 	GetClientByClientID(ctx context.Context, clientID string) (Client, error)
+	// AuthorizeClientIDSecret returns oidc.ErrServerError() only for a genuine server fault; an
+	// unknown client or a wrong secret is a plain error, and a server_error answers 500.
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
 	// SetUserinfoFromScopes is deprecated and should have an empty implementation for now.
 	// Implement SetUserinfoFromRequest instead.

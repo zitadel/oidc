@@ -2,7 +2,6 @@ package rp
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -286,10 +284,7 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	if rp.pkce == pkceFromDiscovery {
 		if slices.ContainsFunc(
 			discoveryConfiguration.CodeChallengeMethodsSupported,
-			func(method oidc.CodeChallengeMethod) bool {
-				return method == oidc.CodeChallengeMethodPlain ||
-					method == oidc.CodeChallengeMethodS256
-			},
+			oidc.CodeChallengeMethod.IsSupported,
 		) {
 			rp.pkce = pkceEnabled
 		} else {
@@ -504,7 +499,8 @@ func AuthURLHandler(stateFn func() string, rp RelyingParty, urlParam ...URLParam
 
 // GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	// 32 random octets, base64url-encoded, as recommended by RFC 7636, section 4.1.
+	codeVerifier := oauth2.GenerateVerifier()
 	if err := rp.CookieHandler().SetCookie(w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}
@@ -513,7 +509,8 @@ func GenerateAndStoreCodeChallenge(w http.ResponseWriter, rp RelyingParty) (stri
 
 // GenerateAndStoreCodeChallenge generates a PKCE code challenge and stores its verifier into a secure cookie
 func GenerateAndStoreCodeChallengeWithRequest(r *http.Request, w http.ResponseWriter, rp RelyingParty) (string, error) {
-	codeVerifier := base64.RawURLEncoding.EncodeToString([]byte(uuid.New().String()))
+	// 32 random octets, base64url-encoded, as recommended by RFC 7636, section 4.1.
+	codeVerifier := oauth2.GenerateVerifier()
 	if err := rp.CookieHandler().SetRequestAwareCookie(r, w, pkceCode, codeVerifier); err != nil {
 		return "", err
 	}

@@ -187,13 +187,11 @@ func CodeChallengeToOIDC(challenge *OIDCCodeChallenge) *oidc.CodeChallenge {
 	if challenge == nil {
 		return nil
 	}
-	challengeMethod := oidc.CodeChallengeMethodPlain
-	if challenge.Method == "S256" {
-		challengeMethod = oidc.CodeChallengeMethodS256
-	}
+	// Pass the method through, so that oidc.VerifyCodeChallenge refuses an
+	// unsupported one instead of it being verified as plain.
 	return &oidc.CodeChallenge{
 		Challenge: challenge.Challenge,
-		Method:    challengeMethod,
+		Method:    oidc.CodeChallengeMethod(challenge.Method),
 	}
 }
 

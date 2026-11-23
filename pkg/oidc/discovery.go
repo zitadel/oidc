@@ -1,7 +1,16 @@
 package oidc
 
 const (
+	// DiscoveryEndpoint is the well-known path of the OpenID Provider
+	// Configuration, appended to the issuer URL.
+	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest
 	DiscoveryEndpoint = "/.well-known/openid-configuration"
+
+	// AuthorizationServerMetadataEndpoint is the well-known path of the
+	// OAuth 2.0 Authorization Server Metadata. The issuer's path,
+	// if any, is appended to it.
+	// https://datatracker.ietf.org/doc/html/rfc8414#section-3
+	AuthorizationServerMetadataEndpoint = "/.well-known/oauth-authorization-server"
 )
 
 type DiscoveryConfiguration struct {

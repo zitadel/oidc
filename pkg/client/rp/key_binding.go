@@ -350,7 +350,7 @@ func keyBindingHTTPClient(client *http.Client, binding KeyBindingRelyingParty, c
 // The token is re-parsed here solely to reach the protected header and the
 // `cnf` claim, which the generic claims types do not expose.
 func verifyKeyBindingIDToken(token string, alg jose.SignatureAlgorithm, expectedJKT string) error {
-	signed, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{alg})
+	signed, err := jose.ParseSignedCompact(token, []jose.SignatureAlgorithm{alg})
 	if err != nil || len(signed.Signatures) != 1 {
 		return ErrKeyBindingIDToken
 	}

@@ -364,7 +364,7 @@ func AuthorizeTokenExchangeClient(ctx context.Context, clientID, clientSecret st
 
 	client, err = exchanger.Storage().GetClientByClientID(ctx, clientID)
 	if err != nil {
-		return nil, oidc.ErrInvalidClient().WithParent(err)
+		return nil, clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 
 	return client, nil

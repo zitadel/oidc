@@ -99,7 +99,7 @@ func (c *aes256GCMCrypto) Encrypt(s string) (string, error) {
 }
 
 func (c *aes256GCMCrypto) Decrypt(s string) (string, error) {
-	jwe, err := jose.ParseEncrypted(s, []jose.KeyAlgorithm{jose.A256GCMKW}, []jose.ContentEncryption{jose.A256GCM})
+	jwe, err := jose.ParseEncryptedCompact(s, []jose.KeyAlgorithm{jose.A256GCMKW}, []jose.ContentEncryption{jose.A256GCM})
 	if err != nil {
 		return "", fmt.Errorf("failed to create jwe: %v", err)
 	}

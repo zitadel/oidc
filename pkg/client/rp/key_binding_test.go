@@ -169,7 +169,7 @@ func TestSignDPoPProof(t *testing.T) {
 			proof, err := rp.SignDPoPProof(http.MethodPost, htu, tt.code)
 			require.NoError(t, err)
 
-			jws, err := jose.ParseSigned(proof, []jose.SignatureAlgorithm{jose.ES256})
+			jws, err := jose.ParseSignedCompact(proof, []jose.SignatureAlgorithm{jose.ES256})
 			require.NoError(t, err)
 			require.Len(t, jws.Signatures, 1)
 
@@ -336,7 +336,7 @@ func TestKeyBindingHTTPClient(t *testing.T) {
 	// proofHTU extracts the htu claim from the DPoP header of the request
 	proofHTU := func(t *testing.T, req *http.Request) string {
 		t.Helper()
-		jws, err := jose.ParseSigned(req.Header.Get(oidc.DPoPHeader), []jose.SignatureAlgorithm{jose.ES256})
+		jws, err := jose.ParseSignedCompact(req.Header.Get(oidc.DPoPHeader), []jose.SignatureAlgorithm{jose.ES256})
 		require.NoError(t, err)
 		var claims oidc.DPoPProofClaims
 		require.NoError(t, json.Unmarshal(jws.UnsafePayloadWithoutVerification(), &claims))
