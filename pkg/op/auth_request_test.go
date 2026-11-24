@@ -1252,6 +1252,34 @@ func TestAuthResponseURL(t *testing.T) {
 				nil,
 			},
 		},
+		{
+			"code response with issuer",
+			args{
+				"https://client.example.com/callback",
+				oidc.ResponseTypeCode,
+				"",
+				&op.CodeResponseType{Code: "code", State: "state", Issuer: "https://op.example.com/"},
+				oidc.NewEncoder(),
+			},
+			res{
+				"https://client.example.com/callback?code=code&iss=https%3A%2F%2Fop.example.com%2F&state=state",
+				nil,
+			},
+		},
+		{
+			"code response with issuer response mode fragment",
+			args{
+				"https://client.example.com/callback",
+				oidc.ResponseTypeCode,
+				oidc.ResponseModeFragment,
+				&op.CodeResponseType{Code: "code", State: "state", Issuer: "https://op.example.com/"},
+				oidc.NewEncoder(),
+			},
+			res{
+				"https://client.example.com/callback#code=code&iss=https%3A%2F%2Fop.example.com%2F&state=state",
+				nil,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1265,6 +1293,38 @@ func TestAuthResponseURL(t *testing.T) {
 			if got != tt.res.url {
 				t.Errorf("AuthResponseURL() got = %v, want %v", got, tt.res.url)
 			}
+		})
+	}
+}
+
+func TestAuthResponseFormPost(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *op.CodeResponseType
+		wantIss  string
+	}{
+		{
+			name:     "with issuer",
+			response: &op.CodeResponseType{Code: "code", State: "state", Issuer: "https://op.example.com/"},
+			wantIss:  `<input type="hidden" name="iss" value="https://op.example.com/" />`,
+		},
+		{
+			name:     "without issuer",
+			response: &op.CodeResponseType{Code: "code", State: "state"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			err := op.AuthResponseFormPost(w, "https://client.example.com/callback", tt.response, oidc.NewEncoder())
+			require.NoError(t, err)
+			body := w.Body.String()
+			assert.Contains(t, body, `<input type="hidden" name="code" value="code" />`)
+			if tt.wantIss == "" {
+				assert.NotContains(t, body, `name="iss"`)
+				return
+			}
+			assert.Contains(t, body, tt.wantIss)
 		})
 	}
 }

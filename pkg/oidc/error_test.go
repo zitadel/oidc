@@ -251,6 +251,11 @@ func TestError_MarshalJSON(t *testing.T) {
 			e:    ErrServerError().WithParent(errors.New("oops")).WithReturnParentToClient(true),
 			want: `{"error":"server_error","parent":"oops"}`,
 		},
+		{
+			name: "issuer only goes into the redirect",
+			e:    &Error{ErrorType: InvalidRequest, Issuer: "https://op.example.com/"},
+			want: `{"error":"invalid_request"}`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

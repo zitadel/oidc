@@ -103,6 +103,34 @@ func WithServerCORSOptions(opts *cors.Options) ServerOption {
 	}
 }
 
+// WithAuthorizationResponseIss adds the `iss` parameter of RFC 9207 to the
+// error redirects of the authorization endpoint. Its value is the issuer
+// from [IssuerFromContext], as set by an [IssuerInterceptor] added with
+// [WithHTTPMiddleware]. If the context has no issuer, the error is not
+// redirected: server_error is rendered instead, since the client would
+// reject a redirect without `iss` anyway.
+//
+// The option only covers the redirects this handler builds. Once a client
+// sees authorization_response_iss_parameter_supported in the metadata, it
+// rejects every authorization response without `iss` (RFC 9207 section 2.4).
+// An implementation that sets this option must therefore also:
+//   - set [oidc.DiscoveryConfiguration.AuthorizationResponseIssParameterSupported]
+//     in its [MetadataServer];
+//   - set the issuer on every response it sends to the redirect_uri itself,
+//     such as [CodeResponseType.Issuer] on its success callback, an `iss`
+//     field on its implicit response, or [oidc.Error.Issuer] on an error
+//     redirect it builds.
+//
+// It is not for [RegisterLegacyServer]: the [Provider] success callback
+// does not set `iss` yet.
+//
+// EXPERIMENTAL: may change until v4
+func WithAuthorizationResponseIss() ServerOption {
+	return func(s *webServer) {
+		s.authorizationResponseIss = true
+	}
+}
+
 // WithFallbackLogger is retained for source compatibility.
 // Deprecated: use [slog.SetDefault]. This option has no effect.
 func WithFallbackLogger(*slog.Logger) ServerOption {
@@ -317,6 +345,8 @@ type webServer struct {
 	// MetadataHandler handle tenants only when it was.
 	tenantPrefix string
 	tenantSet    bool
+
+	authorizationResponseIss bool
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -469,6 +499,16 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 		var statusError StatusError
 		if errors.As(err, &statusError) {
 			return nil, err
+		}
+		if s.authorizationResponseIss {
+			e := oidc.DefaultToServerError(err, err.Error())
+			if !e.IsRedirectDisabled() {
+				if e.Issuer = IssuerFromContext(ctx); e.Issuer == "" {
+					return nil, oidc.ErrServerError().WithParent(err).
+						WithDescription("no issuer in the request context for the iss parameter")
+				}
+			}
+			err = e
 		}
 		// TryErrorRedirect returns the error unredirected if it is marked
 		// redirect-disabled, which renders it here.
