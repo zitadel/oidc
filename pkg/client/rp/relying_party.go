@@ -26,12 +26,17 @@ const (
 
 	idTokenKey = "id_token"
 	stateParam = "state"
+	issParam   = "iss"
 	pkceCode   = "pkce"
 )
 
 var (
 	ErrUserInfoSubNotMatching = errors.New("sub from userinfo does not match the sub from the id_token")
 	ErrInvalidOption          = errors.New("invalid relying party option")
+
+	// ErrAuthorizationResponseIss is returned when the `iss` parameter of an
+	// authorization response is missing or does not match the issuer (RFC 9207 section 2.4).
+	ErrAuthorizationResponseIss = errors.New("invalid iss in authorization response")
 )
 
 type pkceState uint8
@@ -88,6 +93,15 @@ type HasUnauthorizedHandler interface {
 	UnauthorizedHandler() func(w http.ResponseWriter, r *http.Request, desc string, state string)
 }
 
+// HasAuthorizationResponseIss is implemented by a RelyingParty that knows
+// whether its OP sends the `iss` parameter of RFC 9207.
+type HasAuthorizationResponseIss interface {
+	// AuthorizationResponseIssRequired reports whether every authorization
+	// response must carry `iss`, which is the case when the OP advertises
+	// authorization_response_iss_parameter_supported.
+	AuthorizationResponseIssRequired() bool
+}
+
 type (
 	ErrorHandler        func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string)
 	UnauthorizedHandler func(w http.ResponseWriter, r *http.Request, desc string, state string)
@@ -109,6 +123,7 @@ type relyingParty struct {
 	oauth2Only                  bool
 	pkce                        pkceState
 	useSigningAlgsFromDiscovery bool
+	issRequired                 bool
 
 	httpClient    *http.Client
 	cookieHandler *httphelper.CookieHandler
@@ -140,6 +155,10 @@ func jwtProfileAudience(rp RelyingParty) []string {
 		return []string{issuer}
 	}
 	return []string{rp.OAuthConfig().Endpoint.TokenURL}
+}
+
+func (rp *relyingParty) AuthorizationResponseIssRequired() bool {
+	return rp.issRequired
 }
 
 func (rp *relyingParty) IsPKCE() bool {
@@ -277,6 +296,7 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
 	rp.endpoints = endpoints
+	rp.issRequired = discoveryConfiguration.AuthorizationResponseIssParameterSupported
 
 	rp.oauthConfig.Endpoint.AuthStyle = rp.oauthAuthStyle
 	rp.endpoints.Endpoint.AuthStyle = rp.oauthAuthStyle
@@ -606,6 +626,8 @@ type CodeExchangeCallback[C oidc.IDClaims] func(w http.ResponseWriter, r *http.R
 // CodeExchangeHandler extends the `CodeExchange` method with an http handler
 // including cookie handling for secure `state` transfer
 // and optional PKCE code verifier checking.
+// The `iss` parameter is checked with [VerifyAuthorizationResponseIss],
+// on error responses too.
 // Custom parameters can optionally be set to the token URL.
 func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp RelyingParty, urlParam ...URLParamOpt) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -616,6 +638,10 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 		state, err := tryReadStateCookie(w, r, rp)
 		if err != nil {
 			unauthorizedError(w, r, "failed to get state: "+err.Error(), state, rp)
+			return
+		}
+		if err := VerifyAuthorizationResponseIss(rp, r.Form); err != nil {
+			unauthorizedError(w, r, err.Error(), state, rp)
 			return
 		}
 		if errValue := r.FormValue("error"); errValue != "" {
@@ -651,6 +677,32 @@ func CodeExchangeHandler[C oidc.IDClaims](callback CodeExchangeCallback[C], rp R
 		}
 		callback(w, r, tokens, state, rp)
 	}
+}
+
+// VerifyAuthorizationResponseIss checks the `iss` parameter of an
+// authorization response, RFC 9207 section 2.4. Each `iss` in form must
+// equal the issuer of rp. A response without `iss` is accepted, unless rp
+// implements [HasAuthorizationResponseIss] and requires it. An OAuth2-only
+// RelyingParty has no issuer to compare with and is not checked.
+// The returned error wraps [ErrAuthorizationResponseIss].
+func VerifyAuthorizationResponseIss(rp RelyingParty, form url.Values) error {
+	issuer := rp.Issuer()
+	if issuer == "" {
+		return nil
+	}
+	values := form[issParam]
+	if len(values) == 0 {
+		if r, ok := rp.(HasAuthorizationResponseIss); ok && r.AuthorizationResponseIssRequired() {
+			return fmt.Errorf("%w: iss is missing, but the OP advertises authorization_response_iss_parameter_supported", ErrAuthorizationResponseIss)
+		}
+		return nil
+	}
+	for _, iss := range values {
+		if iss != issuer {
+			return fmt.Errorf("%w: got %q, want %q", ErrAuthorizationResponseIss, iss, issuer)
+		}
+	}
+	return nil
 }
 
 type SubjectGetter interface {
