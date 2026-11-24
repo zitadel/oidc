@@ -352,7 +352,7 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 
 		client, err := s.verifyRequestClient(r)
 		if err != nil {
-			WriteError(w, r, err)
+			s.writeClientAuthError(w, r, err)
 			return
 		}
 		if grantType := oidc.GrantType(r.Form.Get("grant_type")); grantType != "" {
@@ -363,6 +363,22 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 		}
 		handler(w, r, client)
 	}
+}
+
+// writeClientAuthError writes an error of the client authentication step.
+// An [oidc.InvalidClient] error without a [StatusError] is answered with
+// [http.StatusUnauthorized], and every 401 with an [oidc.InvalidClient] error
+// gets a Basic challenge, as RFC 6749 section 5.2 and RFC 9110 section 15.5.2 ask.
+func (s *webServer) writeClientAuthError(w http.ResponseWriter, r *http.Request, err error) {
+	statusError := AsStatusError(err, http.StatusUnauthorized)
+	var e *oidc.Error
+	if statusError.statusCode == http.StatusUnauthorized && errors.As(statusError.parent, &e) && e.ErrorType == oidc.InvalidClient {
+		if w.Header().Get("WWW-Authenticate") == "" {
+			w.Header().Set("WWW-Authenticate", `Basic realm="oauth"`)
+		}
+		err = statusError
+	}
+	WriteError(w, r, err)
 }
 
 func (s *webServer) verifyRequestClient(r *http.Request) (_ Client, err error) {
@@ -623,7 +639,7 @@ func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request,
 
 func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	if client.AuthMethod() == oidc.AuthMethodNone {
-		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
+		s.writeClientAuthError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
 		return
 	}
 
@@ -661,11 +677,11 @@ func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, c
 func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request) {
 	cc, err := s.parseClientCredentials(r)
 	if err != nil {
-		WriteError(w, r, err)
+		s.writeClientAuthError(w, r, err)
 		return
 	}
 	if cc.ClientSecret == "" && cc.ClientAssertion == "" {
-		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
+		s.writeClientAuthError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
 		return
 	}
 	request, err := decodeRequest[oidc.IntrospectionRequest](s.decoder, r, false)
@@ -679,7 +695,8 @@ func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request)
 	}
 	resp, err := s.server.Introspect(r.Context(), newRequest(r, &IntrospectionRequest{cc, request}))
 	if err != nil {
-		WriteError(w, r, err)
+		// Introspect authenticates the caller, so its error belongs to that step.
+		s.writeClientAuthError(w, r, err)
 		return
 	}
 	resp.writeOut(w)

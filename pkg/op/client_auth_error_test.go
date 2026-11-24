@@ -84,7 +84,7 @@ func TestClientAuthStorageErrors(t *testing.T) {
 	}
 	invalidClient := map[string]clientAuthAnswer{
 		"Provider":  {string(oidc.InvalidClient), http.StatusUnauthorized},
-		"op.Server": {string(oidc.InvalidClient), http.StatusBadRequest},
+		"op.Server": {string(oidc.InvalidClient), http.StatusUnauthorized},
 	}
 
 	requests := []struct {

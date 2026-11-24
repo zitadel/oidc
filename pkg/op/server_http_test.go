@@ -2,6 +2,7 @@ package op
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -307,6 +308,195 @@ func Test_webServer_withClient(t *testing.T) {
 				fmt.Fprintf(w, `{"foo":%q}`, r.FormValue("foo"))
 			}
 			runWebServerTest(t, s.withClient(handler), tt.r, tt.want)
+		})
+	}
+}
+
+// clientAuthServer answers VerifyClient with verifyErr, or with client when
+// verifyErr is nil, or else with a web client. The other methods refuse with
+// invalid_client.
+type clientAuthServer struct {
+	UnimplementedServer
+	verifyErr error
+	client    Client
+}
+
+func (s clientAuthServer) VerifyClient(ctx context.Context, r *Request[ClientCredentials]) (Client, error) {
+	if s.verifyErr != nil {
+		return nil, s.verifyErr
+	}
+	if s.client != nil {
+		return s.client, nil
+	}
+	return newClient(clientTypeWeb), nil
+}
+
+func (clientAuthServer) Introspect(ctx context.Context, r *Request[IntrospectionRequest]) (*Response, error) {
+	// As the LegacyServer does for a client_assertion it cannot verify.
+	return nil, oidc.ErrInvalidClient().WithDescription("client_assertion not supported")
+}
+
+func (clientAuthServer) VerifyAuthRequest(ctx context.Context, r *Request[oidc.AuthRequest]) (*ClientRequest[oidc.AuthRequest], error) {
+	return nil, oidc.ErrInvalidClient().WithDescription("unknown client")
+}
+
+func (clientAuthServer) Revocation(ctx context.Context, r *ClientRequest[oidc.RevocationRequest]) (*Response, error) {
+	// As the LegacyServer does when the storage refuses the token for this client.
+	return nil, RevocationError(oidc.ErrInvalidClient().WithDescription("token was not issued for this client"))
+}
+
+func TestRegisterServer_invalidClient(t *testing.T) {
+	const codeBody = "grant_type=authorization_code&code=abc&redirect_uri=https%3A%2F%2Fapp.example%2Fcb"
+	wrongSecret := oidc.ErrInvalidClient().WithDescription("wrong secret")
+	setAuthenticate := WithHTTPMiddleware(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("WWW-Authenticate", `Basic realm="tenant"`)
+			next.ServeHTTP(w, r)
+		})
+	})
+	type answer struct {
+		status       int
+		description  string
+		authenticate string
+	}
+	tests := []struct {
+		name      string
+		verifyErr error
+		client    Client
+		options   []ServerOption
+		method    string
+		path      string
+		body      string
+		// password is sent with the user "shop" in the Authorization header, unless empty.
+		password string
+		// error is the expected error type, invalid_client when empty.
+		error string
+		want  answer
+	}{
+		{
+			name:      "token Basic wrong secret",
+			verifyErr: wrongSecret,
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "wrong",
+			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
+		},
+		{
+			name:      "token Basic broken percent-encoding",
+			verifyErr: wrongSecret,
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "s%zz",
+			want:      answer{http.StatusUnauthorized, "invalid basic auth header", `Basic realm="oauth"`},
+		},
+		{
+			name:      "token client_secret_post wrong secret",
+			verifyErr: wrongSecret,
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody + "&client_id=shop&client_secret=wrong",
+			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
+		},
+		{
+			name:      "token with tenant prefix",
+			verifyErr: wrongSecret,
+			options:   []ServerOption{WithTenantPrefix("/oauth")},
+			path:      "/oauth/t1" + DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "wrong",
+			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
+		},
+		{
+			name:      "token status error 401",
+			verifyErr: NewStatusError(oidc.ErrInvalidClient().WithDescription("locked"), http.StatusUnauthorized),
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "secret",
+			want:      answer{http.StatusUnauthorized, "locked", `Basic realm="oauth"`},
+		},
+		{
+			name:      "token status error 400",
+			verifyErr: NewStatusError(oidc.ErrInvalidClient().WithDescription("locked"), http.StatusBadRequest),
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "secret",
+			want:      answer{http.StatusBadRequest, "locked", ""},
+		},
+		{
+			name:      "token keeps WWW-Authenticate set by a middleware",
+			verifyErr: wrongSecret,
+			options:   []ServerOption{setAuthenticate},
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "wrong",
+			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="tenant"`},
+		},
+		{
+			name:     "introspection Basic broken percent-encoding",
+			path:     DefaultEndpoints.Introspection.Relative(),
+			body:     "token=xxx",
+			password: "s%zz",
+			want:     answer{http.StatusUnauthorized, "invalid basic auth header", `Basic realm="oauth"`},
+		},
+		{
+			name: "introspection without client authentication",
+			path: DefaultEndpoints.Introspection.Relative(),
+			body: "client_id=shop&token=xxx",
+			want: answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
+		},
+		{
+			name:     "introspection error of Introspect",
+			path:     DefaultEndpoints.Introspection.Relative(),
+			body:     "token=xxx",
+			password: "secret",
+			want:     answer{http.StatusUnauthorized, "client_assertion not supported", `Basic realm="oauth"`},
+		},
+		{
+			name:   "client credentials for a public client",
+			client: &testClient{id: "shop", authMethod: oidc.AuthMethodNone, grantTypes: []oidc.GrantType{oidc.GrantTypeClientCredentials}},
+			path:   DefaultEndpoints.Token.Relative(),
+			body:   "grant_type=client_credentials&client_id=shop",
+			want:   answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
+		},
+		{
+			name:  "token without client_id is not changed",
+			path:  DefaultEndpoints.Token.Relative(),
+			body:  codeBody,
+			error: "invalid_request",
+			want:  answer{http.StatusBadRequest, "client_id or client_assertion must be provided", ""},
+		},
+		{
+			name:   "authorize is not changed",
+			method: http.MethodGet,
+			path:   DefaultEndpoints.Authorization.Relative() + "?client_id=shop",
+			want:   answer{http.StatusBadRequest, "unknown client", ""},
+		},
+		{
+			name:     "revocation after client authentication is not changed",
+			path:     DefaultEndpoints.Revocation.Relative(),
+			body:     "token=xxx",
+			password: "secret",
+			want:     answer{http.StatusUnauthorized, "token was not issued for this client", ""},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := RegisterServer(clientAuthServer{verifyErr: tt.verifyErr, client: tt.client}, *DefaultEndpoints, tt.options...)
+			method := cmp.Or(tt.method, http.MethodPost)
+			r := httptest.NewRequest(method, tt.path, strings.NewReader(tt.body))
+			if method == http.MethodPost {
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
+			if tt.password != "" {
+				r.SetBasicAuth("shop", tt.password)
+			}
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, r)
+			res := rec.Result()
+			assert.Equal(t, tt.want.status, res.StatusCode, "status code")
+			assert.Equal(t, tt.want.authenticate, res.Header.Get("WWW-Authenticate"), "WWW-Authenticate")
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.JSONEq(t, fmt.Sprintf(`{"error":%q, "error_description":%q}`, cmp.Or(tt.error, "invalid_client"), tt.want.description), string(body))
 		})
 	}
 }
@@ -1231,7 +1421,7 @@ func Test_webServer_clientCredentialsHandler(t *testing.T) {
 			client:  newClient(clientTypeNative),
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("foo=bar")),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusUnauthorized,
 				wantBody:   `{"error":"invalid_client", "error_description":"client must be authenticated"}`,
 			},
 		},
@@ -1325,7 +1515,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 			decoder: testDecoder,
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=123")),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusUnauthorized,
 				wantBody:   `{"error":"invalid_client", "error_description":"client must be authenticated"}`,
 			},
 		},
