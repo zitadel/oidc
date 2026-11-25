@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,17 +20,6 @@ import (
 	"github.com/zitadel/oidc/v4/pkg/op"
 	"golang.org/x/text/language"
 )
-
-func TestDeprecatedWithLogger(t *testing.T) {
-	previous := slog.Default()
-	configured := slog.New(slog.NewTextHandler(new(strings.Builder), nil))
-
-	require.NoError(t, op.WithLogger(configured)(&op.Provider{}))
-	assert.Same(t, previous, slog.Default())
-	assert.NotPanics(t, func() {
-		require.NoError(t, op.WithLogger(nil)(&op.Provider{}))
-	})
-}
 
 var (
 	testProvider op.OpenIDProvider
@@ -558,14 +546,4 @@ func TestNewProviderEndpointsConcurrentRace(t *testing.T) {
 	builderWg.Wait()
 	close(stop)
 	<-readerDone
-}
-
-func TestNewProviderDecryptsAESData(t *testing.T) {
-	const value = "My secret key"
-	encrypted, err := op.NewAESCrypto(testConfig.CryptoKey).Encrypt(value)
-	require.NoError(t, err)
-
-	decrypted, err := testProvider.Crypto().Decrypt(encrypted)
-	require.NoError(t, err)
-	assert.Equal(t, value, decrypted)
 }

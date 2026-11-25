@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -120,8 +119,6 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
-	// Deprecated: configure logging with slog.SetDefault.
-	Logger() *slog.Logger
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
@@ -227,14 +224,7 @@ func NewProvider(
 	opOpts ...Option,
 ) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
-	easgcmCrypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
-	crypto := NewCompositeCrypto(
-		easgcmCrypto,
-		[]Decrypter{
-			easgcmCrypto,
-			NewAESDecrypter(config.CryptoKey),
-		},
-	)
+	crypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
 	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.
 	endpoints := *DefaultEndpoints
 	corsOpts := cloneCORSOptions(defaultCORSOptions)
@@ -455,12 +445,6 @@ func (o *Provider) Endpoints() Endpoints {
 	return *o.endpoints
 }
 
-// Logger returns the global default logger.
-// Deprecated: configure logging with [slog.SetDefault].
-func (o *Provider) Logger() *slog.Logger {
-	return slog.Default()
-}
-
 type OpenIDKeySet struct {
 	Storage
 }
@@ -633,14 +617,6 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 func WithCORSOptions(opts *cors.Options) Option {
 	return func(o *Provider) error {
 		o.corsOpts = opts
-		return nil
-	}
-}
-
-// WithLogger is retained for source compatibility.
-// Deprecated: use [slog.SetDefault]. This option has no effect.
-func WithLogger(*slog.Logger) Option {
-	return func(*Provider) error {
 		return nil
 	}
 }
