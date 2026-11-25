@@ -23,19 +23,12 @@ import (
 
 func Test_deviceAuthorizationHandler(t *testing.T) {
 	type conf struct {
-		UserFormURL  string
 		UserFormPath string
 	}
 	tests := []struct {
 		name string
 		conf conf
 	}{
-		{
-			name: "UserFormURL",
-			conf: conf{
-				UserFormURL: "https://localhost:9998/device",
-			},
-		},
 		{
 			name: "UserFormPath",
 			conf: conf{
@@ -46,7 +39,6 @@ func Test_deviceAuthorizationHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := gu.PtrCopy(testConfig)
-			conf.DeviceAuthorization.UserFormURL = tt.conf.UserFormURL
 			conf.DeviceAuthorization.UserFormPath = tt.conf.UserFormPath
 			provider := newTestProvider(conf)
 
@@ -146,9 +138,7 @@ func runWithRandReader(r io.Reader, f func()) {
 
 func TestNewDeviceCode(t *testing.T) {
 	for i := 1; i <= 32; i++ {
-		got, err := op.NewDeviceCode(i)
-		require.NoError(t, err)
-		assert.Len(t, got, base64.RawURLEncoding.EncodedLen(i))
+		assert.Len(t, op.NewDeviceCode(i), base64.RawURLEncoding.EncodedLen(i))
 	}
 }
 
@@ -447,7 +437,7 @@ func TestCheckDeviceAuthorizationState(t *testing.T) {
 func TestCreateDeviceTokenResponse(t *testing.T) {
 	tests := []struct {
 		name             string
-		tokenRequest     op.TokenRequest
+		tokenRequest     *op.DeviceAuthorizationState
 		wantAccessToken  bool
 		wantRefreshToken bool
 		wantIDToken      bool

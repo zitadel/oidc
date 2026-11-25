@@ -21,10 +21,6 @@ type DeviceAuthorizationConfig struct {
 	Lifetime     time.Duration
 	PollInterval time.Duration
 
-	// UserFormURL is the complete URL where the user must go to authorize the device.
-	// Deprecated: use UserFormPath instead.
-	UserFormURL string
-
 	// UserFormPath is the path where the user must go to authorize the device.
 	// The hostname for the URL is taken from the request by IssuerFromContext.
 	UserFormPath string
@@ -91,7 +87,7 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 	}
 	config := o.DeviceAuthorization()
 
-	deviceCode, _ := NewDeviceCode(RecommendedDeviceCodeBytes)
+	deviceCode := NewDeviceCode(RecommendedDeviceCodeBytes)
 	userCode, err := NewUserCode([]rune(config.UserCode.CharSet), config.UserCode.CharAmount, config.UserCode.DashInterval)
 	if err != nil {
 		return nil, NewStatusError(err, http.StatusInternalServerError)
@@ -103,19 +99,12 @@ func createDeviceAuthorization(ctx context.Context, req *oidc.DeviceAuthorizatio
 		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
 
-	var verification *url.URL
-	if config.UserFormURL != "" {
-		if verification, err = url.Parse(config.UserFormURL); err != nil {
-			err = oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for device user form")
-			return nil, NewStatusError(err, http.StatusInternalServerError)
-		}
-	} else {
-		if verification, err = url.Parse(IssuerFromContext(ctx)); err != nil {
-			err = oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
-			return nil, NewStatusError(err, http.StatusInternalServerError)
-		}
-		verification.Path = config.UserFormPath
+	verification, err := url.Parse(IssuerFromContext(ctx))
+	if err != nil {
+		err = oidc.ErrServerError().WithParent(err).WithDescription("invalid URL for issuer")
+		return nil, NewStatusError(err, http.StatusInternalServerError)
 	}
+	verification.Path = config.UserFormPath
 
 	response := &oidc.DeviceAuthorizationResponse{
 		DeviceCode:      deviceCode,
@@ -162,13 +151,10 @@ const RecommendedDeviceCodeBytes = 16
 
 // NewDeviceCode generates a new cryptographically secure device code as a base64 encoded string.
 // The length of the string is nBytes * 4 / 3.
-// An error is never returned.
-//
-// TODO(v4): change return type to string alone.
-func NewDeviceCode(nBytes int) (string, error) {
+func NewDeviceCode(nBytes int) string {
 	bytes := make([]byte, nBytes)
 	rand.Read(bytes)
-	return base64.RawURLEncoding.EncodeToString(bytes), nil
+	return base64.RawURLEncoding.EncodeToString(bytes)
 }
 
 func NewUserCode(charSet []rune, charAmount, dashInterval int) (string, error) {
@@ -326,11 +312,7 @@ func CheckDeviceAuthorizationState(ctx context.Context, clientID, deviceCode str
 	return state, oidc.ErrAuthorizationPending()
 }
 
-func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
-	/* TODO(v4):
-	Change the TokenRequest argument type to *DeviceAuthorizationState.
-	Breaking change that can not be done for v3.
-	*/
+func CreateDeviceTokenResponse(ctx context.Context, tokenRequest *DeviceAuthorizationState, creator TokenCreator, client Client) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CreateDeviceTokenResponse")
 	defer span.End()
 
@@ -347,9 +329,8 @@ func CreateDeviceTokenResponse(ctx context.Context, tokenRequest TokenRequest, c
 		Scope:        tokenRequest.GetScopes(),
 	}
 
-	// TODO(v4): remove type assertion
-	if idTokenRequest, ok := tokenRequest.(IDTokenRequest); ok && slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
-		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), idTokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
+	if slices.Contains(tokenRequest.GetScopes(), oidc.ScopeOpenID) {
+		response.IDToken, err = CreateIDToken(ctx, IssuerFromContext(ctx), tokenRequest, client.IDTokenLifetime(), accessToken, "", creator.Storage(), client)
 		if err != nil {
 			return nil, err
 		}
