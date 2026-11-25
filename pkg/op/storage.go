@@ -134,9 +134,8 @@ type OPStorage interface {
 	// AuthorizeClientIDSecret returns oidc.ErrServerError() only for a genuine server fault; an
 	// unknown client or a wrong secret is a plain error, and a server_error answers 500.
 	AuthorizeClientIDSecret(ctx context.Context, clientID, clientSecret string) error
-	// SetUserinfoFromScopes is deprecated and should have an empty implementation for now.
-	// Implement SetUserinfoFromRequest instead.
-	SetUserinfoFromScopes(ctx context.Context, userinfo *oidc.UserInfo, userID, clientID string, scopes []string) error
+	// SetUserinfoFromRequest sets the userinfo claims of an id_token for the requested scopes.
+	SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, request IDTokenRequest, scopes []string) error
 	SetUserinfoFromToken(ctx context.Context, userinfo *oidc.UserInfo, tokenID, subject, origin string) error
 	SetIntrospectionFromToken(ctx context.Context, userinfo *oidc.IntrospectionResponse, tokenID, subject, clientID string) error
 	GetPrivateClaimsFromScopes(ctx context.Context, userID, clientID string, scopes []string) (map[string]any, error)
@@ -150,20 +149,13 @@ type JWTProfileTokenStorage interface {
 	JWTProfileTokenType(ctx context.Context, request TokenRequest) (AccessTokenType, error)
 }
 
-// CanSetUserinfoFromRequest is an optional additional interface that may be implemented by
-// implementors of Storage.  It allows additional data to be set in id_tokens based on the
-// request.
-type CanSetUserinfoFromRequest interface {
-	SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, request IDTokenRequest, scopes []string) error
-}
-
 // CanGetPrivateClaimsFromRequest is an optional additional interface that may be implemented by
 // implementors of Storage. It allows setting the jwt token claims based on the request.
 type CanGetPrivateClaimsFromRequest interface {
 	GetPrivateClaimsFromRequest(ctx context.Context, request TokenRequest, restrictedScopes []string) (map[string]any, error)
 }
 
-// Storage is a required parameter for NewOpenIDProvider(). In addition to the
+// Storage is a required parameter for NewProvider(). In addition to the
 // embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
 // then the grant type "client_credentials" will be supported. In that case, the access
 // token returned by CreateAccessToken should be a JWT.

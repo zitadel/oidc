@@ -29,38 +29,6 @@ type jwtProfileTokenSource struct {
 	tokenEndpoint string
 }
 
-// NewJWTProfileTokenSourceFromKeyFile returns an implementation of TokenSource
-// It will request a token using the OAuth2 JWT Profile Grant,
-// therefore sending an `assertion` by singing a JWT with the provided private key from jsonFile.
-//
-// The passed context is only used for the call to the Discover endpoint.
-//
-// Deprecated: use [github.com/zitadel/zitadel-go/v3/pkg/client.ConfigFromKeyFileData] instead.
-// The function will be removed in the next major release.
-func NewJWTProfileTokenSourceFromKeyFile(ctx context.Context, issuer, jsonFile string, scopes []string, options ...func(source *jwtProfileTokenSource)) (TokenSource, error) {
-	keyData, err := client.ConfigFromKeyFile(jsonFile)
-	if err != nil {
-		return nil, err
-	}
-	return NewJWTProfileTokenSource(ctx, issuer, keyData.UserID, keyData.KeyID, []byte(keyData.Key), scopes, options...)
-}
-
-// NewJWTProfileTokenSourceFromKeyFileData returns an implementation of oauth2.TokenSource
-// It will request a token using the OAuth2 JWT Profile Grant,
-// therefore sending an `assertion` by singing a JWT with the provided private key in jsonData.
-//
-// The passed context is only used for the call to the Discover endpoint.
-//
-// Deprecated: use [github.com/zitadel/zitadel-go/v3/pkg/client.ConfigFromKeyFileData] instead.
-// The function will be removed in the next major release.
-func NewJWTProfileTokenSourceFromKeyFileData(ctx context.Context, issuer string, jsonData []byte, scopes []string, options ...func(source *jwtProfileTokenSource)) (TokenSource, error) {
-	keyData, err := client.ConfigFromKeyFileData(jsonData)
-	if err != nil {
-		return nil, err
-	}
-	return NewJWTProfileTokenSource(ctx, issuer, keyData.UserID, keyData.KeyID, []byte(keyData.Key), scopes, options...)
-}
-
 // NewJWTProfileTokenSource returns an implementation of oauth2.TokenSource
 // It will request a token using the OAuth2 JWT Profile Grant,
 // therefore sending an `assertion` by singing a JWT with the provided private key.

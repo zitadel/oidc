@@ -30,17 +30,17 @@ func RefreshTokenExchange(w http.ResponseWriter, r *http.Request, exchanger Exch
 
 	tokenReq, err := ParseRefreshTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	validatedRequest, client, err := ValidateRefreshTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	resp, err := CreateTokenResponse(r.Context(), validatedRequest, client, exchanger, true, "", tokenReq.RefreshToken)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	httphelper.MarshalJSON(w, resp)

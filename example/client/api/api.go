@@ -22,12 +22,29 @@ const (
 	protectedClaimURL string = "/protected/{claim}/{value}"
 )
 
+// keyFile is the ZITADEL application key JSON.
+type keyFile struct {
+	KeyID    string `json:"keyId"`
+	Key      string `json:"key"`
+	ClientID string `json:"clientId"`
+}
+
 func main() {
 	keyPath := os.Getenv("KEY")
 	port := os.Getenv("PORT")
 	issuer := os.Getenv("ISSUER")
 
-	provider, err := rs.NewResourceServerFromKeyFile(context.TODO(), issuer, keyPath)
+	data, err := os.ReadFile(keyPath)
+	if err != nil {
+		slog.Error("error reading key file", "error", err)
+		os.Exit(1)
+	}
+	var key keyFile
+	if err := json.Unmarshal(data, &key); err != nil {
+		slog.Error("error parsing key file", "error", err)
+		os.Exit(1)
+	}
+	provider, err := rs.NewResourceServerJWTProfile(context.TODO(), issuer, key.ClientID, key.KeyID, []byte(key.Key))
 	if err != nil {
 		slog.Error("error creating provider", "error", err)
 		os.Exit(1)
