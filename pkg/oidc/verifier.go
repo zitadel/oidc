@@ -71,7 +71,7 @@ type Verifier struct {
 	MaxAgeIAT         time.Duration
 	Offset            time.Duration
 	ClientID          string
-	SupportedSignAlgs []string
+	SupportedSignAlgs []jose.SignatureAlgorithm
 	MaxAge            time.Duration
 	ACR               ACRVerifier
 	AZP               AZPVerifier
@@ -188,8 +188,11 @@ func CheckAZPVerifier(claims Claims, azp AZPVerifier) error {
 	return nil
 }
 
-func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
-	jws, err := jose.ParseSignedCompact(token, toJoseSignatureAlgorithms(supportedSigAlgs))
+func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []jose.SignatureAlgorithm, set KeySet) error {
+	if len(supportedSigAlgs) == 0 {
+		supportedSigAlgs = []jose.SignatureAlgorithm{jose.RS256, jose.ES256, jose.PS256}
+	}
+	jws, err := jose.ParseSignedCompact(token, supportedSigAlgs)
 	if err != nil {
 		var unexpectedSigAlgErr *jose.ErrUnexpectedSignatureAlgorithm
 		if errors.As(err, &unexpectedSigAlgErr) ||
@@ -218,18 +221,6 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 	claims.SetSignatureAlgorithm(jose.SignatureAlgorithm(sig.Header.Algorithm))
 
 	return nil
-}
-
-// TODO(v4): Use the new jose.SignatureAlgorithm type directly, instead of string.
-func toJoseSignatureAlgorithms(algorithms []string) []jose.SignatureAlgorithm {
-	out := make([]jose.SignatureAlgorithm, len(algorithms))
-	for i := range algorithms {
-		out[i] = jose.SignatureAlgorithm(algorithms[i])
-	}
-	if len(out) == 0 {
-		out = append(out, jose.RS256, jose.ES256, jose.PS256)
-	}
-	return out
 }
 
 func CheckExpiration(claims Claims, offset time.Duration) error {

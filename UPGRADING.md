@@ -191,6 +191,21 @@ return op.ValidateAuthRequestClient(ctx, authReq, client, verifier)
 - `op.NewDeviceCode` returns only a `string`: drop the error from `code, _ := op.NewDeviceCode(n)`.
 - `op.CreateDeviceTokenResponse` takes a `*op.DeviceAuthorizationState` instead of an `op.TokenRequest`: pass the state returned by `op.CheckDeviceAuthorizationState` directly.
 
+### Signature algorithm types
+
+Signature algorithms that feed signature verification are now typed as
+`jose.SignatureAlgorithm` (`github.com/go-jose/go-jose/v4`) instead of `string`:
+
+- `oidc.Verifier.SupportedSignAlgs` is `[]jose.SignatureAlgorithm`
+- `oidc.CheckSignature(ctx, token, payload, claims, supportedSigAlgs []jose.SignatureAlgorithm, set)`
+- `rp.WithSupportedSigningAlgorithms(algs ...jose.SignatureAlgorithm)`
+- `op.WithSupportedAccessTokenSigningAlgorithms(algs ...jose.SignatureAlgorithm)`
+- `op.WithSupportedIDTokenHintSigningAlgorithms(algs ...jose.SignatureAlgorithm)`
+
+Pass the jose constants (`jose.RS256`, `jose.ES256`, ...) or convert a string with
+`jose.SignatureAlgorithm(s)`. Discovery metadata types such as
+`oidc.DiscoveryConfiguration.IDTokenSigningAlgValuesSupported` remain `[]string`.
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:

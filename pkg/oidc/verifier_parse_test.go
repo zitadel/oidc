@@ -67,7 +67,7 @@ func TestCheckSignature(t *testing.T) {
 		ctx              context.Context
 		token            string
 		payload          []byte
-		supportedSigAlgs []string
+		supportedSigAlgs []jose.SignatureAlgorithm
 	}
 	tests := []struct {
 		name    string
@@ -97,7 +97,7 @@ func TestCheckSignature(t *testing.T) {
 				ctx:              context.Background(),
 				token:            token,
 				payload:          payload,
-				supportedSigAlgs: []string{"foo", "bar"},
+				supportedSigAlgs: []jose.SignatureAlgorithm{"foo", "bar"},
 			},
 			wantErr: oidc.ErrSignatureUnsupportedAlg,
 		},
@@ -132,7 +132,7 @@ func TestCheckSignature(t *testing.T) {
 func TestCheckSignatureWrapsJoseError(t *testing.T) {
 	token, _ := tu.ValidIDToken()
 
-	err := oidc.CheckSignature(t.Context(), token, nil, new(oidc.TokenClaims), []string{"foo"}, tu.KeySet{})
+	err := oidc.CheckSignature(t.Context(), token, nil, new(oidc.TokenClaims), []jose.SignatureAlgorithm{"foo"}, tu.KeySet{})
 	assert.ErrorIs(t, err, oidc.ErrSignatureUnsupportedAlg)
 	_, ok := errors.AsType[*jose.ErrUnexpectedSignatureAlgorithm](err)
 	assert.True(t, ok, "jose error not wrapped: %v", err)
