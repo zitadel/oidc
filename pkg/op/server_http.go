@@ -173,8 +173,7 @@ func WithFallbackLogger(*slog.Logger) ServerOption {
 //
 // The third pattern is the OpenID Connect Discovery form of the empty
 // tenant's issuer, https://op.example.com/oauth. Without it, that path
-// reaches the OP handler, where "/.well-known/openid-configuration" is
-// the known [Server.Discovery] route of the empty tenant.
+// reaches the OP handler, which has no discovery route and answers 404.
 //
 // On chi, use r.Mount("/oauth", h). chi strips the mount prefix before
 // the handler runs, so the OP handler takes [WithTenantPrefix] with "".
@@ -326,7 +325,6 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *webServer) createRouter() {
 	s.router.HandleFunc(healthEndpoint, simpleHandler(s, s.server.Health))
 	s.router.HandleFunc(readinessEndpoint, simpleHandler(s, s.server.Ready))
-	s.router.HandleFunc(oidc.DiscoveryEndpoint, simpleHandler(s, s.server.Discovery))
 
 	s.endpointRoute(s.endpoints.Authorization, s.authorizeHandler)
 	s.endpointRoute(s.endpoints.DeviceAuthorization, s.withClient(s.deviceAuthorizationHandler))
