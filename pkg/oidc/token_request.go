@@ -3,8 +3,6 @@ package oidc
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"slices"
 	"time"
 
@@ -270,15 +268,4 @@ type ClientCredentialsRequest struct {
 	ClientSecret        string              `schema:"client_secret,omitempty"`
 	ClientAssertion     string              `schema:"client_assertion,omitempty"`
 	ClientAssertionType string              `schema:"client_assertion_type,omitempty"`
-}
-
-// Deprecated: This function is no longer invoked because it violates
-// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
-//
-// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
-// or use the "authFn" parameter in the related functions for custom needs.
-func (r *ClientCredentialsRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
-	}
 }
