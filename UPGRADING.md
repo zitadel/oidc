@@ -51,6 +51,31 @@ oidc.AccessTokenResponse{
 ```
 
 
+### Key file helpers
+
+The ZITADEL key file helpers were removed:
+
+- `client.KeyFile`, `client.ConfigFromKeyFile`, `client.ConfigFromKeyFileData`
+- `profile.NewJWTProfileTokenSourceFromKeyFile`, `profile.NewJWTProfileTokenSourceFromKeyFileData`
+- `rp.WithClientKey`, `rp.SignerFromKeyPath`, `rp.SignerFromKeyFile`
+- `rs.NewResourceServerFromKeyFile`
+
+Use `KeyFile` and `ConfigFromKeyFile` from `github.com/zitadel/zitadel-go/v3/pkg/client`,
+or parse the JSON yourself, and pass the fields to `profile.NewJWTProfileTokenSource`,
+`rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(...))` or `rs.NewResourceServerJWTProfile`.
+
+```go
+provider, err := rs.NewResourceServerFromKeyFile(ctx, issuer, keyPath)
+```
+becomes
+```go
+key, err := client.ConfigFromKeyFile(keyPath) // github.com/zitadel/zitadel-go/v3/pkg/client
+if err != nil {
+    return err
+}
+provider, err := rs.NewResourceServerJWTProfile(ctx, issuer, key.ClientID, key.KeyID, key.Key)
+```
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:

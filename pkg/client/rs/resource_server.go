@@ -91,15 +91,6 @@ func newResourceServer(ctx context.Context, issuer string, authorizer func() (an
 	return rs, nil
 }
 
-func NewResourceServerFromKeyFile(ctx context.Context, issuer, path string, options ...Option) (ResourceServer, error) {
-	//lint:ignore SA1019 kept until the deprecated key file helpers are removed in the next major release
-	c, err := client.ConfigFromKeyFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return NewResourceServerJWTProfile(ctx, issuer, c.ClientID, c.KeyID, []byte(c.Key), options...)
-}
-
 type Option func(*resourceServer)
 
 // WithClient provides the ability to set an http client to be used for the resource server
