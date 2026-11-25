@@ -86,6 +86,14 @@ Authorization codes and opaque access tokens that were encrypted with AES-CFB ca
 after the upgrade. That covers values issued before v3.47.0 and values issued with
 `WithCrypto(op.NewAESCrypto(...))`. Let them expire before upgrading.
 
+### Signature check errors
+
+`oidc.CheckSignature` now wraps the underlying go-jose error instead of returning a bare
+`ErrSignatureUnsupportedAlg` or `ErrParse`. `errors.Is` against those sentinels still matches, but
+`err.Error()` carries the jose message after the sentinel text, and the jose error can be read with
+`errors.As`. Code that compared the error with `==` must switch to `errors.Is`.
+
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:

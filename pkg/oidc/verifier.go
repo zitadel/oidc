@@ -202,11 +202,9 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 		var unexpectedSigAlgErr *jose.ErrUnexpectedSignatureAlgorithm
 		if errors.As(err, &unexpectedSigAlgErr) ||
 			errors.Is(err, jose.ErrUnsupportedAlgorithm) {
-			// TODO(v4): we should wrap errors instead of returning static ones.
-			// This is a workaround so we keep returning the same error for now.
-			return ErrSignatureUnsupportedAlg
+			return fmt.Errorf("%w: %w", ErrSignatureUnsupportedAlg, err)
 		}
-		return ErrParse
+		return fmt.Errorf("%w: %w", ErrParse, err)
 	}
 	if len(jws.Signatures) == 0 {
 		return ErrSignatureMissing
