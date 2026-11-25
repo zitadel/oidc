@@ -50,6 +50,17 @@ oidc.AccessTokenResponse{
 }
 ```
 
+### Provider constructors
+
+`op.NewOpenIDProvider`, `op.NewDynamicOpenIDProvider` and `op.NewForwardedOpenIDProvider` have been removed.
+Use `op.NewProvider` with the matching issuer function:
+
+- `op.NewOpenIDProvider(issuer, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.StaticIssuer(issuer), opts...)`
+- `op.NewDynamicOpenIDProvider(path, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.IssuerFromHost(path), opts...)`
+- `op.NewForwardedOpenIDProvider(path, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.IssuerFromForwardedOrHost(path), opts...)`
+
+`HttpHandler()` has been removed from `op.OpenIDProvider` and `*op.Provider`. The provider is an `http.Handler` itself,
+so pass it directly where `provider.HttpHandler()` was used.
 
 ## Global `slog` logger migration
 

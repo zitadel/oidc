@@ -163,7 +163,7 @@ type CanGetPrivateClaimsFromRequest interface {
 	GetPrivateClaimsFromRequest(ctx context.Context, request TokenRequest, restrictedScopes []string) (map[string]any, error)
 }
 
-// Storage is a required parameter for NewOpenIDProvider(). In addition to the
+// Storage is a required parameter for NewProvider(). In addition to the
 // embedded interfaces below, if the passed Storage implements ClientCredentialsStorage
 // then the grant type "client_credentials" will be supported. In that case, the access
 // token returned by CreateAccessToken should be a JWT.

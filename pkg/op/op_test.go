@@ -74,7 +74,7 @@ func init() {
 func newTestProvider(config *op.Config) op.OpenIDProvider {
 	storage := storage.NewStorage(storage.NewUserStore(testIssuer))
 	keySet := &op.OpenIDKeySet{storage}
-	provider, err := op.NewOpenIDProvider(testIssuer, config, storage,
+	provider, err := op.NewProvider(config, storage, op.StaticIssuer(testIssuer),
 		op.WithAllowInsecure(),
 		op.WithAccessTokenKeySet(keySet),
 		op.WithIDTokenHintKeySet(keySet),
@@ -468,8 +468,9 @@ func TestWithCustomEndpoints(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider, err := op.NewOpenIDProvider(testIssuer, testConfig,
+			provider, err := op.NewProvider(testConfig,
 				storage.NewStorage(storage.NewUserStore(testIssuer)),
+				op.StaticIssuer(testIssuer),
 				op.WithCustomEndpoints(tt.args.auth, tt.args.token, tt.args.userInfo, tt.args.revocation, tt.args.endSession, tt.args.keys),
 			)
 			require.ErrorIs(t, err, tt.wantErr)
@@ -491,8 +492,9 @@ func TestNewProviderDoesNotMutateDefaultEndpoints(t *testing.T) {
 	defaultsBefore := *op.DefaultEndpoints
 
 	customAuth := op.NewEndpoint("/custom/authorize")
-	_, err := op.NewOpenIDProvider(testIssuer, testConfig,
+	_, err := op.NewProvider(testConfig,
 		storage.NewStorage(storage.NewUserStore(testIssuer)),
+		op.StaticIssuer(testIssuer),
 		op.WithCustomAuthEndpoint(customAuth),
 	)
 	require.NoError(t, err)
@@ -500,8 +502,9 @@ func TestNewProviderDoesNotMutateDefaultEndpoints(t *testing.T) {
 	assert.Equal(t, defaultsBefore, *op.DefaultEndpoints,
 		"DefaultEndpoints was mutated by WithCustomAuthEndpoint")
 
-	sibling, err := op.NewOpenIDProvider(testIssuer, testConfig,
+	sibling, err := op.NewProvider(testConfig,
 		storage.NewStorage(storage.NewUserStore(testIssuer)),
+		op.StaticIssuer(testIssuer),
 	)
 	require.NoError(t, err)
 	assert.NotEqual(t, customAuth, sibling.AuthorizationEndpoint(),
@@ -510,8 +513,9 @@ func TestNewProviderDoesNotMutateDefaultEndpoints(t *testing.T) {
 
 // WithCustom*Endpoint writes inside NewProvider raced with reads on an already-serving provider.
 func TestNewProviderEndpointsConcurrentRace(t *testing.T) {
-	reader, err := op.NewOpenIDProvider(testIssuer, testConfig,
+	reader, err := op.NewProvider(testConfig,
 		storage.NewStorage(storage.NewUserStore(testIssuer)),
+		op.StaticIssuer(testIssuer),
 	)
 	require.NoError(t, err)
 
@@ -535,8 +539,9 @@ func TestNewProviderEndpointsConcurrentRace(t *testing.T) {
 	for range builders {
 		go func() {
 			defer builderWg.Done()
-			_, err := op.NewOpenIDProvider(testIssuer, testConfig,
+			_, err := op.NewProvider(testConfig,
 				storage.NewStorage(storage.NewUserStore(testIssuer)),
+				op.StaticIssuer(testIssuer),
 				op.WithCustomEndpoints(
 					op.NewEndpoint("/authorize"),
 					op.NewEndpoint("/oauth/token"),
