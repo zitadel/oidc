@@ -142,6 +142,23 @@ if err != nil {
 provider, err := rs.NewResourceServerJWTProfile(ctx, issuer, key.ClientID, key.KeyID, key.Key)
 ```
 
+### Storage: `SetUserinfoFromRequest` is required
+
+`op.Storage` (through `OPStorage`) now requires `SetUserinfoFromRequest`, and the optional
+`op.CanSetUserinfoFromRequest` interface is gone. `SetUserinfoFromScopes` was removed from `OPStorage`:
+it was only kept for compatibility and had to be implemented empty.
+
+Delete your `SetUserinfoFromScopes` method. A leftover one still compiles but is never called, so any claims
+it set silently disappear from the id_token. Move that logic into
+`SetUserinfoFromRequest`, which receives the `op.IDTokenRequest`:
+
+```go
+func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, request op.IDTokenRequest, scopes []string) error {
+	return s.setUserinfo(ctx, userinfo, request.GetSubject(), request.GetClientID(), scopes)
+}
+```
+
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
