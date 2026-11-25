@@ -84,7 +84,7 @@ func main() {
 	//
 	//if your issuer ends with a path (e.g. http://localhost:9998/custom/path/),
 	//then you would have to set the path prefix (/custom/path/):
-	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider.HttpHandler()))
+	//router.PathPrefix("/custom/path/").Handler(http.StripPrefix("/custom/path", provider))
 	router.Mount("/", provider)
 
 	server := &http.Server{

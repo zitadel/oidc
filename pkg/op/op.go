@@ -119,8 +119,6 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
-	// Deprecated: Provider now implements http.Handler directly.
-	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
@@ -193,48 +191,6 @@ type Endpoints struct {
 	CheckSessionIframe  *Endpoint
 	JwksURI             *Endpoint
 	DeviceAuthorization *Endpoint
-}
-
-// NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
-// a http.Router that handles a suite of endpoints (some paths can be overridden):
-//
-//	/healthz
-//	/ready
-//	/.well-known/openid-configuration
-//	/oauth/token
-//	/oauth/introspect
-//	/callback
-//	/authorize
-//	/userinfo
-//	/revoke
-//	/end_session
-//	/keys
-//	/device_authorization
-//
-// This does not include login. Login is handled with a redirect that includes the
-// request ID. The redirect for logins is specified per-client by Client.LoginURL().
-// Successful logins should mark the request as authorized and redirect back to
-// op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
-// to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, StaticIssuer(issuer), opOpts...)
-}
-
-// NewForwardedOpenIDProvider tries to establish the issuer from the request Host.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, IssuerFromHost(path), opOpts...)
-}
-
-// NewForwardedOpenIDProvider tries to establish the Issuer from a Forwarded request header, if it is set.
-// See [IssuerFromForwardedOrHost] for details.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, IssuerFromForwardedOrHost(path), opOpts...)
 }
 
 // NewProvider creates a provider with a router on it's embedded http.Handler.
@@ -487,11 +443,6 @@ func (o *Provider) CORSOptions() *cors.Options {
 // Endpoints returns the provider's endpoints, including any set with the WithCustom*Endpoint options.
 func (o *Provider) Endpoints() Endpoints {
 	return *o.endpoints
-}
-
-// Deprecated: Provider now implements http.Handler directly.
-func (o *Provider) HttpHandler() http.Handler {
-	return o
 }
 
 type OpenIDKeySet struct {
