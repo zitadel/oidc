@@ -314,22 +314,26 @@ func TestClientAuthInvalidClient(t *testing.T) {
 		// user and password go in the Authorization header, unless user is empty.
 		user, password string
 		description    string
+		// challenge is true when the answer must carry WWW-Authenticate.
+		challenge bool
 		// provider sends the request to the Provider, which sends no WWW-Authenticate header.
 		provider bool
 	}{
 		{
-			name:     "introspection Basic wrong secret",
-			endpoint: provider.IntrospectionEndpoint(),
-			form:     url.Values{"token": {"abc"}},
-			user:     "web",
-			password: "wrong",
+			name:      "introspection Basic wrong secret",
+			endpoint:  provider.IntrospectionEndpoint(),
+			form:      url.Values{"token": {"abc"}},
+			user:      "web",
+			password:  "wrong",
+			challenge: true,
 		},
 		{
-			name:     "introspection Basic unknown client",
-			endpoint: provider.IntrospectionEndpoint(),
-			form:     url.Values{"token": {"abc"}},
-			user:     "nobody",
-			password: "secret",
+			name:      "introspection Basic unknown client",
+			endpoint:  provider.IntrospectionEndpoint(),
+			form:      url.Values{"token": {"abc"}},
+			user:      "nobody",
+			password:  "secret",
+			challenge: true,
 		},
 		{
 			name:     "introspection bad client_assertion",
@@ -359,11 +363,12 @@ func TestClientAuthInvalidClient(t *testing.T) {
 			form:     codeGrant(unknownClient),
 		},
 		{
-			name:     "token client_credentials wrong secret",
-			endpoint: provider.TokenEndpoint(),
-			form:     url.Values{"grant_type": {string(oidc.GrantTypeClientCredentials)}, "scope": {oidc.ScopeOpenID}},
-			user:     "sid1",
-			password: "wrong",
+			name:      "token client_credentials wrong secret",
+			endpoint:  provider.TokenEndpoint(),
+			form:      url.Values{"grant_type": {string(oidc.GrantTypeClientCredentials)}, "scope": {oidc.ScopeOpenID}},
+			user:      "sid1",
+			password:  "wrong",
+			challenge: true,
 		},
 		{
 			name:     "Provider device authorization Basic wrong secret",
@@ -385,16 +390,19 @@ func TestClientAuthInvalidClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, tt.endpoint.Relative(), strings.NewReader(tt.form.Encode()))
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.Header.Set("Origin", "https://rp.example.com")
 			if tt.user != "" {
 				r.SetBasicAuth(tt.user, tt.password)
 			}
 			rec := httptest.NewRecorder()
-			wantAuthenticate := `Basic realm="oauth"`
 			if tt.provider {
 				provider.ServeHTTP(rec, r)
-				wantAuthenticate = ""
 			} else {
 				handler.ServeHTTP(rec, r)
+			}
+			wantAuthenticate := ""
+			if tt.challenge {
+				wantAuthenticate = `Basic realm="oauth"`
 			}
 
 			var body map[string]any
@@ -404,6 +412,8 @@ func TestClientAuthInvalidClient(t *testing.T) {
 			description, _ := body["error_description"].(string)
 			assert.Equal(t, tt.description, description, rec.Body.String())
 			assert.Equal(t, wantAuthenticate, rec.Header().Get("WWW-Authenticate"))
+			// A cross-origin caller can read only the headers CORS exposes.
+			assert.Contains(t, strings.ToLower(rec.Header().Get("Access-Control-Expose-Headers")), "www-authenticate")
 		})
 	}
 }

@@ -369,6 +369,8 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 		body      string
 		// password is sent with the user "shop" in the Authorization header, unless empty.
 		password string
+		// authorization is sent as the Authorization header, unless empty.
+		authorization string
 		// error is the expected error type, invalid_client when empty.
 		error string
 		want  answer
@@ -394,7 +396,15 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			verifyErr: wrongSecret,
 			path:      DefaultEndpoints.Token.Relative(),
 			body:      codeBody + "&client_id=shop&client_secret=wrong",
-			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
+			want:      answer{http.StatusUnauthorized, "wrong secret", ""},
+		},
+		{
+			name:          "token client_secret_post wrong secret with a Bearer header",
+			verifyErr:     wrongSecret,
+			path:          DefaultEndpoints.Token.Relative(),
+			body:          codeBody + "&client_id=shop&client_secret=wrong",
+			authorization: "Bearer x",
+			want:          answer{http.StatusUnauthorized, "wrong secret", ""},
 		},
 		{
 			name:      "token with tenant prefix",
@@ -441,7 +451,7 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			name: "introspection without client authentication",
 			path: DefaultEndpoints.Introspection.Relative(),
 			body: "client_id=shop&token=xxx",
-			want: answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
+			want: answer{http.StatusUnauthorized, "client must be authenticated", ""},
 		},
 		{
 			name:     "introspection error of Introspect",
@@ -455,7 +465,7 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			client: &testClient{id: "shop", authMethod: oidc.AuthMethodNone, grantTypes: []oidc.GrantType{oidc.GrantTypeClientCredentials}},
 			path:   DefaultEndpoints.Token.Relative(),
 			body:   "grant_type=client_credentials&client_id=shop",
-			want:   answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
+			want:   answer{http.StatusUnauthorized, "client must be authenticated", ""},
 		},
 		{
 			name:  "token without client_id is not changed",
@@ -488,6 +498,9 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			}
 			if tt.password != "" {
 				r.SetBasicAuth("shop", tt.password)
+			}
+			if tt.authorization != "" {
+				r.Header.Set("Authorization", tt.authorization)
 			}
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, r)

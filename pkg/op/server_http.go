@@ -369,10 +369,14 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 // [Server.VerifyClient] on the token, device authorization and revocation
 // endpoints, and [Server.Introspect], which authenticates the caller itself.
 // An [oidc.InvalidClient] error without a [StatusError] is answered with
-// [http.StatusUnauthorized], and every 401 with an [oidc.InvalidClient] error
-// gets a Basic challenge, as RFC 6749 section 5.2 and RFC 9110 section 15.5.2 ask.
+// [http.StatusUnauthorized], for every authentication method.
 // Any other error keeps the answer of [WriteError], so a [Server] must report
 // a failed client authentication as invalid_client to get the 401.
+//
+// A 401 with an [oidc.InvalidClient] error gets a Basic challenge only when
+// the request carried Basic credentials, as RFC 6749 section 5.2 asks.
+// A 401 for a request without Basic credentials has no challenge, because a
+// browser may then open its own credential dialog.
 //
 // An invalid_client that [Server.Revocation] returns after the client
 // authenticated, for example for another client's token, is written by
@@ -381,7 +385,7 @@ func (s *webServer) writeClientAuthError(w http.ResponseWriter, r *http.Request,
 	statusError := AsStatusError(err, http.StatusUnauthorized)
 	var e *oidc.Error
 	if statusError.statusCode == http.StatusUnauthorized && errors.As(statusError.parent, &e) && e.ErrorType == oidc.InvalidClient {
-		if w.Header().Get("WWW-Authenticate") == "" {
+		if _, _, basic := r.BasicAuth(); basic && w.Header().Get("WWW-Authenticate") == "" {
 			w.Header().Set("WWW-Authenticate", `Basic realm="oauth"`)
 		}
 		err = statusError
