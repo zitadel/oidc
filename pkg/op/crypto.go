@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/zitadel/oidc/v3/pkg/crypto"
+	"github.com/zitadel/oidc/v4/pkg/crypto"
 )
 
 type Encrypter interface {

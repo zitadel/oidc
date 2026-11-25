@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"log/slog"
 
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 var _ op.Encrypter = &myCrypto{}

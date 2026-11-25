@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/text/language"
 
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 const (

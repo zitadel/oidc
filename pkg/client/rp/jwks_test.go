@@ -18,9 +18,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	tu "github.com/zitadel/oidc/v3/internal/testutil"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	tu "github.com/zitadel/oidc/v4/internal/testutil"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 func TestJsonWebKeySet_UnmarshalJSON(t *testing.T) {

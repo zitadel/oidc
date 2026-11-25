@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 type ErrAuthRequest interface {

@@ -14,12 +14,12 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
-	"github.com/zitadel/oidc/v3/internal/otel"
+	"github.com/zitadel/oidc/v4/internal/otel"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v3/pkg/crypto"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/crypto"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 var (

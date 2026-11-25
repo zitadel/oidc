@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

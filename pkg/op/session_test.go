@@ -6,8 +6,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/zitadel/oidc/v3/pkg/op"
-	"github.com/zitadel/oidc/v3/pkg/op/mock"
+	"github.com/zitadel/oidc/v4/pkg/op"
+	"github.com/zitadel/oidc/v4/pkg/op/mock"
 )
 
 func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {

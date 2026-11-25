@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 func mustECKey(t *testing.T, c elliptic.Curve) *ecdsa.PrivateKey {

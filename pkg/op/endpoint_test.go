@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zitadel/oidc/v3/pkg/op"
+	"github.com/zitadel/oidc/v4/pkg/op"
 )
 
 func TestEndpoint_Path(t *testing.T) {

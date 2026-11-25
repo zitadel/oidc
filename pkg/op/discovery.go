@@ -7,8 +7,8 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 type DiscoverStorage interface {

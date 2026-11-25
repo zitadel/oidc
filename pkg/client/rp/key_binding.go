@@ -21,7 +21,7 @@ import (
 	"github.com/go-jose/go-jose/v4/cryptosigner"
 	"github.com/google/uuid"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 var (

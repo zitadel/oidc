@@ -23,9 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
-	tu "github.com/zitadel/oidc/v3/internal/testutil"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	tu "github.com/zitadel/oidc/v4/internal/testutil"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 func TestDeprecatedLoggerCompatibility(t *testing.T) {

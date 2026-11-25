@@ -10,7 +10,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 
-	zcrypto "github.com/zitadel/oidc/v3/pkg/crypto"
+	zcrypto "github.com/zitadel/oidc/v4/pkg/crypto"
 )
 
 func TestBytesToPrivateKey(t *testing.T) {

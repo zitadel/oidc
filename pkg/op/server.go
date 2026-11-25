@@ -6,8 +6,8 @@ import (
 	"net/url"
 
 	"github.com/muhlemmer/gu"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 // Server describes the interface that needs to be implemented to serve

@@ -44,9 +44,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zitadel/oidc/v3/pkg/client/rp"
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/client/rp"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 var (

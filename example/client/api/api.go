@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/zitadel/oidc/v3/pkg/client/rs"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/client/rs"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 const (

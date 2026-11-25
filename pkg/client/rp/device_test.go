@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
 )
 
 // deviceCall is what an endpoint of the test OP received.

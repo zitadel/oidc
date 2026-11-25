@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	httphelper "github.com/zitadel/oidc/v3/pkg/http"
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	httphelper "github.com/zitadel/oidc/v4/pkg/http"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 // ClientCredentialsExchange handles the OAuth 2.0 client_credentials grant, including

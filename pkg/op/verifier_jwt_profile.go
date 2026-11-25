@@ -7,7 +7,7 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 
-	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
 // JWTProfileVerifier extends oidc.Verifier with
