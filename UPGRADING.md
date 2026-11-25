@@ -59,6 +59,21 @@ Logging is configured with `slog.SetDefault`, see [Global `slog` logger migratio
 - `rp.WithLogger` and `rp.RelyingParty.Logger(ctx)`: delete the option, use `slog.Default()`. In V3, `rp.WithLogger` stored the given logger and `Logger(ctx)` returned it; callers that read a custom logger back this way must keep their own reference to it.
 - The ignored `*slog.Logger` parameter on `op.RequestError`, `op.WriteError` and `op.TryErrorRedirect`: drop the final argument.
 
+### AES-CFB encryption removed
+
+The unauthenticated AES-CFB helpers are gone:
+
+- `crypto.EncryptAES`, `crypto.EncryptBytesAES`, `crypto.DecryptAES`, `crypto.DecryptBytesAES` and `crypto.ErrCipherTextBlockSize`
+- `op.NewAESCrypto` and `op.NewAESDecrypter`
+
+Use `op.NewAES256GCMCrypto(key, keyID)` instead. `op.NewProvider` now uses it directly, without the AES-CFB
+decrypt fallback it had in v3.
+
+Since v3.47.0, `NewProvider` already encrypted with AES-GCM and used AES-CFB only to decrypt older values.
+Authorization codes and opaque access tokens that were encrypted with AES-CFB can no longer be decrypted
+after the upgrade. That covers values issued before v3.47.0 and values issued with
+`WithCrypto(op.NewAESCrypto(...))`. Let them expire before upgrading.
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:

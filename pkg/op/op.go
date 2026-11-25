@@ -268,14 +268,7 @@ func NewProvider(
 	opOpts ...Option,
 ) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
-	easgcmCrypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
-	crypto := NewCompositeCrypto(
-		easgcmCrypto,
-		[]Decrypter{
-			easgcmCrypto,
-			NewAESDecrypter(config.CryptoKey),
-		},
-	)
+	crypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
 	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.
 	endpoints := *DefaultEndpoints
 	corsOpts := cloneCORSOptions(defaultCORSOptions)
