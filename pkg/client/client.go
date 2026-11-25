@@ -27,15 +27,6 @@ var (
 	Tracer  = otel.Tracer("github.com/zitadel/oidc/pkg/client")
 )
 
-// Deprecated: This interface function Auth() is no longer invoked because it violates
-// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
-//
-// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
-// or use the "authFn" parameter in the related functions for custom needs.
-type ClientSecretBasicAuthRequest interface {
-	Auth(req *http.Request)
-}
-
 // Discover calls the discovery endpoint of the provided issuer and returns its configuration
 // It accepts an optional argument "wellknownUrl" which can be used to override the discovery endpoint url
 func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellKnownUrl ...string) (*oidc.DiscoveryConfiguration, error) {
@@ -162,17 +153,6 @@ type RevokeRequest struct {
 	ClientSecret        string `schema:"client_secret,omitempty"`
 	ClientAssertion     string `schema:"client_assertion,omitempty"`
 	ClientAssertionType string `schema:"client_assertion_type,omitempty"`
-}
-
-// Deprecated: This function is no longer invoked because it violates
-// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
-//
-// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
-// or use the "authFn" parameter in the related functions for custom needs.
-func (r RevokeRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
-	}
 }
 
 func CallRevokeEndpoint(ctx context.Context, request any, authFn any, caller RevokeCaller) error {
@@ -330,17 +310,6 @@ type DeviceAccessTokenRequest struct {
 	oidc.DeviceAccessTokenRequest
 }
 
-// Deprecated: This function is no longer invoked because it violates
-// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
-//
-// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
-// or use the "authFn" parameter in the related functions for custom needs.
-func (r *DeviceAccessTokenRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
-	}
-}
-
 // CallDeviceAccessTokenEndpointWithAuthFn calls the device access token endpoint, accepting an authFn for custom authentication.
 func CallDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller, authFn any) (*oidc.AccessTokenResponse, error) {
 	ctx, span := Tracer.Start(ctx, "CallDeviceAccessTokenEndpoint")
@@ -356,11 +325,6 @@ func CallDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, request *Devic
 		return nil, err
 	}
 	return resp, nil
-}
-
-// Deprecated: Use CallDeviceAccessTokenEndpointWithAuthFn instead.
-func CallDeviceAccessTokenEndpoint(ctx context.Context, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
-	return CallDeviceAccessTokenEndpointWithAuthFn(ctx, request, caller, nil)
 }
 
 // PollDeviceAccessTokenEndpointWithAuthFn polls the device access token endpoint, accepting an authFn for custom authentication.
@@ -400,9 +364,4 @@ func PollDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, interval time.
 			return nil, err
 		}
 	}
-}
-
-// Deprecated: Use PollDeviceAccessTokenEndpointWithAuthFn instead.
-func PollDeviceAccessTokenEndpoint(ctx context.Context, interval time.Duration, request *DeviceAccessTokenRequest, caller TokenEndpointCaller) (*oidc.AccessTokenResponse, error) {
-	return PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, request, caller, nil)
 }

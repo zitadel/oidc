@@ -103,13 +103,6 @@ func WithServerCORSOptions(opts *cors.Options) ServerOption {
 	}
 }
 
-// WithFallbackLogger is retained for source compatibility.
-// Deprecated: use [slog.SetDefault]. This option has no effect.
-func WithFallbackLogger(*slog.Logger) ServerOption {
-	return func(*webServer) {
-	}
-}
-
 // WithTenantPrefix serves one handler for many issuers that differ in
 // one path segment, the tenant: https://op.example.com{prefix}/{tenant}.
 // With the prefix "/oauth", the issuer path "/oauth/p1" has the tenant
@@ -299,7 +292,7 @@ func (s *webServer) forwardTenant(withTenant bool) http.HandlerFunc {
 // carrying description.
 func writeNotFound(w http.ResponseWriter, r *http.Request, description string) {
 	err := oidc.ErrInvalidRequest().WithDescription("%s", description)
-	WriteError(w, r, NewStatusError(err, http.StatusNotFound), nil)
+	WriteError(w, r, NewStatusError(err, http.StatusNotFound))
 }
 
 type webServer struct {
@@ -359,12 +352,12 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 
 		client, err := s.verifyRequestClient(r)
 		if err != nil {
-			WriteError(w, r, err, nil)
+			WriteError(w, r, err)
 			return
 		}
 		if grantType := oidc.GrantType(r.Form.Get("grant_type")); grantType != "" {
 			if !ValidateGrantType(client, grantType) {
-				WriteError(w, r, oidc.ErrUnauthorizedClient().WithDescription("grant_type %q not allowed", grantType), nil)
+				WriteError(w, r, oidc.ErrUnauthorizedClient().WithDescription("grant_type %q not allowed", grantType))
 				return
 			}
 		}
@@ -429,12 +422,12 @@ func (s *webServer) parseClientCredentials(r *http.Request) (_ *ClientCredential
 func (s *webServer) authorizeHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeRequest[oidc.AuthRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	redirect, err := s.authorize(r.Context(), newRequest(r, request))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	redirect.writeOut(w, r)
@@ -470,7 +463,7 @@ func (s *webServer) authorize(ctx context.Context, r *Request[oidc.AuthRequest])
 		}
 		// TryErrorRedirect returns the error unredirected if it is marked
 		// redirect-disabled, which renders it here.
-		return TryErrorRedirect(ctx, authReq, err, s.encoder, nil)
+		return TryErrorRedirect(ctx, authReq, err, s.encoder)
 	}
 	return redirect, nil
 }
@@ -499,12 +492,12 @@ func (s *webServer) authorizeWithValidRedirectURI(ctx context.Context, cr *Clien
 func (s *webServer) deviceAuthorizationHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.DeviceAuthorizationRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp, err := s.server.DeviceAuthorization(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -512,7 +505,7 @@ func (s *webServer) deviceAuthorizationHandler(w http.ResponseWriter, r *http.Re
 
 func (s *webServer) tokensHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err))
 		return
 	}
 
@@ -530,25 +523,25 @@ func (s *webServer) tokensHandler(w http.ResponseWriter, r *http.Request) {
 	case oidc.GrantTypeDeviceCode:
 		s.withClient(s.deviceTokenHandler)(w, r)
 	case "":
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("grant_type missing"))
 	default:
-		WriteError(w, r, unimplementedGrantError(grantType), nil)
+		WriteError(w, r, unimplementedGrantError(grantType))
 	}
 }
 
 func (s *webServer) jwtProfileHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeRequest[oidc.JWTProfileGrantRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.Assertion == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("assertion missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("assertion missing"))
 		return
 	}
 	resp, err := s.server.JWTProfile(r.Context(), newRequest(r, request))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -557,20 +550,20 @@ func (s *webServer) jwtProfileHandler(w http.ResponseWriter, r *http.Request) {
 func (s *webServer) codeExchangeHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.AccessTokenRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.Code == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"))
 		return
 	}
 	if request.RedirectURI == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("redirect_uri missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("redirect_uri missing"))
 		return
 	}
 	resp, err := s.server.CodeExchange(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -579,16 +572,16 @@ func (s *webServer) codeExchangeHandler(w http.ResponseWriter, r *http.Request, 
 func (s *webServer) refreshTokenHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.RefreshTokenRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.RefreshToken == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("refresh_token missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("refresh_token missing"))
 		return
 	}
 	resp, err := s.server.RefreshToken(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -597,32 +590,32 @@ func (s *webServer) refreshTokenHandler(w http.ResponseWriter, r *http.Request, 
 func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.TokenExchangeRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.SubjectToken == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token missing"))
 		return
 	}
 	if request.SubjectTokenType == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token_type missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token_type missing"))
 		return
 	}
 	if !request.SubjectTokenType.IsSupported() {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token_type is not supported"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("subject_token_type is not supported"))
 		return
 	}
 	if request.RequestedTokenType != "" && !request.RequestedTokenType.IsSupported() {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("requested_token_type is not supported"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("requested_token_type is not supported"))
 		return
 	}
 	if request.ActorTokenType != "" && !request.ActorTokenType.IsSupported() {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("actor_token_type is not supported"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("actor_token_type is not supported"))
 		return
 	}
 	resp, err := s.server.TokenExchange(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -630,18 +623,18 @@ func (s *webServer) tokenExchangeHandler(w http.ResponseWriter, r *http.Request,
 
 func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	if client.AuthMethod() == oidc.AuthMethodNone {
-		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"), nil)
+		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
 		return
 	}
 
 	request, err := decodeRequest[oidc.ClientCredentialsRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp, err := s.server.ClientCredentialsExchange(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -650,16 +643,16 @@ func (s *webServer) clientCredentialsHandler(w http.ResponseWriter, r *http.Requ
 func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.DeviceAccessTokenRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.DeviceCode == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("device_code missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("device_code missing"))
 		return
 	}
 	resp, err := s.server.DeviceToken(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -668,25 +661,25 @@ func (s *webServer) deviceTokenHandler(w http.ResponseWriter, r *http.Request, c
 func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request) {
 	cc, err := s.parseClientCredentials(r)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if cc.ClientSecret == "" && cc.ClientAssertion == "" {
-		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"), nil)
+		WriteError(w, r, oidc.ErrInvalidClient().WithDescription("client must be authenticated"))
 		return
 	}
 	request, err := decodeRequest[oidc.IntrospectionRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.Token == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("token missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("token missing"))
 		return
 	}
 	resp, err := s.server.Introspect(r.Context(), newRequest(r, &IntrospectionRequest{cc, request}))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -695,7 +688,7 @@ func (s *webServer) introspectionHandler(w http.ResponseWriter, r *http.Request)
 func (s *webServer) userInfoHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeRequest[oidc.UserInfoRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if token, err := getAccessToken(r); err == nil {
@@ -706,12 +699,12 @@ func (s *webServer) userInfoHandler(w http.ResponseWriter, r *http.Request) {
 			oidc.ErrInvalidRequest().WithDescription("access token missing"),
 			http.StatusUnauthorized,
 		)
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp, err := s.server.UserInfo(r.Context(), newRequest(r, request))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -720,16 +713,16 @@ func (s *webServer) userInfoHandler(w http.ResponseWriter, r *http.Request) {
 func (s *webServer) revocationHandler(w http.ResponseWriter, r *http.Request, client Client) {
 	request, err := decodeRequest[oidc.RevocationRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	if request.Token == "" {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("token missing"), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("token missing"))
 		return
 	}
 	resp, err := s.server.Revocation(r.Context(), newClientRequest(r, request, client))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)
@@ -738,12 +731,12 @@ func (s *webServer) revocationHandler(w http.ResponseWriter, r *http.Request, cl
 func (s *webServer) endSessionHandler(w http.ResponseWriter, r *http.Request) {
 	request, err := decodeRequest[oidc.EndSessionRequest](s.decoder, r, false)
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp, err := s.server.EndSession(r.Context(), newRequest(r, request))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w, r)
@@ -759,12 +752,12 @@ func simpleHandler(s *webServer, method func(context.Context, *Request[struct{}]
 // Data and writes the response, or the error.
 func serveSimple[T any](w http.ResponseWriter, r *http.Request, data *T, method func(context.Context, *Request[T]) (*Response, error)) {
 	if err := r.ParseForm(); err != nil {
-		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err), nil)
+		WriteError(w, r, oidc.ErrInvalidRequest().WithDescription("error parsing form").WithParent(err))
 		return
 	}
 	resp, err := method(r.Context(), newRequest(r, data))
 	if err != nil {
-		WriteError(w, r, err, nil)
+		WriteError(w, r, err)
 		return
 	}
 	resp.writeOut(w)

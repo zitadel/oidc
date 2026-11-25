@@ -71,7 +71,7 @@ type Verifier struct {
 	MaxAgeIAT         time.Duration
 	Offset            time.Duration
 	ClientID          string
-	SupportedSignAlgs []string
+	SupportedSignAlgs []jose.SignatureAlgorithm
 	MaxAge            time.Duration
 	ACR               ACRVerifier
 	AZP               AZPVerifier
@@ -127,14 +127,6 @@ func ParseToken(tokenString string, claims any) ([]byte, error) {
 func CheckSubject(claims Claims) error {
 	if claims.GetSubject() == "" {
 		return ErrSubjectMissing
-	}
-	return nil
-}
-
-// Deprecated: Use CheckIssuerWithISSVerifier instead
-func CheckIssuer(claims Claims, issuer string) error {
-	if claims.GetIssuer() != issuer {
-		return fmt.Errorf("%w: Expected: %s, got: %s", ErrIssuerInvalid, issuer, claims.GetIssuer())
 	}
 	return nil
 }
@@ -196,17 +188,18 @@ func CheckAZPVerifier(claims Claims, azp AZPVerifier) error {
 	return nil
 }
 
-func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []string, set KeySet) error {
-	jws, err := jose.ParseSignedCompact(token, toJoseSignatureAlgorithms(supportedSigAlgs))
+func CheckSignature(ctx context.Context, token string, payload []byte, claims ClaimsSignature, supportedSigAlgs []jose.SignatureAlgorithm, set KeySet) error {
+	if len(supportedSigAlgs) == 0 {
+		supportedSigAlgs = []jose.SignatureAlgorithm{jose.RS256, jose.ES256, jose.PS256}
+	}
+	jws, err := jose.ParseSignedCompact(token, supportedSigAlgs)
 	if err != nil {
 		var unexpectedSigAlgErr *jose.ErrUnexpectedSignatureAlgorithm
 		if errors.As(err, &unexpectedSigAlgErr) ||
 			errors.Is(err, jose.ErrUnsupportedAlgorithm) {
-			// TODO(v4): we should wrap errors instead of returning static ones.
-			// This is a workaround so we keep returning the same error for now.
-			return ErrSignatureUnsupportedAlg
+			return fmt.Errorf("%w: %w", ErrSignatureUnsupportedAlg, err)
 		}
-		return ErrParse
+		return fmt.Errorf("%w: %w", ErrParse, err)
 	}
 	if len(jws.Signatures) == 0 {
 		return ErrSignatureMissing
@@ -228,18 +221,6 @@ func CheckSignature(ctx context.Context, token string, payload []byte, claims Cl
 	claims.SetSignatureAlgorithm(jose.SignatureAlgorithm(sig.Header.Algorithm))
 
 	return nil
-}
-
-// TODO(v4): Use the new jose.SignatureAlgorithm type directly, instead of string.
-func toJoseSignatureAlgorithms(algorithms []string) []jose.SignatureAlgorithm {
-	out := make([]jose.SignatureAlgorithm, len(algorithms))
-	for i := range algorithms {
-		out[i] = jose.SignatureAlgorithm(algorithms[i])
-	}
-	if len(out) == 0 {
-		out = append(out, jose.RS256, jose.ES256, jose.PS256)
-	}
-	return out
 }
 
 func CheckExpiration(claims Claims, offset time.Duration) error {

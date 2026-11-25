@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -52,8 +51,6 @@ type Authorizer interface {
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	Crypto() Crypto
 	RequestObjectSupported() bool
-	// Deprecated: configure logging with slog.SetDefault.
-	Logger() *slog.Logger
 }
 
 // AuthorizeValidator is an extension of Authorizer interface
@@ -251,20 +248,6 @@ func CopyRequestObjectToAuthRequest(authReq *oidc.AuthRequest, requestObject *oi
 		authReq.CodeChallengeMethod = requestObject.CodeChallengeMethod
 	}
 	authReq.RequestParam = ""
-}
-
-// ValidateAuthRequest validates the authorize parameters and returns the userID of the id_token_hint if passed.
-//
-// Deprecated: Use [ValidateAuthRequestClient] to prevent querying for the Client twice.
-func ValidateAuthRequest(ctx context.Context, authReq *oidc.AuthRequest, storage Storage, verifier *IDTokenHintVerifier) (sub string, err error) {
-	ctx, span := Tracer.Start(ctx, "ValidateAuthRequest")
-	defer span.End()
-
-	client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
-	if err != nil {
-		return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
-	}
-	return ValidateAuthRequestClient(ctx, authReq, client, verifier)
 }
 
 // ValidateAuthRequestClient validates the Auth request against the passed client.

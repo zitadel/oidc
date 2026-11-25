@@ -5,11 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +21,6 @@ import (
 )
 
 func TestRegisterServer(t *testing.T) {
-	previous := slog.Default()
 	server := UnimplementedServer{}
 	endpoints := Endpoints{
 		Authorization: &Endpoint{
@@ -32,20 +29,16 @@ func TestRegisterServer(t *testing.T) {
 	}
 	decoder := schema.NewDecoder()
 	encoder := schema.NewEncoder()
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	h := RegisterServer(server, endpoints,
 		WithDecoder(decoder),
 		WithEncoder(encoder),
-		WithFallbackLogger(logger),
-		WithFallbackLogger(nil),
 	)
 	got := h.(*webServer)
 	assert.Equal(t, got.server, server)
 	assert.Equal(t, got.endpoints, endpoints)
 	assert.Equal(t, got.decoder, decoder)
 	assert.Equal(t, got.encoder, encoder)
-	assert.Same(t, previous, slog.Default())
 
 	// The error redirect needs an encoder whether or not one was passed.
 	assert.NotNil(t, RegisterServer(server, endpoints).(*webServer).encoder)

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v4/internal/testutil"
@@ -46,7 +47,7 @@ func TestNewIDTokenHintVerifier(t *testing.T) {
 			want: &IDTokenHintVerifier{
 				Issuer:            tu.ValidIssuer,
 				KeySet:            tu.KeySet{},
-				SupportedSignAlgs: []string{"ABC", "DEF"},
+				SupportedSignAlgs: []jose.SignatureAlgorithm{"ABC", "DEF"},
 			},
 		},
 	}
@@ -70,7 +71,7 @@ func TestVerifyIDTokenHint(t *testing.T) {
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
-		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		SupportedSignAlgs: []jose.SignatureAlgorithm{tu.SignatureAlgorithm},
 		MaxAge:            2 * time.Minute,
 		ACR:               tu.ACRVerify,
 		KeySet:            tu.KeySet{},

@@ -163,7 +163,7 @@ func TestRegisterLegacyServer_Metadata(t *testing.T) {
 		op.AuthorizeCallbackHandler(testProvider),
 	)
 	const pathIssuer = "https://localhost:9998/custom/path"
-	provider, err := op.NewOpenIDProvider(pathIssuer, testConfig, testProvider.Storage(), op.WithAllowInsecure())
+	provider, err := op.NewProvider(testConfig, testProvider.Storage(), op.StaticIssuer(pathIssuer), op.WithAllowInsecure())
 	require.NoError(t, err)
 	pathed := op.RegisterLegacyServer(
 		op.NewLegacyServer(provider, *op.DefaultEndpoints),

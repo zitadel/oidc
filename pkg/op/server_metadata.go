@@ -244,7 +244,7 @@ func writeMetadataNotFound(w http.ResponseWriter, r *http.Request) {
 func (h *MetadataHandler) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Allow", "GET, HEAD")
 	err := oidc.ErrInvalidRequest().WithDescription("method not allowed")
-	WriteError(w, r, NewStatusError(err, http.StatusMethodNotAllowed), nil)
+	WriteError(w, r, NewStatusError(err, http.StatusMethodNotAllowed))
 }
 
 // handle runs after CORS and the user middleware,

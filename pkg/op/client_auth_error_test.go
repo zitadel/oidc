@@ -191,7 +191,7 @@ func TestClientAuthStorageErrors(t *testing.T) {
 	for _, req := range requests {
 		for _, se := range storageErrors {
 			fs := &failingClientStorage{Storage: s, method: req.method, err: se.err}
-			provider, err := op.NewOpenIDProvider(testIssuer, testConfig, fs, op.WithAllowInsecure())
+			provider, err := op.NewProvider(testConfig, fs, op.StaticIssuer(testIssuer), op.WithAllowInsecure())
 			require.NoError(t, err)
 
 			for _, path := range authorizePaths(provider) {

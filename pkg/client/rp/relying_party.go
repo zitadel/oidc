@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -77,10 +76,6 @@ type RelyingParty interface {
 
 	// ErrorHandler returns the handler used for callback errors
 	ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string)
-
-	// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
-	// Deprecated: configure logging with [slog.SetDefault].
-	Logger(context.Context) (logger *slog.Logger, ok bool)
 }
 
 type HasUnauthorizedHandler interface {
@@ -121,7 +116,6 @@ type relyingParty struct {
 	verifierOpts        []VerifierOption
 	signer              jose.Signer
 	keyBinding          *keyBinding
-	logger              *slog.Logger
 }
 
 func (rp *relyingParty) OAuthConfig() *oauth2.Config {
@@ -199,15 +193,6 @@ func (rp *relyingParty) UnauthorizedHandler() func(http.ResponseWriter, *http.Re
 	return rp.unauthorizedHandler
 }
 
-// Logger returns the logger configured with [WithLogger], or [slog.Default] if none was set.
-// Deprecated: configure logging with [slog.SetDefault].
-func (rp *relyingParty) Logger(context.Context) (*slog.Logger, bool) {
-	if rp.logger != nil {
-		return rp.logger, true
-	}
-	return slog.Default(), true
-}
-
 // NewRelyingPartyOAuth creates an (OAuth2) RelyingParty with the given
 // OAuth2 Config and possible configOptions
 // it will use the AuthURL and TokenURL set in config
@@ -272,7 +257,11 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 		return nil, err
 	}
 	if rp.useSigningAlgsFromDiscovery {
-		rp.verifierOpts = append(rp.verifierOpts, WithSupportedSigningAlgorithms(discoveryConfiguration.IDTokenSigningAlgValuesSupported...))
+		algs := make([]jose.SignatureAlgorithm, len(discoveryConfiguration.IDTokenSigningAlgValuesSupported))
+		for i, alg := range discoveryConfiguration.IDTokenSigningAlgValuesSupported {
+			algs[i] = jose.SignatureAlgorithm(alg)
+		}
+		rp.verifierOpts = append(rp.verifierOpts, WithSupportedSigningAlgorithms(algs...))
 	}
 	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint
@@ -377,13 +366,6 @@ func WithVerifierOpts(opts ...VerifierOption) Option {
 	}
 }
 
-// WithClientKey specifies the path to the key.json to be used for the JWT Profile Client Authentication on the token endpoint
-//
-// Deprecated: use WithJWTProfile(SignerFromKeyPath(path)), resp. WithJWTProfile(SignerFromKeyAndKeyID(key, keyID) instead.
-func WithClientKey(path string) Option {
-	return WithJWTProfile(SignerFromKeyPath(path))
-}
-
 // WithJWTProfile creates a signer used for the JWT Profile Client Authentication on the token endpoint
 // When creating the signer, be sure to include the KeyID in the SigningKey.
 // See client.NewSignerFromPrivateKeyByte for an example.
@@ -398,16 +380,6 @@ func WithJWTProfile(signerFromKey SignerFromKey) Option {
 	}
 }
 
-// WithLogger sets the logger returned by [RelyingParty.Logger].
-// OIDC package logging uses the global [slog] default; prefer [slog.SetDefault].
-// Deprecated: use [slog.SetDefault].
-func WithLogger(logger *slog.Logger) Option {
-	return func(rp *relyingParty) error {
-		rp.logger = logger
-		return nil
-	}
-}
-
 // WithSigningAlgsFromDiscovery appends the [WithSupportedSigningAlgorithms] option to the Verifier Options.
 // The algorithms returned in the `id_token_signing_alg_values_supported` from the discovery response will be set.
 func WithSigningAlgsFromDiscovery() Option {
@@ -418,30 +390,6 @@ func WithSigningAlgsFromDiscovery() Option {
 }
 
 type SignerFromKey func() (jose.Signer, error)
-
-// Deprecated: use [SignerFromKeyAndKeyID] instead.
-// The function will be removed in the next major release.
-func SignerFromKeyPath(path string) SignerFromKey {
-	return func() (jose.Signer, error) {
-		config, err := client.ConfigFromKeyFile(path)
-		if err != nil {
-			return nil, err
-		}
-		return client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
-	}
-}
-
-// Deprecated: use [SignerFromKeyAndKeyID] instead.
-// The function will be removed in the next major release.
-func SignerFromKeyFile(fileData []byte) SignerFromKey {
-	return func() (jose.Signer, error) {
-		config, err := client.ConfigFromKeyFileData(fileData)
-		if err != nil {
-			return nil, err
-		}
-		return client.NewSignerFromPrivateKeyByte([]byte(config.Key), config.KeyID)
-	}
-}
 
 func SignerFromKeyAndKeyID(key []byte, keyID string) SignerFromKey {
 	return func() (jose.Signer, error) {
@@ -850,17 +798,6 @@ type RefreshTokenRequest struct {
 	ClientAssertion     string                   `schema:"client_assertion,omitempty"`
 	ClientAssertionType string                   `schema:"client_assertion_type,omitempty"`
 	GrantType           oidc.GrantType           `schema:"grant_type"`
-}
-
-// Deprecated: This function is no longer invoked because it violates
-// RFC 6749 §2.3: The client MUST NOT use more than one authentication method in each request.
-//
-// Configure the OAuth2 endpoint AuthStyle (e.g., oauth2.AuthStyleInHeader)
-// or use the "authFn" parameter in the related functions for custom needs.
-func (r RefreshTokenRequest) Auth(req *http.Request) {
-	if r.ClientSecret != "" {
-		req.SetBasicAuth(url.QueryEscape(r.ClientID), url.QueryEscape(r.ClientSecret))
-	}
 }
 
 // RefreshTokens performs a token refresh. If it doesn't error, it will always

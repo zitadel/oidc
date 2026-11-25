@@ -10,7 +10,7 @@ import (
 	jose "github.com/go-jose/go-jose/v4"
 )
 
-func TestFindKey(t *testing.T) {
+func TestFindMatchingKey(t *testing.T) {
 	type args struct {
 		keyID       string
 		use         string
@@ -419,10 +419,10 @@ func TestFindKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := FindMatchingKey(tt.args.keyID, tt.args.use, tt.args.expectedAlg, tt.args.keys...)
 			if (tt.res.err != nil && !errors.Is(err, tt.res.err)) || (tt.res.err == nil && err != nil) {
-				t.Errorf("FindKey() error, got = %v, want = %v", err, tt.res.err)
+				t.Errorf("FindMatchingKey() error, got = %v, want = %v", err, tt.res.err)
 			}
 			if !reflect.DeepEqual(got, tt.res.key) {
-				t.Errorf("FindKey() got = %v, want %v", got, tt.res.key)
+				t.Errorf("FindMatchingKey() got = %v, want %v", got, tt.res.key)
 			}
 		})
 	}

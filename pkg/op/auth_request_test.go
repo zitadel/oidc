@@ -294,51 +294,6 @@ func TestParseAuthorizeRequest(t *testing.T) {
 	}
 }
 
-func TestValidateAuthRequest(t *testing.T) {
-	type args struct {
-		authRequest *oidc.AuthRequest
-		storage     op.Storage
-		verifier    *op.IDTokenHintVerifier
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr error
-	}{
-		{
-			"scope missing fails",
-			args{&oidc.AuthRequest{}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidRequest(),
-		},
-		{
-			"response_type missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidRequest(),
-		},
-		{
-			"client_id missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidRequest(),
-		},
-		{
-			"redirect_uri missing fails",
-			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
-			oidc.ErrInvalidRequest(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := op.ValidateAuthRequest(context.TODO(), tt.args.authRequest, tt.args.storage, tt.args.verifier)
-			if tt.wantErr == nil && err != nil {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
-			}
-			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestValidateAuthReqPrompt(t *testing.T) {
 	type args struct {
 		prompts []string
@@ -424,10 +379,10 @@ func TestValidateAuthReqPrompt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			maxAge, err := op.ValidateAuthReqPrompt(tt.args.prompts, tt.args.maxAge)
 			if tt.res.err == nil && err != nil {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+				t.Errorf("ValidateAuthReqPrompt() unexpected error = %v", err)
 			}
 			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+				t.Errorf("ValidateAuthReqPrompt() unexpected error = %v, want = %v", err, tt.res.err)
 			}
 			assert.Equal(t, tt.res.maxAge, maxAge)
 		})
@@ -1257,10 +1212,10 @@ func TestAuthResponseURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := op.AuthResponseURL(tt.args.redirectURI, tt.args.responseType, tt.args.responseMode, tt.args.response, tt.args.encoder)
 			if tt.res.err == nil && err != nil {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v", err)
+				t.Errorf("AuthResponseURL() unexpected error = %v", err)
 			}
 			if tt.res.err != nil && !errors.Is(err, tt.res.err) {
-				t.Errorf("ValidateAuthRequest() unexpected error = %v, want = %v", err, tt.res.err)
+				t.Errorf("AuthResponseURL() unexpected error = %v, want = %v", err, tt.res.err)
 			}
 			if got != tt.res.url {
 				t.Errorf("AuthResponseURL() got = %v, want %v", got, tt.res.url)

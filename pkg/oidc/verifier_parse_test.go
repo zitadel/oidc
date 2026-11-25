@@ -3,8 +3,10 @@ package oidc_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v4/internal/testutil"
@@ -65,7 +67,7 @@ func TestCheckSignature(t *testing.T) {
 		ctx              context.Context
 		token            string
 		payload          []byte
-		supportedSigAlgs []string
+		supportedSigAlgs []jose.SignatureAlgorithm
 	}
 	tests := []struct {
 		name    string
@@ -95,7 +97,7 @@ func TestCheckSignature(t *testing.T) {
 				ctx:              context.Background(),
 				token:            token,
 				payload:          payload,
-				supportedSigAlgs: []string{"foo", "bar"},
+				supportedSigAlgs: []jose.SignatureAlgorithm{"foo", "bar"},
 			},
 			wantErr: oidc.ErrSignatureUnsupportedAlg,
 		},
@@ -125,4 +127,17 @@ func TestCheckSignature(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestCheckSignatureWrapsJoseError(t *testing.T) {
+	token, _ := tu.ValidIDToken()
+
+	err := oidc.CheckSignature(t.Context(), token, nil, new(oidc.TokenClaims), []jose.SignatureAlgorithm{"foo"}, tu.KeySet{})
+	assert.ErrorIs(t, err, oidc.ErrSignatureUnsupportedAlg)
+	_, ok := errors.AsType[*jose.ErrUnexpectedSignatureAlgorithm](err)
+	assert.True(t, ok, "jose error not wrapped: %v", err)
+
+	err = oidc.CheckSignature(t.Context(), "~", nil, new(oidc.TokenClaims), nil, tu.KeySet{})
+	assert.ErrorIs(t, err, oidc.ErrParse)
+	assert.ErrorContains(t, err, "go-jose")
 }

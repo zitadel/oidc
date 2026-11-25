@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v4/internal/testutil"
@@ -45,7 +46,7 @@ func TestNewAccessTokenVerifier(t *testing.T) {
 			want: &AccessTokenVerifier{
 				Issuer:            tu.ValidIssuer,
 				KeySet:            tu.KeySet{},
-				SupportedSignAlgs: []string{"ABC", "DEF"},
+				SupportedSignAlgs: []jose.SignatureAlgorithm{"ABC", "DEF"},
 			},
 		},
 	}
@@ -62,7 +63,7 @@ func TestVerifyAccessToken(t *testing.T) {
 		Issuer:            tu.ValidIssuer,
 		MaxAgeIAT:         2 * time.Minute,
 		Offset:            time.Second,
-		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		SupportedSignAlgs: []jose.SignatureAlgorithm{tu.SignatureAlgorithm},
 		KeySet:            tu.KeySet{},
 	}
 

@@ -67,7 +67,7 @@ func AuthRequestError(w http.ResponseWriter, r *http.Request, authReq ErrAuthReq
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func RequestError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Logger) {
+func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 	e := oidc.DefaultToServerError(err, err.Error())
 	status := http.StatusBadRequest
 	if e.ErrorType == oidc.InvalidClient {
@@ -83,7 +83,7 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Log
 // TryErrorRedirect tries to handle an error by redirecting a client.
 // If this attempt fails, an error is returned that must be returned
 // to the client instead.
-func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder, _ *slog.Logger) (*Redirect, error) {
+func TryErrorRedirect(ctx context.Context, authReq ErrAuthRequest, parent error, encoder httphelper.Encoder) (*Redirect, error) {
 	e := oidc.DefaultToServerError(parent, parent.Error())
 	args := []any{slog.Any("oidc_error", e)}
 
@@ -180,7 +180,7 @@ func (e StatusError) Is(err error) bool {
 // If no `oidc.Error` was found in the parent, the error type defaults to [oidc.ServerError].
 // When there was no `StatusError` and the `oidc.Error` is of type `oidc.ServerError`,
 // the status code will be set to [http.StatusInternalServerError]
-func WriteError(w http.ResponseWriter, r *http.Request, err error, _ *slog.Logger) {
+func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	var statusError StatusError
 	if errors.As(err, &statusError) {
 		writeError(w, r,

@@ -17,21 +17,21 @@ func CodeExchange(w http.ResponseWriter, r *http.Request, exchanger Exchanger) {
 
 	tokenReq, err := ParseAccessTokenRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	if tokenReq.Code == "" {
-		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"), nil)
+		RequestError(w, r, oidc.ErrInvalidRequest().WithDescription("code missing"))
 		return
 	}
 	authReq, client, err := ValidateAccessTokenRequest(r.Context(), tokenReq, exchanger)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	resp, err := CreateTokenResponse(r.Context(), authReq, client, exchanger, true, tokenReq.Code, "")
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	httphelper.MarshalJSON(w, resp)

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/jeremija/gosubmit"
@@ -370,7 +371,7 @@ func RunAuthorizationCodeFlow(t *testing.T, opServer *httptest.Server, clientID,
 		rp.WithAuthStyle(oauth2.AuthStyleInHeader),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
-			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
+			rp.WithSupportedSigningAlgorithms(jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512),
 		),
 	)
 	require.NoError(t, err, "new rp")
@@ -557,7 +558,7 @@ func testErrorFromPromptNone(t *testing.T, wrapServer bool) {
 		rp.WithPKCE(cookieHandler),
 		rp.WithVerifierOpts(
 			rp.WithIssuedAtOffset(5*time.Second),
-			rp.WithSupportedSigningAlgorithms("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"),
+			rp.WithSupportedSigningAlgorithms(jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512),
 		),
 	)
 	require.NoError(t, err, "new rp")
