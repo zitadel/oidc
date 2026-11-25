@@ -182,8 +182,8 @@ func WithAuthTimeMaxAge(maxAge time.Duration) VerifierOption {
 	}
 }
 
-// WithSupportedSigningAlgorithms overwrites the default RS256 signing algorithm
-func WithSupportedSigningAlgorithms(algs ...string) VerifierOption {
+// WithSupportedSigningAlgorithms overwrites the default signing algorithms (RS256, ES256, PS256)
+func WithSupportedSigningAlgorithms(algs ...jose.SignatureAlgorithm) VerifierOption {
 	return func(v *IDTokenVerifier) {
 		v.SupportedSignAlgs = algs
 	}

@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
@@ -10,7 +11,7 @@ type AccessTokenVerifier oidc.Verifier
 
 type AccessTokenVerifierOpt func(*AccessTokenVerifier)
 
-func WithSupportedAccessTokenSigningAlgorithms(algs ...string) AccessTokenVerifierOpt {
+func WithSupportedAccessTokenSigningAlgorithms(algs ...jose.SignatureAlgorithm) AccessTokenVerifierOpt {
 	return func(verifier *AccessTokenVerifier) {
 		verifier.SupportedSignAlgs = algs
 	}

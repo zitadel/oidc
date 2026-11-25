@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/zitadel/oidc/v4/pkg/oidc"
 )
 
@@ -11,7 +12,7 @@ type IDTokenHintVerifier oidc.Verifier
 
 type IDTokenHintVerifierOpt func(*IDTokenHintVerifier)
 
-func WithSupportedIDTokenHintSigningAlgorithms(algs ...string) IDTokenHintVerifierOpt {
+func WithSupportedIDTokenHintSigningAlgorithms(algs ...jose.SignatureAlgorithm) IDTokenHintVerifierOpt {
 	return func(verifier *IDTokenHintVerifier) {
 		verifier.SupportedSignAlgs = algs
 	}

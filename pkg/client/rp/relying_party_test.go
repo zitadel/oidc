@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +56,7 @@ func Test_verifyTokenResponse(t *testing.T) {
 		MaxAgeIAT:         2 * time.Minute,
 		ClientID:          tu.ValidClientID,
 		Offset:            time.Second,
-		SupportedSignAlgs: []string{string(tu.SignatureAlgorithm)},
+		SupportedSignAlgs: []jose.SignatureAlgorithm{tu.SignatureAlgorithm},
 		KeySet:            tu.KeySet{},
 		MaxAge:            2 * time.Minute,
 		ACR:               tu.ACRVerify,

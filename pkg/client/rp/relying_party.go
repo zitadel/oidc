@@ -272,7 +272,11 @@ func NewRelyingPartyOIDC(ctx context.Context, issuer, clientID, clientSecret, re
 		return nil, err
 	}
 	if rp.useSigningAlgsFromDiscovery {
-		rp.verifierOpts = append(rp.verifierOpts, WithSupportedSigningAlgorithms(discoveryConfiguration.IDTokenSigningAlgValuesSupported...))
+		algs := make([]jose.SignatureAlgorithm, len(discoveryConfiguration.IDTokenSigningAlgValuesSupported))
+		for i, alg := range discoveryConfiguration.IDTokenSigningAlgValuesSupported {
+			algs[i] = jose.SignatureAlgorithm(alg)
+		}
+		rp.verifierOpts = append(rp.verifierOpts, WithSupportedSigningAlgorithms(algs...))
 	}
 	endpoints := GetEndpoints(discoveryConfiguration)
 	rp.oauthConfig.Endpoint = endpoints.Endpoint

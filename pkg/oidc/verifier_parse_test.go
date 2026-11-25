@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tu "github.com/zitadel/oidc/v4/internal/testutil"
@@ -65,7 +66,7 @@ func TestCheckSignature(t *testing.T) {
 		ctx              context.Context
 		token            string
 		payload          []byte
-		supportedSigAlgs []string
+		supportedSigAlgs []jose.SignatureAlgorithm
 	}
 	tests := []struct {
 		name    string
@@ -95,7 +96,7 @@ func TestCheckSignature(t *testing.T) {
 				ctx:              context.Background(),
 				token:            token,
 				payload:          payload,
-				supportedSigAlgs: []string{"foo", "bar"},
+				supportedSigAlgs: []jose.SignatureAlgorithm{"foo", "bar"},
 			},
 			wantErr: oidc.ErrSignatureUnsupportedAlg,
 		},
