@@ -103,23 +103,6 @@ func WithServerCORSOptions(opts *cors.Options) ServerOption {
 	}
 }
 
-// WithInvalidClientUnauthorized answers an [oidc.InvalidClient] error from the
-// client authentication step of the token, device authorization, revocation
-// and introspection endpoints with [http.StatusUnauthorized] and the header
-// `WWW-Authenticate: Basic realm="oauth"`, as RFC 6749 section 5.2 and
-// RFC 9110 section 15.5.2 ask. An error with its own [StatusError] keeps its
-// status, and a `WWW-Authenticate` header that is already set is kept.
-// As [Server.Introspect] authenticates the caller, every [oidc.InvalidClient]
-// error it returns is covered.
-// Other routes, and errors the other [Server] methods return after the client
-// authenticated, are not changed.
-// It is off by default, to keep the existing status codes.
-func WithInvalidClientUnauthorized() ServerOption {
-	return func(s *webServer) {
-		s.invalidClientUnauthorized = true
-	}
-}
-
 // WithTenantPrefix serves one handler for many issuers that differ in
 // one path segment, the tenant: https://op.example.com{prefix}/{tenant}.
 // With the prefix "/oauth", the issuer path "/oauth/p1" has the tenant
@@ -326,8 +309,6 @@ type webServer struct {
 	// MetadataHandler handle tenants only when it was.
 	tenantPrefix string
 	tenantSet    bool
-
-	invalidClientUnauthorized bool
 }
 
 func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -384,16 +365,22 @@ func (s *webServer) withClient(handler clientHandler) http.HandlerFunc {
 	}
 }
 
-// writeClientAuthError writes an error of the client authentication step.
+// writeClientAuthError writes an error of the client authentication step:
+// [Server.VerifyClient] on the token, device authorization and revocation
+// endpoints, and [Server.Introspect], which authenticates the caller itself.
 // An [oidc.InvalidClient] error without a [StatusError] is answered with
 // [http.StatusUnauthorized], and every 401 with an [oidc.InvalidClient] error
 // gets a Basic challenge, as RFC 6749 section 5.2 and RFC 9110 section 15.5.2 ask.
-// This rule applies only with [WithInvalidClientUnauthorized], otherwise the
-// error goes to [WriteError] as is.
+// Any other error keeps the answer of [WriteError], so a [Server] must report
+// a failed client authentication as invalid_client to get the 401.
+//
+// An invalid_client that [Server.Revocation] returns after the client
+// authenticated, for example for another client's token, is written by
+// [WriteError] without a challenge on purpose, because the credentials were accepted.
 func (s *webServer) writeClientAuthError(w http.ResponseWriter, r *http.Request, err error) {
 	statusError := AsStatusError(err, http.StatusUnauthorized)
 	var e *oidc.Error
-	if s.invalidClientUnauthorized && statusError.statusCode == http.StatusUnauthorized && errors.As(statusError.parent, &e) && e.ErrorType == oidc.InvalidClient {
+	if statusError.statusCode == http.StatusUnauthorized && errors.As(statusError.parent, &e) && e.ErrorType == oidc.InvalidClient {
 		if w.Header().Get("WWW-Authenticate") == "" {
 			w.Header().Set("WWW-Authenticate", `Basic realm="oauth"`)
 		}

@@ -101,7 +101,7 @@ func ClientJWTAuth(ctx context.Context, ca oidc.ClientAssertionParams, verifier 
 
 	profile, err := VerifyJWTAssertion(ctx, ca.ClientAssertion, verifier.JWTProfileVerifier(ctx))
 	if err != nil {
-		return "", clientAuthError(oidc.ErrUnauthorizedClient().WithDescription("JWT assertion failed"), err)
+		return "", clientAuthError(oidc.ErrInvalidClient().WithDescription("JWT assertion failed"), err)
 	}
 	return profile.Issuer, nil
 }
@@ -124,20 +124,29 @@ func ClientBasicAuth(r *http.Request, storage Storage) (clientID string, err err
 		return "", oidc.ErrInvalidClient().WithParent(ErrInvalidAuthHeader)
 	}
 	if err := storage.AuthorizeClientIDSecret(r.Context(), clientID, clientSecret); err != nil {
-		return "", clientAuthError(oidc.ErrUnauthorizedClient(), err)
+		return "", clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 	return clientID, nil
 }
 
-// clientAuthError answers a server_error a Storage reported during client
-// authentication with a new server_error, so a server side fault is not
-// answered as a client fault. The Storage error stays its parent, so a
-// StatusError in the chain keeps its status code. Any other error is wrapped
-// in base.
+// clientAuthError answers a server_error or a context error a Storage
+// reported during client authentication with a new server_error, so a server
+// side fault is not answered as a client fault. Any other error is wrapped in
+// base, which takes the description of an invalid_client from the Storage, so
+// the client still sees it. The Storage error stays the parent, so a
+// StatusError in the chain keeps its status code.
 func clientAuthError(base *oidc.Error, err error) *oidc.Error {
 	var oidcErr *oidc.Error
-	if errors.As(err, &oidcErr) && oidcErr != nil && oidcErr.ErrorType == oidc.ServerError {
+	if errors.As(err, &oidcErr) && oidcErr == nil {
+		// errors.Is would call Unwrap on this typed nil and panic.
+		return base.WithParent(err)
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) ||
+		(oidcErr != nil && oidcErr.ErrorType == oidc.ServerError) {
 		return oidc.ErrServerError().WithParent(err)
+	}
+	if oidcErr != nil && oidcErr.ErrorType == oidc.InvalidClient && oidcErr.Description != "" {
+		base = base.WithDescription("%s", oidcErr.Description)
 	}
 	return base.WithParent(err)
 }

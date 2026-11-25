@@ -372,8 +372,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 		// error is the expected error type, invalid_client when empty.
 		error string
 		want  answer
-		// off is the answer without WithInvalidClientUnauthorized.
-		off answer
 	}{
 		{
 			name:      "token Basic wrong secret",
@@ -382,7 +380,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "wrong",
 			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
-			off:       answer{http.StatusBadRequest, "wrong secret", ""},
 		},
 		{
 			name:      "token Basic broken percent-encoding",
@@ -391,7 +388,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "s%zz",
 			want:      answer{http.StatusUnauthorized, "invalid basic auth header", `Basic realm="oauth"`},
-			off:       answer{http.StatusBadRequest, "invalid basic auth header", ""},
 		},
 		{
 			name:      "token client_secret_post wrong secret",
@@ -399,7 +395,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			path:      DefaultEndpoints.Token.Relative(),
 			body:      codeBody + "&client_id=shop&client_secret=wrong",
 			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
-			off:       answer{http.StatusBadRequest, "wrong secret", ""},
 		},
 		{
 			name:      "token with tenant prefix",
@@ -409,7 +404,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "wrong",
 			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
-			off:       answer{http.StatusBadRequest, "wrong secret", ""},
 		},
 		{
 			name:      "token status error 401",
@@ -418,7 +412,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "secret",
 			want:      answer{http.StatusUnauthorized, "locked", `Basic realm="oauth"`},
-			off:       answer{http.StatusUnauthorized, "locked", ""},
 		},
 		{
 			name:      "token status error 400",
@@ -427,7 +420,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "secret",
 			want:      answer{http.StatusBadRequest, "locked", ""},
-			off:       answer{http.StatusBadRequest, "locked", ""},
 		},
 		{
 			name:      "token keeps WWW-Authenticate set by a middleware",
@@ -437,7 +429,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:      codeBody,
 			password:  "wrong",
 			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="tenant"`},
-			off:       answer{http.StatusBadRequest, "wrong secret", `Basic realm="tenant"`},
 		},
 		{
 			name:     "introspection Basic broken percent-encoding",
@@ -445,14 +436,12 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:     "token=xxx",
 			password: "s%zz",
 			want:     answer{http.StatusUnauthorized, "invalid basic auth header", `Basic realm="oauth"`},
-			off:      answer{http.StatusBadRequest, "invalid basic auth header", ""},
 		},
 		{
 			name: "introspection without client authentication",
 			path: DefaultEndpoints.Introspection.Relative(),
 			body: "client_id=shop&token=xxx",
 			want: answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
-			off:  answer{http.StatusBadRequest, "client must be authenticated", ""},
 		},
 		{
 			name:     "introspection error of Introspect",
@@ -460,7 +449,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:     "token=xxx",
 			password: "secret",
 			want:     answer{http.StatusUnauthorized, "client_assertion not supported", `Basic realm="oauth"`},
-			off:      answer{http.StatusBadRequest, "client_assertion not supported", ""},
 		},
 		{
 			name:   "client credentials for a public client",
@@ -468,7 +456,6 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			path:   DefaultEndpoints.Token.Relative(),
 			body:   "grant_type=client_credentials&client_id=shop",
 			want:   answer{http.StatusUnauthorized, "client must be authenticated", `Basic realm="oauth"`},
-			off:    answer{http.StatusBadRequest, "client must be authenticated", ""},
 		},
 		{
 			name:  "token without client_id is not changed",
@@ -476,14 +463,12 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:  codeBody,
 			error: "invalid_request",
 			want:  answer{http.StatusBadRequest, "client_id or client_assertion must be provided", ""},
-			off:   answer{http.StatusBadRequest, "client_id or client_assertion must be provided", ""},
 		},
 		{
 			name:   "authorize is not changed",
 			method: http.MethodGet,
 			path:   DefaultEndpoints.Authorization.Relative() + "?client_id=shop",
 			want:   answer{http.StatusBadRequest, "unknown client", ""},
-			off:    answer{http.StatusBadRequest, "unknown client", ""},
 		},
 		{
 			name:     "revocation after client authentication is not changed",
@@ -491,35 +476,28 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			body:     "token=xxx",
 			password: "secret",
 			want:     answer{http.StatusUnauthorized, "token was not issued for this client", ""},
-			off:      answer{http.StatusUnauthorized, "token was not issued for this client", ""},
 		},
 	}
-	for _, on := range []bool{true, false} {
-		for _, tt := range tests {
-			mode, want, options := "default", tt.off, tt.options
-			if on {
-				mode, want, options = "opted in", tt.want, append([]ServerOption{WithInvalidClientUnauthorized()}, tt.options...)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := RegisterServer(clientAuthServer{verifyErr: tt.verifyErr, client: tt.client}, *DefaultEndpoints, tt.options...)
+			method := cmp.Or(tt.method, http.MethodPost)
+			r := httptest.NewRequest(method, tt.path, strings.NewReader(tt.body))
+			if method == http.MethodPost {
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
-			t.Run(mode+"/"+tt.name, func(t *testing.T) {
-				h := RegisterServer(clientAuthServer{verifyErr: tt.verifyErr, client: tt.client}, *DefaultEndpoints, options...)
-				method := cmp.Or(tt.method, http.MethodPost)
-				r := httptest.NewRequest(method, tt.path, strings.NewReader(tt.body))
-				if method == http.MethodPost {
-					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				}
-				if tt.password != "" {
-					r.SetBasicAuth("shop", tt.password)
-				}
-				rec := httptest.NewRecorder()
-				h.ServeHTTP(rec, r)
-				res := rec.Result()
-				assert.Equal(t, want.status, res.StatusCode, "status code")
-				assert.Equal(t, want.authenticate, res.Header.Get("WWW-Authenticate"), "WWW-Authenticate")
-				body, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				assert.JSONEq(t, fmt.Sprintf(`{"error":%q, "error_description":%q}`, cmp.Or(tt.error, "invalid_client"), want.description), string(body))
-			})
-		}
+			if tt.password != "" {
+				r.SetBasicAuth("shop", tt.password)
+			}
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, r)
+			res := rec.Result()
+			assert.Equal(t, tt.want.status, res.StatusCode, "status code")
+			assert.Equal(t, tt.want.authenticate, res.Header.Get("WWW-Authenticate"), "WWW-Authenticate")
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.JSONEq(t, fmt.Sprintf(`{"error":%q, "error_description":%q}`, cmp.Or(tt.error, "invalid_client"), tt.want.description), string(body))
+		})
 	}
 }
 
@@ -1443,7 +1421,7 @@ func Test_webServer_clientCredentialsHandler(t *testing.T) {
 			client:  newClient(clientTypeNative),
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("foo=bar")),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusUnauthorized,
 				wantBody:   `{"error":"invalid_client", "error_description":"client must be authenticated"}`,
 			},
 		},
@@ -1537,7 +1515,7 @@ func Test_webServer_introspectionHandler(t *testing.T) {
 			decoder: testDecoder,
 			r:       httptest.NewRequest(http.MethodPost, "/", strings.NewReader("client_id=123")),
 			want: webServerResult{
-				wantStatus: http.StatusBadRequest,
+				wantStatus: http.StatusUnauthorized,
 				wantBody:   `{"error":"invalid_client", "error_description":"client must be authenticated"}`,
 			},
 		},

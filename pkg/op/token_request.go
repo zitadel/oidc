@@ -188,11 +188,11 @@ func AuthorizePrivateJWTKey(ctx context.Context, clientAssertion string, exchang
 
 	jwtReq, err := VerifyJWTAssertion(ctx, clientAssertion, exchanger.JWTProfileVerifier(ctx))
 	if err != nil {
-		return nil, err
+		return nil, clientAuthError(oidc.ErrInvalidClient().WithDescription("JWT assertion failed"), err)
 	}
 	client, err := exchanger.Storage().GetClientByClientID(ctx, jwtReq.Issuer)
 	if err != nil {
-		return nil, err
+		return nil, clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 	if client.AuthMethod() != oidc.AuthMethodPrivateKeyJWT {
 		return nil, oidc.ErrInvalidClient()
