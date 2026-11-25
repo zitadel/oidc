@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -120,9 +119,6 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
-	// Deprecated: configure logging with slog.SetDefault.
-	Logger() *slog.Logger
-
 	// Deprecated: Provider now implements http.Handler directly.
 	HttpHandler() http.Handler
 }
@@ -493,12 +489,6 @@ func (o *Provider) Endpoints() Endpoints {
 	return *o.endpoints
 }
 
-// Logger returns the global default logger.
-// Deprecated: configure logging with [slog.SetDefault].
-func (o *Provider) Logger() *slog.Logger {
-	return slog.Default()
-}
-
 // Deprecated: Provider now implements http.Handler directly.
 func (o *Provider) HttpHandler() http.Handler {
 	return o
@@ -676,14 +666,6 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 func WithCORSOptions(opts *cors.Options) Option {
 	return func(o *Provider) error {
 		o.corsOpts = opts
-		return nil
-	}
-}
-
-// WithLogger is retained for source compatibility.
-// Deprecated: use [slog.SetDefault]. This option has no effect.
-func WithLogger(*slog.Logger) Option {
-	return func(*Provider) error {
 		return nil
 	}
 }

@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -17,8 +16,6 @@ type SessionEnder interface {
 	Storage() Storage
 	IDTokenHintVerifier(context.Context) *IDTokenHintVerifier
 	DefaultLogoutRedirectURI() string
-	// Deprecated: configure logging with slog.SetDefault.
-	Logger() *slog.Logger
 }
 
 func endSessionHandler(ender SessionEnder) func(http.ResponseWriter, *http.Request) {
@@ -39,7 +36,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 	}
 	session, err := ValidateEndSessionRequest(r.Context(), req, ender)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	redirect := session.RedirectURI
@@ -49,7 +46,7 @@ func EndSession(w http.ResponseWriter, r *http.Request, ender SessionEnder) {
 		err = ender.Storage().TerminateSession(r.Context(), session.UserID, session.ClientID)
 	}
 	if err != nil {
-		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"), nil)
+		RequestError(w, r, oidc.DefaultToServerError(err, "error terminating session"))
 		return
 	}
 	http.Redirect(w, r, redirect, http.StatusFound)
