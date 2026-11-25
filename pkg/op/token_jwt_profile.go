@@ -22,24 +22,24 @@ func JWTProfile(w http.ResponseWriter, r *http.Request, exchanger JWTAuthorizati
 
 	profileRequest, err := ParseJWTProfileGrantRequest(r, exchanger.Decoder())
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 
 	tokenRequest, err := VerifyJWTAssertion(r.Context(), profileRequest.Assertion, exchanger.JWTProfileVerifier(r.Context()))
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 
 	tokenRequest.Scopes, err = exchanger.Storage().ValidateJWTProfileScopes(r.Context(), tokenRequest.Issuer, profileRequest.Scope)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	resp, err := CreateJWTTokenResponse(r.Context(), tokenRequest, exchanger)
 	if err != nil {
-		RequestError(w, r, err, nil)
+		RequestError(w, r, err)
 		return
 	}
 	httphelper.MarshalJSON(w, resp)
@@ -92,13 +92,6 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 		ExpiresIn:   oidc.Duration(validity),
 		Scope:       tokenRequest.GetScopes(),
 	}, nil
-}
-
-// ParseJWTProfileRequest has been renamed to ParseJWTProfileGrantRequest
-//
-// deprecated: use ParseJWTProfileGrantRequest
-func ParseJWTProfileRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.JWTProfileGrantRequest, error) {
-	return ParseJWTProfileGrantRequest(r, decoder)
 }
 
 type jwtProfileClient struct {

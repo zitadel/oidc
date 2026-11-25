@@ -3,7 +3,6 @@ package op
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -120,11 +119,6 @@ type OpenIDProvider interface {
 	Crypto() Crypto
 	DefaultLogoutRedirectURI() string
 	Probes() []ProbesFn
-	// Deprecated: configure logging with slog.SetDefault.
-	Logger() *slog.Logger
-
-	// Deprecated: Provider now implements http.Handler directly.
-	HttpHandler() http.Handler
 }
 
 type HttpInterceptor func(http.Handler) http.Handler
@@ -199,48 +193,6 @@ type Endpoints struct {
 	DeviceAuthorization *Endpoint
 }
 
-// NewOpenIDProvider creates a provider. The provider provides (with HttpHandler())
-// a http.Router that handles a suite of endpoints (some paths can be overridden):
-//
-//	/healthz
-//	/ready
-//	/.well-known/openid-configuration
-//	/oauth/token
-//	/oauth/introspect
-//	/callback
-//	/authorize
-//	/userinfo
-//	/revoke
-//	/end_session
-//	/keys
-//	/device_authorization
-//
-// This does not include login. Login is handled with a redirect that includes the
-// request ID. The redirect for logins is specified per-client by Client.LoginURL().
-// Successful logins should mark the request as authorized and redirect back to
-// op.AuthCallbackURL(provider) which is probably /callback. On the redirect back
-// to the AuthCallbackURL, the request id should be passed as the "id" parameter.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewOpenIDProvider(issuer string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, StaticIssuer(issuer), opOpts...)
-}
-
-// NewForwardedOpenIDProvider tries to establish the issuer from the request Host.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewDynamicOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, IssuerFromHost(path), opOpts...)
-}
-
-// NewForwardedOpenIDProvider tries to establish the Issuer from a Forwarded request header, if it is set.
-// See [IssuerFromForwardedOrHost] for details.
-//
-// Deprecated: use [NewProvider] with an issuer function direct.
-func NewForwardedOpenIDProvider(path string, config *Config, storage Storage, opOpts ...Option) (*Provider, error) {
-	return NewProvider(config, storage, IssuerFromForwardedOrHost(path), opOpts...)
-}
-
 // NewProvider creates a provider with a router on it's embedded http.Handler.
 // Issuer is a function that must return the issuer on every request.
 // Typically [StaticIssuer], [IssuerFromHost] or [IssuerFromForwardedOrHost] can be used.
@@ -272,14 +224,7 @@ func NewProvider(
 	opOpts ...Option,
 ) (_ *Provider, err error) {
 	keySet := &OpenIDKeySet{storage}
-	easgcmCrypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
-	crypto := NewCompositeCrypto(
-		easgcmCrypto,
-		[]Decrypter{
-			easgcmCrypto,
-			NewAESDecrypter(config.CryptoKey),
-		},
-	)
+	crypto := NewAES256GCMCrypto(config.CryptoKey, config.CryptoKeyId)
 	// Copied per provider: the options below assign into these and CORSOptions() hands its pointer to callers, so sharing the globals would let one provider reconfigure every other.
 	endpoints := *DefaultEndpoints
 	corsOpts := cloneCORSOptions(defaultCORSOptions)
@@ -500,17 +445,6 @@ func (o *Provider) Endpoints() Endpoints {
 	return *o.endpoints
 }
 
-// Logger returns the global default logger.
-// Deprecated: configure logging with [slog.SetDefault].
-func (o *Provider) Logger() *slog.Logger {
-	return slog.Default()
-}
-
-// Deprecated: Provider now implements http.Handler directly.
-func (o *Provider) HttpHandler() http.Handler {
-	return o
-}
-
 type OpenIDKeySet struct {
 	Storage
 }
@@ -683,14 +617,6 @@ func WithIDTokenHintVerifierOpts(opts ...IDTokenHintVerifierOpt) Option {
 func WithCORSOptions(opts *cors.Options) Option {
 	return func(o *Provider) error {
 		o.corsOpts = opts
-		return nil
-	}
-}
-
-// WithLogger is retained for source compatibility.
-// Deprecated: use [slog.SetDefault]. This option has no effect.
-func WithLogger(*slog.Logger) Option {
-	return func(*Provider) error {
 		return nil
 	}
 }
