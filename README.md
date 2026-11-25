@@ -102,8 +102,6 @@ slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 Because the logger is process-wide, this also affects other code that uses the global `slog` functions.
 
-The existing `WithLogger`, `WithFallbackLogger`, and `Logger` APIs remain available for source compatibility but are deprecated. `op.WithLogger` / `WithFallbackLogger` are no-ops; `rp.WithLogger` still stores a logger for `rp.Logger()` callers. New code should call `slog.SetDefault` directly. Logger parameters on the exported error helpers are also retained for source compatibility, but OIDC logging uses the current global default.
-
 ### Server configuration
 
 Example server allows extra configuration using environment variables and could be used for end-to-end testing of your services.

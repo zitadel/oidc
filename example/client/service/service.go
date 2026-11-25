@@ -18,6 +18,21 @@ import (
 
 var client = http.DefaultClient
 
+// keyFile is the ZITADEL service user key JSON.
+type keyFile struct {
+	KeyID  string `json:"keyId"`
+	Key    string `json:"key"`
+	UserID string `json:"userId"`
+}
+
+func tokenSourceFromKeyFile(data []byte, issuer string, scopes []string) (profile.TokenSource, error) {
+	var key keyFile
+	if err := json.Unmarshal(data, &key); err != nil {
+		return nil, err
+	}
+	return profile.NewJWTProfileTokenSource(context.TODO(), issuer, key.UserID, key.KeyID, []byte(key.Key), scopes)
+}
+
 func main() {
 	keyPath := os.Getenv("KEY_PATH")
 	issuer := os.Getenv("ISSUER")
@@ -25,8 +40,12 @@ func main() {
 	scopes := strings.Split(os.Getenv("SCOPES"), " ")
 
 	if keyPath != "" {
-		//lint:ignore SA1019 the replacement lives in zitadel-go, which this module does not depend on
-		ts, err := profile.NewJWTProfileTokenSourceFromKeyFile(context.TODO(), issuer, keyPath, scopes)
+		key, err := os.ReadFile(keyPath)
+		if err != nil {
+			slog.Error("error reading key file", "error", err)
+			os.Exit(1)
+		}
+		ts, err := tokenSourceFromKeyFile(key, issuer, scopes)
 		if err != nil {
 			slog.Error("error creating token source", "error", err)
 			os.Exit(1)
@@ -78,8 +97,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			//lint:ignore SA1019 the replacement lives in zitadel-go, which this module does not depend on
-			ts, err := profile.NewJWTProfileTokenSourceFromKeyFileData(context.TODO(), issuer, key, scopes)
+			ts, err := tokenSourceFromKeyFile(key, issuer, scopes)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

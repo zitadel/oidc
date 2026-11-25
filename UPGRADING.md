@@ -8,7 +8,7 @@ Alternatively, GNU sed can be installed on such systems. (`coreutils` package?).
 ## V3 to V4
 
 **TL;DR** this chapter has no full `sed` script: the module path can be replaced
-automatically, the `ExpiresIn` change cannot.
+automatically; the other changes in this chapter must be done by hand.
 
 As first steps we will:
 1. Download the latest v4 module;
@@ -47,6 +47,114 @@ oidc.AccessTokenResponse{
     TokenType:   oidc.BearerToken,
     ExpiresIn:   oidc.Duration(validity),
     Scope:       tokenRequest.GetScopes(),
+}
+```
+
+### Provider constructors
+
+`op.NewOpenIDProvider`, `op.NewDynamicOpenIDProvider` and `op.NewForwardedOpenIDProvider` have been removed.
+Use `op.NewProvider` with the matching issuer function:
+
+- `op.NewOpenIDProvider(issuer, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.StaticIssuer(issuer), opts...)`
+- `op.NewDynamicOpenIDProvider(path, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.IssuerFromHost(path), opts...)`
+- `op.NewForwardedOpenIDProvider(path, config, storage, opts...)` becomes `op.NewProvider(config, storage, op.IssuerFromForwardedOrHost(path), opts...)`
+
+`HttpHandler()` has been removed from `op.OpenIDProvider` and `*op.Provider`. The provider is an `http.Handler` itself,
+so pass it directly where `provider.HttpHandler()` was used.
+
+### Logging
+
+Logging is configured with `slog.SetDefault`, see [Global `slog` logger migration](#global-slog-logger-migration). The deprecated accessors and options that were kept for source compatibility in V3 are removed:
+
+- `op.WithLogger` and `op.WithFallbackLogger`: delete the option, call `slog.SetDefault` instead.
+- `op.Provider.Logger()` and the `Logger()` method on the `op.OpenIDProvider`, `op.Authorizer`, `op.Exchanger` and `op.SessionEnder` interfaces: use `slog.Default()`.
+- `rp.WithLogger` and `rp.RelyingParty.Logger(ctx)`: delete the option, use `slog.Default()`. In V3, `rp.WithLogger` stored the given logger and `Logger(ctx)` returned it; callers that read a custom logger back this way must keep their own reference to it.
+- The ignored `*slog.Logger` parameter on `op.RequestError`, `op.WriteError` and `op.TryErrorRedirect`: drop the final argument.
+
+### AES-CFB encryption removed
+
+The unauthenticated AES-CFB helpers are gone:
+
+- `crypto.EncryptAES`, `crypto.EncryptBytesAES`, `crypto.DecryptAES`, `crypto.DecryptBytesAES` and `crypto.ErrCipherTextBlockSize`
+- `op.NewAESCrypto` and `op.NewAESDecrypter`
+
+Use `op.NewAES256GCMCrypto(key, keyID)` instead. `op.NewProvider` now uses it directly, without the AES-CFB
+decrypt fallback it had in v3.
+
+Since v3.47.0, `NewProvider` already encrypted with AES-GCM and used AES-CFB only to decrypt older values.
+Authorization codes and opaque access tokens that were encrypted with AES-CFB can no longer be decrypted
+after the upgrade. That covers values issued before v3.47.0 and values issued with
+`WithCrypto(op.NewAESCrypto(...))`. Let them expire before upgrading.
+
+### Signature check errors
+
+`oidc.CheckSignature` now wraps the underlying go-jose error instead of returning a bare
+`ErrSignatureUnsupportedAlg` or `ErrParse`. `errors.Is` against those sentinels still matches, but
+`err.Error()` carries the jose message after the sentinel text, and the jose error can be read with
+`errors.As`. Code that compared the error with `==` must switch to `errors.Is`.
+
+
+### Client authentication helpers
+
+The deprecated `Auth(*http.Request)` methods were removed, because they set HTTP basic auth
+on top of the `client_secret` form field, which violates RFC 6749 §2.3 (one authentication
+method per request). Removed:
+
+- `client.ClientSecretBasicAuthRequest` interface
+- `client.RevokeRequest.Auth`
+- `client.DeviceAccessTokenRequest.Auth`
+- `oidc.ClientCredentialsRequest.Auth`
+- `rp.RefreshTokenRequest.Auth`
+
+Configure the OAuth2 endpoint `AuthStyle` (e.g. `oauth2.AuthStyleInHeader`) instead,
+or pass an `authFn` to the functions that accept one.
+
+`client.CallDeviceAccessTokenEndpoint` and `client.PollDeviceAccessTokenEndpoint` were
+removed in favor of their `WithAuthFn` variants; pass `nil` to keep the old behavior:
+
+```go
+client.CallDeviceAccessTokenEndpointWithAuthFn(ctx, req, caller, nil)
+client.PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, req, caller, nil)
+```
+
+### Key file helpers
+
+The ZITADEL key file helpers were removed:
+
+- `client.KeyFile`, `client.ConfigFromKeyFile`, `client.ConfigFromKeyFileData`
+- `profile.NewJWTProfileTokenSourceFromKeyFile`, `profile.NewJWTProfileTokenSourceFromKeyFileData`
+- `rp.WithClientKey`, `rp.SignerFromKeyPath`, `rp.SignerFromKeyFile`
+- `rs.NewResourceServerFromKeyFile`
+
+Use `KeyFile` and `ConfigFromKeyFile` from `github.com/zitadel/zitadel-go/v3/pkg/client`,
+or parse the JSON yourself, and pass the fields to `profile.NewJWTProfileTokenSource`,
+`rp.WithJWTProfile(rp.SignerFromKeyAndKeyID(...))` or `rs.NewResourceServerJWTProfile`.
+
+```go
+provider, err := rs.NewResourceServerFromKeyFile(ctx, issuer, keyPath)
+```
+becomes
+```go
+key, err := client.ConfigFromKeyFile(keyPath) // github.com/zitadel/zitadel-go/v3/pkg/client
+if err != nil {
+    return err
+}
+provider, err := rs.NewResourceServerJWTProfile(ctx, issuer, key.ClientID, key.KeyID, key.Key)
+```
+
+### Storage: `SetUserinfoFromRequest` is required
+
+`op.Storage` (through `OPStorage`) now requires `SetUserinfoFromRequest`, and the optional
+`op.CanSetUserinfoFromRequest` interface is gone. `SetUserinfoFromScopes` was removed from `OPStorage`:
+it was only kept for compatibility and had to be implemented empty.
+
+Delete your `SetUserinfoFromScopes` method. A leftover one still compiles but is never called, so any claims
+it set silently disappear from the id_token. Move that logic into
+`SetUserinfoFromRequest`, which receives the `op.IDTokenRequest`:
+
+```go
+func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.UserInfo, request op.IDTokenRequest, scopes []string) error {
+	return s.setUserinfo(ctx, userinfo, request.GetSubject(), request.GetClientID(), scopes)
 }
 ```
 
@@ -89,7 +197,7 @@ To disable OIDC logs, install a discard handler instead:
 slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 ```
 
-OIDC package logging always uses the process-wide `slog` default. The exported `WithLogger`, `WithFallbackLogger`, and `Logger` APIs remain for source compatibility but are deprecated. `op.WithLogger` / `op.WithFallbackLogger` are no-ops; `op.Provider.Logger()` returns `slog.Default()`. `rp.WithLogger` still stores a logger returned by `rp.Logger()` (falling back to `slog.Default()`), but the RP package itself no longer writes through that logger. Logger arguments on `RequestError`, `WriteError`, and `TryErrorRedirect` are also retained but ignored.
+OIDC package logging always uses the process-wide `slog` default.
 
 Remove uses of `logging.ToContext` and `github.com/zitadel/logging` middleware. Applications that need request logging or context enrichment should provide their own middleware and `slog.Handler`. Discovery debug records are now sent to the global logger without first checking for a context logger; use the global handler's level configuration to suppress them. RP records no longer receive the `rp` attribute group or its function-name enrichment.
 

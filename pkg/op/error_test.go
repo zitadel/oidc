@@ -288,7 +288,7 @@ func TestRequestError(t *testing.T) {
 			setDefaultTestLogger(t, logger)
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", "/path", nil)
-			RequestError(w, r, tt.err, logger)
+			RequestError(w, r, tt.err)
 
 			res := w.Result()
 			defer res.Body.Close()
@@ -489,7 +489,7 @@ func TestTryErrorRedirect(t *testing.T) {
 			setDefaultTestLogger(t, logger)
 			encoder := schema.NewEncoder()
 
-			got, err := TryErrorRedirect(tt.args.ctx, tt.args.authReq, tt.args.parent, encoder, logger)
+			got, err := TryErrorRedirect(tt.args.ctx, tt.args.authReq, tt.args.parent, encoder)
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.want, got)
 
@@ -701,7 +701,7 @@ func TestWriteError(t *testing.T) {
 			r := httptest.NewRequest("GET", "/target", nil)
 			w := httptest.NewRecorder()
 
-			WriteError(w, r, tt.err, logger)
+			WriteError(w, r, tt.err)
 			res := w.Result()
 			assert.Equal(t, tt.wantStatus, res.StatusCode, "status code")
 			gotBody, err := io.ReadAll(res.Body)
