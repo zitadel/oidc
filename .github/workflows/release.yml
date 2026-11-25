@@ -4,7 +4,7 @@ on:
     branches:
       - "2.11.x"
       - main
-      - next
+      - next-v4
     tags-ignore:
       - '**'
   pull_request:
@@ -34,7 +34,7 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     needs: [test]
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next-v4' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

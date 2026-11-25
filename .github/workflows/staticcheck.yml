@@ -4,7 +4,7 @@ on:
     branches:
       - "2.11.x"
       - main
-      - next
+      - next-v4
   pull_request:
     branches:
       - '**'
