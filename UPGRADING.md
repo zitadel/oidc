@@ -182,6 +182,14 @@ if err != nil {
 return op.ValidateAuthRequestClient(ctx, authReq, client, verifier)
 ```
 
+### Device authorization
+
+- `DeviceAuthorizationConfig.UserFormURL` is removed: set `UserFormPath` instead; the host is taken from the request issuer by `IssuerFromContext`.
+  `UserFormPath` replaces the issuer's path, so the verification URI is always on the issuer's host: with the
+  issuer `https://host/tenant` and the path `/device` it is `https://host/device`. A user form on another host
+  is no longer possible; redirect from `UserFormPath` to it instead.
+- `op.NewDeviceCode` returns only a `string`: drop the error from `code, _ := op.NewDeviceCode(n)`.
+- `op.CreateDeviceTokenResponse` takes a `*op.DeviceAuthorizationState` instead of an `op.TokenRequest`: pass the state returned by `op.CheckDeviceAuthorizationState` directly.
 
 ## Global `slog` logger migration
 
