@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,7 @@ import (
 // EXPERIMENTAL: may change until v4
 type ExtendedLegacyServer interface {
 	Server
+	MetadataServer
 	Provider() OpenIDProvider
 	Endpoints() Endpoints
 	AuthCallbackURL() func(context.Context, string) string
@@ -26,6 +28,13 @@ type ExtendedLegacyServer interface {
 // It takes care of registering the IssuerFromRequest middleware.
 // The authorizeCallbackHandler is registered on `/callback` under the authorization endpoint.
 // Neither are part of the bare [Server] interface.
+// The well-known metadata paths are served by a [RegisterMetadataServer]
+// handler in front of the [RegisterServer] handler, see
+// [MetadataHandler.Intercept]. The options apply to both handlers, so a
+// [WithSetRouter] func runs twice and must be idempotent; routes it adds
+// only take effect on the OP handler. To customise the metadata, override
+// both [LegacyServer.OpenIDConfiguration] and
+// [LegacyServer.AuthorizationServerMetadata].
 //
 // EXPERIMENTAL: may change until v4
 func RegisterLegacyServer(s ExtendedLegacyServer, authorizeCallbackHandler http.HandlerFunc, options ...ServerOption) http.Handler {
@@ -35,17 +44,21 @@ func RegisterLegacyServer(s ExtendedLegacyServer, authorizeCallbackHandler http.
 			r.HandleFunc(s.Endpoints().Authorization.Relative()+authCallbackPathSuffix, authorizeCallbackHandler)
 		}),
 	)
-	return RegisterServer(s, s.Endpoints(), options...)
+	opHandler := RegisterServer(s, s.Endpoints(), options...)
+	return RegisterMetadataServer(s, options...).Intercept(opHandler)
 }
 
-// LegacyServer is an implementation of [Server] that
-// simply wraps an [OpenIDProvider].
+// LegacyServer is an implementation of [Server] and [MetadataServer]
+// that simply wraps an [OpenIDProvider].
 // It can be used to transition from the former Provider/Storage
 // interfaces to the new Server interface.
+// Both metadata methods serve the same document; a type that embeds
+// LegacyServer and customises it overrides both.
 //
 // EXPERIMENTAL: may change until v4
 type LegacyServer struct {
 	UnimplementedServer
+	UnimplementedMetadataServer
 	provider  OpenIDProvider
 	endpoints Endpoints
 }
@@ -100,10 +113,29 @@ func (s *LegacyServer) Ready(ctx context.Context, r *Request[struct{}]) (*Respon
 	return NewResponse(Status{Status: "ok"}), nil
 }
 
-func (s *LegacyServer) Discovery(ctx context.Context, r *Request[struct{}]) (*Response, error) {
-	ctx, span := Tracer.Start(ctx, "LegacyServer.Discovery")
+func (s *LegacyServer) OpenIDConfiguration(ctx context.Context, r *Request[MetadataRequest]) (*Response, error) {
+	return s.metadata(ctx, r, "LegacyServer.OpenIDConfiguration")
+}
+
+func (s *LegacyServer) AuthorizationServerMetadata(ctx context.Context, r *Request[MetadataRequest]) (*Response, error) {
+	return s.metadata(ctx, r, "LegacyServer.AuthorizationServerMetadata")
+}
+
+// metadata answers both well-known documents with the discovery config.
+// An issuer path other than the one of the issuer on the context is a
+// 404, as RFC 8414 section 3.3 asks. The empty path is always accepted,
+// so the handler also works behind a [http.StripPrefix] for an issuer
+// with a path.
+func (s *LegacyServer) metadata(ctx context.Context, r *Request[MetadataRequest], spanName string) (*Response, error) {
+	ctx, span := Tracer.Start(ctx, spanName)
 	defer span.End()
 
+	if p := r.Data.IssuerPath; p != "" {
+		issuer, err := url.Parse(IssuerFromContext(ctx))
+		if err != nil || p != strings.TrimSuffix(issuer.Path, "/") {
+			return nil, NewStatusError(oidc.ErrInvalidRequest().WithDescription("no issuer at this path"), http.StatusNotFound)
+		}
+	}
 	return NewResponse(
 		createDiscoveryConfigV2(ctx, s.provider, s.provider.Storage(), &s.endpoints),
 	), nil

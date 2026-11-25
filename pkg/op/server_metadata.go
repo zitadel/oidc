@@ -12,10 +12,11 @@ import (
 
 // MetadataServer serves the OpenID Provider Configuration and the
 // OAuth 2.0 Authorization Server Metadata from their well-known paths.
-// Where [Server.Discovery] answers only the well-known path directly
-// under the handler, a MetadataServer registered with
-// [RegisterMetadataServer] serves every URL form the standards define
-// for an issuer with a path, including RFC 8414 section 5.
+// A MetadataServer registered with [RegisterMetadataServer] serves every
+// URL form the standards define for an issuer with a path, including
+// RFC 8414 section 5. A [RegisterServer] handler has no discovery route
+// of its own; route the metadata handler ahead of it, for example with
+// [MetadataHandler.Intercept], as [RegisterLegacyServer] does.
 //
 // The Request's Data carries the issuer path found in the URL as
 // [MetadataRequest]; the tenant derived from it is on the context,

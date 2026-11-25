@@ -156,3 +156,66 @@ func TestAuthCallbackURL_EscapesRequestID(t *testing.T) {
 		})
 	}
 }
+
+func TestRegisterLegacyServer_Metadata(t *testing.T) {
+	root := op.RegisterLegacyServer(
+		op.NewLegacyServer(testProvider, *op.DefaultEndpoints),
+		op.AuthorizeCallbackHandler(testProvider),
+	)
+	const pathIssuer = "https://localhost:9998/custom/path"
+	provider, err := op.NewProvider(testConfig, testProvider.Storage(), op.StaticIssuer(pathIssuer), op.WithAllowInsecure())
+	require.NoError(t, err)
+	pathed := op.RegisterLegacyServer(
+		op.NewLegacyServer(provider, *op.DefaultEndpoints),
+		op.AuthorizeCallbackHandler(provider),
+	)
+
+	tests := []struct {
+		name       string
+		handler    http.Handler
+		path       string
+		wantStatus int
+		wantIssuer string
+	}{
+		{
+			name:       "authorization server metadata",
+			handler:    root,
+			path:       oidc.AuthorizationServerMetadataEndpoint,
+			wantStatus: http.StatusOK,
+			wantIssuer: testIssuer,
+		},
+		{
+			name:       "foreign issuer path",
+			handler:    root,
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/other",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "issuer path, RFC 8414 form",
+			handler:    pathed,
+			path:       oidc.AuthorizationServerMetadataEndpoint + "/custom/path",
+			wantStatus: http.StatusOK,
+			wantIssuer: pathIssuer,
+		},
+		{
+			name:       "issuer path, behind StripPrefix",
+			handler:    http.StripPrefix("/custom/path", pathed),
+			path:       "/custom/path" + oidc.DiscoveryEndpoint,
+			wantStatus: http.StatusOK,
+			wantIssuer: pathIssuer,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := serveMetadata(t, tt.handler, http.MethodGet, tt.path)
+			if tt.wantStatus != http.StatusOK {
+				assertJSONError(t, rec, tt.wantStatus)
+				return
+			}
+			require.Equal(t, http.StatusOK, rec.Code)
+			var config oidc.DiscoveryConfiguration
+			require.NoError(t, json.NewDecoder(rec.Body).Decode(&config))
+			assert.Equal(t, tt.wantIssuer, config.Issuer)
+		})
+	}
+}

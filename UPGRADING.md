@@ -206,6 +206,40 @@ Pass the jose constants (`jose.RS256`, `jose.ES256`, ...) or convert a string wi
 `jose.SignatureAlgorithm(s)`. Discovery metadata types such as
 `oidc.DiscoveryConfiguration.IDTokenSigningAlgValuesSupported` remain `[]string`.
 
+### Server discovery
+
+`op.Server.Discovery` and `op.UnimplementedServer.Discovery` have been removed, and
+`op.RegisterServer` no longer routes `/.well-known/openid-configuration`.
+Implement `op.MetadataServer` instead (embed `op.UnimplementedMetadataServer`) and
+serve it with `op.RegisterMetadataServer`, routed in front of the `op.RegisterServer`
+handler:
+
+```go
+meta := op.RegisterMetadataServer(ms, options...)
+srv := op.RegisterServer(s, endpoints, options...)
+handler := meta.Intercept(srv)
+```
+
+`op.RegisterLegacyServer` does this for you: `op.LegacyServer` implements
+`op.MetadataServer`, `op.ExtendedLegacyServer` includes it, and the returned handler
+now also serves `/.well-known/oauth-authorization-server` (RFC 8414). The options are
+applied to both handlers, so a `op.WithSetRouter` func runs twice and must be idempotent.
+
+A type that embeds `op.LegacyServer` and overrides `Discovery` still compiles, but the
+override is no longer called. Rename it to `OpenIDConfiguration`, taking
+`*op.Request[op.MetadataRequest]`, and override `AuthorizationServerMetadata` as well,
+or the default document is served on `/.well-known/oauth-authorization-server`:
+
+```go
+func (s *MyServer) OpenIDConfiguration(ctx context.Context, r *op.Request[op.MetadataRequest]) (*op.Response, error) {
+    // custom document
+}
+
+func (s *MyServer) AuthorizationServerMetadata(ctx context.Context, r *op.Request[op.MetadataRequest]) (*op.Response, error) {
+    return s.OpenIDConfiguration(ctx, r)
+}
+```
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
