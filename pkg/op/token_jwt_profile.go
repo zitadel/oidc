@@ -94,13 +94,6 @@ func CreateJWTTokenResponse(ctx context.Context, tokenRequest TokenRequest, crea
 	}, nil
 }
 
-// ParseJWTProfileRequest has been renamed to ParseJWTProfileGrantRequest
-//
-// deprecated: use ParseJWTProfileGrantRequest
-func ParseJWTProfileRequest(r *http.Request, decoder httphelper.Decoder) (*oidc.JWTProfileGrantRequest, error) {
-	return ParseJWTProfileGrantRequest(r, decoder)
-}
-
 type jwtProfileClient struct {
 	id string
 }

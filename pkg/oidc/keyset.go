@@ -41,19 +41,6 @@ func GetKeyIDAndAlg(jws *jose.JSONWebSignature) (string, string) {
 	return keyID, alg
 }
 
-// FindKey searches the given JSON Web Keys for the requested key ID, usage and key type
-//
-// will return the key immediately if matches exact (id, usage, type)
-//
-// will return false none or multiple match
-//
-// deprecated: use FindMatchingKey which will return an error (more specific) instead of just a bool
-// moved implementation already to FindMatchingKey
-func FindKey(keyID, use, expectedAlg string, keys ...jose.JSONWebKey) (jose.JSONWebKey, bool) {
-	key, err := FindMatchingKey(keyID, use, expectedAlg, keys...)
-	return key, err == nil
-}
-
 // FindMatchingKey searches the given JSON Web Keys for the requested key ID, usage and alg type
 //
 // will return the key immediately if matches exact (id, usage, type)
