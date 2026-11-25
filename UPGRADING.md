@@ -158,6 +158,30 @@ func (s *Storage) SetUserinfoFromRequest(ctx context.Context, userinfo *oidc.Use
 }
 ```
 
+### Superseded helpers
+
+These deprecated functions and packages were removed. Use their replacements:
+
+| Removed | Replacement |
+|---|---|
+| `pkg/strings` package (`strings.Contains`) | `slices.Contains` |
+| `oidc.CheckIssuer(claims, issuer)` | `oidc.CheckIssuerWithISSVerifier(claims, issuer, nil)` |
+| `oidc.FindKey(...)` returning `(key, bool)` | `oidc.FindMatchingKey(...)` returning `(key, error)` |
+| `op.ParseJWTProfileRequest` | `op.ParseJWTProfileGrantRequest` |
+| `op.ValidateAuthRequest(ctx, authReq, storage, verifier)` | load the client, then `op.ValidateAuthRequestClient(ctx, authReq, client, verifier)`; see below |
+
+The `AuthorizeValidator.ValidateAuthRequest` interface method is unchanged. A custom validator that called
+`op.ValidateAuthRequest` must keep its client-lookup error wrapped in `oidc.ErrInvalidRequestRedirectURI()`.
+That error disables the redirect, so an unknown `client_id` is never redirected to an unvalidated `redirect_uri`:
+
+```go
+client, err := storage.GetClientByClientID(ctx, authReq.ClientID)
+if err != nil {
+	return "", oidc.ErrInvalidRequestRedirectURI().WithDescription("unable to retrieve client by id").WithParent(err)
+}
+return op.ValidateAuthRequestClient(ctx, authReq, client, verifier)
+```
+
 
 ## Global `slog` logger migration
 

@@ -101,9 +101,7 @@ func TestCheckIssuer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckIssuer(tt.claims, issuer)
-			assert.ErrorIs(t, err, tt.wantErr)
-			err = CheckIssuerWithISSVerifier(tt.claims, issuer, nil)
+			err := CheckIssuerWithISSVerifier(tt.claims, issuer, nil)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}

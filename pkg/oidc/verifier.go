@@ -131,14 +131,6 @@ func CheckSubject(claims Claims) error {
 	return nil
 }
 
-// Deprecated: Use CheckIssuerWithISSVerifier instead
-func CheckIssuer(claims Claims, issuer string) error {
-	if claims.GetIssuer() != issuer {
-		return fmt.Errorf("%w: Expected: %s, got: %s", ErrIssuerInvalid, issuer, claims.GetIssuer())
-	}
-	return nil
-}
-
 func CheckIssuerWithISSVerifier(claims Claims, issuer string, issVerifier ISSVerifier) error {
 	if issVerifier == nil {
 		return DefaultISSVerifier(issuer)(claims.GetIssuer())
