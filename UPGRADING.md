@@ -51,6 +51,29 @@ oidc.AccessTokenResponse{
 ```
 
 
+### Client authentication helpers
+
+The deprecated `Auth(*http.Request)` methods were removed, because they set HTTP basic auth
+on top of the `client_secret` form field, which violates RFC 6749 §2.3 (one authentication
+method per request). Removed:
+
+- `client.ClientSecretBasicAuthRequest` interface
+- `client.RevokeRequest.Auth`
+- `client.DeviceAccessTokenRequest.Auth`
+- `oidc.ClientCredentialsRequest.Auth`
+- `rp.RefreshTokenRequest.Auth`
+
+Configure the OAuth2 endpoint `AuthStyle` (e.g. `oauth2.AuthStyleInHeader`) instead,
+or pass an `authFn` to the functions that accept one.
+
+`client.CallDeviceAccessTokenEndpoint` and `client.PollDeviceAccessTokenEndpoint` were
+removed in favor of their `WithAuthFn` variants; pass `nil` to keep the old behavior:
+
+```go
+client.CallDeviceAccessTokenEndpointWithAuthFn(ctx, req, caller, nil)
+client.PollDeviceAccessTokenEndpointWithAuthFn(ctx, interval, req, caller, nil)
+```
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
