@@ -99,7 +99,7 @@ func TestClientJWTAuth(t *testing.T) {
 				keyErrJWTProfile{err: errKey},
 			},
 			wantErr:  errKey,
-			wantType: string(oidc.UnauthorizedClient),
+			wantType: string(oidc.InvalidClient),
 		},
 		{
 			name: "key storage server_error",
@@ -109,6 +109,16 @@ func TestClientJWTAuth(t *testing.T) {
 				keyErrJWTProfile{err: oidc.ErrServerError().WithParent(errDB)},
 			},
 			wantErr:  errDB,
+			wantType: string(oidc.ServerError),
+		},
+		{
+			name: "key storage context error",
+			args: args{
+				context.Background(),
+				oidc.ClientAssertionParams{ClientAssertion: assertion},
+				keyErrJWTProfile{err: context.DeadlineExceeded},
+			},
+			wantErr:  context.DeadlineExceeded,
 			wantType: string(oidc.ServerError),
 		},
 	}
@@ -178,7 +188,7 @@ func TestClientBasicAuth(t *testing.T) {
 				return s
 			}(),
 			wantErr:  errWrong,
-			wantType: string(oidc.UnauthorizedClient),
+			wantType: string(oidc.InvalidClient),
 		},
 		{
 			name:     "storage server_error",
@@ -199,14 +209,14 @@ func TestClientBasicAuth(t *testing.T) {
 			args:     &args{username: "foo", password: "bar"},
 			storage:  failingStorage(errClient),
 			wantErr:  errClient,
-			wantType: string(oidc.UnauthorizedClient),
+			wantType: string(oidc.InvalidClient),
 		},
 		{
 			name:     "storage typed nil oidc error",
 			args:     &args{username: "foo", password: "bar"},
 			storage:  failingStorage(errTypedNil),
 			wantErr:  errTypedNil,
-			wantType: string(oidc.UnauthorizedClient),
+			wantType: string(oidc.InvalidClient),
 		},
 		{
 			name: "auth error",

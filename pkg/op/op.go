@@ -90,6 +90,7 @@ var (
 		ExposedHeaders: []string{
 			"Location",
 			"Content-Length",
+			"WWW-Authenticate",
 		},
 		AllowOriginFunc: func(_ string) bool {
 			return true

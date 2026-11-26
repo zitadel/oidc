@@ -235,7 +235,11 @@ func (s *LegacyServer) VerifyClient(ctx context.Context, r *Request[ClientCreden
 		if !ok {
 			return nil, oidc.ErrUnsupportedGrantType().WithDescription("client_credentials grant not supported")
 		}
-		return storage.ClientCredentials(ctx, r.Data.ClientID, r.Data.ClientSecret)
+		client, err := storage.ClientCredentials(ctx, r.Data.ClientID, r.Data.ClientSecret)
+		if err != nil {
+			return nil, clientAuthError(oidc.ErrInvalidClient(), err)
+		}
+		return client, nil
 	}
 
 	if r.Data.ClientAssertionType == oidc.ClientAssertionTypeJWTAssertion {
@@ -414,7 +418,7 @@ func (s *LegacyServer) authenticateResourceClient(ctx context.Context, cc *Clien
 		return "", oidc.ErrInvalidClient().WithDescription("client_assertion not supported")
 	}
 	if err := s.provider.Storage().AuthorizeClientIDSecret(ctx, cc.ClientID, cc.ClientSecret); err != nil {
-		return "", clientAuthError(oidc.ErrUnauthorizedClient(), err)
+		return "", clientAuthError(oidc.ErrInvalidClient(), err)
 	}
 	return cc.ClientID, nil
 }
