@@ -91,6 +91,10 @@ type Server interface {
 	// If no secrets are provided, the client must be public.
 	// This method is called before each method that takes a
 	// [ClientRequest] argument.
+	// An error of type [oidc.InvalidClient] without a [StatusError] is answered
+	// with [http.StatusUnauthorized], and with a Basic challenge when the request
+	// carried Basic credentials. Any other error is answered as [WriteError] does.
+	// Use [NewStatusError] to set another status.
 	VerifyClient(context.Context, *Request[ClientCredentials]) (Client, error)
 
 	// CodeExchange returns Tokens after an authorization code
@@ -142,6 +146,8 @@ type Server interface {
 	// Introspect handles the OAuth 2.0 Token Introspection endpoint.
 	// https://datatracker.ietf.org/doc/html/rfc7662
 	// The recommended Response Data type is [oidc.IntrospectionResponse].
+	// The method authenticates the caller itself, so an [oidc.InvalidClient]
+	// error it returns is answered as for [Server.VerifyClient].
 	Introspect(context.Context, *Request[IntrospectionRequest]) (*Response, error)
 
 	// UserInfo handles the UserInfo endpoint and returns Claims about the authenticated End-User.

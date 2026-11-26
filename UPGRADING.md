@@ -240,6 +240,41 @@ func (s *MyServer) AuthorizationServerMetadata(ctx context.Context, r *op.Reques
 }
 ```
 
+### Client authentication errors
+
+On the `op.Server` path (`op.RegisterServer`), a failed client authentication is now answered with
+401 `invalid_client`. It was 400. This covers an `invalid_client` returned by `Server.VerifyClient`
+(token, device authorization and revocation endpoints) or by `Server.Introspect`, and a Basic header
+with broken percent-encoding. The answer has `WWW-Authenticate: Basic realm="oauth"` only when the
+request carried Basic credentials (RFC 6749 section 5.2). An error wrapped in a `StatusError` keeps
+its status, so `op.NewStatusError(oidc.ErrInvalidClient(), http.StatusBadRequest)` keeps the old 400.
+
+The `LegacyServer` and the shared helpers `ClientJWTAuth`, `ClientBasicAuth` and
+`AuthorizePrivateJWTKey` now report a failed client authentication as `invalid_client`. The helpers
+are also used by the Provider path, so some of its answers change too:
+
+| Request | Before | Now |
+|---|---|---|
+| Introspection with a wrong secret, an unknown client or a bad `client_assertion` | `unauthorized_client` | 401 `invalid_client` |
+| Device authorization (Provider path) with a wrong Basic secret or a bad `client_assertion` | 400 `unauthorized_client` | 401 `invalid_client` |
+| Malformed `private_key_jwt` assertion | 400 `invalid_request` | 401 `invalid_client` |
+| `private_key_jwt` assertion that fails the check | 400 `invalid_grant` | 401 `invalid_client` |
+| Valid `private_key_jwt` assertion of a client the `Storage` does not know | 500 `server_error` | 401 `invalid_client` |
+| `client_credentials` on the `LegacyServer` with a wrong secret | 500 `server_error` | 401 `invalid_client` |
+
+During client authentication by the `LegacyServer`, an `oidc.ErrServerError()`, a
+`context.DeadlineExceeded` or a `context.Canceled` from the `Storage` is answered as 500
+`server_error`. Every other error counts as a failed authentication and is answered as 401
+`invalid_client`. For `ClientCredentialsStorage.ClientCredentials`, and for `GetClientByClientID`
+during `private_key_jwt` authentication, a plain error was a 500 before. Return
+`oidc.ErrServerError()` from your `Storage` for a server fault.
+
+When the `Storage` returns an `invalid_client` with a description, that description is sent to the
+client as `error_description`. It is public text. A `Storage` that uses different descriptions for an
+unknown client and a wrong secret tells a caller whether a client exists.
+
+`WWW-Authenticate` is now in the exposed headers of the default CORS options.
+
 ## Global `slog` logger migration
 
 OIDC now logs through the global `log/slog` functions. Configure the process-wide default before constructing an OP or RP:
