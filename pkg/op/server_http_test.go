@@ -384,6 +384,14 @@ func TestRegisterServer_invalidClient(t *testing.T) {
 			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
 		},
 		{
+			name:      "token Basic wrapped wrong secret",
+			verifyErr: fmt.Errorf("verify: %w", wrongSecret),
+			path:      DefaultEndpoints.Token.Relative(),
+			body:      codeBody,
+			password:  "wrong",
+			want:      answer{http.StatusUnauthorized, "wrong secret", `Basic realm="oauth"`},
+		},
+		{
 			name:      "token Basic broken percent-encoding",
 			verifyErr: wrongSecret,
 			path:      DefaultEndpoints.Token.Relative(),

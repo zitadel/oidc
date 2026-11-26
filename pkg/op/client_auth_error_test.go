@@ -266,12 +266,23 @@ func TestClientAuthStorageErrors(t *testing.T) {
 	}
 }
 
+// webKeyStorage gives the client "web" the key of the service user, so that a
+// valid assertion can name a client that is not a private_key_jwt client.
+type webKeyStorage struct{ *storage.Storage }
+
+func (s webKeyStorage) GetKeyByIDAndClientID(ctx context.Context, keyID, clientID string) (*jose.JSONWebKey, error) {
+	if clientID == "web" {
+		clientID = storage.ServiceUserID
+	}
+	return s.Storage.GetKeyByIDAndClientID(ctx, keyID, clientID)
+}
+
 // TestClientAuthInvalidClient sends failed client authentications to the
 // stock LegacyServer and the Provider with the example storage, so that it
 // catches an error from the storage or the handlers that is not invalid_client.
 func TestClientAuthInvalidClient(t *testing.T) {
 	s := storage.NewStorage(storage.NewUserStore(testIssuer))
-	provider, err := op.NewProvider(testConfig, s, op.StaticIssuer(testIssuer), op.WithAllowInsecure())
+	provider, err := op.NewProvider(testConfig, webKeyStorage{s}, op.StaticIssuer(testIssuer), op.WithAllowInsecure())
 	require.NoError(t, err)
 	handler := op.RegisterLegacyServer(op.NewLegacyServer(provider, *op.DefaultEndpoints), op.AuthorizeCallbackHandler(provider))
 
@@ -296,6 +307,8 @@ func TestClientAuthInvalidClient(t *testing.T) {
 	require.NoError(t, err)
 	// The example storage has a key for this issuer, but no client.
 	unknownClient, err := jwtProfile()
+	require.NoError(t, err)
+	basicClient, err := client.SignedJWTProfileAssertion("web", []string{testIssuer}, time.Hour, signer)
 	require.NoError(t, err)
 
 	codeGrant := func(assertion string) url.Values {
@@ -361,6 +374,11 @@ func TestClientAuthInvalidClient(t *testing.T) {
 			name:     "token private_key_jwt assertion of an unknown client",
 			endpoint: provider.TokenEndpoint(),
 			form:     codeGrant(unknownClient),
+		},
+		{
+			name:     "token private_key_jwt assertion of a client_secret_basic client",
+			endpoint: provider.TokenEndpoint(),
+			form:     codeGrant(basicClient),
 		},
 		{
 			name:      "token client_credentials wrong secret",
