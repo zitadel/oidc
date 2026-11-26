@@ -3,6 +3,7 @@ package op
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -614,6 +615,165 @@ func Test_webServer_authorizeHandler_errorRedirect(t *testing.T) {
 			assert.Equal(t, tt.wantError, params.Get("error"))
 			assert.NotEmpty(t, params.Get("error_description"))
 			assert.Equal(t, state, params.Get("state"))
+		})
+	}
+}
+
+// Test_webServer_authorizeHandler_iss drives refusals over HTTP with
+// WithAuthorizationResponseIss. RFC 9207 section 2 puts iss on every
+// authorization response, errors included, whatever the response mode.
+func Test_webServer_authorizeHandler_iss(t *testing.T) {
+	client := newClient(clientTypeWeb)
+	const issuer = "https://op.example.com/"
+	missingScope := func() url.Values {
+		return url.Values{
+			"response_type": []string{string(oidc.ResponseTypeCode)},
+			"redirect_uri":  []string{"https://registered.com/callback"},
+		}
+	}
+	tests := []struct {
+		name         string
+		withOption   bool
+		ctxIssuer    string
+		server       Server
+		query        url.Values
+		wantStatus   int
+		wantError    string
+		wantIss      []string
+		wantFragment bool
+		wantRendered string
+	}{
+		{
+			name:       "query",
+			withOption: true,
+			ctxIssuer:  issuer,
+			query:      missingScope(),
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.InvalidRequest),
+			wantIss:    []string{issuer},
+		},
+		{
+			name:       "fragment",
+			withOption: true,
+			ctxIssuer:  issuer,
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeIDToken)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus:   http.StatusFound,
+			wantError:    string(oidc.UnauthorizedClient),
+			wantIss:      []string{issuer},
+			wantFragment: true,
+		},
+		{
+			name:       "form_post",
+			withOption: true,
+			ctxIssuer:  issuer,
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"response_mode": []string{string(oidc.ResponseModeFormPost)},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.InvalidRequest),
+			wantIss:    []string{issuer},
+		},
+		{
+			name:       "refused by Authorize",
+			withOption: true,
+			ctxIssuer:  issuer,
+			server: &refusingAuthorizer{
+				requestVerifier: requestVerifier{client: client},
+				err:             oidc.ErrAccessDenied(),
+			},
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.AccessDenied),
+			wantIss:    []string{issuer},
+		},
+		{
+			name:       "without the option",
+			ctxIssuer:  issuer,
+			query:      missingScope(),
+			wantStatus: http.StatusFound,
+			wantError:  string(oidc.InvalidRequest),
+		},
+		{
+			// A redirect without iss would be rejected by the client.
+			name:         "no issuer in the context",
+			withOption:   true,
+			query:        missingScope(),
+			wantStatus:   http.StatusInternalServerError,
+			wantRendered: string(oidc.ServerError),
+		},
+		{
+			name:       "redirect-disabled error without issuer",
+			withOption: true,
+			server: &refusingAuthorizer{
+				requestVerifier: requestVerifier{client: client},
+				err:             oidc.ErrInvalidRequestRedirectURI(),
+			},
+			query: url.Values{
+				"response_type": []string{string(oidc.ResponseTypeCode)},
+				"scope":         []string{"openid"},
+				"redirect_uri":  []string{"https://registered.com/callback"},
+			},
+			wantStatus:   http.StatusBadRequest,
+			wantRendered: string(oidc.InvalidRequest),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.query.Set("client_id", client.GetID())
+			tt.query.Set("state", "state")
+
+			server := tt.server
+			if server == nil {
+				server = &redirectingAuthorizer{requestVerifier{client: client}}
+			}
+			s := &webServer{
+				server:  server,
+				decoder: testDecoder,
+				encoder: testEncoder,
+			}
+			if tt.withOption {
+				WithAuthorizationResponseIss()(s)
+			}
+			r := httptest.NewRequest(http.MethodGet, "/authorize?"+tt.query.Encode(), nil)
+			if tt.ctxIssuer != "" {
+				r = r.WithContext(ContextWithIssuer(r.Context(), tt.ctxIssuer))
+			}
+			w := httptest.NewRecorder()
+			s.authorizeHandler(w, r)
+
+			res := w.Result()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantStatus, res.StatusCode, "body: %s", body)
+
+			location := res.Header.Get("Location")
+			if tt.wantRendered != "" {
+				assert.Empty(t, location)
+				var rendered oidc.Error
+				require.NoError(t, json.Unmarshal(body, &rendered))
+				assert.Equal(t, tt.wantRendered, string(rendered.ErrorType))
+				return
+			}
+			target, err := url.Parse(location)
+			require.NoError(t, err)
+			params := target.Query()
+			if tt.wantFragment {
+				params, err = url.ParseQuery(target.Fragment)
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantError, params.Get("error"))
+			assert.Equal(t, "state", params.Get("state"))
+			assert.Equal(t, tt.wantIss, params["iss"])
 		})
 	}
 }

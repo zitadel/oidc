@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -293,6 +294,216 @@ func Test_CodeExchangeHandler_JWTProfileAudience(t *testing.T) {
 	// token endpoint must not appear. Keycloak 26 and Microsoft Entra ID
 	// refuse assertions with more than one audience.
 	assert.Equal(t, oidc.Audience{server.URL}, claims.Audience)
+}
+
+// newIssServer serves a discovery document that advertises RFC 9207
+// support or not, and a token endpoint that refuses every code: a callback
+// that passes the iss check fails with "failed to exchange token".
+func newIssServer(t *testing.T, supported bool) *httptest.Server {
+	t.Helper()
+	var server *httptest.Server
+	// The handler runs on the server's goroutine: assert, not require.
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case oidc.DiscoveryEndpoint:
+			assert.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"issuer":                 server.URL,
+				"authorization_endpoint": server.URL + "/authorize",
+				"token_endpoint":         server.URL + "/token",
+				"jwks_uri":               server.URL + "/keys",
+				"authorization_response_iss_parameter_supported": supported,
+			}))
+		case "/token":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func Test_CodeExchangeHandler_Iss(t *testing.T) {
+	const (
+		exchanged = "exchanged"
+		rejected  = "rejected"
+		errored   = "errored"
+	)
+	// "$issuer" stands for the URL of the test server.
+	tests := []struct {
+		name      string
+		supported bool
+		params    url.Values
+		formPost  bool
+		want      string
+	}{
+		{
+			name:      "advertised, iss matches",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"$issuer"}},
+			want:      exchanged,
+		},
+		{
+			name:      "advertised, iss missing",
+			supported: true,
+			params:    url.Values{"code": {"abc"}},
+			want:      rejected,
+		},
+		{
+			name:      "advertised, iss differs",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"https://other.example.com"}},
+			want:      rejected,
+		},
+		{
+			name:      "advertised, iss with a trailing slash",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"$issuer/"}},
+			want:      rejected,
+		},
+		{
+			name:      "advertised, second iss differs",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"$issuer", "https://other.example.com"}},
+			want:      rejected,
+		},
+		{
+			name:   "not advertised, iss missing",
+			params: url.Values{"code": {"abc"}},
+			want:   exchanged,
+		},
+		{
+			name:   "not advertised, iss matches",
+			params: url.Values{"code": {"abc"}, "iss": {"$issuer"}},
+			want:   exchanged,
+		},
+		{
+			name:   "not advertised, iss differs",
+			params: url.Values{"code": {"abc"}, "iss": {"https://other.example.com"}},
+			want:   rejected,
+		},
+		{
+			name:      "error response, iss matches",
+			supported: true,
+			params:    url.Values{"error": {"access_denied"}, "iss": {"$issuer"}},
+			want:      errored,
+		},
+		{
+			name:      "error response, iss missing",
+			supported: true,
+			params:    url.Values{"error": {"access_denied"}},
+			want:      rejected,
+		},
+		{
+			name:   "error response, iss differs",
+			params: url.Values{"error": {"access_denied"}, "iss": {"https://other.example.com"}},
+			want:   rejected,
+		},
+		{
+			name:      "form_post, iss matches",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"$issuer"}},
+			formPost:  true,
+			want:      exchanged,
+		},
+		{
+			name:      "form_post, iss differs",
+			supported: true,
+			params:    url.Values{"code": {"abc"}, "iss": {"https://other.example.com"}},
+			formPost:  true,
+			want:      rejected,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newIssServer(t, tt.supported)
+			var got, desc string
+			rp, err := NewRelyingPartyOIDC(t.Context(), server.URL, "client", "secret", "http://local-site/callback", nil,
+				WithUnauthorizedHandler(func(w http.ResponseWriter, r *http.Request, d string, state string) {
+					got, desc = rejected, d
+					if strings.HasPrefix(d, "failed to exchange token") {
+						got = exchanged
+					}
+				}),
+				WithErrorHandler(func(w http.ResponseWriter, r *http.Request, errorType string, errorDesc string, state string) {
+					got, desc = errored, errorType
+				}),
+			)
+			require.NoError(t, err)
+			require.Equal(t, tt.supported, rp.(HasAuthorizationResponseIss).AuthorizationResponseIssRequired())
+
+			params := url.Values{"state": {"xyz"}}
+			for key, values := range tt.params {
+				for _, v := range values {
+					params.Add(key, strings.ReplaceAll(v, "$issuer", server.URL))
+				}
+			}
+			r := httptest.NewRequest(http.MethodGet, "/callback?"+params.Encode(), nil)
+			if tt.formPost {
+				r = httptest.NewRequest(http.MethodPost, "/callback", strings.NewReader(params.Encode()))
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
+			handler := CodeExchangeHandler(func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, rp RelyingParty) {
+				t.Fatal("callback must not be reached, the token endpoint refuses the code")
+			}, rp)
+			handler.ServeHTTP(httptest.NewRecorder(), r)
+
+			assert.Equal(t, tt.want, got, desc)
+			if tt.want == rejected {
+				assert.Contains(t, desc, ErrAuthorizationResponseIss.Error())
+			}
+		})
+	}
+}
+
+func TestVerifyAuthorizationResponseIss(t *testing.T) {
+	const issuer = "https://op.example.com"
+	tests := []struct {
+		name    string
+		rp      RelyingParty
+		form    url.Values
+		wantErr bool
+	}{
+		{
+			name: "matches",
+			rp:   &relyingParty{issuer: issuer, issRequired: true},
+			form: url.Values{"iss": {issuer}},
+		},
+		{
+			name:    "differs",
+			rp:      &relyingParty{issuer: issuer},
+			form:    url.Values{"iss": {"https://other.example.com"}},
+			wantErr: true,
+		},
+		{
+			name:    "missing and required",
+			rp:      &relyingParty{issuer: issuer, issRequired: true},
+			form:    url.Values{},
+			wantErr: true,
+		},
+		{
+			name: "missing and not required",
+			rp:   &relyingParty{issuer: issuer},
+			form: url.Values{},
+		},
+		{
+			name: "OAuth2-only relying party has no issuer to compare with",
+			rp:   &relyingParty{oauth2Only: true},
+			form: url.Values{"iss": {"https://other.example.com"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := VerifyAuthorizationResponseIss(tt.rp, tt.form)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, ErrAuthorizationResponseIss)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 // jwtProfileServer is a discovery document plus token and revocation

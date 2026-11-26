@@ -134,6 +134,7 @@ type Error struct {
 	Description      string    `json:"error_description,omitempty" schema:"error_description,omitempty"`
 	State            string    `json:"state,omitempty" schema:"state,omitempty"`
 	SessionState     string    `json:"session_state,omitempty" schema:"session_state,omitempty"`
+	Issuer           string    `json:"-" schema:"iss,omitempty"`
 	redirectDisabled bool      `schema:"-"`
 	returnParent     bool      `schema:"-"`
 }

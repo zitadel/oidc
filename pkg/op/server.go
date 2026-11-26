@@ -95,6 +95,10 @@ type Server interface {
 	// To have an error written to the response instead, wrap it in a
 	// [StatusError] or return a redirect-disabled [oidc.Error] such as
 	// [oidc.ErrInvalidRequestRedirectURI].
+	//
+	// With [WithAuthorizationResponseIss], such an error redirect also
+	// carries `iss`. A response the implementation sends to the
+	// redirect_uri itself, success or error, must then carry it too.
 	Authorize(context.Context, *ClientRequest[oidc.AuthRequest]) (*Redirect, error)
 
 	// DeviceAuthorization initiates the device authorization flow.

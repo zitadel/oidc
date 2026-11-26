@@ -67,6 +67,7 @@ type CodeResponseType struct {
 	Code         string `schema:"code"`
 	State        string `schema:"state,omitempty"`
 	SessionState string `schema:"session_state,omitempty"`
+	Issuer       string `schema:"iss,omitempty"`
 }
 
 func authorizeHandler(authorizer Authorizer) func(http.ResponseWriter, *http.Request) {
