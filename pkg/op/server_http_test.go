@@ -973,6 +973,39 @@ func Test_webServer_tokensHandler(t *testing.T) {
 	}
 }
 
+// cachingTokenServer answers refresh token requests with a response
+// that sets its own cache headers.
+type cachingTokenServer struct {
+	requestVerifier
+}
+
+func (s *cachingTokenServer) RefreshToken(ctx context.Context, r *ClientRequest[oidc.RefreshTokenRequest]) (*Response, error) {
+	resp := NewResponse(&oidc.AccessTokenResponse{AccessToken: "foo", TokenType: oidc.BearerToken})
+	resp.Header.Set("Cache-Control", "public, max-age=60")
+	resp.Header.Set("Pragma", "bar")
+	resp.Header.Set("X-Custom", "baz")
+	return resp, nil
+}
+
+func Test_webServer_tokensHandler_cacheHeaders(t *testing.T) {
+	client := newClient(clientTypeNative)
+	client.grantTypes = []oidc.GrantType{oidc.GrantTypeRefreshToken}
+	s := &webServer{
+		server:  &cachingTokenServer{requestVerifier{client: client}},
+		decoder: testDecoder,
+	}
+	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("grant_type=refresh_token&refresh_token=xxx&client_id=native"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	s.tokensHandler(w, r)
+
+	res := w.Result()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, "no-store", res.Header.Get("Cache-Control"))
+	assert.Equal(t, "no-cache", res.Header.Get("Pragma"))
+	assert.Equal(t, "baz", res.Header.Get("X-Custom"))
+}
+
 func Test_webServer_jwtProfileHandler(t *testing.T) {
 	tests := []struct {
 		name    string

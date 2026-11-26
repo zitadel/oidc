@@ -261,8 +261,9 @@ func TestRoutes(t *testing.T) {
 				"grant_type": string(oidc.GrantTypeClientCredentials),
 				"scope":      oidc.SpaceDelimitedArray{oidc.ScopeOpenID, oidc.ScopeOfflineAccess}.String(),
 			},
-			wantCode: http.StatusOK,
-			contains: []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
+			wantCode:       http.StatusOK,
+			contains:       []string{`{"access_token":"`, `","token_type":"Bearer","expires_in":299,"scope":"openid offline_access"}`},
+			headerContains: map[string]string{"Cache-Control": "no-store", "Pragma": "no-cache"},
 		},
 		{
 			// This call will fail. A successful test is already
@@ -282,11 +283,12 @@ func TestRoutes(t *testing.T) {
 			json:     `{"error":"access_denied","error_description":"The authorization request was denied."}`,
 		},
 		{
-			name:     "missing grant type",
-			method:   http.MethodGet,
-			path:     testProvider.TokenEndpoint().Relative(),
-			wantCode: http.StatusBadRequest,
-			json:     `{"error":"invalid_request","error_description":"grant_type missing"}`,
+			name:           "missing grant type",
+			method:         http.MethodGet,
+			path:           testProvider.TokenEndpoint().Relative(),
+			wantCode:       http.StatusBadRequest,
+			json:           `{"error":"invalid_request","error_description":"grant_type missing"}`,
+			headerContains: map[string]string{"Cache-Control": "no-store", "Pragma": "no-cache"},
 		},
 		{
 			name:   "unsupported grant type",
