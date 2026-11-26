@@ -89,6 +89,10 @@ func ValidateClientCredentialsRequest(ctx context.Context, request *oidc.ClientC
 		return nil, nil, err
 	}
 
+	if err = ValidateTokenRequestResources(request.Resource, tokenRequest); err != nil {
+		return nil, nil, err
+	}
+
 	return tokenRequest, client, nil
 }
 

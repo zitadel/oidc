@@ -2,6 +2,7 @@ package storage
 
 import (
 	"log/slog"
+	"slices"
 	"time"
 
 	"golang.org/x/text/language"
@@ -39,8 +40,14 @@ type AuthRequest struct {
 	Nonce         string
 	CodeChallenge *OIDCCodeChallenge
 
-	done     bool
-	authTime time.Time
+	// Resource holds the resource indicators (RFC 8707) requested by the client.
+	// A token request may narrow them down for the access token, see
+	// SetCurrentResources, but the grant itself is kept for the refresh token.
+	Resource []string
+
+	done             bool
+	authTime         time.Time
+	currentResources []string
 }
 
 // LogValue allows you to define which fields will be logged.
@@ -72,8 +79,31 @@ func (a *AuthRequest) GetAMR() []string {
 	return nil
 }
 
+// GetAudience is the audience of the ID token, which is always just the client_id.
 func (a *AuthRequest) GetAudience() []string {
-	return []string{a.ApplicationID} // this example will always just use the client_id as audience
+	return []string{a.ApplicationID}
+}
+
+// GetAccessTokenAudience implements the optional op.AccessTokenAudienceRequest
+// interface: unlike the ID token, the access token is addressed to the requested
+// resources as well.
+func (a *AuthRequest) GetAccessTokenAudience() []string {
+	return accessTokenAudience(a.GetAudience(), a.Resource, a.currentResources)
+}
+
+// GetResource implements the optional op.ResourceRequest interface, which lets the
+// op package check a `resource` parameter of a token request against the resources
+// that were requested at the authorization endpoint.
+func (a *AuthRequest) GetResource() []string {
+	return a.Resource
+}
+
+// SetCurrentResources implements the optional op.CurrentResourceSetter interface.
+// It is called with the `resource` values of a token request, after they have been
+// checked against the resources of the authorization request, so that the audience
+// of the access token can be narrowed down to them.
+func (a *AuthRequest) SetCurrentResources(resources []string) {
+	a.currentResources = resources
 }
 
 func (a *AuthRequest) GetAuthTime() time.Time {
@@ -166,6 +196,7 @@ func authRequestToInternal(authReq *oidc.AuthRequest, userID string) *AuthReques
 		ResponseMode:  authReq.ResponseMode,
 		Nonce:         authReq.Nonce,
 		CodeChallenge: codeChallenge,
+		Resource:      authReq.Resource,
 	}
 }
 
@@ -197,19 +228,41 @@ func CodeChallengeToOIDC(challenge *OIDCCodeChallenge) *oidc.CodeChallenge {
 
 // RefreshTokenRequestFromBusiness will simply wrap the storage RefreshToken to implement the op.RefreshTokenRequest interface
 func RefreshTokenRequestFromBusiness(token *RefreshToken) op.RefreshTokenRequest {
-	return &RefreshTokenRequest{token}
+	return &RefreshTokenRequest{RefreshToken: token}
 }
 
 type RefreshTokenRequest struct {
 	*RefreshToken
+
+	// currentResources is kept on the request instead of the stored refresh token,
+	// as narrowing the resources of one refresh request must not change the grant.
+	currentResources []string
 }
 
 func (r *RefreshTokenRequest) GetAMR() []string {
 	return r.AMR
 }
 
+// GetAudience is the audience of the ID token.
 func (r *RefreshTokenRequest) GetAudience() []string {
 	return r.Audience
+}
+
+// GetAccessTokenAudience implements the optional op.AccessTokenAudienceRequest
+// interface, see AuthRequest.GetAccessTokenAudience.
+func (r *RefreshTokenRequest) GetAccessTokenAudience() []string {
+	return accessTokenAudience(r.Audience, r.Resource, r.currentResources)
+}
+
+// GetResource implements the optional op.ResourceRequest interface. It reports the
+// resources of the original grant, which a refresh request may only narrow down.
+func (r *RefreshTokenRequest) GetResource() []string {
+	return r.Resource
+}
+
+// SetCurrentResources implements the optional op.CurrentResourceSetter interface.
+func (r *RefreshTokenRequest) SetCurrentResources(resources []string) {
+	r.currentResources = resources
 }
 
 func (r *RefreshTokenRequest) GetAuthTime() time.Time {
@@ -230,4 +283,40 @@ func (r *RefreshTokenRequest) GetSubject() string {
 
 func (r *RefreshTokenRequest) SetCurrentScopes(scopes []string) {
 	r.Scopes = scopes
+}
+
+// accessTokenAudience shows how a Storage implementation can bind the audience of
+// the access token to the resource indicators of [RFC 8707]: the resources a token
+// request narrowed the grant to, or else all granted resources, are added to the
+// audience of the ID token.
+//
+// The client_id is kept in the access token audience, so that the existing
+// behaviour of the example, such as introspection by the client itself, does not
+// change. A real implementation would check the requested resources against a
+// policy of the client, and could restrict the audience to the resources alone.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func accessTokenAudience(audience, granted, current []string) []string {
+	resources := granted
+	if len(current) > 0 {
+		resources = current
+	}
+	result := slices.Clone(audience)
+	for _, resource := range resources {
+		if !slices.Contains(result, resource) {
+			result = append(result, resource)
+		}
+	}
+	return result
+}
+
+// grantedResources returns the resource indicators of [RFC 8707] granted to a
+// token request, if the request reports any. A refresh token is bound to them.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+func grantedResources(request op.TokenRequest) []string {
+	if resourceRequest, ok := request.(op.ResourceRequest); ok {
+		return resourceRequest.GetResource()
+	}
+	return nil
 }

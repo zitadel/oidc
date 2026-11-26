@@ -495,6 +495,9 @@ func (s *webServer) authorizeWithValidRedirectURI(ctx context.Context, cr *Clien
 	if err := ValidateAuthReqCodeChallengeMethod(authReq.CodeChallenge, authReq.CodeChallengeMethod); err != nil {
 		return nil, err
 	}
+	if err := ValidateResourceIndicators(authReq.Resource); err != nil {
+		return nil, err
+	}
 	return s.server.Authorize(ctx, cr)
 }
 

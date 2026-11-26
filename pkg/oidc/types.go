@@ -36,6 +36,52 @@ func (a *Audience) UnmarshalJSON(text []byte) error {
 	return nil
 }
 
+// Resources holds the values of the `resource` parameter of [RFC 8707].
+//
+// In a form-encoded request the parameter is repeated for every value. When an
+// authorization request is sent as a JWT ([RFC 9101]), a single value is
+// represented as a JSON string and multiple values as an array of strings
+// ([RFC 8707, section 2.1]), which is what MarshalJSON and UnmarshalJSON implement.
+//
+// [RFC 8707]: https://www.rfc-editor.org/rfc/rfc8707
+// [RFC 9101]: https://www.rfc-editor.org/rfc/rfc9101
+// [RFC 8707, section 2.1]: https://www.rfc-editor.org/rfc/rfc8707#section-2.1
+type Resources []string
+
+func (r Resources) MarshalJSON() ([]byte, error) {
+	switch len(r) {
+	case 0:
+		return []byte("null"), nil
+	case 1:
+		return json.Marshal(r[0])
+	default:
+		return json.Marshal([]string(r))
+	}
+}
+
+func (r *Resources) UnmarshalJSON(data []byte) error {
+	var dst any
+	if err := json.Unmarshal(data, &dst); err != nil {
+		return fmt.Errorf("oidc resource: %w", err)
+	}
+
+	switch v := dst.(type) {
+	case nil:
+		*r = nil
+	case string:
+		*r = Resources{v}
+	case []any:
+		resources, err := gu.AssertInterfaces[string](v)
+		if err != nil {
+			return fmt.Errorf("oidc resource: %w", err)
+		}
+		*r = Resources(resources)
+	default:
+		return fmt.Errorf("oidc resource: unable to parse type %T", v)
+	}
+	return nil
+}
+
 type AuthenticationMethodsReferences []string
 
 func (a *AuthenticationMethodsReferences) UnmarshalJSON(data []byte) error {

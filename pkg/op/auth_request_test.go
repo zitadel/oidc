@@ -280,6 +280,24 @@ func TestParseAuthorizeRequest(t *testing.T) {
 				false,
 			},
 		},
+		{
+			"parsing repeated resource ok",
+			args{
+				&http.Request{URL: &url.URL{RawQuery: "scope=openid&resource=https%3A%2F%2Fapi.example.com%2F&resource=https%3A%2F%2Fmcp.example.com%2Fmcp"}},
+				func() httphelper.Decoder {
+					decoder := schema.NewDecoder()
+					decoder.IgnoreUnknownKeys(false)
+					return decoder
+				}(),
+			},
+			res{
+				&oidc.AuthRequest{
+					Scopes:   oidc.SpaceDelimitedArray{"openid"},
+					Resource: []string{"https://api.example.com/", "https://mcp.example.com/mcp"},
+				},
+				false,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -324,6 +342,17 @@ func TestValidateAuthRequest(t *testing.T) {
 			"redirect_uri missing fails",
 			args{&oidc.AuthRequest{Scopes: []string{"openid"}, ResponseType: oidc.ResponseTypeCode, ClientID: "client_id"}, mock.NewMockStorageExpectValidClientID(t), nil},
 			oidc.ErrInvalidRequest(),
+		},
+		{
+			"resource with fragment fails",
+			args{&oidc.AuthRequest{
+				Scopes:       []string{"openid"},
+				ResponseType: oidc.ResponseTypeCode,
+				ClientID:     "web_client",
+				RedirectURI:  "https://registered.com/callback",
+				Resource:     []string{"https://mcp.example.com/mcp#fragment"},
+			}, mock.NewMockStorageExpectValidClientID(t), nil},
+			oidc.ErrInvalidTarget().WithDescription("resource must not include a fragment component"),
 		},
 	}
 	for _, tt := range tests {
@@ -1888,4 +1917,25 @@ func TestBuildAuthResponseCallbackURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCopyRequestObjectToAuthRequest(t *testing.T) {
+	authReq := &oidc.AuthRequest{
+		Scopes:      oidc.SpaceDelimitedArray{"openid"},
+		ClientID:    "web_client",
+		RedirectURI: "https://registered.com/callback",
+		Resource:    []string{"https://api.example.com/"},
+	}
+	requestObject := &oidc.RequestObject{
+		AuthRequest: oidc.AuthRequest{
+			Resource: []string{"https://mcp.example.com/mcp"},
+		},
+	}
+
+	op.CopyRequestObjectToAuthRequest(authReq, requestObject)
+	assert.Equal(t, oidc.Resources{"https://mcp.example.com/mcp"}, authReq.Resource)
+
+	// an empty resource in the request object must not clear the request parameter
+	op.CopyRequestObjectToAuthRequest(authReq, &oidc.RequestObject{})
+	assert.Equal(t, oidc.Resources{"https://mcp.example.com/mcp"}, authReq.Resource)
 }
