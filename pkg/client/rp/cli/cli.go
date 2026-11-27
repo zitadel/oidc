@@ -18,20 +18,61 @@ const (
 	loginPath = "/login"
 )
 
+const defaultSuccessHTML = "<p><strong>Success!</strong></p>" +
+	"<p>You are authenticated and can now return to the CLI.</p>"
+
+// CodeFlowOpt configures [CodeFlowWithOptions].
+type CodeFlowOpt func(*codeFlowConfig)
+
+type codeFlowConfig struct {
+	authURLParams      []rp.URLParamOpt
+	codeExchangeParams []rp.URLParamOpt
+	successHTML        string
+}
+
+// WithAuthURLParams adds parameters to the authorization request sent from the
+// login handler, for example rp.WithURLParam("audience", "https://api.example.com")
+// for providers such as Auth0 that only issue a JWT access token for a named audience.
+func WithAuthURLParams(params ...rp.URLParamOpt) CodeFlowOpt {
+	return func(c *codeFlowConfig) {
+		c.authURLParams = append(c.authURLParams, params...)
+	}
+}
+
+// WithCodeExchangeParams adds parameters to the token request made by the
+// callback handler.
+func WithCodeExchangeParams(params ...rp.URLParamOpt) CodeFlowOpt {
+	return func(c *codeFlowConfig) {
+		c.codeExchangeParams = append(c.codeExchangeParams, params...)
+	}
+}
+
+// WithSuccessHTML replaces the HTML page shown in the browser after a successful
+// login, for example to close the window with
+// `<body onload="window.close()">You may close this window</body>`.
+func WithSuccessHTML(html string) CodeFlowOpt {
+	return func(c *codeFlowConfig) {
+		c.successHTML = html
+	}
+}
+
+// CodeFlow runs the authorization code flow for a CLI with a local callback
+// server and returns the tokens. Use [CodeFlowWithOptions] to customise it.
 func CodeFlow[C oidc.IDClaims](ctx context.Context, relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string) *oidc.Tokens[C] {
+	return CodeFlowWithOptions[C](ctx, relyingParty, callbackPath, port, stateProvider)
+}
+
+// CodeFlowWithOptions is [CodeFlow] with options for the authorization request,
+// the token request and the page shown after login.
+func CodeFlowWithOptions[C oidc.IDClaims](ctx context.Context, relyingParty rp.RelyingParty, callbackPath, port string, stateProvider func() string, opts ...CodeFlowOpt) *oidc.Tokens[C] {
 	codeflowCtx, codeflowCancel := context.WithCancel(ctx)
 	defer codeflowCancel()
 
 	tokenChan := make(chan *oidc.Tokens[C], 1)
 
-	callback := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp rp.RelyingParty) {
-		tokenChan <- tokens
-		msg := "<p><strong>Success!</strong></p>"
-		msg = msg + "<p>You are authenticated and can now return to the CLI.</p>"
-		w.Write([]byte(msg))
-	}
-	http.Handle(loginPath, rp.AuthURLHandler(stateProvider, relyingParty))
-	http.Handle(callbackPath, rp.CodeExchangeHandler(callback, relyingParty))
+	login, callback := codeFlowHandlers(relyingParty, stateProvider, tokenChan, opts...)
+	http.Handle(loginPath, login)
+	http.Handle(callbackPath, callback)
 
 	listenAddress, loginURL, err := callbackServerConfig(relyingParty.OAuthConfig().RedirectURL, callbackPath, port)
 	if err != nil {
@@ -42,6 +83,23 @@ func CodeFlow[C oidc.IDClaims](ctx context.Context, relyingParty rp.RelyingParty
 	OpenBrowser(loginURL)
 
 	return <-tokenChan
+}
+
+// codeFlowHandlers returns the login and callback handlers of the CLI code flow.
+// The callback handler sends the tokens to tokenChan.
+func codeFlowHandlers[C oidc.IDClaims](relyingParty rp.RelyingParty, stateProvider func() string, tokenChan chan<- *oidc.Tokens[C], opts ...CodeFlowOpt) (login, callback http.Handler) {
+	cfg := codeFlowConfig{successHTML: defaultSuccessHTML}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	onTokens := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[C], state string, rp rp.RelyingParty) {
+		tokenChan <- tokens
+		w.Write([]byte(cfg.successHTML))
+	}
+	login = rp.AuthURLHandler(stateProvider, relyingParty, cfg.authURLParams...)
+	callback = rp.CodeExchangeHandler(onTokens, relyingParty, cfg.codeExchangeParams...)
+	return login, callback
 }
 
 func callbackServerConfig(redirectURI, callbackPath, port string) (listenAddress, loginURL string, err error) {
