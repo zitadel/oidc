@@ -211,6 +211,27 @@ func DeviceClient(id, secret string) *Client {
 	}
 }
 
+// ServiceUserClient creates a client that authenticates with a JWT assertion
+// (private_key_jwt, RFC 7521 6.2) and is allowed to use the client_credentials
+// grant for machine-to-machine communication, e.g. a service user.
+// It is registered with the keys of the JWT Profile, see Storage.GetServiceUserKey.
+func ServiceUserClient(id string) *Client {
+	return &Client{
+		id:                             id,
+		secret:                         "", // no secret: this client authenticates with a JWT assertion only
+		redirectURIs:                   nil,
+		applicationType:                op.ApplicationTypeWeb,
+		authMethod:                     oidc.AuthMethodPrivateKeyJWT,
+		loginURL:                       defaultLoginURL,
+		responseTypes:                  nil,
+		grantTypes:                     []oidc.GrantType{oidc.GrantTypeClientCredentials},
+		accessTokenType:                op.AccessTokenTypeBearer,
+		devMode:                        false,
+		idTokenUserinfoClaimsAssertion: false,
+		clockSkew:                      0,
+	}
+}
+
 type hasRedirectGlobs struct {
 	*Client
 }
