@@ -51,7 +51,9 @@ func Discover(ctx context.Context, issuer string, httpClient *http.Client, wellK
 		return nil, err
 	}
 	discoveryConfig := new(oidc.DiscoveryConfiguration)
-	err = httphelper.HttpRequest(httpClient, req, &discoveryConfig)
+	// OpenID Connect Discovery 1.0, section 4.2: the response MUST use the
+	// application/json content type.
+	err = httphelper.HttpJSONRequest(httpClient, req, &discoveryConfig)
 	if err != nil {
 		return nil, errors.Join(oidc.ErrDiscoveryFailed, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"strings"
@@ -57,7 +58,22 @@ func FormRequest(ctx context.Context, endpoint string, request any, encoder Enco
 	return req, nil
 }
 
+// HttpRequest sends req using client and unmarshals a successful JSON response
+// body into response. The Content-Type of the response is not checked;
+// use [HttpJSONRequest] when the server is required to respond with
+// application/json.
 func HttpRequest(client *http.Client, req *http.Request, response any) error {
+	return httpRequest(client, req, response, false)
+}
+
+// HttpJSONRequest works like [HttpRequest], but additionally requires a
+// successful response to carry an application/json Content-Type header.
+// If it does not, an error wrapping [ErrInvalidContentType] is returned.
+func HttpJSONRequest(client *http.Client, req *http.Request, response any) error {
+	return httpRequest(client, req, response, true)
+}
+
+func httpRequest(client *http.Client, req *http.Request, response any, requireJSON bool) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -80,6 +96,12 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 
 	if int64(len(body)) > MaxResponseBodySize {
 		return ErrResponseBodyTooLarge
+	}
+
+	if requireJSON {
+		if err := checkJSONContentType(resp.Header.Get("Content-Type")); err != nil {
+			return err
+		}
 	}
 
 	err = json.Unmarshal(body, response)
@@ -115,4 +137,12 @@ func StartServer(ctx context.Context, address string) {
 			log.Fatalf("Shutdown(): %v", err)
 		}
 	}()
+}
+
+func checkJSONContentType(contentType string) error {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || mediaType != "application/json" {
+		return fmt.Errorf("%w: expected application/json, got %q", ErrInvalidContentType, contentType)
+	}
+	return nil
 }
