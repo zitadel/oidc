@@ -82,6 +82,13 @@ func ValidateRefreshTokenRequest(ctx context.Context, tokenReq *oidc.RefreshToke
 // it will set the requested scopes as current scopes onto RefreshTokenRequest
 // if empty the original scopes will be used
 func ValidateRefreshTokenScopes(requestedScopes []string, authRequest RefreshTokenRequest) error {
+	// An empty scope parameter (scope=), or one of only spaces, decodes to
+	// empty values, which name no scope. A parameter sent without a value is
+	// treated as omitted (RFC 6749, section 3.2), which keeps the scopes of
+	// the original grant (section 6).
+	requestedScopes = slices.DeleteFunc(slices.Clone(requestedScopes), func(scope string) bool {
+		return scope == ""
+	})
 	if len(requestedScopes) == 0 {
 		return nil
 	}
