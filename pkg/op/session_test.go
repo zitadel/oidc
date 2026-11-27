@@ -1,11 +1,13 @@
 package op_test
 
 import (
+	"path"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"github.com/zitadel/oidc/v3/pkg/op"
 	"github.com/zitadel/oidc/v3/pkg/op/mock"
 )
@@ -19,6 +21,12 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 		postLogoutRedirectURI string
 		useGlobsClient        bool
 		wantErr               bool
+		// wantErrIs, when set, additionally pins the error identity for
+		// the invalid-pattern case: the returned error must wrap both the
+		// OIDC server error and the underlying pattern parse failure, so
+		// a future change that swaps the matcher (or the error plumbing)
+		// cannot silently turn a malformed glob into a plain mismatch.
+		wantErrIs []error
 	}{
 		{
 			name:                  "exact match (web)",
@@ -122,6 +130,69 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 			postLogoutRedirectURI: "https://a.example.com",
 			useGlobsClient:        true,
 			wantErr:               false,
+		},
+		{
+			// path.Match does not support alternation; doublestar (already used
+			// by checkURIAgainstRedirects for RedirectURIGlobs since #297) does.
+			name:                  "glob alternation match (doublestar semantics)",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://a.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			name:                  "glob alternation other branch match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://b.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			name:                  "glob alternation no match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://{a,b}.example.com/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://c.example.com/logout",
+			useGlobsClient:        true,
+			wantErr:               true,
+		},
+		{
+			// ** crosses "/" separators in doublestar; * in path.Match stops at "/",
+			// so a nested path was impossible to register before this change.
+			name:                  "glob multi-segment ** match",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://app.example.com/**/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://app.example.com/x/y/logout",
+			useGlobsClient:        true,
+			wantErr:               false,
+		},
+		{
+			// Control: * must still NOT cross "/" separators (doublestar keeps
+			// path.Match semantics for single *), preserving security posture.
+			name:                  "glob single * does not cross separator",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://app.example.com/*/logout"},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://app.example.com/x/y/logout",
+			useGlobsClient:        true,
+			wantErr:               true,
+		},
+		{
+			// Control: an invalid glob pattern must still surface as server_error
+			// (doublestar returns path.ErrBadPattern like path.Match does).
+			name:                  "glob invalid pattern still errors",
+			registered:            []string{"https://logged-out"},
+			registeredGlobs:       []string{"https://["},
+			applicationType:       op.ApplicationTypeWeb,
+			postLogoutRedirectURI: "https://a.example.com",
+			useGlobsClient:        true,
+			wantErr:               true,
+			wantErrIs:             []error{oidc.ErrServerError(), path.ErrBadPattern},
 		},
 		{
 			name:                  "glob no match (HasRedirectGlobs)",
@@ -239,6 +310,10 @@ func TestValidateEndSessionPostLogoutRedirectURI(t *testing.T) {
 			err := op.ValidateEndSessionPostLogoutRedirectURI(tt.postLogoutRedirectURI, client)
 			if tt.wantErr {
 				assert.Error(t, err)
+				for _, target := range tt.wantErrIs {
+					assert.ErrorIs(t, err, target,
+						"the invalid-pattern error must wrap both the OIDC server error and the pattern parse failure")
+				}
 			} else {
 				assert.NoError(t, err)
 			}
