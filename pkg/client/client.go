@@ -376,15 +376,21 @@ func PollDeviceAccessTokenEndpointWithAuthFn(ctx context.Context, interval time.
 		case <-timer:
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, interval)
-		defer cancel()
-
-		resp, err := CallDeviceAccessTokenEndpointWithAuthFn(ctx, request, caller, authFn)
+		reqCtx, cancel := context.WithTimeout(ctx, interval)
+		resp, err := CallDeviceAccessTokenEndpointWithAuthFn(reqCtx, request, caller, authFn)
+		cancel()
 		if err == nil {
 			return resp, nil
 		}
+		if ctx.Err() != nil {
+			// The caller's context ended, not only this request.
+			return nil, err
+		}
 		if errors.Is(err, context.DeadlineExceeded) {
+			// "On encountering a connection timeout, clients MUST unilaterally
+			// reduce their polling frequency before retrying." (RFC 8628, section 3.5)
 			interval += 5 * time.Second
+			continue
 		}
 		var target *oidc.Error
 		if !errors.As(err, &target) {

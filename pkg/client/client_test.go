@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -317,4 +318,59 @@ func TestSignedJWTProfileAssertion_JWTID(t *testing.T) {
 	first, second := jti(), jti()
 	assert.NotEmpty(t, first)
 	assert.NotEqual(t, first, second)
+}
+
+type testTokenEndpointCaller struct {
+	endpoint string
+}
+
+func (c testTokenEndpointCaller) TokenEndpoint() string    { return c.endpoint }
+func (c testTokenEndpointCaller) HttpClient() *http.Client { return http.DefaultClient }
+
+// TestPollDeviceAccessTokenEndpointRetriesAfterTimeout checks that a token
+// request that times out is retried at a lower polling frequency, as
+// RFC 8628, section 3.5, requires, instead of ending the poll.
+func TestPollDeviceAccessTokenEndpointRetriesAfterTimeout(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			// Answer only after the client gave up on the request.
+			time.Sleep(200 * time.Millisecond)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"token","token_type":"Bearer"}`))
+	}))
+	defer srv.Close()
+
+	resp, err := PollDeviceAccessTokenEndpointWithAuthFn(context.Background(), 50*time.Millisecond,
+		&DeviceAccessTokenRequest{DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{
+			GrantType:  oidc.GrantTypeDeviceCode,
+			DeviceCode: "device-code",
+		}},
+		testTokenEndpointCaller{endpoint: srv.URL}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "token", resp.AccessToken)
+	assert.Equal(t, int32(2), calls.Load())
+}
+
+// TestPollDeviceAccessTokenEndpointContextDeadline checks that the poll
+// still ends when the caller's own context expires.
+func TestPollDeviceAccessTokenEndpointContextDeadline(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 75*time.Millisecond)
+	defer cancel()
+	_, err := PollDeviceAccessTokenEndpointWithAuthFn(ctx, 50*time.Millisecond,
+		&DeviceAccessTokenRequest{DeviceAccessTokenRequest: oidc.DeviceAccessTokenRequest{
+			GrantType:  oidc.GrantTypeDeviceCode,
+			DeviceCode: "device-code",
+		}},
+		testTokenEndpointCaller{endpoint: srv.URL}, nil)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
 }
